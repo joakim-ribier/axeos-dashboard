@@ -1,5 +1,9 @@
 # axeos-dashboard
 
+[![CI](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](server/go.mod)
+
 Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-compatible Bitcoin ASIC miners — designed to run on a Raspberry Pi or any machine on your local network.
 
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
@@ -15,6 +19,22 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - Clickable pool dashboard links (Braiins, Atlas, …) auto-resolved from stratum user
 - Health check loop with live reachability indicator per miner card
 - EN / FR localization
+
+---
+
+## Table of Contents
+
+- [Architecture](#architecture)
+- [Prerequisites](#prerequisites)
+- [Quick Start (dev)](#quick-start-dev)
+- [Testing](#testing)
+- [Production Deployment](#production-deployment)
+- [Configuration](#configuration)
+- [API Reference](#api-reference)
+- [Dashboard Features](#dashboard-features)
+- [Firmware Update Detection](#firmware-update-detection)
+- [AxeOs Device API](#axeos-device-api)
+- [License](#license)
 
 ---
 
@@ -56,6 +76,41 @@ To view remote miners pushed to hashboard:
 make run-remote-dashboard-api  # read-only API on :8081, reads resources/remote-dashboard.yml
 make run-remote-dashboard-ui   # Vite dev server → :8081; open /{boardId} in browser
 ```
+
+---
+
+## Testing
+
+### Backend (Go)
+
+```bash
+make test   # go test ./... -race -cover, run from server/
+```
+
+Tests live next to the code as `*_test.go` files, using only the standard
+library (`testing`, `net/http/httptest`) — no test framework dependency.
+Coverage focuses on pure logic (config, payload mapping, firmware cache) and
+HTTP handlers.
+
+### Frontend (React)
+
+```bash
+cd ui
+npm run test         # vitest run — single pass, what CI runs
+npm run test:watch   # vitest — watch mode for local development
+```
+
+Built with [Vitest](https://vitest.dev) and [React Testing Library](https://testing-library.com/react).
+
+### Continuous Integration
+
+Every push to `main` and every pull request targeting `main` runs
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+
+| Job | Steps |
+|-----|-------|
+| `go` | `go vet` → `golangci-lint` → `go test -race -cover` |
+| `ui` | `npm run typecheck` → `npm run lint` → `npm run test` |
 
 ---
 
@@ -336,3 +391,9 @@ Each miner in the API response includes:
 ## AxeOs Device API
 
 Full device API docs: https://osmu.wiki/bitaxe/api/
+
+---
+
+## License
+
+[MIT](LICENSE) © Joakim Ribier
