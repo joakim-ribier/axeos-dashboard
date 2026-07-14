@@ -29,7 +29,7 @@ SERVER_BUILD_DIR := resources/build/server/bin
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote
+.PHONY: all build clean help lintAll test run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote
 
 # ==============================================================================
 # Main Commands
@@ -62,6 +62,12 @@ lintAll:
 	@echo ">>> Running linter on all packages..."
 	cd server && golangci-lint run ./...
 	@echo ">>> Linting complete."
+
+# Run the Go test suite with race detection and coverage
+test:
+	@echo ">>> Running Go test suite..."
+	cd server && go test ./... -race -cover
+	@echo ">>> Tests complete."
 
 # Clean build artifacts
 clean:
