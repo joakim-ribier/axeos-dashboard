@@ -40,7 +40,9 @@ func (f *Router) Listen() {
 	}()
 }
 
-func (f *Router) listenAndServe() {
+// Handler builds the chi router without starting a listener — kept separate
+// from listenAndServe so the routing table can be exercised in tests.
+func (f *Router) Handler() http.Handler {
 	router := chi.NewRouter()
 
 	// Global middlewares – logging, panic recovery, request timeout.
@@ -77,6 +79,12 @@ func (f *Router) listenAndServe() {
 			})
 		})
 	})
+
+	return router
+}
+
+func (f *Router) listenAndServe() {
+	router := f.Handler()
 
 	port := f.config.Server.Port
 	if port == "" {
