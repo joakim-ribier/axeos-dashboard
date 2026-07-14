@@ -35,13 +35,13 @@ func getDataRoot(c config.StorageConfig) string {
 // (and of each line in a daily `.jsonl` file).
 // Only the fields needed by the API are declared; everything else is ignored.
 type latestFileStructure struct {
-	Timestamp        string           `json:"ts"`
-	IP               string           `json:"ip,omitempty"`
-	Hostname         string           `json:"hostname,omitempty"`
-	Model            string           `json:"model,omitempty"`
-	Payload          PayloadStructure `json:"payload"`
-	ElectricityRate  float64          `json:"electricityRatePerKwh,omitempty"`
-	LatestFirmware   string           `json:"latestFirmware,omitempty"`
+	Timestamp       string           `json:"ts"`
+	IP              string           `json:"ip,omitempty"`
+	Hostname        string           `json:"hostname,omitempty"`
+	Model           string           `json:"model,omitempty"`
+	Payload         PayloadStructure `json:"payload"`
+	ElectricityRate float64          `json:"electricityRatePerKwh,omitempty"`
+	LatestFirmware  string           `json:"latestFirmware,omitempty"`
 }
 
 type PayloadStructure struct {
@@ -49,13 +49,13 @@ type PayloadStructure struct {
 
 	SharesAccepted int64 `json:"sharesAccepted"`
 	SharesRejected int64 `json:"sharesRejected"`
-	BlockFound  int64 `json:"blockFound"`  // bitaxe
-	FoundBlocks int64 `json:"foundBlocks"` // nerdaxe
+	BlockFound     int64 `json:"blockFound"`  // bitaxe
+	FoundBlocks    int64 `json:"foundBlocks"` // nerdaxe
 
 	Version       string `json:"version"`
 	UptimeSeconds int64  `json:"uptimeSeconds"`
 
-	HashRate          float64 `json:"hashRate"` // GH/s (as stored in the file)
+	HashRate          float64 `json:"hashRate"`          // GH/s (as stored in the file)
 	NetworkDifficulty float64 `json:"networkDifficulty"` // NerdAxe sends scientific notation
 	BestDiff          int64   `json:"bestDiff"`
 
@@ -159,9 +159,9 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 	return model.MinerInfo{
 		Timestamp: raw.Timestamp,
 
-		IP:       miner.Ip,
-		MacAddr:  raw.Payload.MacAddr,
-		Hostname: miner.Hostname,
+		IP:          miner.Ip,
+		MacAddr:     raw.Payload.MacAddr,
+		Hostname:    miner.Hostname,
 		DeviceModel: raw.Payload.getDeviceModel(miner),
 
 		SharesAccepted: raw.Payload.SharesAccepted,
