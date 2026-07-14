@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "typescript-advanced-types",
+  "owner": "wshobson",
+  "repo": "agents",
+  "path": "plugins/javascript-typescript/skills/typescript-advanced-types",
+  "branch": "main",
+  "sha": "7e9663cb1d15ca0aff369d35a31348b7e8cf5e95",
+  "source": "manual"
+}

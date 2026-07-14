@@ -1,0 +1,34 @@
+global:
+  env: dev
+server:
+  port: "8080"
+storage:
+  dataDir: resources
+  retentionDays: 30 # not used!
+feeder:
+  interval: 2m
+healthCheck:
+  interval: 15s
+endpoints:
+  timeout: 5s
+  info: api/system/info       # Get system information
+  system: api/system          # Update system settings
+  restart: api/system/restart # Restart the miner
+electricity:
+  ratePerKwh: 0.1915 # €/kWh — example rate, adjust to your local tariff
+pools:
+  dashboards:
+    stratum.braiins.com: "https://pool.braiins.com/mining/overview/{user}"
+    solo.atlaspool.io: "https://atlaspool.io/dashboard.html?wallet={user}"
+firmware:
+  cacheTTL: 24h
+  repos:
+    bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
+    nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"
+wifi:
+  on: false
+  ssid: ""
+  pwd: ""
+remote:
+  pushURL: "" # push URL from your hashboard dashboard (e.g. https://hashboard.live/api/push)
+  apiKey: ""  # API key from your hashboard dashboard

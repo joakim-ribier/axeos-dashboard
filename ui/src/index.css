@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fond sombre avec léger dégradé */
+html,
+body,
+#root {
+  @apply h-full min-h-full;
+}
+body {
+  background: linear-gradient(
+    to bottom right,
+    theme("colors.tech-bg") 0%,
+    #1a202c 100%
+  );
+  color: #e5e7eb; /* texte clair */
+}

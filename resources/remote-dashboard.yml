@@ -1,0 +1,11 @@
+global:
+  env: dev
+server:
+  port: "8081"
+storage:
+  dataDir: resources                         # root dir: logs written here
+  boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty)
+pools:
+  dashboards:
+    stratum.braiins.com: "https://pool.braiins.com/mining/overview/{user}"
+    solo.atlaspool.io: "https://atlaspool.io/dashboard.html?wallet={user}"

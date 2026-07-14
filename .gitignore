@@ -28,5 +28,13 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# Project
+**/.DS_Store
+resources/data/*
+resources/build
+resources/miners.yml
+*.log
+server/feeder

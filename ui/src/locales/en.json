@@ -1,0 +1,114 @@
+{
+  "dashboard": {
+    "error": "Failed to load data",
+    "header": {
+      "description": "Overview of all connected AxeOs miners.",
+      "title": "Dashboard"
+    },
+    "loading": "Loading...",
+    "filter": {
+      "all": "All",
+      "miners": "miners"
+    },
+    "stats": {
+      "lastUpdate": "Last update:",
+      "name": "Name",
+      "title": "Pools",
+      "totalPower": "Total TH/s",
+      "timestampDivergence": "Miners have different timestamps",
+      "kpi": {
+        "hashrate": "Total Hashrate",
+        "miners": "Miners",
+        "shares": "Total Shares",
+        "tempFan": "Temp · Fan",
+        "maxFan": "Max fan speed",
+        "perYear": "yr",
+        "perMonth": "month",
+        "electricityCost": "Elec. cost / day"
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": {
+        "label": "Cancel"
+      },
+      "confirm": {
+        "label": "Confirm"
+      }
+    }
+  },
+  "graph": {
+    "day": "Day",
+    "loading": "Loading data...",
+    "noDataAvailable": "No data available"
+  },
+  "miner": {
+    "actions": {
+      "restart": {
+        "description": "Restart miner {{ip}}.",
+        "label": "Restart",
+        "title": "Restart Miner"
+      },
+      "switchPool": {
+        "description": "Switch pool of {{ip}}.",
+        "label": "Switch",
+        "title": "Switch miner pool",
+        "toMain": "Switch",
+        "toFallback": "Switch"
+      }
+    },
+    "bestSession": "Best:",
+    "blockFound": {
+      "label": "{{count}} block",
+      "tooltip": "Block found this session!"
+    },
+    "energy": "Energy (J/TH):",
+    "fallbackPool": "Fallback",
+    "fanspeed": "Fan speed:",
+    "hashrate": "{{value}} TH/s",
+    "lastUpdate": "Last update: {{value}}",
+    "mainPool": "Primary",
+    "poolUrl": "Pool:",
+    "poolUser": "User:",
+    "responseTime": "Ping:",
+    "sharesAccepted": "Shares accepted:",
+    "sharesRejected": "Shares rejected:",
+    "statsTimeline": "Today's History",
+    "temp": "Temp:",
+    "openDevice": "Open device UI",
+    "openPool": "Open pool dashboard",
+    "unknown": "Unknown miner",
+    "updateAvailable": "Update available",
+    "uptime": "Uptime:",
+    "health": {
+      "alive": "Reachable",
+      "unreachable": "Unreachable",
+      "unknown": "Health check pending"
+    }
+  },
+  "remote": {
+    "badge": "REMOTE",
+    "badgeLong": "REMOTE · {{id}}"
+  },
+  "oops": {
+    "boardNotFound": {
+      "title": "Page not found",
+      "message": "This page does not exist or has no data yet."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "message": "This page does not exist."
+    },
+    "retry": "Retry"
+  },
+  "common": {
+    "expand": "Show details",
+    "collapse": "Hide details"
+  },
+  "theme": {
+    "dark": "Dark",
+    "light": "Light"
+  },
+  "title": "BTC Mining Dashboard"
+}

@@ -1,0 +1,125 @@
+package handler
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+)
+
+// boardDataRoot returns the bitaxes directory for a given boardId.
+func boardDataRoot(dataDir, boardID string) string {
+	return filepath.Join(dataDir, boardID, "bitaxes")
+}
+
+// ListRemoteMiners handles GET /api/{boardId}/miners/ for the remote-api.
+// It auto-discovers miners by scanning the board's bitaxes directory.
+// Miner metadata (IP, hostname, model) is read from the file itself (PushSample fields).
+func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		boardID := chi.URLParam(r, "boardId")
+		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
+
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				writeErrorResponse(w, fmt.Sprintf("board '%s' not found", boardID), http.StatusNotFound)
+				return
+			}
+			writeErrorResponse(w, "failed to scan data dir", http.StatusInternalServerError)
+			return
+		}
+
+		resp := model.MinersResponse{
+			Miners: make([]model.MinerInfo, 0),
+		}
+
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+
+			path := filepath.Join(root, entry.Name(), "latest.json")
+			raw, err := decodeLatestJSON(path)
+			if err != nil {
+				log.Printf("remote: skipping %s: %v", entry.Name(), err)
+				continue
+			}
+
+			miner := syntheticBitaxe(raw, entry.Name())
+			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Pools.Dashboards)
+			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp)
+			resp.Miners = append(resp.Miners, info)
+		}
+
+		resp.Configured = len(resp.Miners)
+		resp.Total = len(resp.Miners)
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		}
+	}
+}
+
+// RemoteStats handles GET /api/{boardId}/{ip}/stats for the remote-api.
+func RemoteStats(cfg config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		boardID := chi.URLParam(r, "boardId")
+		ip := chi.URLParam(r, "ip")
+		if ip == "" {
+			writeErrorResponse(w, "missing ip", http.StatusBadRequest)
+			return
+		}
+
+		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
+		today := time.Now().UTC().Format("2006-01-02")
+		path := filepath.Join(root, ip, fmt.Sprintf("%s.jsonl", today))
+
+		entries, err := decodeJSONL(path)
+		if err != nil {
+			writeErrorResponse(w, fmt.Sprintf("failed to read data file: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		stats := make([]model.MinerInfo, 0, len(entries))
+		for _, raw := range entries {
+			stats = append(stats, toMinerInfo(raw, syntheticBitaxe(raw, ip), "", nil))
+		}
+
+		writeStatsResponse(w, stats)
+	}
+}
+
+// aliveFromTimestamp returns alive=true if the timestamp is within the last 10 minutes.
+// Used in remote mode where no real-time watcher runs.
+func aliveFromTimestamp(ts string) (bool, string) {
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return false, ts
+	}
+	return time.Since(t) < 10*time.Minute, ts
+}
+
+// syntheticBitaxe builds a config.Bitaxe from fields embedded in the PushSample file.
+// Falls back to dirName for IP when the file field is empty (backward compatibility).
+func syntheticBitaxe(raw latestFileStructure, dirName string) config.Bitaxe {
+	ip := raw.IP
+	if ip == "" {
+		ip = dirName
+	}
+	return config.Bitaxe{
+		Ip:       ip,
+		Hostname: raw.Hostname,
+		Model:    raw.Model,
+		Enabled:  true,
+	}
+}

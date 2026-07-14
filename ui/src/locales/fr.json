@@ -1,0 +1,114 @@
+{
+  "dashboard": {
+    "error": "Échec du chargement des données",
+    "header": {
+      "description": "Vue d’ensemble de tous les mineurs AxeOs connectés.",
+      "title": "Tableau de bord"
+    },
+    "loading": "Chargement...",
+    "filter": {
+      "all": "Tous",
+      "miners": "mineurs"
+    },
+    "stats": {
+      "lastUpdate": "Dernière mise à jour :",
+      "name": "Nom",
+      "pools": "Pools",
+      "totalPower": "TH/s total",
+      "timestampDivergence": "Les mineurs ont des timestamps différents",
+      "kpi": {
+        "hashrate": "Hashrate total",
+        "miners": "Mineurs",
+        "shares": "Parts totales",
+        "tempFan": "Temp · Ventil.",
+        "maxFan": "Vitesse ventilateur max",
+        "perYear": "an",
+        "perMonth": "mois",
+        "electricityCost": "Coût élec. / jour"
+      }
+    }
+  },
+  "dialog": {
+    "actions": {
+      "cancel": {
+        "label": "Annuler"
+      },
+      "confirm": {
+        "label": "Valider"
+      }
+    }
+  },
+  "graph": {
+    "day": "Jour",
+    "loading": "Chargement des données...",
+    "noDataAvailable": "Aucune donnée disponible"
+  },
+  "miner": {
+    "actions": {
+      "restart": {
+        "description": "Demande de redémarrage pour le mineur {{ip}}.",
+        "label": "Redémarrer",
+        "title": "Redémarrer le mineur"
+      },
+      "switchPool": {
+        "description": "Demande de changement de pool pour {{ip}}.",
+        "label": "Basculer",
+        "title": "Basculer de Pool",
+        "toMain": "Basculer",
+        "toFallback": "Basculer"
+      }
+    },
+    "bestSession": "Meilleure :",
+    "blockFound": {
+      "label": "{{count}} bloc",
+      "tooltip": "Bloc trouvé cette session !"
+    },
+    "energy": "Énergie (J/TH) :",
+    "fallbackPool": "Secours",
+    "fanspeed": "Ventilateur :",
+    "hashrate": "{{value}} TH/s",
+    "lastUpdate": "Dernière mise à jour : {{value}}",
+    "mainPool": "Principal",
+    "poolUrl": "Pool :",
+    "poolUser": "Utilisateur :",
+    "responseTime": "Ping :",
+    "sharesAccepted": "Parts acceptées :",
+    "sharesRejected": "Parts rejetées :",
+    "statsTimeline": "Historique de la journée",
+    "temp": "Température :",
+    "openDevice": "Ouvrir l'interface du mineur",
+    "openPool": "Ouvrir le tableau de bord du pool",
+    "unknown": "Mineur inconnu",
+    "updateAvailable": "Mise à jour disponible",
+    "uptime": "Temps de fonctionnement :",
+    "health": {
+      "alive": "Accessible",
+      "unreachable": "Inaccessible",
+      "unknown": "Vérification en attente"
+    }
+  },
+  "remote": {
+    "badge": "DISTANT",
+    "badgeLong": "DISTANT · {{id}}"
+  },
+  "oops": {
+    "boardNotFound": {
+      "title": "Page introuvable",
+      "message": "Cette page n'existe pas ou n'a pas encore de données."
+    },
+    "notFound": {
+      "title": "Page introuvable",
+      "message": "Cette page n'existe pas."
+    },
+    "retry": "Réessayer"
+  },
+  "common": {
+    "expand": "Voir les détails",
+    "collapse": "Masquer les détails"
+  },
+  "theme": {
+    "dark": "Sombre",
+    "light": "Clair"
+  },
+  "title": "Tableau de bord BTC Mining"
+}
