@@ -7,6 +7,12 @@
       "skillPath": "skills/golang-code-style/SKILL.md",
       "computedHash": "c26ad2e38dd3ae57eb90ddca25eff2e1237375325bd67eff3d1444e2597baac5"
     },
+    "golang-continuous-integration": {
+      "source": "samber/cc-skills-golang",
+      "sourceType": "github",
+      "skillPath": "skills/golang-continuous-integration/SKILL.md",
+      "computedHash": "3e05e6159414419c167712b788bf0a066818b514c3385a2907de2c33ee886f1a"
+    },
     "golang-documentation": {
       "source": "samber/cc-skills-golang",
       "sourceType": "github",
