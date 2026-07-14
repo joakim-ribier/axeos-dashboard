@@ -3,13 +3,13 @@ package bitaxe
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/joakim-ribier/go-utils/pkg/jsonsutil"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
 
@@ -72,7 +72,7 @@ func (c *Client) Restart(addr string) error {
 func (c *Client) patch(method, addr string, data any) error {
 	c.logger.Info(fmt.Sprintf("[PATCH] %s", c.endpoint), "ip", addr, "endpoint", c.endpoint, "data", data)
 
-	payload, err := jsonsutil.Marshal(data)
+	payload, err := json.Marshal(data)
 	if err != nil {
 		c.logger.Error("error marshaling data", "ip", addr, "endpoint", c.endpoint, "error", err)
 		return err

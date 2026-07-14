@@ -188,14 +188,14 @@ Override remote-dashboard-api data dir: `BITAXE_DATA_ROOT` env var (default from
 ### Patterns & Constraints
 
 - **No auth** — internal LAN only; no API keys, no CORS restrictions
-- **No tests** — no test files exist yet
+- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see README's Testing section)
 - **No WebSocket** — polling-based; feeder writes files, API reads files
 - **Graceful shutdown** — both binaries handle SIGINT/SIGTERM
-- **Error handling** — minimal custom types; `fmt.Errorf()` wrapping + structured logging (`github.com/joakim-ribier/go-utils`)
+- **Error handling** — minimal custom types; `fmt.Errorf()` wrapping + structured logging (stdlib only)
 - **Confirmation dialogs** — destructive actions (restart, pool switch) require user confirmation in UI
 
 ### Key Dependencies
 
-**Go:** `go-chi/chi/v5`, `robfig/cron/v3`, `go.yaml.in/yaml/v3`, `github.com/joakim-ribier/go-utils`
+**Go:** `go-chi/chi/v5`, `robfig/cron/v3`, `go.yaml.in/yaml/v3`
 
 **React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `apexcharts`, `recharts`, `zustand`

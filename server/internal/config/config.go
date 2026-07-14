@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"time"
-
-	"github.com/joakim-ribier/go-utils/pkg/slicesutil"
 )
 
 type PoolTarget string
@@ -32,17 +30,28 @@ type Config struct {
 }
 
 func (c Config) GetMiners() []Bitaxe {
-	return slicesutil.FilterT(c.Bitaxes, func(b Bitaxe) bool { return b.Enabled })
+	var out []Bitaxe
+	for _, b := range c.Bitaxes {
+		if b.Enabled {
+			out = append(out, b)
+		}
+	}
+	return out
 }
 
 func (c Config) GetMinersFilterBy(hostnameOrIp string) []Bitaxe {
 	miners := c.GetMiners()
-	if len(hostnameOrIp) > 0 {
-		miners = slicesutil.FilterT(miners, func(b Bitaxe) bool {
-			return b.Hostname == hostnameOrIp || b.Ip == hostnameOrIp
-		})
+	if len(hostnameOrIp) == 0 {
+		return miners
 	}
-	return miners
+
+	var filtered []Bitaxe
+	for _, b := range miners {
+		if b.Hostname == hostnameOrIp || b.Ip == hostnameOrIp {
+			filtered = append(filtered, b)
+		}
+	}
+	return filtered
 }
 
 type Bitaxe struct {

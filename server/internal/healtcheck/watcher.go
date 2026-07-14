@@ -3,11 +3,11 @@ package healtcheck
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"sync"
 	"time"
 
-	"github.com/joakim-ribier/go-utils/pkg/jsonsutil"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/bitaxe"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
@@ -106,8 +106,12 @@ func (f *Watcher) watch() {
 func parseAxeOsDeviceResponse(response []byte, model string) (AxeOsModel, error) {
 	switch model {
 	case "bitaxe":
-		return jsonsutil.Unmarshal[Bitaxe](response)
+		var v Bitaxe
+		err := json.Unmarshal(response, &v)
+		return v, err
 	default:
-		return jsonsutil.Unmarshal[Nerdaxe](response)
+		var v Nerdaxe
+		err := json.Unmarshal(response, &v)
+		return v, err
 	}
 }

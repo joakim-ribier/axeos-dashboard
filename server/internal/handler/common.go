@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joakim-ribier/go-utils/pkg/genericsutil"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
@@ -89,13 +88,20 @@ type StratumConfig struct {
 }
 
 func (p PayloadStructure) getResponseTime(miner config.Bitaxe) float64 {
-	return genericsutil.When(miner.Model, func(s string) bool { return s == "bitaxe" }, func(s string) float64 { return p.ResponseTime }, func() float64 { return p.Ping })
+	if miner.Model == "bitaxe" {
+		return p.ResponseTime
+	}
+	return p.Ping
 }
 
 func (p PayloadStructure) getIsUsingFallbackStratum(miner config.Bitaxe) int64 {
-	return genericsutil.When(miner.Model, func(s string) bool { return s == "bitaxe" }, func(s string) int64 { return p.IsUsingFallbackStratum }, func() int64 {
-		return genericsutil.When(p.StratumConfig.UsingFallback, func(b bool) bool { return b }, func(b bool) int64 { return 1 }, func() int64 { return 0 })
-	})
+	if miner.Model == "bitaxe" {
+		return p.IsUsingFallbackStratum
+	}
+	if p.StratumConfig.UsingFallback {
+		return 1
+	}
+	return 0
 }
 
 // getBlockFound returns block count regardless of field name (bitaxe: blockFound, nerdaxe: foundBlocks).
