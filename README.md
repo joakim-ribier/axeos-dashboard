@@ -1,6 +1,6 @@
 # axeos-dashboard
 
-[![CI](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/ci.yml)
+[![Checks](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](server/go.mod)
 
@@ -105,12 +105,19 @@ Built with [Vitest](https://vitest.dev) and [React Testing Library](https://test
 ### Continuous Integration
 
 Every push to `main` and every pull request targeting `main` runs
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml):
 
 | Job | Steps |
 |-----|-------|
 | `go` | `go vet` → `golangci-lint` → `go test -race -cover` |
 | `ui` | `npm run typecheck` → `npm run lint` → `npm run test` |
+
+When `checks.yml` succeeds on `main`,
+[`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
+feeder/dashboard-api/remote-dashboard-api binaries for `linux/arm64` plus the
+UI, and publishes them to a rolling `latest` GitHub Release. Fetch them on a
+Raspberry Pi with `make latest-up` (no local Go/npm build needed) — see the
+Makefile's `latest-fetch`/`latest-up`/`latest-down` targets.
 
 ---
 

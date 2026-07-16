@@ -19,6 +19,10 @@ REMOTE_DASHBOARD_CONFIG ?= resources/remote-dashboard.yml
 MINERS_FILE ?= resources/miners.yml
 MINERS_FLAG = $(if $(MINERS_FILE),-miners $(MINERS_FILE),)
 
+# GitHub repo + release used by `make latest-*` (fetch CI-built linux/arm64 artifacts instead of building locally)
+GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
+RELEASE_TAG       ?= latest
+
 # ==============================================================================
 # Build Configuration
 # ==============================================================================
@@ -29,7 +33,7 @@ SERVER_BUILD_DIR := resources/build/server/bin
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote
+.PHONY: all build clean help lintAll test run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote latest-fetch latest-up latest-down
 
 # ==============================================================================
 # Main Commands
@@ -120,6 +124,9 @@ help:
 	@echo "  make dev-down                  - Stop dev environment"
 	@echo "  make dev-attach                - Attach to existing dev screen session"
 	@echo "  make dev-status                - List all screen sessions"
+	@echo "  make latest-fetch              - Fetch prebuilt binaries + UI from the latest GitHub Release (linux/arm64)"
+	@echo "  make latest-up                 - Start the stack from the latest release, no local build"
+	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
 	@echo "  make help                      - Show this help message"
 
 # ==============================================================================
@@ -185,6 +192,7 @@ dev-down:
 
 	# 2. Kill residual processes by name (fallback)
 	-pkill -9 -f "npm run dev" 2>/dev/null || true
+	-pkill -9 -f "npm run preview" 2>/dev/null || true
 	-pkill -9 -f "dashboard-api" 2>/dev/null || true
 	-pkill -9 -f "feeder" 2>/dev/null || true
 
@@ -204,3 +212,56 @@ dev-status:
 # Display logs message
 dev-logs:
 	@echo "Logs available in the screen session. Use 'make dev-attach' to connect."
+
+# ==============================================================================
+# Latest Environment (prebuilt CI artifacts — no local build, linux/arm64 only)
+# ==============================================================================
+
+# Fetch feeder/dashboard-api/remote-dashboard-api binaries + UI dist from the
+# latest GitHub Release (built by CI on every push to main).
+latest-fetch:
+	@echo ">>> Fetching release '$(RELEASE_TAG)' from $(GITHUB_REPO)..."
+	@curl -sf https://api.github.com/repos/$(GITHUB_REPO)/releases/tags/$(RELEASE_TAG) -o /tmp/axeos-release.json || \
+		{ echo "Error: could not fetch release metadata (bad repo or tag?)."; exit 1; }
+	@mkdir -p $(SERVER_BUILD_DIR)
+	@for bin in feeder dashboard-api remote-dashboard-api; do \
+		url=$$(jq -r ".assets[] | select(.name==\"$$bin\") | .browser_download_url" /tmp/axeos-release.json); \
+		echo "   - $$bin"; \
+		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/$$bin; \
+		chmod +x $(SERVER_BUILD_DIR)/$$bin; \
+	done
+	@ui_url=$$(jq -r '.assets[] | select(.name=="ui-dist.tar.gz") | .browser_download_url' /tmp/axeos-release.json); \
+	echo "   - ui-dist.tar.gz"; \
+	rm -rf $(UI_DIR)/dist && mkdir -p $(UI_DIR)/dist; \
+	curl -sfL "$$ui_url" | tar -xz -C $(UI_DIR)/dist
+	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,dashboard-api,remote-dashboard-api}, $(UI_DIR)/dist/"
+
+# Start the full stack from the latest CI-built release — no local build/toolchain needed.
+# Same screen layout as dev-up, but serves the static UI (vite preview) instead of the dev server.
+latest-up: latest-fetch
+	@echo "🚀 Starting latest environment (prebuilt from CI, no local build)..."
+
+	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
+	@sleep 1
+
+	screen -dmS $(SCREEN_NAME)
+
+	# --- DASHBOARD UI (serves the fetched static build) ---
+	screen -S $(SCREEN_NAME) -X screen -t dashboard-ui bash -c "\
+		cd $(UI_DIR) && \
+		API_PORT=$(DASHBOARD_API_PORT) npm run preview -- --host 0.0.0.0"
+
+	# --- DASHBOARD API ---
+	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)"
+
+	# --- FEEDER ---
+	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
+
+	@echo "✅ Latest environment started. Use 'make dev-attach' to connect."
+
+# Stop the latest environment — identical teardown to dev-down (same screen session name).
+latest-down: dev-down

@@ -1,0 +1,66 @@
+name: Latest Release
+
+on:
+  workflow_run:
+    workflows: ["Checks"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  release:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24.3"
+          cache-dependency-path: server/go.sum
+
+      - name: build binaries (linux/arm64)
+        working-directory: server
+        env:
+          GOOS: linux
+          GOARCH: arm64
+        run: |
+          mkdir -p ../dist
+          go build -o ../dist/feeder ./cmd/feeder
+          go build -o ../dist/dashboard-api ./cmd/dashboard-api
+          go build -o ../dist/remote-dashboard-api ./cmd/remote-dashboard-api
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: build UI
+        working-directory: ui
+        env:
+          API_PORT: "8080" # placeholder — only proxy target for dev/preview, not baked into the build
+        run: |
+          npm ci
+          npm run build
+          tar -czf ../dist/ui-dist.tar.gz -C dist .
+
+      - name: publish rolling "latest" release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: "latest (${{ github.event.workflow_run.head_sha }})"
+          target_commitish: ${{ github.event.workflow_run.head_sha }}
+          prerelease: true
+          make_latest: "true"
+          body: |
+            Automatically built from commit ${{ github.event.workflow_run.head_sha }} on `main`, after CI passed.
+            Binaries are linux/arm64 (Raspberry Pi). Fetch with `make latest-up` on the Pi.
+          files: |
+            dist/feeder
+            dist/dashboard-api
+            dist/remote-dashboard-api
+            dist/ui-dist.tar.gz

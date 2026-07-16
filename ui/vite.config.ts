@@ -31,6 +31,15 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    proxy: {
+      "/api": {
+        target: `http://localhost:${apiPort}`,
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   build: {
     outDir: "dist",
   },
