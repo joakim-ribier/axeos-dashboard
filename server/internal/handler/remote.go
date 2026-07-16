@@ -55,7 +55,7 @@ func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
 			}
 
 			miner := syntheticBitaxe(raw, entry.Name())
-			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Pools.Dashboards)
+			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
 			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp)
 			resp.Miners = append(resp.Miners, info)
 		}
@@ -92,7 +92,7 @@ func RemoteStats(cfg config.Config) http.HandlerFunc {
 
 		stats := make([]model.MinerInfo, 0, len(entries))
 		for _, raw := range entries {
-			stats = append(stats, toMinerInfo(raw, syntheticBitaxe(raw, ip), "", nil))
+			stats = append(stats, toMinerInfo(raw, syntheticBitaxe(raw, ip), "", "", nil))
 		}
 
 		writeStatsResponse(w, stats)

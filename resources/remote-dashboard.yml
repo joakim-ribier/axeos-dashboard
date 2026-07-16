@@ -9,3 +9,10 @@ pools:
   dashboards:
     stratum.braiins.com: "https://pool.braiins.com/mining/overview/{user}"
     solo.atlaspool.io: "https://atlaspool.io/dashboard.html?wallet={user}"
+firmware:
+  # Same model->repo mapping as dashboard.yml — only used here to build the
+  # "view release" link on the update badge (no cacheTTL needed: this binary
+  # never checks GitHub itself, it just reads latestFirmware from the pushed sample).
+  repos:
+    bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
+    nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"

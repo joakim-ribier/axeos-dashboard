@@ -41,7 +41,7 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 		}
 
 		latestVersion := fwCache.Models[miner.Model].Version
-		info := toMinerInfo(raw, miner, latestVersion, cfg.Pools.Dashboards)
+		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
 
 		if status, ok := watcher.GetStatus(miner.Ip); ok {
 			info.Alive = status.Alive

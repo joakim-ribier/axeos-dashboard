@@ -22,6 +22,8 @@ pools:
     solo.atlaspool.io: "https://atlaspool.io/dashboard.html?wallet={user}"
 firmware:
   cacheTTL: 24h
+  # GitHub "latest release" API URL per model — used both to check for
+  # updates and to build the "view release" link shown on the update badge
   repos:
     bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
     nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"

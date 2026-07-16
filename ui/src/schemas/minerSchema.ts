@@ -18,6 +18,7 @@ export const minerSchema = z.object({
   version: z.string(),
   latestVersion: z.string().optional(),
   updateAvailable: z.boolean().optional(),
+  releaseURL: z.string().optional(),
   uptimeSeconds: z.number(),
   responseTime: z.number(),
 

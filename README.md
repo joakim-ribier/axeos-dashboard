@@ -227,6 +227,7 @@ pools:
 
 firmware:
   cacheTTL: 24h     # how long to cache the GitHub latest-release response
+  # Same URL is used to build the "view release" link on the update badge
   repos:
     bitaxe:   "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
     nerdaxe:  "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"

@@ -72,6 +72,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     version,
     latestVersion,
     updateAvailable,
+    releaseURL,
     sharesAccepted,
     sharesRejected,
     blockFound,
@@ -754,6 +755,15 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                   }
                   size="small"
                   color="warning"
+                  clickable={!!releaseURL}
+                  {...(releaseURL
+                    ? {
+                        component: "a",
+                        href: releaseURL,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                      }
+                    : {})}
                   sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
                 />
               </Tooltip>

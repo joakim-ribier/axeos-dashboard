@@ -14,11 +14,12 @@ type MinerInfo struct {
 	SharesRejected int64 `json:"sharesRejected"`
 	BlockFound     int64 `json:"blockFound"`
 
-	Version         string  `json:"version"`         // Firmware version (e.g. "v2.12.2")
-	LatestVersion   string  `json:"latestVersion"`   // Latest firmware version available on GitHub
-	UpdateAvailable bool    `json:"updateAvailable"` // True when LatestVersion != Version
-	UptimeSeconds   int64   `json:"uptimeSeconds"`   // Miner uptime in seconds
-	ResponseTime    float64 `json:"responseTime"`    // Ping/latency to the pool (ms).
+	Version         string  `json:"version"`             // Firmware version (e.g. "v2.12.2")
+	LatestVersion   string  `json:"latestVersion"`       // Latest firmware version available on GitHub
+	UpdateAvailable bool    `json:"updateAvailable"`     // True when LatestVersion != Version
+	ReleaseURL      string  `json:"releaseURL,omitempty"` // GitHub releases page for the latest firmware version
+	UptimeSeconds   int64   `json:"uptimeSeconds"`       // Miner uptime in seconds
+	ResponseTime    float64 `json:"responseTime"`        // Ping/latency to the pool (ms).
 
 	// Additional fields requested by the API
 	HashRateTHs       float64 `json:"hashRateTHs"`       // Hash rate expressed in terahashes per second (TH/s)

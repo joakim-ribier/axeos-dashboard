@@ -142,7 +142,19 @@ func poolDashboardURL(stratumURL, stratumUser string, dashboards map[string]stri
 	return strings.ReplaceAll(tmpl, "{user}", account)
 }
 
-func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVersion string, dashboards map[string]string) model.MinerInfo {
+// firmwareReleaseURL converts a GitHub API "latest release" URL (as configured
+// under firmware.repos, e.g. "https://api.github.com/repos/owner/repo/releases/latest")
+// into the equivalent web page URL. Returns "" if apiURL isn't a recognized
+// GitHub API releases URL.
+func firmwareReleaseURL(apiURL string) string {
+	const prefix = "https://api.github.com/repos/"
+	if !strings.HasPrefix(apiURL, prefix) {
+		return ""
+	}
+	return "https://github.com/" + strings.TrimPrefix(apiURL, prefix)
+}
+
+func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVersion, firmwareAPIURL string, dashboards map[string]string) model.MinerInfo {
 	// Convert GH/s → TH/s (1 TH = 1 000 GH)
 	hashRateTHs := raw.Payload.HashRate / 1_000.0
 
@@ -171,6 +183,7 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 		Version:         raw.Payload.Version,
 		LatestVersion:   latestFirmwareVersion,
 		UpdateAvailable: updateAvailable,
+		ReleaseURL:      firmwareReleaseURL(firmwareAPIURL),
 		UptimeSeconds:   raw.Payload.UptimeSeconds,
 		ResponseTime:    raw.Payload.getResponseTime(miner),
 

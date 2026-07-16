@@ -223,7 +223,7 @@ func TestToMinerInfo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toMinerInfo(tt.raw, miner, tt.latestFirmware, dashboards)
+			got := toMinerInfo(tt.raw, miner, tt.latestFirmware, "", dashboards)
 
 			if got.HashRateTHs != tt.wantHashRateTH {
 				t.Errorf("HashRateTHs = %v, want %v", got.HashRateTHs, tt.wantHashRateTH)
@@ -244,12 +244,60 @@ func TestToMinerInfo(t *testing.T) {
 		raw := latestFileStructure{
 			Payload: PayloadStructure{StratumURL: "pool.example", StratumUser: "acct.worker"},
 		}
-		got := toMinerInfo(raw, miner, "", dashboards)
+		got := toMinerInfo(raw, miner, "", "", dashboards)
 		want := "https://dash.example/acct"
 		if got.StratumDashboardURL != want {
 			t.Errorf("StratumDashboardURL = %q, want %q", got.StratumDashboardURL, want)
 		}
 	})
+
+	t.Run("resolves firmware release url", func(t *testing.T) {
+		raw := latestFileStructure{Payload: PayloadStructure{Version: "v1.0"}}
+		got := toMinerInfo(raw, miner, "v2.0", "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest", dashboards)
+		want := "https://github.com/bitaxeorg/esp-miner/releases/latest"
+		if got.ReleaseURL != want {
+			t.Errorf("ReleaseURL = %q, want %q", got.ReleaseURL, want)
+		}
+	})
+
+	t.Run("empty firmware release url when repo not configured", func(t *testing.T) {
+		raw := latestFileStructure{Payload: PayloadStructure{Version: "v1.0"}}
+		got := toMinerInfo(raw, miner, "v2.0", "", dashboards)
+		if got.ReleaseURL != "" {
+			t.Errorf("ReleaseURL = %q, want empty", got.ReleaseURL)
+		}
+	})
+}
+
+func TestFirmwareReleaseURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		apiURL string
+		want   string
+	}{
+		{
+			name:   "converts github api releases url",
+			apiURL: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest",
+			want:   "https://github.com/bitaxeorg/esp-miner/releases/latest",
+		},
+		{
+			name:   "empty when not a github api url",
+			apiURL: "",
+			want:   "",
+		},
+		{
+			name:   "empty when url does not match expected github api shape",
+			apiURL: "https://example.com/releases/latest",
+			want:   "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := firmwareReleaseURL(tt.apiURL); got != tt.want {
+				t.Errorf("firmwareReleaseURL(%q) = %q, want %q", tt.apiURL, got, tt.want)
+			}
+		})
+	}
 }
 
 func TestDecodeLatestJSON(t *testing.T) {

@@ -12,6 +12,7 @@ export interface MinerInfo {
   version: string;
   latestVersion?: string;
   updateAvailable?: boolean;
+  releaseURL?: string;
 
   sharesAccepted: number;
   sharesRejected: number;

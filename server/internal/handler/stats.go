@@ -46,7 +46,7 @@ func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *htt
 	// Transform every entry into the API model
 	stats := make([]model.MinerInfo, 0, len(entries))
 	for _, entry := range entries {
-		stats = append(stats, toMinerInfo(entry, miner, "", nil))
+		stats = append(stats, toMinerInfo(entry, miner, "", "", nil))
 	}
 
 	writeStatsResponse(w, stats)
