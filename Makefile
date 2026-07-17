@@ -249,8 +249,9 @@ latest-fetch:
 	curl -sfL "$$ui_url" | tar -xz -C $(UI_DIR)/dist
 	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,dashboard-api,remote-dashboard-api}, $(UI_DIR)/dist/"
 
-# Start the full stack from the latest CI-built release — no local build/toolchain needed.
-# Same screen layout as dev-up, but serves the static UI (vite preview) instead of the dev server.
+# Start the full stack from the latest CI-built release — no local build/toolchain
+# needed. The UI (fetched static files in ui/dist) is served by nginx, configured
+# once outside of this Makefile — see README's Production Deployment section.
 latest-up: latest-fetch
 	@echo "🚀 Starting latest environment (prebuilt from CI, no local build)..."
 
@@ -258,11 +259,6 @@ latest-up: latest-fetch
 	@sleep 1
 
 	screen -dmS $(SCREEN_NAME)
-
-	# --- DASHBOARD UI (serves the fetched static build) ---
-	screen -S $(SCREEN_NAME) -X screen -t dashboard-ui bash -c "\
-		cd $(UI_DIR) && \
-		API_PORT=$(DASHBOARD_API_PORT) npm run preview -- --host 0.0.0.0"
 
 	# --- DASHBOARD API ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
@@ -274,7 +270,8 @@ latest-up: latest-fetch
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
 
-	@echo "✅ Latest environment started. Use 'make dev-attach' to connect."
+	@echo "✅ Latest environment started (dashboard-api + feeder). nginx serves the UI separately."
+	@echo "   Use 'make dev-attach' to connect to the screen session."
 
 # Stop the latest environment — identical teardown to dev-down (same screen session name).
 latest-down: dev-down
