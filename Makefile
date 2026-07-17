@@ -30,6 +30,12 @@ RELEASE_TAG       ?= latest
 # Output directory for compiled binaries
 SERVER_BUILD_DIR := resources/build/server/bin
 
+# Git SHA baked into each binary (exposed via GET /api/miners as buildSHA) —
+# lets you confirm you're running the version you expect, e.g. after `make latest-up`.
+GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
+GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo -dirty)
+VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$(GIT_SHA)$(GIT_DIRTY)"
+
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
@@ -49,15 +55,15 @@ build:
 
 	# Build FEEDER binary
 	@echo "   - Building feeder..."
-	cd server && go build -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
 
 	# Build DASHBOARD-API binary
 	@echo "   - Building dashboard-api..."
-	cd server && go build -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
+	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
 
 	# Build REMOTE-DASHBOARD-API binary
 	@echo "   - Building remote-dashboard-api..."
-	cd server && go build -o ../$(SERVER_BUILD_DIR)/remote-dashboard-api ./cmd/remote-dashboard-api
+	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/remote-dashboard-api ./cmd/remote-dashboard-api
 
 	@echo ">>> Success! Binaries available in $(SERVER_BUILD_DIR)/"
 

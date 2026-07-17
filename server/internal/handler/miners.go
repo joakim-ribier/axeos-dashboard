@@ -11,6 +11,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 // ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 	resp := model.MinersResponse{
 		Configured: len(miners),
 		Miners:     make([]model.MinerInfo, 0, len(miners)),
+		BuildSHA:   version.GitSHA,
 	}
 
 	for _, miner := range miners {

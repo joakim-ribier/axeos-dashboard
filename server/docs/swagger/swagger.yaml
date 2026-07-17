@@ -111,6 +111,9 @@ definitions:
     type: object
   model.MinersResponse:
     properties:
+      buildSHA:
+        description: Git commit this dashboard-api binary was built from
+        type: string
       configured:
         description: Number of miners in config
         type: integer

@@ -54,4 +54,5 @@ type MinersResponse struct {
 	Configured int         `json:"configured"` // Number of miners in config
 	Total      int         `json:"total"`       // Number of miners successfully loaded
 	Miners     []MinerInfo `json:"miners"`
+	BuildSHA   string      `json:"buildSHA,omitempty"` // Git commit this dashboard-api binary was built from
 }

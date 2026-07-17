@@ -144,7 +144,7 @@ const PoolCard = ({
 export const Home = () => {
   const { t } = useTranslation();
   const { boardId } = useMode();
-  const { data, isLoading, error } = useMiners();
+  const { data, buildSHA, isLoading, error } = useMiners();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -299,6 +299,16 @@ export const Home = () => {
           </Box>
         ))}
       </Grid>
+
+      {buildSHA && (
+        <Typography
+          variant="caption"
+          align="center"
+          sx={{ color: "text.disabled", fontFamily: "monospace", opacity: 0.6 }}
+        >
+          build {buildSHA}
+        </Typography>
+      )}
     </Box>
   );
 };

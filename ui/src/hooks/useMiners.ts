@@ -17,14 +17,23 @@ export class ApiError extends Error {
   }
 }
 
-const fetchMiners = async (url: string): Promise<Miner[]> => {
+interface MinersResult {
+  miners: Miner[];
+  buildSHA?: string;
+}
+
+const fetchMiners = async (url: string): Promise<MinersResult> => {
   try {
     const { data } = await axios.get<{
       configured: number;
       total: number;
       miners: MinerInfo[];
+      buildSHA?: string;
     }>(url);
-    return data.miners.map((raw) => minerSchema.parse(raw));
+    return {
+      miners: data.miners.map((raw) => minerSchema.parse(raw)),
+      buildSHA: data.buildSHA,
+    };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       throw new ApiError(
@@ -38,6 +47,7 @@ const fetchMiners = async (url: string): Promise<Miner[]> => {
 
 export interface UseMinersReturn {
   data: Miner[] | undefined;
+  buildSHA: string | undefined;
   isLoading: boolean;
   error: Error | null;
   isFetching: boolean;
@@ -47,7 +57,7 @@ export interface UseMinersReturn {
 export const useMiners = (): UseMinersReturn => {
   const { apiPaths } = useMode();
 
-  const query = useQuery<Miner[], Error>({
+  const query = useQuery<MinersResult, Error>({
     queryKey: ["miners", apiPaths.miners],
     queryFn: () => fetchMiners(apiPaths.miners),
     staleTime: Infinity,
@@ -59,6 +69,8 @@ export const useMiners = (): UseMinersReturn => {
 
   return {
     ...query,
+    data: query.data?.miners,
+    buildSHA: query.data?.buildSHA,
     refetch: async () => {
       await query.refetch();
     },

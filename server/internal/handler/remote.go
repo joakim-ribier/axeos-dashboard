@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 // boardDataRoot returns the bitaxes directory for a given boardId.
@@ -48,7 +49,8 @@ func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
 		}
 
 		resp := model.MinersResponse{
-			Miners: make([]model.MinerInfo, 0),
+			Miners:   make([]model.MinerInfo, 0),
+			BuildSHA: version.GitSHA,
 		}
 
 		for _, entry := range entries {

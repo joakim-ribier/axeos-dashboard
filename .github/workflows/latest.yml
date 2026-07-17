@@ -29,9 +29,11 @@ jobs:
           GOARCH: arm64
         run: |
           mkdir -p ../dist
-          go build -o ../dist/feeder ./cmd/feeder
-          go build -o ../dist/dashboard-api ./cmd/dashboard-api
-          go build -o ../dist/remote-dashboard-api ./cmd/remote-dashboard-api
+          sha=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+          ldflags="-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$sha"
+          go build -ldflags "$ldflags" -o ../dist/feeder ./cmd/feeder
+          go build -ldflags "$ldflags" -o ../dist/dashboard-api ./cmd/dashboard-api
+          go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api ./cmd/remote-dashboard-api
 
       - uses: actions/setup-node@v7
         with:
