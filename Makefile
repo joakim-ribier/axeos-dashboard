@@ -33,7 +33,7 @@ SERVER_BUILD_DIR := resources/build/server/bin
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote latest-fetch latest-up latest-down
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote latest-fetch latest-up latest-down
 
 # ==============================================================================
 # Main Commands
@@ -72,6 +72,12 @@ test:
 	@echo ">>> Running Go test suite..."
 	cd server && go test ./... -race -cover
 	@echo ">>> Tests complete."
+
+# Regenerate the OpenAPI spec from @-annotations in internal/handler and cmd/dashboard-api.
+swagger:
+	@echo ">>> Regenerating OpenAPI spec..."
+	cd server && go tool swag init -g cmd/dashboard-api/main.go -o docs/swagger --outputTypes json,yaml --parseInternal
+	@echo ">>> Done. See server/docs/swagger/swagger.yaml"
 
 # Clean build artifacts
 clean:
@@ -114,6 +120,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make build                     - Compile feeder, dashboard-api and remote-dashboard-api"
 	@echo "  make lintAll                   - Run linter on all packages"
+	@echo "  make swagger                   - Regenerate the OpenAPI spec (server/docs/swagger/)"
 	@echo "  make clean                     - Remove generated binaries"
 	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
 	@echo "  make run-feeder                - Start feeder with resources/dashboard.yml"

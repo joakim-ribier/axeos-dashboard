@@ -23,6 +23,15 @@ func boardDataRoot(dataDir, boardID string) string {
 // ListRemoteMiners handles GET /api/{boardId}/miners/ for the remote-api.
 // It auto-discovers miners by scanning the board's bitaxes directory.
 // Miner metadata (IP, hostname, model) is read from the file itself (PushSample fields).
+//
+// @Summary List miners pushed to a hashboard board (read-only)
+// @Description Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.
+// @Tags remote-dashboard-api
+// @Produce json
+// @Param boardId path string true "hashboard board ID"
+// @Success 200 {object} model.MinersResponse
+// @Failure 404 {object} handler.ErrorResponse "board not found"
+// @Router /api/{boardId}/miners [get]
 func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		boardID := chi.URLParam(r, "boardId")
@@ -71,6 +80,16 @@ func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
 }
 
 // RemoteStats handles GET /api/{boardId}/{ip}/stats for the remote-api.
+//
+// @Summary Get today's stats for one remote miner (read-only)
+// @Description Returns today's JSONL entries pushed to hashboard.live for a single miner in the board.
+// @Tags remote-dashboard-api
+// @Produce json
+// @Param boardId path string true "hashboard board ID"
+// @Param ip path string true "Miner IP"
+// @Success 200 {object} handler.StatsResponse
+// @Failure 500 {object} handler.ErrorResponse "data file missing or unreadable"
+// @Router /api/{boardId}/{ip}/stats [get]
 func RemoteStats(cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		boardID := chi.URLParam(r, "boardId")

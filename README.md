@@ -8,7 +8,7 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
-**Supported models:** bitaxe · nerdaxe
+**Supported models (tested firmware):** Bitaxe Gamma (`v2.14.1`) · NerdQAxe++ (`V1.0.37.2-LTS`)
 
 **Key features:**
 - Real-time hashrate, temperature, fan speed, shares and uptime per miner
@@ -45,6 +45,7 @@ Bitaxe devices (HTTP)
     ↓  poll every 2m  (GET /api/system/info)
 feeder → writes  {dataDir}/{ip}/YYYY-MM-DD.jsonl  (append)
                  {dataDir}/{ip}/latest.json        (overwrite)
+         pushes to hashboard.live if remote.apiKey is set
     ↓  reads latest.json
 miner-api → REST API at /api/miners/*
     ↓  axios + TanStack Query
@@ -54,6 +55,14 @@ React UI → display + control (restart / pool switch / WiFi)
 ---
 
 ## Prerequisites
+
+For the recommended Raspberry Pi setup (`make latest-up` — see [Production Deployment](#production-deployment)):
+
+```bash
+apt install -y nodejs npm
+```
+
+Go is only needed if you build from source instead of fetching the prebuilt release:
 
 ```bash
 apt install -y golang nodejs npm
@@ -70,7 +79,7 @@ make run-dashboard-api CONFIG=resources/dashboard.yml MINERS_FILE=resources/mine
 make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
-To view remote miners pushed to hashboard:
+To view remote miners pushed to https://hashboard.live:
 
 ```bash
 make run-remote-dashboard-api  # read-only API on :8081, reads resources/remote-dashboard.yml
@@ -123,7 +132,38 @@ Makefile's `latest-fetch`/`latest-up`/`latest-down` targets.
 
 ## Production Deployment
 
-### 1. Build
+Recommended for a Raspberry Pi: fetch the prebuilt `linux/arm64` release (CI-built on every push to `main`) instead of building locally — no Go toolchain needed on the Pi.
+
+### 1. Clone
+
+```bash
+git clone https://github.com/joakim-ribier/axeos-dashboard.git
+cd axeos-dashboard
+```
+
+### 2. Configure
+
+`dashboard.yml` is already committed with sane defaults — edit `resources/dashboard.yml` for your setup (electricity rate, pool dashboards, firmware repos, etc.).
+
+**Create `resources/miners.yml` before going further.** It's gitignored (holds your pool credentials) so it does **not** exist on a fresh clone — copy the full example from [Configuration](#configuration) below and fill in your miners' IPs, models, and pool credentials.
+
+### 3. Run
+
+```bash
+make latest-up
+```
+
+Downloads the feeder/dashboard-api/remote-dashboard-api binaries + UI from the latest GitHub Release and starts everything in a GNU screen session.
+
+```bash
+make latest-down   # stop
+make dev-attach    # attach to the screen session
+make dev-status    # list running sessions
+```
+
+### Building from source instead (advanced)
+
+`make dev-up`/`make build` are for local development (e.g. testing a change before opening a PR) — not recommended for deploying on a Pi, since it means installing the Go toolchain there. If you still want to build locally instead of using `make latest-up`:
 
 ```bash
 make build
@@ -132,21 +172,7 @@ make build
 # → resources/build/server/bin/remote-dashboard-api
 ```
 
-### 2. Prepare config files
-
-See [Configuration](#configuration) below. Keep `miners.yml` **out of git**.
-
-### 3. Run
-
-Using `make dev-up` (recommended — starts all services in a GNU screen session):
-
-```bash
-make dev-up \
-  CONFIG_FILE=/home/{{user}}/axeos-dashboard/config.yml \
-  MINERS_FILE=/home/{{user}}/axeos-dashboard/miners.yml
-```
-
-Or manually (background processes):
+Or run the binaries manually (background processes):
 
 ```bash
 # Feeder (background)
@@ -294,32 +320,18 @@ bitaxes:
 
 ## API Reference
 
-Base URL: `http://localhost:8080`
+Base URL: `http://localhost:8080`. Config is loaded once at startup — restart the binaries after any config change.
 
-> Config is loaded once at startup — restart the binaries after any config change.
+Full reference (both dashboard-api and remote-dashboard-api), generated from Go
+annotations with [swaggo/swag](https://github.com/swaggo/swag):
+[`swagger.yaml`](server/docs/swagger/swagger.yaml) /
+[`swagger.json`](server/docs/swagger/swagger.json). For a browsable view, paste
+the file into [editor.swagger.io](https://editor.swagger.io).
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/miners/` | All miners with latest snapshot |
-| `GET` | `/api/miners/{hostnameOrIp}/stats` | Today's JSONL entries for one miner |
-| `POST` | `/api/miners/{hostnameOrIp}/restart` | Restart a device |
-| `PUT` | `/api/miners/pool/{primary\|fallback}/enable` | Switch pool — all miners; add `?miner=<hostnameOrIp>` for one |
-| `PUT` | `/api/miners/set/wifi` | Update WiFi credentials — all miners; add `?miner=<hostnameOrIp>` for one |
-
-`{hostnameOrIp}` accepts either the device IP or the configured `hostname`.
+Regenerate after changing a handler's annotations:
 
 ```bash
-# List miners
-curl http://localhost:8080/api/miners/
-
-# Switch all miners to fallback pool
-curl -X PUT 'http://localhost:8080/api/miners/pool/fallback/enable'
-
-# Switch one miner by hostname
-curl -X PUT 'http://localhost:8080/api/miners/pool/primary/enable?miner=bitaxe-1'
-
-# Restart by IP
-curl -X POST 'http://localhost:8080/api/miners/192.168.1.65/restart'
+make swagger
 ```
 
 ---

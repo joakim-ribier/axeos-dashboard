@@ -21,6 +21,13 @@ import (
 // It walks through every `<dataRoot>/<ip>/latest.json` file, extracts the
 // required fields, converts the hash rate to TH/s, calculates energy consumption
 // in J/TH, and builds the JSON response.
+//
+// @Summary List all configured miners
+// @Description Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).
+// @Tags dashboard-api
+// @Produce json
+// @Success 200 {object} model.MinersResponse
+// @Router /api/miners [get]
 func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseWriter, r *http.Request) {
 	root := getDataRoot(cfg.Storage)
 	miners := cfg.GetMiners()

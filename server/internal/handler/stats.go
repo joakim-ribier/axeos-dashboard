@@ -26,6 +26,15 @@ type StatsResponse struct {
 // It retrieves the daily JSONL file for the specified miner (e.g. 2026-05-04.jsonl)
 // and returns all entries for the day. Returns an empty array when no data is
 // available yet for today.
+//
+// @Summary Get today's stats for one miner
+// @Description Returns today's JSONL entries (one per poll cycle) for a single miner, used by the "Today's History" chart.
+// @Tags dashboard-api
+// @Produce json
+// @Param hostnameOrIp path string true "Miner IP or configured hostname"
+// @Success 200 {object} handler.StatsResponse
+// @Failure 404 {object} handler.ErrorResponse "miner not found"
+// @Router /api/miners/{hostnameOrIp}/stats [get]
 func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *http.Request) {
 	// Build the path to today's JSONL file: <dataRoot>/<ip>/YYYY-MM-DD.jsonl
 	root := getDataRoot(cfg.Storage)

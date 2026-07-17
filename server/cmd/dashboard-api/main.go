@@ -18,6 +18,16 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/poolscheduler"
 )
 
+// @title axeos-dashboard API
+// @version 1.0
+// @description Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.
+// @description No authentication — internal LAN use only.
+// @description
+// @description Endpoints tagged "dashboard-api" run on this binary (default :8080).
+// @description Endpoints tagged "remote-dashboard-api" run on the separate remote-dashboard-api binary (default :8081),
+// @description a read-only API serving miners pushed to hashboard.live — see the project README.
+// @host localhost:8080
+// @BasePath /
 func main() {
 	var configPath, minersPath string
 	flag.StringVar(&configPath, "config", "", "Config path")

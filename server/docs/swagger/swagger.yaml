@@ -1,0 +1,297 @@
+basePath: /
+definitions:
+  handler.ErrorResponse:
+    properties:
+      code:
+        type: integer
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  handler.StatsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.MinerInfo'
+        type: array
+      total:
+        type: integer
+    type: object
+  model.MinerInfo:
+    properties:
+      alive:
+        description: Health check
+        type: boolean
+      aliveCheckedAt:
+        type: string
+      bestDiff:
+        description: Highest difficulty value ever solved by the miner since start‑up
+        type: integer
+      blockFound:
+        type: integer
+      deviceModel:
+        description: Computed device model (e.g. "NerdQAxe++", "Bitaxe 602")
+        type: string
+      electricityRatePerKwh:
+        description: Electricity cost
+        type: number
+      energyJPerTh:
+        description: Energy consumption per terahash (Joules per TH)
+        type: number
+      fallbackStratumDashboardURL:
+        description: Web dashboard URL for the fallback pool
+        type: string
+      fallbackStratumURL:
+        type: string
+      fallbackStratumUser:
+        type: string
+      fanspeed:
+        description: Fan speed (linked to the Temp field)
+        type: number
+      hashRateTHs:
+        description: Additional fields requested by the API
+        type: number
+      hostname:
+        description: Human-readable name from config
+        type: string
+      ip:
+        description: Miner IP address (derived from the folder name)
+        type: string
+      isUsingFallbackStratum:
+        type: integer
+      latestVersion:
+        description: Latest firmware version available on GitHub
+        type: string
+      macAddr:
+        description: Mac address
+        type: string
+      networkDifficulty:
+        description: Current network difficulty reported by the pool (unitless)
+        type: integer
+      power:
+        description: Watts (Joules per second)
+        type: number
+      releaseURL:
+        description: GitHub releases page for the latest firmware version
+        type: string
+      responseTime:
+        description: Ping/latency to the pool (ms).
+        type: number
+      sharesAccepted:
+        type: integer
+      sharesRejected:
+        type: integer
+      stratumDashboardURL:
+        description: Web dashboard URL for the primary pool
+        type: string
+      stratumURL:
+        description: Pool urls
+        type: string
+      stratumUser:
+        description: Username (typically miner ID) for the primary pool
+        type: string
+      temp:
+        description: Primary temperature sensor reading (°C)
+        type: number
+      timestamp:
+        type: string
+      updateAvailable:
+        description: True when LatestVersion != Version
+        type: boolean
+      uptimeSeconds:
+        description: Miner uptime in seconds
+        type: integer
+      version:
+        description: Firmware version (e.g. "v2.12.2")
+        type: string
+      voltage:
+        description: Volts (millivolts)
+        type: number
+    type: object
+  model.MinersResponse:
+    properties:
+      configured:
+        description: Number of miners in config
+        type: integer
+      miners:
+        items:
+          $ref: '#/definitions/model.MinerInfo'
+        type: array
+      total:
+        description: Number of miners successfully loaded
+        type: integer
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: |-
+    Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.
+    No authentication — internal LAN use only.
+
+    Endpoints tagged "dashboard-api" run on this binary (default :8080).
+    Endpoints tagged "remote-dashboard-api" run on the separate remote-dashboard-api binary (default :8081),
+    a read-only API serving miners pushed to hashboard.live — see the project README.
+  title: axeos-dashboard API
+  version: "1.0"
+paths:
+  /api/{boardId}/{ip}/stats:
+    get:
+      description: Returns today's JSONL entries pushed to hashboard.live for a single
+        miner in the board.
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      - description: Miner IP
+        in: path
+        name: ip
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StatsResponse'
+        "500":
+          description: data file missing or unreadable
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get today's stats for one remote miner (read-only)
+      tags:
+      - remote-dashboard-api
+  /api/{boardId}/miners:
+    get:
+      description: Auto-discovers miners from the board's bitaxes directory — no local
+        config needed, data comes from whatever the feeder already pushed to hashboard.live.
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MinersResponse'
+        "404":
+          description: board not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: List miners pushed to a hashboard board (read-only)
+      tags:
+      - remote-dashboard-api
+  /api/miners:
+    get:
+      description: Returns every enabled miner with its latest snapshot (hashrate,
+        temp, shares, pool, uptime...).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MinersResponse'
+      summary: List all configured miners
+      tags:
+      - dashboard-api
+  /api/miners/{hostnameOrIp}/restart:
+    post:
+      description: Restarts the device via its AxeOs restart endpoint.
+      parameters:
+      - description: Miner IP or configured hostname
+        in: path
+        name: hostnameOrIp
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: miner not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Restart a miner
+      tags:
+      - dashboard-api
+  /api/miners/{hostnameOrIp}/stats:
+    get:
+      description: Returns today's JSONL entries (one per poll cycle) for a single
+        miner, used by the "Today's History" chart.
+      parameters:
+      - description: Miner IP or configured hostname
+        in: path
+        name: hostnameOrIp
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StatsResponse'
+        "404":
+          description: miner not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get today's stats for one miner
+      tags:
+      - dashboard-api
+  /api/miners/pool/fallback/enable:
+    put:
+      description: Switches miner(s) to the primary or fallback pool and restarts
+        them to apply it.
+      parameters:
+      - description: Miner IP or hostname — omit to apply to all configured miners
+        in: query
+        name: miner
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Switch stratum pool
+      tags:
+      - dashboard-api
+  /api/miners/pool/primary/enable:
+    put:
+      description: Switches miner(s) to the primary or fallback pool and restarts
+        them to apply it.
+      parameters:
+      - description: Miner IP or hostname — omit to apply to all configured miners
+        in: query
+        name: miner
+        type: string
+      responses:
+        "204":
+          description: No Content
+      summary: Switch stratum pool
+      tags:
+      - dashboard-api
+  /api/miners/set/wifi:
+    put:
+      description: Pushes the configured WiFi SSID/password to miner(s) and restarts
+        them. Disabled unless wifi.on is set in config.
+      parameters:
+      - description: Miner IP or hostname — omit to apply to all configured miners
+        in: query
+        name: miner
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "405":
+          description: WiFi updates disabled by config
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Update WiFi credentials
+      tags:
+      - dashboard-api
+swagger: "2.0"
