@@ -52,6 +52,15 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      # Delete any existing "latest" release + tag first. action-gh-release
+      # replaces assets with matching names but never removes ones that are no
+      # longer in `files:` below (e.g. after a rename) — they'd otherwise pile
+      # up as stale orphans forever. Starting fresh each run avoids that.
+      - name: delete stale "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete latest --yes --cleanup-tag --repo ${{ github.repository }} || true
+
       - uses: actions/download-artifact@v8
         with:
           path: dist
