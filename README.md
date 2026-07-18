@@ -126,10 +126,18 @@ Every push to `main` and every pull request targeting `main` runs
 
 When `checks.yml` succeeds on `main`,
 [`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
-feeder/dashboard-api/remote-dashboard-api binaries for `linux/arm64` plus the
-UI, and publishes them to a rolling `latest` GitHub Release. Fetch them on a
-Raspberry Pi with `make latest-up` (no local Go/npm build needed) — see the
-Makefile's `latest-fetch`/`latest-up`/`latest-down` targets.
+feeder/dashboard-api/remote-dashboard-api binaries for **both `linux/arm64`
+(Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI once, and
+publishes everything to a rolling `latest` GitHub Release. `make latest-fetch`
+auto-detects the local architecture (`uname -m`) and pulls the matching
+binaries — no need to specify it manually, override with `RELEASE_ARCH=` if
+detection ever guesses wrong.
+
+- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder
+- `make latest-remote-up` / `make latest-remote-down` — VPS: remote-dashboard-api only
+
+Neither needs a local Go or npm build — see the Makefile's
+`latest-fetch`/`latest-up`/`latest-remote-up` targets.
 
 ---
 

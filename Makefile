@@ -19,9 +19,23 @@ REMOTE_DASHBOARD_CONFIG ?= resources/remote-dashboard.yml
 MINERS_FILE ?= resources/miners.yml
 MINERS_FLAG = $(if $(MINERS_FILE),-miners $(MINERS_FILE),)
 
-# GitHub repo + release used by `make latest-*` (fetch CI-built linux/arm64 artifacts instead of building locally)
+# GitHub repo + release used by `make latest-*` (fetch CI-built binaries for the local architecture instead of building locally)
 GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG       ?= latest
+
+# Auto-detected local architecture, used to pick the right release asset
+# (feeder-$(RELEASE_ARCH), dashboard-api-$(RELEASE_ARCH), ...). Override if
+# `uname -m` reports something unexpected: make latest-fetch RELEASE_ARCH=amd64
+UNAME_ARCH := $(shell uname -m)
+ifeq ($(UNAME_ARCH),x86_64)
+RELEASE_ARCH ?= amd64
+else ifeq ($(UNAME_ARCH),aarch64)
+RELEASE_ARCH ?= arm64
+else ifeq ($(UNAME_ARCH),arm64)
+RELEASE_ARCH ?= arm64
+else
+RELEASE_ARCH ?= $(UNAME_ARCH)
+endif
 
 # ==============================================================================
 # Build Configuration
@@ -39,7 +53,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs dev-up-remote dev-down-remote latest-fetch latest-up latest-down
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down
 
 # ==============================================================================
 # Main Commands
@@ -137,9 +151,11 @@ help:
 	@echo "  make dev-down                  - Stop dev environment"
 	@echo "  make dev-attach                - Attach to existing dev screen session"
 	@echo "  make dev-status                - List all screen sessions"
-	@echo "  make latest-fetch              - Fetch prebuilt binaries + UI from the latest GitHub Release (linux/arm64)"
+	@echo "  make latest-fetch              - Fetch prebuilt binaries + UI from the latest GitHub Release (auto-detects arch)"
 	@echo "  make latest-up                 - Start the stack from the latest release, no local build"
 	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
+	@echo "  make latest-remote-up          - Start remote-dashboard-api from the latest release (VPS use, no local build)"
+	@echo "  make latest-remote-down        - Stop remote-dashboard-api"
 	@echo "  make help                      - Show this help message"
 
 # ==============================================================================
@@ -177,23 +193,6 @@ dev-up: build
 		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
 
 	@echo "✅ Dev environment started. Use 'make dev-attach' to connect."
-
-# Start remote-dashboard-api in a screen session (VPS use)
-dev-up-remote: build
-	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
-	@sleep 1
-	screen -dmS $(SCREEN_NAME)
-	screen -S $(SCREEN_NAME) -X screen -t remote-dashboard-api bash -c "\
-		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/remote-dashboard-api -config $(CONFIG_FILE); exec bash"
-	@echo ">>> remote-dashboard-api started in screen '$(SCREEN_NAME)'"
-	@echo ">>> Attach: make dev-attach"
-
-dev-down-remote:
-	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
-	-pkill -9 -f "remote-dashboard-api" 2>/dev/null || true
-	-screen -wipe > /dev/null 2>&1 || true
-	@echo ">>> Stopped."
 
 # Stop development environment and all associated processes
 dev-down:
@@ -233,13 +232,18 @@ dev-logs:
 # Fetch feeder/dashboard-api/remote-dashboard-api binaries + UI dist from the
 # latest GitHub Release (built by CI on every push to main).
 latest-fetch:
-	@echo ">>> Fetching release '$(RELEASE_TAG)' from $(GITHUB_REPO)..."
+	@echo ">>> Fetching release '$(RELEASE_TAG)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
 	@curl -sf https://api.github.com/repos/$(GITHUB_REPO)/releases/tags/$(RELEASE_TAG) -o /tmp/axeos-release.json || \
 		{ echo "Error: could not fetch release metadata (bad repo or tag?)."; exit 1; }
 	@mkdir -p $(SERVER_BUILD_DIR)
 	@for bin in feeder dashboard-api remote-dashboard-api; do \
-		url=$$(jq -r ".assets[] | select(.name==\"$$bin\") | .browser_download_url" /tmp/axeos-release.json); \
-		echo "   - $$bin"; \
+		asset="$$bin-$(RELEASE_ARCH)"; \
+		url=$$(jq -r ".assets[] | select(.name==\"$$asset\") | .browser_download_url" /tmp/axeos-release.json); \
+		if [ -z "$$url" ] || [ "$$url" = "null" ]; then \
+			echo "Error: no '$$asset' asset in release '$(RELEASE_TAG)' — unsupported architecture?"; \
+			exit 1; \
+		fi; \
+		echo "   - $$asset -> $(SERVER_BUILD_DIR)/$$bin"; \
 		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/$$bin; \
 		chmod +x $(SERVER_BUILD_DIR)/$$bin; \
 	done
@@ -275,3 +279,22 @@ latest-up: latest-fetch
 
 # Stop the latest environment — identical teardown to dev-down (same screen session name).
 latest-down: dev-down
+
+# Start remote-dashboard-api from the latest CI-built release (VPS use) — no local
+# Go/Node toolchain needed on the server at all.
+latest-remote-up: latest-fetch
+	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
+	@sleep 1
+	screen -dmS $(SCREEN_NAME)
+	screen -S $(SCREEN_NAME) -X screen -t remote-dashboard-api bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/remote-dashboard-api -config $(CONFIG_FILE); exec bash"
+	@echo ">>> remote-dashboard-api started in screen '$(SCREEN_NAME)'"
+	@echo ">>> Attach: make dev-attach"
+
+# Stop the latest remote environment.
+latest-remote-down:
+	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
+	-pkill -9 -f "remote-dashboard-api" 2>/dev/null || true
+	-screen -wipe > /dev/null 2>&1 || true
+	@echo ">>> Stopped."

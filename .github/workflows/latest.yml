@@ -7,11 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  release:
+  build:
     if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        arch: [arm64, amd64] # arm64: Raspberry Pi. amd64: typical VPS (e.g. hashboard).
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,18 +23,40 @@ jobs:
           go-version: "1.24.3"
           cache-dependency-path: server/go.sum
 
-      - name: build binaries (linux/arm64)
+      - name: build binaries (linux/${{ matrix.arch }})
         working-directory: server
         env:
           GOOS: linux
-          GOARCH: arm64
+          GOARCH: ${{ matrix.arch }}
         run: |
           mkdir -p ../dist
           sha=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
           ldflags="-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$sha"
-          go build -ldflags "$ldflags" -o ../dist/feeder ./cmd/feeder
-          go build -ldflags "$ldflags" -o ../dist/dashboard-api ./cmd/dashboard-api
-          go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api ./cmd/remote-dashboard-api
+          go build -ldflags "$ldflags" -o ../dist/feeder-${{ matrix.arch }} ./cmd/feeder
+          go build -ldflags "$ldflags" -o ../dist/dashboard-api-${{ matrix.arch }} ./cmd/dashboard-api
+          go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api-${{ matrix.arch }} ./cmd/remote-dashboard-api
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: binaries-*
+          merge-multiple: true
 
       - uses: actions/setup-node@v7
         with:
@@ -60,9 +83,15 @@ jobs:
           make_latest: "true"
           body: |
             Automatically built from commit ${{ github.event.workflow_run.head_sha }} on `main`, after CI passed.
-            Binaries are linux/arm64 (Raspberry Pi). Fetch with `make latest-up` on the Pi.
+            Binaries for linux/arm64 (Raspberry Pi) and linux/amd64 (typical VPS).
+            Fetch with `make latest-up` (Pi, dashboard-api + feeder) or
+            `make latest-remote-up` (VPS, remote-dashboard-api) — both auto-detect
+            the local architecture.
           files: |
-            dist/feeder
-            dist/dashboard-api
-            dist/remote-dashboard-api
+            dist/feeder-arm64
+            dist/feeder-amd64
+            dist/dashboard-api-arm64
+            dist/dashboard-api-amd64
+            dist/remote-dashboard-api-arm64
+            dist/remote-dashboard-api-amd64
             dist/ui-dist.tar.gz
