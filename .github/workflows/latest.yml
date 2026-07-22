@@ -7,8 +7,21 @@ on:
     branches: [main]
 
 jobs:
+  # Fails the whole workflow run (instead of silently skipping downstream
+  # jobs) when the triggering "Checks" run didn't succeed — so the badge
+  # actually means "latest matches the last commit on main", not just
+  # "nothing failed" (an all-skipped run would otherwise report success).
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: require Checks to have succeeded
+        if: github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "::error::Checks did not succeed (conclusion: ${{ github.event.workflow_run.conclusion }}) for ${{ github.event.workflow_run.head_sha }} — refusing to publish 'latest'."
+          exit 1
+
   build:
-    if: github.event.workflow_run.conclusion == 'success'
+    needs: guard
     runs-on: ubuntu-latest
     strategy:
       matrix:
