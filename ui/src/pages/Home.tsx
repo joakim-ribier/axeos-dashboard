@@ -1,11 +1,18 @@
 // src/pages/Home.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import { Box, Grid, Tooltip, Typography } from "@mui/material";
 import { Theme, useTheme } from "@mui/material/styles";
 
+import { useMode } from "@/contexts/ModeContext";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import { useSearch } from "@/contexts/SearchContext";
+import {
+  detectNotifications,
+  loadMinerSnapshot,
+  saveMinerSnapshot,
+} from "@/utils/minerNotifications";
 import { matchesSearch } from "@/utils/minerSearch";
 
 import { GlobalStats } from "../components/ui/GlobalStats";
@@ -138,9 +145,24 @@ const PoolCard = ({
 export const Home = () => {
   const { t } = useTranslation();
   const { data, isLoading, error } = useMiners();
+  const { boardId } = useMode();
   const { query } = useSearch();
+  const { addNotifications } = useNotifications();
 
   const [selectedPool, setSelectedPool] = useState<string | null>(null);
+
+  // Seeded from localStorage rather than starting undefined every mount —
+  // otherwise a plain page reload would look like "the very first fetch
+  // ever" and re-notify for anything already in a bad state (see
+  // detectNotifications' neutral-baseline behavior).
+  const previousDataRef = useRef<typeof data>(loadMinerSnapshot(boardId));
+  useEffect(() => {
+    if (!data) return;
+    const newNotifications = detectNotifications(previousDataRef.current, data);
+    if (newNotifications.length > 0) addNotifications(newNotifications);
+    previousDataRef.current = data;
+    saveMinerSnapshot(boardId, data);
+  }, [data, addNotifications, boardId]);
 
   const poolEntries = useMemo(() => {
     const map: Record<

@@ -91,6 +91,16 @@
   "nav": {
     "home": "Accueil"
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "Aucune notification pour le moment.",
+    "clear": "Effacer",
+    "temp": "{{miner}} a atteint {{value}}°C",
+    "fan": "{{miner}} : ventilateur à {{value}}%",
+    "offline": "{{miner}} est hors ligne",
+    "version": "{{miner}} : firmware mis à jour : {{value}}",
+    "updateAvailable": "{{miner}} : mise à jour firmware disponible ({{value}})"
+  },
   "search": {
     "helpTitle": "Astuces de recherche",
     "helpPlain": "Le texte simple cherche dans le nom, l'IP, le modèle, le pool et la version.",

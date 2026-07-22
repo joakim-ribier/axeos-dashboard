@@ -1,5 +1,5 @@
 // src/components/layout/TopBar.tsx
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -8,15 +8,19 @@ import SearchIcon from "@mui/icons-material/Search";
 import {
   Badge,
   Box,
+  Button,
   IconButton,
   InputBase,
+  Popover,
   Toolbar,
   Tooltip,
   Typography,
 } from "@mui/material";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useNotifications } from "@/contexts/NotificationsContext";
 import { useSearch } from "@/contexts/SearchContext";
+import { formatTimestamp } from "@/utils/format";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -62,6 +66,111 @@ const SearchHelpTooltip: React.FC = () => {
   );
 };
 
+const NotificationBell: React.FC = () => {
+  const { t } = useTranslation();
+  const { notifications, clear } = useNotifications();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  return (
+    <>
+      <IconButton
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        sx={{ color: "text.secondary" }}
+        aria-label="notifications"
+      >
+        <Badge
+          badgeContent={notifications.length}
+          max={99}
+          color="error"
+          invisible={notifications.length === 0}
+        >
+          <NotificationsNoneIcon />
+        </Badge>
+      </IconButton>
+
+      <Popover
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: { sx: { width: 300, maxWidth: "90vw", p: 1.5 } },
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 0.75,
+          }}
+        >
+          <Typography
+            variant="caption"
+            component="div"
+            sx={{ fontWeight: 700 }}
+          >
+            {t("notifications.title")}
+          </Typography>
+          {notifications.length > 0 && (
+            <Button
+              size="small"
+              onClick={clear}
+              sx={{ minWidth: 0, py: 0, fontSize: "0.7rem" }}
+            >
+              {t("notifications.clear")}
+            </Button>
+          )}
+        </Box>
+
+        {notifications.length === 0 ? (
+          <Typography variant="caption" component="div" color="text.secondary">
+            {t("notifications.empty")}
+          </Typography>
+        ) : (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1,
+              maxHeight: 320,
+              overflowY: "auto",
+            }}
+          >
+            {notifications.map((n) => (
+              <Box
+                key={n.id}
+                sx={{
+                  pb: 1,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  "&:last-of-type": { borderBottom: "none", pb: 0 },
+                }}
+              >
+                <Typography variant="caption" component="div">
+                  {t(`notifications.${n.type}`, {
+                    miner: n.minerLabel,
+                    value: n.detail,
+                  })}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  component="div"
+                  color="text.secondary"
+                  sx={{ fontSize: "0.7rem" }}
+                >
+                  {formatTimestamp(String(n.timestamp))}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Popover>
+    </>
+  );
+};
+
 const SearchField: React.FC<{ sx?: object }> = ({ sx }) => {
   const { query, setQuery } = useSearch();
 
@@ -91,9 +200,6 @@ const SearchField: React.FC<{ sx?: object }> = ({ sx }) => {
 };
 
 /**
- * Notifications remain a visual placeholder for now — no backend signal
- * to wire up yet (e.g. miner overheating or a stale feeder).
- *
  * On mobile the search field drops to its own row below the icons/language
  * row — there isn't enough width to keep everything on one line once the
  * hamburger and language switcher are both present.
@@ -133,17 +239,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
 
         <Box sx={{ flexGrow: 1 }} />
 
-        <IconButton
-          sx={{
-            display: { xs: "none", sm: "inline-flex" },
-            color: "text.secondary",
-          }}
-          aria-label="notifications"
-        >
-          <Badge variant="dot" color="primary" invisible>
-            <NotificationsNoneIcon />
-          </Badge>
-        </IconButton>
+        <NotificationBell />
 
         <LanguageSwitcher />
       </Box>

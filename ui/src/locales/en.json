@@ -91,6 +91,16 @@
   "nav": {
     "home": "Home"
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "clear": "Clear",
+    "temp": "{{miner}} temperature reached {{value}}°C",
+    "fan": "{{miner}} fan speed reached {{value}}%",
+    "offline": "{{miner}} went offline",
+    "version": "{{miner}} firmware updated: {{value}}",
+    "updateAvailable": "{{miner}} has a firmware update available ({{value}})"
+  },
   "search": {
     "helpTitle": "Search tips",
     "helpPlain": "Plain text matches hostname, IP, model, pool, and version.",

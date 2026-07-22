@@ -62,6 +62,10 @@ export const useMiners = (): UseMinersReturn => {
     queryKey: ["miners", apiPaths.miners],
     queryFn: () => fetchMiners(apiPaths.miners),
     staleTime: Infinity,
+    // Polled so a tab left open keeps catching new threshold-crossing
+    // notifications (see minerNotifications.ts) rather than only fetching
+    // once at page load.
+    refetchInterval: 90_000,
     refetchOnWindowFocus: false,
     retry: (failureCount, err) =>
       err instanceof ApiError && err.status === 404 ? false : failureCount < 2,
