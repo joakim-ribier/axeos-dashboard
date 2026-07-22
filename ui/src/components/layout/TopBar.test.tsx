@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import i18n from "@/i18n";
 
@@ -19,11 +20,13 @@ vi.mock("@/components/LanguageSwitcher", () => ({
 function renderTopBar(onMenuClick: () => void = () => {}) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <NotificationsProvider>
-        <SearchProvider>
-          <TopBar onMenuClick={onMenuClick} />
-        </SearchProvider>
-      </NotificationsProvider>
+      <RefreshSettingsProvider>
+        <NotificationsProvider>
+          <SearchProvider>
+            <TopBar onMenuClick={onMenuClick} />
+          </SearchProvider>
+        </NotificationsProvider>
+      </RefreshSettingsProvider>
     </I18nextProvider>,
   );
 }
@@ -122,5 +125,24 @@ describe("TopBar", () => {
     renderTopBar();
 
     expect(screen.getByTestId("language-switcher")).toBeInTheDocument();
+  });
+
+  describe("auto-refresh indicator", () => {
+    it("shows the 'on' state by default", () => {
+      renderTopBar();
+
+      expect(
+        screen.getByLabelText("Auto-refresh is on", { exact: false }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the 'off' state when auto-refresh was disabled", () => {
+      window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
+      renderTopBar();
+
+      expect(
+        screen.getByLabelText("Auto-refresh is off", { exact: false }),
+      ).toBeInTheDocument();
+    });
   });
 });

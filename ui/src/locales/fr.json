@@ -89,17 +89,34 @@
     }
   },
   "nav": {
-    "home": "Accueil"
+    "home": "Accueil",
+    "autoRefresh": "Actualisation auto",
+    "refreshPage": "Actualiser la page"
+  },
+  "notificationSettings": {
+    "title": "Réglages des notifications",
+    "tempThreshold": "Seuil température (°C)",
+    "fanThreshold": "Seuil ventilateur (%)",
+    "notifyTemp": "Notifier sur température",
+    "notifyFan": "Notifier sur ventilateur",
+    "notifyOffline": "Notifier hors ligne",
+    "notifyUpdateAvailable": "Notifier update disponible",
+    "notifyVersion": "Notifier update appliquée"
   },
   "notifications": {
     "title": "Notifications",
     "empty": "Aucune notification pour le moment.",
     "clear": "Effacer",
     "temp": "{{miner}} a atteint {{value}}°C",
+    "tempRecovered": "{{miner}} : température revenue à la normale ({{value}}°C)",
     "fan": "{{miner}} : ventilateur à {{value}}%",
+    "fanRecovered": "{{miner}} : ventilateur revenu à la normale ({{value}}%)",
     "offline": "{{miner}} est hors ligne",
+    "online": "{{miner}} est de nouveau en ligne",
     "version": "{{miner}} : firmware mis à jour : {{value}}",
-    "updateAvailable": "{{miner}} : mise à jour firmware disponible ({{value}})"
+    "updateAvailable": "{{miner}} : mise à jour firmware disponible ({{value}})",
+    "settingsUpdated": "Réglages de notification mis à jour : {{value}}",
+    "autoRefreshToggled": "Actualisation auto : {{value}}"
   },
   "search": {
     "helpTitle": "Astuces de recherche",
@@ -122,11 +139,17 @@
   },
   "common": {
     "expand": "Voir les détails",
-    "collapse": "Masquer les détails"
+    "collapse": "Masquer les détails",
+    "on": "activé",
+    "off": "désactivé"
   },
   "theme": {
     "dark": "Sombre",
     "light": "Clair"
+  },
+  "topBar": {
+    "autoRefreshOn": "Actualisation auto activée",
+    "autoRefreshOff": "Actualisation auto désactivée"
   },
   "language": "Langue"
 }

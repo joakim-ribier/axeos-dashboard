@@ -89,17 +89,34 @@
     }
   },
   "nav": {
-    "home": "Home"
+    "home": "Home",
+    "autoRefresh": "Auto-refresh",
+    "refreshPage": "Refresh page"
+  },
+  "notificationSettings": {
+    "title": "Notification settings",
+    "tempThreshold": "Temp threshold (°C)",
+    "fanThreshold": "Fan threshold (%)",
+    "notifyTemp": "Notify on temperature",
+    "notifyFan": "Notify on fan speed",
+    "notifyOffline": "Notify when offline",
+    "notifyUpdateAvailable": "Notify on update available",
+    "notifyVersion": "Notify on update applied"
   },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet.",
     "clear": "Clear",
     "temp": "{{miner}} temperature reached {{value}}°C",
+    "tempRecovered": "{{miner}} temperature back to normal ({{value}}°C)",
     "fan": "{{miner}} fan speed reached {{value}}%",
+    "fanRecovered": "{{miner}} fan speed back to normal ({{value}}%)",
     "offline": "{{miner}} went offline",
+    "online": "{{miner}} is back online",
     "version": "{{miner}} firmware updated: {{value}}",
-    "updateAvailable": "{{miner}} has a firmware update available ({{value}})"
+    "updateAvailable": "{{miner}} has a firmware update available ({{value}})",
+    "settingsUpdated": "Notification settings updated: {{value}}",
+    "autoRefreshToggled": "Auto-refresh: {{value}}"
   },
   "search": {
     "helpTitle": "Search tips",
@@ -122,11 +139,17 @@
   },
   "common": {
     "expand": "Show details",
-    "collapse": "Hide details"
+    "collapse": "Hide details",
+    "on": "on",
+    "off": "off"
   },
   "theme": {
     "dark": "Dark",
     "light": "Light"
+  },
+  "topBar": {
+    "autoRefreshOn": "Auto-refresh is on",
+    "autoRefreshOff": "Auto-refresh is off"
   },
   "language": "Language"
 }

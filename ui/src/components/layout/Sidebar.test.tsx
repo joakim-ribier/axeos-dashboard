@@ -1,7 +1,10 @@
 import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
+import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
 import { Sidebar } from "./Sidebar";
 
@@ -17,12 +20,20 @@ vi.mock("@/hooks/useMiners", () => ({
 function renderSidebar(initialEntry: string) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
-      <Sidebar mobileOpen={false} onClose={() => {}} />
+      <RefreshSettingsProvider>
+        <NotificationsProvider>
+          <Sidebar mobileOpen={false} onClose={() => {}} />
+        </NotificationsProvider>
+      </RefreshSettingsProvider>
     </MemoryRouter>,
   );
 }
 
 describe("Sidebar", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it("renders the brand mark and the Home nav item", () => {
     mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/");
@@ -66,7 +77,11 @@ describe("Sidebar", () => {
 
     render(
       <MemoryRouter initialEntries={["/"]}>
-        <Sidebar mobileOpen onClose={onClose} />
+        <RefreshSettingsProvider>
+          <NotificationsProvider>
+            <Sidebar mobileOpen onClose={onClose} />
+          </NotificationsProvider>
+        </RefreshSettingsProvider>
       </MemoryRouter>,
     );
 
@@ -75,5 +90,64 @@ describe("Sidebar", () => {
     }
 
     expect(onClose).toHaveBeenCalled();
+  });
+
+  describe("auto-refresh toggle", () => {
+    it("is enabled by default", () => {
+      mockUseBuildSHA.mockReturnValue(undefined);
+      renderSidebar("/");
+
+      const switches = screen.getAllByLabelText("auto-refresh");
+      expect(switches[0]).toBeChecked();
+    });
+
+    it("reflects a previously-disabled setting from storage", () => {
+      window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
+      mockUseBuildSHA.mockReturnValue(undefined);
+      renderSidebar("/");
+
+      const switches = screen.getAllByLabelText("auto-refresh");
+      expect(switches[0]).not.toBeChecked();
+    });
+
+    it("persists the new value and fires a notification when toggled", async () => {
+      mockUseBuildSHA.mockReturnValue(undefined);
+      const user = userEvent.setup();
+      renderSidebar("/");
+
+      const switches = screen.getAllByLabelText("auto-refresh");
+      await user.click(switches[0]);
+
+      expect(window.localStorage.getItem("axeos.autoRefreshEnabled")).toBe(
+        "false",
+      );
+
+      const stored = JSON.parse(
+        window.localStorage.getItem("axeos.notifications") ?? "[]",
+      );
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({
+        type: "autoRefreshToggled",
+        detail: "common.off",
+      });
+    });
+  });
+
+  describe("logo", () => {
+    it("reloads the page when clicked", async () => {
+      mockUseBuildSHA.mockReturnValue(undefined);
+      const reload = vi.fn();
+      Object.defineProperty(window, "location", {
+        value: { ...window.location, reload },
+        writable: true,
+      });
+      const user = userEvent.setup();
+      renderSidebar("/");
+
+      const logos = screen.getAllByText("AxeOS");
+      await user.click(logos[0]);
+
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 });

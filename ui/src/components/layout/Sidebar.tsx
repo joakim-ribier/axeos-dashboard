@@ -10,10 +10,14 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Switch,
   Typography,
 } from "@mui/material";
 
+import { useNotifications } from "@/contexts/NotificationsContext";
+import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useBuildSHA } from "@/hooks/useMiners";
+import { createAutoRefreshToggledNotification } from "@/utils/minerNotifications";
 
 export const SIDEBAR_WIDTH = 240;
 
@@ -31,6 +35,17 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
   const buildSHA = useBuildSHA();
   const location = useLocation();
   const boardId = location.pathname.slice(1) || undefined;
+  const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
+  const { addNotifications } = useNotifications();
+
+  const handleAutoRefreshChange = (checked: boolean) => {
+    setAutoRefreshEnabled(checked);
+    addNotifications([
+      createAutoRefreshToggledNotification(
+        checked ? t("common.on") : t("common.off"),
+      ),
+    ]);
+  };
 
   return (
     <Box
@@ -42,6 +57,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
       }}
     >
       <Box
+        onClick={() => window.location.reload()}
+        title={t("nav.refreshPage")}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -50,6 +67,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
           gap: 0.75,
           px: 2,
           py: 3,
+          cursor: "pointer",
+          userSelect: "none",
+          transition: "opacity 0.15s ease",
+          "&:hover": { opacity: 0.75 },
         }}
       >
         <Typography
@@ -138,6 +159,35 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
           />
         </ListItemButton>
       </List>
+
+      <Box
+        sx={{
+          mx: 2,
+          height: "1px",
+          background:
+            "linear-gradient(to right, transparent, rgba(255,255,255,0.14), transparent)",
+        }}
+      />
+
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          px: 2,
+          py: 1.25,
+        }}
+      >
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          {t("nav.autoRefresh")}
+        </Typography>
+        <Switch
+          size="small"
+          checked={autoRefreshEnabled}
+          onChange={(e) => handleAutoRefreshChange(e.target.checked)}
+          slotProps={{ input: { "aria-label": "auto-refresh" } }}
+        />
+      </Box>
 
       <Box sx={{ flexGrow: 1 }} />
 

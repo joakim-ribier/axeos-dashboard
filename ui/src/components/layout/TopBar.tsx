@@ -5,6 +5,8 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SearchIcon from "@mui/icons-material/Search";
+import SyncIcon from "@mui/icons-material/Sync";
+import SyncDisabledIcon from "@mui/icons-material/SyncDisabled";
 import {
   Badge,
   Box,
@@ -13,13 +15,16 @@ import {
   InputBase,
   Popover,
   Toolbar,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useNotifications } from "@/contexts/NotificationsContext";
+import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useSearch } from "@/contexts/SearchContext";
 import { formatTimestamp } from "@/utils/format";
+import type { NotificationType } from "@/utils/minerNotifications";
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -71,6 +76,49 @@ const SearchHelpTooltip: React.FC = () => {
         </Typography>
       </Popover>
     </>
+  );
+};
+
+// A red dot marks a "bad" state -- a threshold exceeded, or a miner gone
+// offline. A green dot marks the same state resolved -- back under the
+// threshold, or back online. version/updateAvailable/settingsUpdated are
+// one-off events, not a two-sided state, so they stay plain text.
+const NOTIFICATION_DOT_COLOR: Partial<Record<NotificationType, string>> = {
+  temp: "#f44336",
+  fan: "#f44336",
+  offline: "#f44336",
+  tempRecovered: "#66bb6a",
+  fanRecovered: "#66bb6a",
+  online: "#66bb6a",
+};
+
+// Passive status indicator, not a control -- the actual on/off toggle lives
+// in the Sidebar. Placed next to the bell since it explains whether the
+// bell (and the data behind it) is still being kept live.
+const AutoRefreshIndicator: React.FC = () => {
+  const { t } = useTranslation();
+  const { autoRefreshEnabled } = useRefreshSettings();
+  const label = autoRefreshEnabled
+    ? t("topBar.autoRefreshOn")
+    : t("topBar.autoRefreshOff");
+
+  return (
+    <Tooltip title={label}>
+      <Box
+        aria-label={label}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          color: autoRefreshEnabled ? "primary.main" : "text.disabled",
+        }}
+      >
+        {autoRefreshEnabled ? (
+          <SyncIcon fontSize="small" />
+        ) : (
+          <SyncDisabledIcon fontSize="small" />
+        )}
+      </Box>
+    </Tooltip>
   );
 };
 
@@ -150,26 +198,43 @@ const NotificationBell: React.FC = () => {
               <Box
                 key={n.id}
                 sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 0.75,
                   pb: 1,
                   borderBottom: "1px solid",
                   borderColor: "divider",
                   "&:last-of-type": { borderBottom: "none", pb: 0 },
                 }}
               >
-                <Typography variant="caption" component="div">
-                  {t(`notifications.${n.type}`, {
-                    miner: n.minerLabel,
-                    value: n.detail,
-                  })}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  component="div"
-                  color="text.secondary"
-                  sx={{ fontSize: "0.7rem" }}
-                >
-                  {formatTimestamp(String(n.timestamp))}
-                </Typography>
+                {NOTIFICATION_DOT_COLOR[n.type] && (
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      mt: "5px",
+                      backgroundColor: NOTIFICATION_DOT_COLOR[n.type],
+                    }}
+                  />
+                )}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="caption" component="div">
+                    {t(`notifications.${n.type}`, {
+                      miner: n.minerLabel,
+                      value: n.detail,
+                    })}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    component="div"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.7rem" }}
+                  >
+                    {formatTimestamp(String(n.timestamp))}
+                  </Typography>
+                </Box>
               </Box>
             ))}
           </Box>
@@ -246,6 +311,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
         />
 
         <Box sx={{ flexGrow: 1 }} />
+
+        <AutoRefreshIndicator />
 
         <NotificationBell />
 

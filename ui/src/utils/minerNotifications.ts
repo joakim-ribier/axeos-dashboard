@@ -1,11 +1,37 @@
 // src/utils/minerNotifications.ts
 import { Miner } from "@/schemas/minerSchema";
 
-export const TEMP_THRESHOLD = 60;
-export const FAN_THRESHOLD = 75;
-
 export type NotificationType =
-  "temp" | "fan" | "offline" | "version" | "updateAvailable";
+  | "temp"
+  | "tempRecovered"
+  | "fan"
+  | "fanRecovered"
+  | "offline"
+  | "online"
+  | "version"
+  | "updateAvailable"
+  | "settingsUpdated"
+  | "autoRefreshToggled";
+
+export interface NotificationSettings {
+  tempThreshold: number;
+  fanThreshold: number;
+  notifyTemp: boolean;
+  notifyFan: boolean;
+  notifyOffline: boolean;
+  notifyUpdateAvailable: boolean;
+  notifyVersion: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  tempThreshold: 60,
+  fanThreshold: 75,
+  notifyTemp: true,
+  notifyFan: true,
+  notifyOffline: true,
+  notifyUpdateAvailable: true,
+  notifyVersion: true,
+};
 
 export interface MinerNotification {
   id: string;
@@ -25,12 +51,22 @@ const nextId = (): string => `notif-${Date.now()}-${idCounter++}`;
 
 /**
  * Compares the previous and current miner lists and returns the
- * notifications for any state worth surfacing:
- * - temp crosses above TEMP_THRESHOLD
- * - fan speed crosses above FAN_THRESHOLD
- * - a miner goes offline (alive transitions to false)
- * - a miner has a pending firmware update available
- * - a miner's firmware version actually changed (an update was applied)
+ * notifications for any state worth surfacing, gated by `settings`:
+ * - temp crosses above settings.tempThreshold, and back below it again
+ *   (if settings.notifyTemp)
+ * - fan speed crosses above settings.fanThreshold, and back below it again
+ *   (if settings.notifyFan)
+ * - a miner goes offline, and comes back online again
+ *   (if settings.notifyOffline)
+ * - a miner has a pending firmware update available (if settings.notifyUpdateAvailable)
+ * - a miner's firmware version actually changed, i.e. an update was applied
+ *   (if settings.notifyVersion)
+ *
+ * temp/fan comparisons use the *rounded* reading (matching what's actually
+ * displayed on the miner cards), not the raw sensor float — otherwise a
+ * miner sitting right at the threshold (e.g. reading 59.95, then 60.05,
+ * then 59.98...) would flap between "exceeded"/"recovered" every poll even
+ * though the displayed value never visibly changes.
  *
  * temp/fan/offline/updateAvailable use an implicit neutral baseline when
  * there's no previous snapshot for a miner (first fetch, or a miner that
@@ -40,13 +76,20 @@ const nextId = (): string => `notif-${Date.now()}-${idCounter++}`;
  * a miner is already in that state, it won't fire again on every
  * subsequent poll while it stays there.
  *
- * "version changed" is the one exception — it genuinely needs a real
+ * The "recovered" side — temp/fan dropping back below the threshold, or a
+ * miner coming back online — is the mirror image of the above, whether the
+ * underlying state is a numeric threshold or a boolean one. It genuinely
+ * needs a real previous reading to compare against — there's nothing to
+ * "recover from" on a miner's first appearance, so it never fires there.
+ *
+ * "version changed" is the other exception — it genuinely needs a real
  * previous version string to diff against, so it never fires on a miner's
- * first appearance.
+ * first appearance either.
  */
 export const detectNotifications = (
   previous: Miner[] | undefined,
   current: Miner[],
+  settings: NotificationSettings,
 ): MinerNotification[] => {
   const previousByKey = new Map((previous ?? []).map((m) => [minerKey(m), m]));
   const notifications: MinerNotification[] = [];
@@ -55,62 +98,175 @@ export const detectNotifications = (
     const prev = previousByKey.get(minerKey(miner));
     const label = minerLabel(miner);
 
-    const prevTemp = prev?.temp ?? -Infinity;
-    if (prevTemp <= TEMP_THRESHOLD && miner.temp > TEMP_THRESHOLD) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "temp",
-        detail: String(Math.round(miner.temp)),
-      });
+    if (settings.notifyTemp) {
+      const prevTemp = prev ? Math.round(prev.temp) : -Infinity;
+      const currentTemp = Math.round(miner.temp);
+      if (
+        prevTemp <= settings.tempThreshold &&
+        currentTemp > settings.tempThreshold
+      ) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "temp",
+          detail: String(currentTemp),
+        });
+      } else if (
+        prev &&
+        prevTemp > settings.tempThreshold &&
+        currentTemp <= settings.tempThreshold
+      ) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "tempRecovered",
+          detail: String(currentTemp),
+        });
+      }
     }
 
-    const prevFan = prev?.fanspeed ?? -Infinity;
-    if (prevFan <= FAN_THRESHOLD && miner.fanspeed > FAN_THRESHOLD) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "fan",
-        detail: String(Math.round(miner.fanspeed)),
-      });
+    if (settings.notifyFan) {
+      const prevFan = prev ? Math.round(prev.fanspeed) : -Infinity;
+      const currentFan = Math.round(miner.fanspeed);
+      if (
+        prevFan <= settings.fanThreshold &&
+        currentFan > settings.fanThreshold
+      ) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "fan",
+          detail: String(currentFan),
+        });
+      } else if (
+        prev &&
+        prevFan > settings.fanThreshold &&
+        currentFan <= settings.fanThreshold
+      ) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "fanRecovered",
+          detail: String(currentFan),
+        });
+      }
     }
 
-    const wasAlive = prev ? prev.alive !== false : true;
-    if (wasAlive && miner.alive === false) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "offline",
-      });
+    if (settings.notifyOffline) {
+      const wasAlive = prev ? prev.alive !== false : true;
+      if (wasAlive && miner.alive === false) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "offline",
+        });
+      } else if (prev && prev.alive === false && miner.alive !== false) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "online",
+        });
+      }
     }
 
-    const hadUpdateAvailable = prev?.updateAvailable === true;
-    if (!hadUpdateAvailable && miner.updateAvailable === true) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "updateAvailable",
-        detail: miner.latestVersion,
-      });
+    if (settings.notifyUpdateAvailable) {
+      const hadUpdateAvailable = prev?.updateAvailable === true;
+      if (!hadUpdateAvailable && miner.updateAvailable === true) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "updateAvailable",
+          detail: miner.latestVersion,
+        });
+      }
     }
 
-    if (prev?.version && miner.version && prev.version !== miner.version) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "version",
-        detail: `${prev.version} → ${miner.version}`,
-      });
+    if (settings.notifyVersion) {
+      if (prev?.version && miner.version && prev.version !== miner.version) {
+        notifications.push({
+          id: nextId(),
+          timestamp: Date.now(),
+          minerLabel: label,
+          type: "version",
+          detail: `${prev.version} → ${miner.version}`,
+        });
+      }
     }
   }
 
   return notifications;
 };
+
+export interface SettingsDiffEntry {
+  key: keyof NotificationSettings;
+  previousValue: NotificationSettings[keyof NotificationSettings];
+  nextValue: NotificationSettings[keyof NotificationSettings];
+}
+
+/**
+ * Pure diff between two settings snapshots — every field whose value
+ * actually changed, keyed and raw (no i18n/formatting here; the caller
+ * translates field labels and formats units since this file has no
+ * dependency on react-i18next).
+ */
+export const diffNotificationSettings = (
+  previous: NotificationSettings,
+  next: NotificationSettings,
+): SettingsDiffEntry[] => {
+  const keys = Object.keys(next) as (keyof NotificationSettings)[];
+  return keys
+    .filter((key) => previous[key] !== next[key])
+    .map((key) => ({
+      key,
+      previousValue: previous[key],
+      nextValue: next[key],
+    }));
+};
+
+/**
+ * A single, non-miner-specific notification acknowledging that the
+ * notification settings themselves were changed (e.g. a threshold edited,
+ * a notify-toggle flipped). Intentionally a flat "it changed" signal, not a
+ * per-miner re-check — see Home.tsx for why re-checking every miner against
+ * a settings edit is the wrong call (each intermediate keystroke would
+ * otherwise produce its own batch of notifications).
+ *
+ * `detail` is expected to be a human-readable, already-translated summary
+ * of what changed (built from diffNotificationSettings() by the caller,
+ * which has access to i18n) — e.g. "Temp threshold: 60°C → 30°C".
+ */
+export const createSettingsUpdatedNotification = (
+  detail?: string,
+): MinerNotification => ({
+  id: nextId(),
+  timestamp: Date.now(),
+  minerLabel: "",
+  type: "settingsUpdated",
+  detail,
+});
+
+/**
+ * A single, non-miner-specific notification acknowledging that auto-refresh
+ * was turned on or off from the Sidebar. `detail` is expected to already be
+ * translated by the caller (e.g. "on"/"off"), same convention as
+ * createSettingsUpdatedNotification.
+ */
+export const createAutoRefreshToggledNotification = (
+  detail: string,
+): MinerNotification => ({
+  id: nextId(),
+  timestamp: Date.now(),
+  minerLabel: "",
+  type: "autoRefreshToggled",
+  detail,
+});
 
 const SNAPSHOT_STORAGE_PREFIX = "axeos.minerSnapshot.";
 

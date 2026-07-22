@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
 import { useMode } from "@/contexts/ModeContext";
+import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
 
 import { type Miner, minerSchema } from "../schemas/minerSchema";
@@ -57,6 +58,7 @@ export interface UseMinersReturn {
 
 export const useMiners = (): UseMinersReturn => {
   const { apiPaths } = useMode();
+  const { autoRefreshEnabled } = useRefreshSettings();
 
   const query = useQuery<MinersResult, Error>({
     queryKey: ["miners", apiPaths.miners],
@@ -64,8 +66,9 @@ export const useMiners = (): UseMinersReturn => {
     staleTime: Infinity,
     // Polled so a tab left open keeps catching new threshold-crossing
     // notifications (see minerNotifications.ts) rather than only fetching
-    // once at page load.
-    refetchInterval: 90_000,
+    // once at page load — unless the user turned auto-refresh off from
+    // the Sidebar, in which case it only ever fetches once per mount.
+    refetchInterval: autoRefreshEnabled ? 90_000 : false,
     refetchOnWindowFocus: false,
     retry: (failureCount, err) =>
       err instanceof ApiError && err.status === 404 ? false : failureCount < 2,
