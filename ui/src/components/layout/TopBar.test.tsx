@@ -1,4 +1,5 @@
 import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,13 +21,15 @@ vi.mock("@/components/LanguageSwitcher", () => ({
 function renderTopBar(onMenuClick: () => void = () => {}) {
   return render(
     <I18nextProvider i18n={i18n}>
-      <RefreshSettingsProvider>
-        <NotificationsProvider>
-          <SearchProvider>
-            <TopBar onMenuClick={onMenuClick} />
-          </SearchProvider>
-        </NotificationsProvider>
-      </RefreshSettingsProvider>
+      <MemoryRouter initialEntries={["/"]}>
+        <RefreshSettingsProvider>
+          <NotificationsProvider>
+            <SearchProvider>
+              <TopBar onMenuClick={onMenuClick} />
+            </SearchProvider>
+          </NotificationsProvider>
+        </RefreshSettingsProvider>
+      </MemoryRouter>
     </I18nextProvider>,
   );
 }
@@ -99,7 +102,7 @@ describe("TopBar", () => {
 
   it("lists persisted notifications with a clear button", async () => {
     window.localStorage.setItem(
-      "axeos.notifications",
+      "axeos.notifications.local",
       JSON.stringify([
         {
           id: "n1",

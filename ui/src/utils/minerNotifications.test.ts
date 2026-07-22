@@ -150,14 +150,20 @@ describe("detectNotifications", () => {
     });
 
     it("compares the rounded reading, not the raw sensor float, against the threshold", () => {
-      // Both readings round to 60, straddling the default 60 threshold at
-      // the raw level (59.95 -> 60.05) — should not flap between
+      // Both readings round to 60, straddling a 60 threshold at the raw
+      // level (59.95 -> 60.05) — should not flap between
       // exceeded/recovered since the displayed value never actually moves.
+      // Uses an explicit threshold rather than the default so this test
+      // doesn't silently stop testing the boundary if the default changes.
+      const settings: NotificationSettings = {
+        ...DEFAULT_NOTIFICATION_SETTINGS,
+        tempThreshold: 60,
+      };
       const justUnder: Miner = { ...baseMiner, temp: 59.95 };
       const justOver: Miner = { ...baseMiner, temp: 60.05 };
 
-      expect(detect([justUnder], [justOver])).toEqual([]);
-      expect(detect([justOver], [justUnder])).toEqual([]);
+      expect(detect([justUnder], [justOver], settings)).toEqual([]);
+      expect(detect([justOver], [justUnder], settings)).toEqual([]);
     });
   });
 
@@ -321,7 +327,7 @@ describe("detectNotifications", () => {
         tempThreshold: 50,
       };
 
-      // 55 doesn't cross the default 60 threshold...
+      // 55 doesn't cross the default 62 threshold...
       expect(detect([baseMiner], [warm])).toEqual([]);
       // ...but does cross a custom 50 threshold.
       expect(detect([baseMiner], [warm], settings)).toHaveLength(1);
@@ -428,7 +434,7 @@ describe("diffNotificationSettings", () => {
 
     expect(
       diffNotificationSettings(DEFAULT_NOTIFICATION_SETTINGS, next),
-    ).toEqual([{ key: "tempThreshold", previousValue: 60, nextValue: 30 }]);
+    ).toEqual([{ key: "tempThreshold", previousValue: 62, nextValue: 30 }]);
   });
 
   it("reports a flipped boolean toggle", () => {

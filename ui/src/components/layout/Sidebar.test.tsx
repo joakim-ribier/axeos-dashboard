@@ -123,7 +123,7 @@ describe("Sidebar", () => {
       );
 
       const stored = JSON.parse(
-        window.localStorage.getItem("axeos.notifications") ?? "[]",
+        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
       );
       expect(stored).toHaveLength(1);
       expect(stored[0]).toMatchObject({

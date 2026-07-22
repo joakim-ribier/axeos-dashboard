@@ -24,7 +24,7 @@ export interface NotificationSettings {
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  tempThreshold: 60,
+  tempThreshold: 62,
   fanThreshold: 75,
   notifyTemp: true,
   notifyFan: true,
