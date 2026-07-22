@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { OopsPage } from "@/components/ui/OopsPage";
 import { ModeProvider } from "@/contexts/ModeContext";
+import { SearchProvider } from "@/contexts/SearchContext";
 import i18n from "@/i18n";
 import { Home } from "@/pages/Home";
 import { getTheme } from "@/theme";
@@ -26,59 +27,61 @@ export const App: React.FC = () => {
         <ThemeProvider theme={theme}>
           <CssBaseline />
 
-          <Box sx={{ display: "flex", minHeight: "100vh" }}>
-            <Sidebar
-              mobileOpen={mobileNavOpen}
-              onClose={() => setMobileNavOpen(false)}
-            />
-
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                minWidth: 0,
-              }}
-            >
-              <TopBar onMenuClick={() => setMobileNavOpen(true)} />
+          <SearchProvider>
+            <Box sx={{ display: "flex", minHeight: "100vh" }}>
+              <Sidebar
+                mobileOpen={mobileNavOpen}
+                onClose={() => setMobileNavOpen(false)}
+              />
 
               <Box
-                component="main"
                 sx={{
                   flexGrow: 1,
-                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  minWidth: 0,
                 }}
               >
-                <Routes>
-                  <Route
-                    path="/"
-                    element={
-                      <ModeProvider mode="local">
-                        <Home />
-                      </ModeProvider>
-                    }
-                  />
-                  <Route
-                    path="/:boardId"
-                    element={
-                      <ModeProvider mode="remote">
-                        <Home />
-                      </ModeProvider>
-                    }
-                  />
-                  <Route
-                    path="*"
-                    element={
-                      <OopsPage
-                        titleKey="oops.notFound.title"
-                        messageKey="oops.notFound.message"
-                      />
-                    }
-                  />
-                </Routes>
+                <TopBar onMenuClick={() => setMobileNavOpen(true)} />
+
+                <Box
+                  component="main"
+                  sx={{
+                    flexGrow: 1,
+                    p: 2,
+                  }}
+                >
+                  <Routes>
+                    <Route
+                      path="/"
+                      element={
+                        <ModeProvider mode="local">
+                          <Home />
+                        </ModeProvider>
+                      }
+                    />
+                    <Route
+                      path="/:boardId"
+                      element={
+                        <ModeProvider mode="remote">
+                          <Home />
+                        </ModeProvider>
+                      }
+                    />
+                    <Route
+                      path="*"
+                      element={
+                        <OopsPage
+                          titleKey="oops.notFound.title"
+                          messageKey="oops.notFound.message"
+                        />
+                      }
+                    />
+                  </Routes>
+                </Box>
               </Box>
             </Box>
-          </Box>
+          </SearchProvider>
         </ThemeProvider>
       </I18nextProvider>
     </QueryClientProvider>

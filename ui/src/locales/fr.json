@@ -8,7 +8,8 @@
     "loading": "Chargement...",
     "filter": {
       "all": "Tous",
-      "miners": "mineurs"
+      "miners": "mineurs",
+      "noResults": "Aucun mineur ne correspond à votre recherche."
     },
     "stats": {
       "lastUpdate": "Dernière mise à jour :",
@@ -89,6 +90,14 @@
   },
   "nav": {
     "home": "Accueil"
+  },
+  "search": {
+    "helpTitle": "Astuces de recherche",
+    "helpPlain": "Le texte simple cherche dans le nom, l'IP, le modèle, le pool et la version.",
+    "helpCompare": "Comparer une valeur : temp>60, fan<=50, power>15, hashrate<0.3, uptime>3600 (secondes).",
+    "helpKeywords": "Mot-clé : offline (utilisez !offline ou -offline pour l'inverse).",
+    "helpExclude": "Niez n'importe quel terme avec - ou !, ex : -office ou !temp>60.",
+    "helpCombine": "Combinez plusieurs termes avec un espace — tous doivent correspondre."
   },
   "oops": {
     "boardNotFound": {

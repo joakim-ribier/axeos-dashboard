@@ -5,6 +5,9 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import { Box, Grid, Tooltip, Typography } from "@mui/material";
 import { Theme, useTheme } from "@mui/material/styles";
 
+import { useSearch } from "@/contexts/SearchContext";
+import { matchesSearch } from "@/utils/minerSearch";
+
 import { GlobalStats } from "../components/ui/GlobalStats";
 import { MinerCard } from "../components/ui/MinerCard/MinerCard";
 import { OopsPage } from "../components/ui/OopsPage";
@@ -135,6 +138,7 @@ const PoolCard = ({
 export const Home = () => {
   const { t } = useTranslation();
   const { data, isLoading, error } = useMiners();
+  const { query } = useSearch();
 
   const [selectedPool, setSelectedPool] = useState<string | null>(null);
 
@@ -161,13 +165,15 @@ export const Home = () => {
   );
 
   const filteredData = useMemo(() => {
-    if (!selectedPool) return data;
     return data?.filter((m) => {
-      const isFallback = m.isUsingFallbackStratum === 1;
-      const url = isFallback ? m.fallbackStratumURL : m.stratumURL;
-      return url === selectedPool;
+      if (selectedPool) {
+        const isFallback = m.isUsingFallbackStratum === 1;
+        const url = isFallback ? m.fallbackStratumURL : m.stratumURL;
+        if (url !== selectedPool) return false;
+      }
+      return matchesSearch(m, query);
     });
-  }, [data, selectedPool]);
+  }, [data, selectedPool, query]);
 
   useEffect(() => {
     if (poolEntries.length === 1) setSelectedPool(poolEntries[0][0]);
@@ -247,22 +253,28 @@ export const Home = () => {
         </Box>
       )}
 
-      <Grid container sx={gridContainerSx}>
-        {(filteredData ?? []).map((miner, idx) => (
-          <Box
-            key={idx}
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "stretch",
-            }}
-          >
-            <MinerCard minerInfo={miner} loading={isLoading} error={error} />
-          </Box>
-        ))}
-      </Grid>
+      {!isLoading && data && data.length > 0 && filteredData?.length === 0 ? (
+        <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+          {t("dashboard.filter.noResults")}
+        </Typography>
+      ) : (
+        <Grid container sx={gridContainerSx}>
+          {(filteredData ?? []).map((miner, idx) => (
+            <Box
+              key={idx}
+              sx={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
+              }}
+            >
+              <MinerCard minerInfo={miner} loading={isLoading} error={error} />
+            </Box>
+          ))}
+        </Grid>
+      )}
     </Box>
   );
 };

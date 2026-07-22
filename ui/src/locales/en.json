@@ -8,7 +8,8 @@
     "loading": "Loading...",
     "filter": {
       "all": "All",
-      "miners": "miners"
+      "miners": "miners",
+      "noResults": "No miners match your search."
     },
     "stats": {
       "lastUpdate": "Last update:",
@@ -89,6 +90,14 @@
   },
   "nav": {
     "home": "Home"
+  },
+  "search": {
+    "helpTitle": "Search tips",
+    "helpPlain": "Plain text matches hostname, IP, model, pool, and version.",
+    "helpCompare": "Compare a value: temp>60, fan<=50, power>15, hashrate<0.3, uptime>3600 (seconds).",
+    "helpKeywords": "Keyword: offline (use !offline or -offline for the opposite).",
+    "helpExclude": "Negate any term with - or !, e.g. -office or !temp>60.",
+    "helpCombine": "Combine terms with a space — all must match."
   },
   "oops": {
     "boardNotFound": {
