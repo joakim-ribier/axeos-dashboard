@@ -1,5 +1,6 @@
 import { MemoryRouter } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { Sidebar } from "./Sidebar";
@@ -56,5 +57,23 @@ describe("Sidebar", () => {
     renderSidebar("/");
 
     expect(screen.queryByText(/^build /)).not.toBeInTheDocument();
+  });
+
+  it("closes the mobile drawer when the Home nav item is clicked", async () => {
+    mockUseBuildSHA.mockReturnValue(undefined);
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Sidebar mobileOpen onClose={onClose} />
+      </MemoryRouter>,
+    );
+
+    for (const item of screen.getAllByText("nav.home")) {
+      await user.click(item);
+    }
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

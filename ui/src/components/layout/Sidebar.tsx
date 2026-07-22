@@ -22,7 +22,11 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const SidebarContent: React.FC = () => {
+interface SidebarContentProps {
+  onItemClick?: () => void;
+}
+
+const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
   const { t } = useTranslation();
   const buildSHA = useBuildSHA();
   const location = useLocation();
@@ -112,6 +116,7 @@ const SidebarContent: React.FC = () => {
       <List sx={{ px: 2, pt: 2 }}>
         <ListItemButton
           selected
+          onClick={onItemClick}
           sx={{
             borderRadius: 2,
             py: 0.75,
@@ -207,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           },
         }}
       >
-        <SidebarContent />
+        <SidebarContent onItemClick={onClose} />
       </Drawer>
 
       {/* Desktop: permanent, always-visible drawer */}
