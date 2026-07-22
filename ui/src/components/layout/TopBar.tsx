@@ -13,7 +13,6 @@ import {
   InputBase,
   Popover,
   Toolbar,
-  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -28,41 +27,50 @@ interface TopBarProps {
 
 const SearchHelpTooltip: React.FC = () => {
   const { t } = useTranslation();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   return (
-    <Tooltip
-      arrow
-      title={
-        <Box sx={{ p: 0.5 }}>
-          <Typography
-            variant="caption"
-            component="div"
-            sx={{ fontWeight: 700, mb: 0.5 }}
-          >
-            {t("search.helpTitle")}
-          </Typography>
-          <Typography variant="caption" component="div">
-            {t("search.helpPlain")}
-          </Typography>
-          <Typography variant="caption" component="div">
-            {t("search.helpCompare")}
-          </Typography>
-          <Typography variant="caption" component="div">
-            {t("search.helpKeywords")}
-          </Typography>
-          <Typography variant="caption" component="div">
-            {t("search.helpExclude")}
-          </Typography>
-          <Typography variant="caption" component="div">
-            {t("search.helpCombine")}
-          </Typography>
-        </Box>
-      }
-    >
-      <IconButton size="small" aria-label="search syntax help">
+    <>
+      <IconButton
+        size="small"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        aria-label="search syntax help"
+      >
         <InfoOutlinedIcon fontSize="inherit" sx={{ color: "text.secondary" }} />
       </IconButton>
-    </Tooltip>
+
+      <Popover
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { p: 1, maxWidth: 280 } } }}
+      >
+        <Typography
+          variant="caption"
+          component="div"
+          sx={{ fontWeight: 700, mb: 0.5 }}
+        >
+          {t("search.helpTitle")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpPlain")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpCompare")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpKeywords")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpExclude")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpCombine")}
+        </Typography>
+      </Popover>
+    </>
   );
 };
 
