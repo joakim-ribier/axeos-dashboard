@@ -1,23 +1,14 @@
 // src/pages/Home.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import CloudIcon from "@mui/icons-material/Cloud";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import {
-  Box,
-  Chip,
-  Grid,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-} from "@mui/material";
+import { Box, Grid, Tooltip, Typography } from "@mui/material";
 import { Theme, useTheme } from "@mui/material/styles";
 
 import { GlobalStats } from "../components/ui/GlobalStats";
 import { MinerCard } from "../components/ui/MinerCard/MinerCard";
 import { OopsPage } from "../components/ui/OopsPage";
 import { PageHeader } from "../components/ui/PageHeader";
-import { useMode } from "@/contexts/ModeContext";
 import { ApiError, useMiners } from "../hooks/useMiners";
 
 const getPoolLabel = (url: string): string => {
@@ -143,10 +134,7 @@ const PoolCard = ({
 /* ── Home ────────────────────────────────────────────────────── */
 export const Home = () => {
   const { t } = useTranslation();
-  const { boardId } = useMode();
-  const { data, buildSHA, isLoading, error } = useMiners();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { data, isLoading, error } = useMiners();
 
   const [selectedPool, setSelectedPool] = useState<string | null>(null);
 
@@ -213,30 +201,6 @@ export const Home = () => {
         title={t("dashboard.header.title")}
         description={t("dashboard.header.description")}
         icon={<DashboardIcon fontSize="large" />}
-        titleBadge={
-          boardId ? (
-            <Chip
-              icon={<CloudIcon sx={{ fontSize: 13 }} />}
-              label={
-                isMobile
-                  ? t("remote.badge")
-                  : t("remote.badgeLong", { id: boardId.slice(0, 8) })
-              }
-              size="small"
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                borderRadius: 1,
-                backgroundColor: "rgba(255,160,0,0.08)",
-                color: "warning.main",
-                border: "1px solid rgba(255,160,0,0.35)",
-                boxShadow: "0 0 10px rgba(255,160,0,0.12)",
-              }}
-            />
-          ) : undefined
-        }
         gradientProps={{
           height: 3,
           radius: 2,
@@ -299,16 +263,6 @@ export const Home = () => {
           </Box>
         ))}
       </Grid>
-
-      {buildSHA && (
-        <Typography
-          variant="caption"
-          align="center"
-          sx={{ color: "text.disabled", fontFamily: "monospace", opacity: 0.6 }}
-        >
-          build {buildSHA}
-        </Typography>
-      )}
     </Box>
   );
 };

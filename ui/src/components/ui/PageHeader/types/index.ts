@@ -14,6 +14,10 @@ export interface PageHeaderProps {
   actions?: React.ReactNode[];
   /** Force actions to be shown even on mobile (default: false) */
   forceShowActions?: boolean;
+  /** Show the whole header content — icon, title, badge, GradientBar and
+   * description (default: true). Set to false to render nothing, e.g. when
+   * a sidebar nav item already carries the page identity. */
+  showHeader?: boolean;
   /** Additional styling for the root container */
   sx?: SxProps<Theme>;
   /** Props forwarded to GradientBar (height, radius, colors) */

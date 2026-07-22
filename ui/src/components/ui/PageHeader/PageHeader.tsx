@@ -18,6 +18,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   titleBadge,
   actions = [],
   forceShowActions = false,
+  showHeader = true,
   sx = {},
   gradientProps = {},
 }) => {
@@ -38,27 +39,31 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       }}
     >
       <Stack spacing={0.5}>
-        <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-          <Box sx={{ mr: 1 }}>{LeftIcon}</Box>
-          <Typography
-            variant="h5"
-            component="h2"
-            color="text.primary"
-            sx={{ lineHeight: 1.2 }}
-          >
-            {title}
-          </Typography>
-          {titleBadge}
-        </Box>
-        <GradientBar {...gradientProps} />
-        {description && (
-          <Typography
-            variant="subtitle2"
-            color="text.secondary"
-            sx={{ mt: 0.5 }}
-          >
-            {description}
-          </Typography>
+        {showHeader && (
+          <>
+            <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ mr: 1 }}>{LeftIcon}</Box>
+              <Typography
+                variant="h5"
+                component="h2"
+                color="text.primary"
+                sx={{ lineHeight: 1.2 }}
+              >
+                {title}
+              </Typography>
+              {titleBadge}
+            </Box>
+            <GradientBar {...gradientProps} />
+            {description && (
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                sx={{ mt: 0.5 }}
+              >
+                {description}
+              </Typography>
+            )}
+          </>
         )}
       </Stack>
 

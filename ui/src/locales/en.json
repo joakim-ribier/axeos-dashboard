@@ -87,9 +87,8 @@
       "unknown": "Health check pending"
     }
   },
-  "remote": {
-    "badge": "REMOTE",
-    "badgeLong": "REMOTE · {{id}}"
+  "nav": {
+    "home": "Home"
   },
   "oops": {
     "boardNotFound": {
@@ -110,5 +109,5 @@
     "dark": "Dark",
     "light": "Light"
   },
-  "title": "BTC Mining Dashboard"
+  "language": "Language"
 }

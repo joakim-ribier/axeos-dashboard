@@ -87,9 +87,8 @@
       "unknown": "Vérification en attente"
     }
   },
-  "remote": {
-    "badge": "DISTANT",
-    "badgeLong": "DISTANT · {{id}}"
+  "nav": {
+    "home": "Accueil"
   },
   "oops": {
     "boardNotFound": {
@@ -110,5 +109,5 @@
     "dark": "Sombre",
     "light": "Clair"
   },
-  "title": "Tableau de bord BTC Mining"
+  "language": "Langue"
 }

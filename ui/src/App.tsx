@@ -1,23 +1,22 @@
 // src/App.tsx
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { Route, Routes } from "react-router-dom";
-import { useMediaQuery, useTheme } from "@mui/material";
-import { Box, CssBaseline, Toolbar } from "@mui/material";
+import { Box, CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { Header } from "@/components/Header";
-import i18n from "@/i18n";
-import { ModeProvider } from "@/contexts/ModeContext";
-import { Home } from "@/pages/Home";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { TopBar } from "@/components/layout/TopBar";
 import { OopsPage } from "@/components/ui/OopsPage";
+import { ModeProvider } from "@/contexts/ModeContext";
+import i18n from "@/i18n";
+import { Home } from "@/pages/Home";
 import { getTheme } from "@/theme";
 
 export const App: React.FC = () => {
   const theme = useMemo(() => getTheme("dark"), []);
-  const muiTheme = useTheme();
-  const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const queryClient = new QueryClient();
 
@@ -27,45 +26,58 @@ export const App: React.FC = () => {
         <ThemeProvider theme={theme}>
           <CssBaseline />
 
-          <Header />
+          <Box sx={{ display: "flex", minHeight: "100vh" }}>
+            <Sidebar
+              mobileOpen={mobileNavOpen}
+              onClose={() => setMobileNavOpen(false)}
+            />
 
-          <Toolbar />
-          {isMobile && <Toolbar />}
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                minWidth: 0,
+              }}
+            >
+              <TopBar onMenuClick={() => setMobileNavOpen(true)} />
 
-          <Box
-            component="main"
-            sx={{
-              flexGrow: 1,
-              p: 2,
-            }}
-          >
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <ModeProvider mode="local">
-                    <Home />
-                  </ModeProvider>
-                }
-              />
-              <Route
-                path="/:boardId"
-                element={
-                  <ModeProvider mode="remote">
-                    <Home />
-                  </ModeProvider>
-                }
-              />
-              <Route
-                path="*"
-                element={
-                  <OopsPage
-                    titleKey="oops.notFound.title"
-                    messageKey="oops.notFound.message"
+              <Box
+                component="main"
+                sx={{
+                  flexGrow: 1,
+                  p: 2,
+                }}
+              >
+                <Routes>
+                  <Route
+                    path="/"
+                    element={
+                      <ModeProvider mode="local">
+                        <Home />
+                      </ModeProvider>
+                    }
                   />
-                }
-              />
-            </Routes>
+                  <Route
+                    path="/:boardId"
+                    element={
+                      <ModeProvider mode="remote">
+                        <Home />
+                      </ModeProvider>
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={
+                      <OopsPage
+                        titleKey="oops.notFound.title"
+                        messageKey="oops.notFound.message"
+                      />
+                    }
+                  />
+                </Routes>
+              </Box>
+            </Box>
           </Box>
         </ThemeProvider>
       </I18nextProvider>
