@@ -42,18 +42,27 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("nav.home").length).toBeGreaterThan(0);
   });
 
-  it("shows the current board id on a remote route", () => {
+  it("shows the current board id (without the word 'board') on a remote route", () => {
     mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/demo");
 
-    expect(screen.getAllByText("board demo").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("demo").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/board demo/)).not.toBeInTheDocument();
   });
 
-  it("does not show a board id on the local route", () => {
+  it("shows the full board id, not truncated to a handful of characters", () => {
+    mockUseBuildSHA.mockReturnValue(undefined);
+    const longBoardId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+    renderSidebar(`/${longBoardId}`);
+
+    expect(screen.getAllByText(longBoardId).length).toBeGreaterThan(0);
+  });
+
+  it("does not show a board id chip on the local route", () => {
     mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/");
 
-    expect(screen.queryByText(/^board /)).not.toBeInTheDocument();
+    expect(screen.queryByText("demo")).not.toBeInTheDocument();
   });
 
   it("shows the build SHA when available", () => {

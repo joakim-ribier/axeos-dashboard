@@ -5,12 +5,14 @@ import { useLocation } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import {
   Box,
+  Chip,
   Drawer,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Switch,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
@@ -125,6 +127,29 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
         </Typography>
       </Box>
 
+      {boardId && (
+        <Box sx={{ display: "flex", justifyContent: "center", pb: 2, mt: -1 }}>
+          <Tooltip title={boardId} arrow>
+            <Chip
+              size="small"
+              label={boardId}
+              sx={{
+                fontFamily: "monospace",
+                fontSize: "0.7rem",
+                height: 22,
+                maxWidth: SIDEBAR_WIDTH - 32,
+                color: "text.disabled",
+                bgcolor: "rgba(255,255,255,0.06)",
+                "& .MuiChip-label": {
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                },
+              }}
+            />
+          </Tooltip>
+        </Box>
+      )}
+
       <Box
         sx={{
           mx: 2,
@@ -191,7 +216,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {(boardId || buildSHA) && (
+      {buildSHA && (
         <>
           <Box
             sx={{
@@ -211,30 +236,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
               pb: 2,
             }}
           >
-            {boardId && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.disabled",
-                  fontFamily: "monospace",
-                  opacity: 0.6,
-                }}
-              >
-                board {boardId.slice(0, 8)}
-              </Typography>
-            )}
-            {buildSHA && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: "text.disabled",
-                  fontFamily: "monospace",
-                  opacity: 0.6,
-                }}
-              >
-                build {buildSHA}
-              </Typography>
-            )}
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.disabled",
+                fontFamily: "monospace",
+                opacity: 0.6,
+              }}
+            >
+              build {buildSHA}
+            </Typography>
           </Box>
         </>
       )}
