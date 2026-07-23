@@ -2,24 +2,35 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import FilterAltIcon from "@mui/icons-material/FilterAlt";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import SearchIcon from "@mui/icons-material/Search";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
+  Chip,
   Collapse,
   FormControlLabel,
   Grid,
   IconButton,
+  InputBase,
+  Popover,
   Switch,
   TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Theme, useTheme } from "@mui/material/styles";
+import { Theme } from "@mui/material/styles";
 
 import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useNotificationSettings } from "@/contexts/NotificationSettingsContext";
 import { useSearch } from "@/contexts/SearchContext";
+import {
+  matchesQuickFilters,
+  NO_QUICK_FILTERS,
+  QuickFilters,
+} from "@/utils/minerFilters";
 import {
   createSettingsUpdatedNotification,
   detectNotifications,
@@ -44,115 +55,83 @@ const getPoolLabel = (url: string): string => {
   }
 };
 
-/* ── Pool filter card ────────────────────────────────────────── */
-interface PoolCardProps {
-  label: string;
-  count: number;
-  hashRate?: number;
-  isActive: boolean;
-  tooltip?: string;
-  onClick: () => void;
-}
-
-const PoolCard = ({
-  label,
-  count,
-  hashRate,
-  isActive,
-  tooltip,
-  onClick,
-}: PoolCardProps) => {
+/* ── Search ──────────────────────────────────────────────────── */
+const SearchHelpTooltip = () => {
   const { t } = useTranslation();
-  const theme = useTheme();
-  const primary = theme.palette.primary.main;
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
-  const card = (
-    <Box
-      onClick={onClick}
-      sx={{
-        cursor: "pointer",
-        px: 2,
-        py: 1.5,
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: isActive ? primary : "divider",
-        backgroundColor: isActive ? `${primary}14` : "background.paper",
-        boxShadow: isActive ? `0 0 16px ${primary}28` : "none",
-        transition: "all 0.2s ease",
-        minWidth: { xs: 120, sm: 140 },
-        maxWidth: { xs: 160, sm: 200 },
-        flexShrink: 0,
-        overflow: "hidden",
-        userSelect: "none",
-        "&:hover": {
-          borderColor: primary,
-          backgroundColor: `${primary}0a`,
-        },
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 1,
-          mb: 0.5,
-        }}
+  return (
+    <>
+      <IconButton
+        size="small"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        aria-label="search syntax help"
+      >
+        <InfoOutlinedIcon fontSize="inherit" sx={{ color: "text.secondary" }} />
+      </IconButton>
+
+      <Popover
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { sx: { p: 1, maxWidth: 280 } } }}
       >
         <Typography
           variant="caption"
-          sx={{
-            textTransform: "uppercase",
-            letterSpacing: "0.07em",
-            fontWeight: 700,
-            color: isActive ? primary : "text.secondary",
-            lineHeight: 1,
-            flex: 1,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
+          component="div"
+          sx={{ fontWeight: 700, mb: 0.5 }}
         >
-          {label}
+          {t("search.helpTitle")}
         </Typography>
-        {isActive && (
-          <Box
-            sx={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              backgroundColor: primary,
-              boxShadow: `0 0 6px ${primary}`,
-              flexShrink: 0,
-              mt: 0.25,
-            }}
-          />
-        )}
-      </Box>
-      <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-        {count}
-        <Typography
-          component="span"
-          variant="caption"
-          color="text.secondary"
-          sx={{ ml: 0.5 }}
-        >
-          {t("dashboard.filter.miners")}
+        <Typography variant="caption" component="div">
+          {t("search.helpPlain")}
         </Typography>
-      </Typography>
-      {hashRate !== undefined && (
-        <Typography variant="caption" color="text.secondary">
-          {hashRate.toFixed(2)} TH/s
+        <Typography variant="caption" component="div">
+          {t("search.helpCompare")}
         </Typography>
-      )}
-    </Box>
+        <Typography variant="caption" component="div">
+          {t("search.helpKeywords")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpExclude")}
+        </Typography>
+        <Typography variant="caption" component="div">
+          {t("search.helpCombine")}
+        </Typography>
+      </Popover>
+    </>
   );
+};
 
-  return tooltip ? (
-    <Tooltip title={tooltip} arrow>
-      {card}
-    </Tooltip>
-  ) : (
-    card
+const SearchField = () => {
+  const { query, setQuery } = useSearch();
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        bgcolor: "background.default",
+        borderRadius: 2,
+        border: "1px solid",
+        borderColor: "divider",
+        px: 1.5,
+        py: 1,
+        width: "100%",
+      }}
+    >
+      <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+      <InputBase
+        placeholder="Search…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        sx={{ color: "text.primary", fontSize: "0.875rem", width: "100%" }}
+      />
+      <SearchHelpTooltip />
+    </Box>
   );
 };
 
@@ -295,7 +274,22 @@ export const Home = () => {
   const { settings } = useNotificationSettings();
 
   const [selectedPool, setSelectedPool] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedDeviceModel, setSelectedDeviceModel] = useState<string | null>(
+    null,
+  );
+  const [alertTemp, setAlertTemp] = useState(false);
+  const [alertFan, setAlertFan] = useState(false);
+  const [alertOffline, setAlertOffline] = useState(false);
+  // A single "which panel is open" state (rather than two independent
+  // booleans) so opening one automatically closes the other -- no need to
+  // manually re-click the previous icon to collapse it first.
+  const [openPanel, setOpenPanel] = useState<"filters" | "settings" | null>(
+    null,
+  );
+  const toggleFilters = () =>
+    setOpenPanel((current) => (current === "filters" ? null : "filters"));
+  const toggleSettings = () =>
+    setOpenPanel((current) => (current === "settings" ? null : "settings"));
 
   // Seeded from localStorage rather than starting undefined every mount —
   // otherwise a plain page reload would look like "the very first fetch
@@ -350,42 +344,71 @@ export const Home = () => {
   }, [settings, addNotifications, t]);
 
   const poolEntries = useMemo(() => {
-    const map: Record<
-      string,
-      { count: number; hashRate: number; label: string }
-    > = {};
+    const map: Record<string, { count: number; label: string }> = {};
     data?.forEach((m) => {
       const isFallback = m.isUsingFallbackStratum === 1;
       const url = (isFallback ? m.fallbackStratumURL : m.stratumURL) ?? "";
       if (!url) return;
-      if (!map[url])
-        map[url] = { count: 0, hashRate: 0, label: getPoolLabel(url) };
+      if (!map[url]) map[url] = { count: 0, label: getPoolLabel(url) };
       map[url].count++;
-      map[url].hashRate += m.hashRateTHs ?? 0;
     });
     return Object.entries(map);
   }, [data]);
 
-  const totalHashRate = useMemo(
-    () => data?.reduce((s, m) => s + (m.hashRateTHs ?? 0), 0) ?? 0,
-    [data],
+  const deviceModelEntries = useMemo(() => {
+    const map: Record<string, number> = {};
+    data?.forEach((m) => {
+      const model = m.deviceModel;
+      if (!model) return;
+      map[model] = (map[model] ?? 0) + 1;
+    });
+    return Object.entries(map);
+  }, [data]);
+
+  const alertCounts = useMemo(() => {
+    let temp = 0;
+    let fan = 0;
+    let offline = 0;
+    data?.forEach((m) => {
+      if (Math.round(m.temp) > settings.tempThreshold) temp++;
+      if (Math.round(m.fanspeed) > settings.fanThreshold) fan++;
+      if (m.alive === false) offline++;
+    });
+    return { temp, fan, offline };
+  }, [data, settings.tempThreshold, settings.fanThreshold]);
+
+  const quickFilters: QuickFilters = useMemo(
+    () => ({
+      ...NO_QUICK_FILTERS,
+      selectedPool,
+      selectedDeviceModel,
+      alertTemp,
+      alertFan,
+      alertOffline,
+    }),
+    [selectedPool, selectedDeviceModel, alertTemp, alertFan, alertOffline],
   );
 
   const filteredData = useMemo(() => {
-    return data?.filter((m) => {
-      if (selectedPool) {
-        const isFallback = m.isUsingFallbackStratum === 1;
-        const url = isFallback ? m.fallbackStratumURL : m.stratumURL;
-        if (url !== selectedPool) return false;
-      }
-      return matchesSearch(m, query);
-    });
-  }, [data, selectedPool, query]);
+    return data?.filter(
+      (m) =>
+        matchesQuickFilters(m, quickFilters, settings) &&
+        matchesSearch(m, query),
+    );
+  }, [data, quickFilters, settings, query]);
 
   useEffect(() => {
     if (poolEntries.length === 1) setSelectedPool(poolEntries[0][0]);
     else if (poolEntries.length > 1) setSelectedPool(null);
   }, [poolEntries]);
+
+  useEffect(() => {
+    if (deviceModelEntries.length === 1) {
+      setSelectedDeviceModel(deviceModelEntries[0][0]);
+    } else if (deviceModelEntries.length > 1) {
+      setSelectedDeviceModel(null);
+    }
+  }, [deviceModelEntries]);
 
   const gridContainerSx = (theme: Theme) => ({
     display: "grid",
@@ -410,69 +433,171 @@ export const Home = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <PageHeader
-        title={t("dashboard.header.title")}
-        description={t("dashboard.header.description")}
-        icon={<DashboardIcon fontSize="large" />}
-        gradientProps={{
-          height: 3,
-          radius: 2,
-          colors: ["#00b4ff", "#0066cc"],
-        }}
-        actions={[
-          <IconButton
-            key="notification-settings"
-            size="small"
-            onClick={() => setSettingsOpen((open) => !open)}
-            aria-label="notification settings"
-          >
-            <SettingsIcon fontSize="small" />
-          </IconButton>,
-        ]}
-        forceShowActions
-      />
+      {/* The two Collapse panels use their own inner "mt" for spacing
+          instead of the header-group's `gap` -- a Collapse still occupies
+          a gap slot on both sides even at 0 height, so relying on `gap`
+          here would leave a stray double-gap whenever a panel is closed.
+          A margin on the *inner* content only ever shows once the panel is
+          actually open, since Collapse clips overflow while collapsed. */}
+      <Box sx={{ display: "flex", flexDirection: "column" }}>
+        <PageHeader
+          title={t("dashboard.header.title")}
+          description={t("dashboard.header.description")}
+          icon={<DashboardIcon fontSize="large" />}
+          gradientProps={{
+            height: 3,
+            radius: 2,
+            colors: ["#00b4ff", "#0066cc"],
+          }}
+          actions={[
+            <IconButton
+              key="filters"
+              size="small"
+              onClick={toggleFilters}
+              aria-label="filters"
+            >
+              <FilterAltIcon fontSize="small" />
+            </IconButton>,
+            <IconButton
+              key="notification-settings"
+              size="small"
+              onClick={toggleSettings}
+              aria-label="notification settings"
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>,
+          ]}
+          forceShowActions
+        />
 
-      <Collapse in={settingsOpen}>
-        <NotificationSettingsPanel />
-      </Collapse>
+        <Collapse in={openPanel === "filters"}>
+          <Box
+            sx={{
+              mt: 4,
+              p: 2,
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            <SearchField />
+
+            {poolEntries.length >= 1 && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("dashboard.filter.poolLabel")}
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {poolEntries.length > 1 && (
+                    <Chip
+                      size="small"
+                      label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
+                      color={selectedPool === null ? "primary" : "default"}
+                      variant={selectedPool === null ? "filled" : "outlined"}
+                      onClick={() => setSelectedPool(null)}
+                    />
+                  )}
+                  {poolEntries.map(([url, stats]) => (
+                    <Tooltip key={url} title={url} arrow>
+                      <Chip
+                        size="small"
+                        label={`${stats.label} (${stats.count})`}
+                        color={selectedPool === url ? "primary" : "default"}
+                        variant={selectedPool === url ? "filled" : "outlined"}
+                        onClick={() =>
+                          setSelectedPool(url === selectedPool ? null : url)
+                        }
+                      />
+                    </Tooltip>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {deviceModelEntries.length >= 1 && (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("dashboard.filter.deviceLabel")}
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  {deviceModelEntries.length > 1 && (
+                    <Chip
+                      size="small"
+                      label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
+                      color={
+                        selectedDeviceModel === null ? "primary" : "default"
+                      }
+                      variant={
+                        selectedDeviceModel === null ? "filled" : "outlined"
+                      }
+                      onClick={() => setSelectedDeviceModel(null)}
+                    />
+                  )}
+                  {deviceModelEntries.map(([model, count]) => (
+                    <Chip
+                      key={model}
+                      size="small"
+                      label={`${model} (${count})`}
+                      color={
+                        selectedDeviceModel === model ? "primary" : "default"
+                      }
+                      variant={
+                        selectedDeviceModel === model ? "filled" : "outlined"
+                      }
+                      onClick={() =>
+                        setSelectedDeviceModel(
+                          model === selectedDeviceModel ? null : model,
+                        )
+                      }
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+              <Typography variant="caption" color="text.secondary">
+                {t("dashboard.filter.alertsLabel")}
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                <Chip
+                  size="small"
+                  label={`${t("dashboard.filter.highTemp", { value: settings.tempThreshold })} (${alertCounts.temp})`}
+                  color={alertTemp ? "error" : "default"}
+                  variant={alertTemp ? "filled" : "outlined"}
+                  onClick={() => setAlertTemp((v) => !v)}
+                />
+                <Chip
+                  size="small"
+                  label={`${t("dashboard.filter.highFan", { value: settings.fanThreshold })} (${alertCounts.fan})`}
+                  color={alertFan ? "error" : "default"}
+                  variant={alertFan ? "filled" : "outlined"}
+                  onClick={() => setAlertFan((v) => !v)}
+                />
+                <Chip
+                  size="small"
+                  label={`${t("dashboard.filter.offline")} (${alertCounts.offline})`}
+                  color={alertOffline ? "error" : "default"}
+                  variant={alertOffline ? "filled" : "outlined"}
+                  onClick={() => setAlertOffline((v) => !v)}
+                />
+              </Box>
+            </Box>
+          </Box>
+        </Collapse>
+
+        <Collapse in={openPanel === "settings"}>
+          <Box sx={{ mt: 4 }}>
+            <NotificationSettingsPanel />
+          </Box>
+        </Collapse>
+      </Box>
 
       <GlobalStats data={data} isLoading={isLoading} />
-
-      {/* Pool filter cards */}
-      {!isLoading && poolEntries.length >= 1 && (
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1.5,
-            overflowX: "auto",
-            pb: 0.5,
-            WebkitOverflowScrolling: "touch",
-            scrollbarWidth: "none",
-            "&::-webkit-scrollbar": { display: "none" },
-          }}
-        >
-          {poolEntries.length > 1 && (
-            <PoolCard
-              label={t("dashboard.filter.all")}
-              count={data?.length ?? 0}
-              hashRate={totalHashRate}
-              isActive={selectedPool === null}
-              onClick={() => setSelectedPool(null)}
-            />
-          )}
-          {poolEntries.map(([url, stats]) => (
-            <PoolCard
-              key={url}
-              label={stats.label}
-              count={stats.count}
-              hashRate={stats.hashRate}
-              isActive={selectedPool === url}
-              tooltip={url}
-              onClick={() => setSelectedPool(url === selectedPool ? null : url)}
-            />
-          ))}
-        </Box>
-      )}
 
       {!isLoading && data && data.length > 0 && filteredData?.length === 0 ? (
         <Typography color="text.secondary" align="center" sx={{ py: 4 }}>

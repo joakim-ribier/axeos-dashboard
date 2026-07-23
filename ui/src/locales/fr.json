@@ -9,7 +9,13 @@
     "filter": {
       "all": "Tous",
       "miners": "mineurs",
-      "noResults": "Aucun mineur ne correspond à votre recherche."
+      "noResults": "Aucun mineur ne correspond à votre recherche.",
+      "highTemp": "Temp > {{value}}°C",
+      "highFan": "Ventil. > {{value}}%",
+      "offline": "Hors ligne",
+      "poolLabel": "Pool",
+      "deviceLabel": "Modèle",
+      "alertsLabel": "Alertes"
     },
     "stats": {
       "lastUpdate": "Dernière mise à jour :",

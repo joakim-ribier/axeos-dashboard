@@ -9,7 +9,13 @@
     "filter": {
       "all": "All",
       "miners": "miners",
-      "noResults": "No miners match your search."
+      "noResults": "No miners match your search.",
+      "highTemp": "Temp > {{value}}°C",
+      "highFan": "Fan > {{value}}%",
+      "offline": "Offline",
+      "poolLabel": "Pool",
+      "deviceLabel": "Device",
+      "alertsLabel": "Alerts"
     },
     "stats": {
       "lastUpdate": "Last update:",

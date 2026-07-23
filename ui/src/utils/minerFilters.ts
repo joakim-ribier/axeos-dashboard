@@ -1,0 +1,68 @@
+// src/utils/minerFilters.ts
+import { Miner } from "@/schemas/minerSchema";
+import { NotificationSettings } from "@/utils/minerNotifications";
+
+export interface QuickFilters {
+  selectedPool: string | null;
+  selectedDeviceModel: string | null;
+  alertTemp: boolean;
+  alertFan: boolean;
+  alertOffline: boolean;
+}
+
+export const NO_QUICK_FILTERS: QuickFilters = {
+  selectedPool: null,
+  selectedDeviceModel: null,
+  alertTemp: false,
+  alertFan: false,
+  alertOffline: false,
+};
+
+const minerPoolUrl = (miner: Miner): string | undefined =>
+  miner.isUsingFallbackStratum === 1
+    ? miner.fallbackStratumURL
+    : miner.stratumURL;
+
+/**
+ * Quick, pre-built filters — pool, device model, and "currently in an
+ * alert state" — as an alternative to typing a comparison into the free
+ * text search (matchesSearch in minerSearch.ts, still available alongside
+ * these). Pool and device model narrow the set (AND'd with everything
+ * else); the three alert flags are OR'd together when more than one is
+ * active — "show anyone flagged for ANY of these reasons" reads more
+ * useful at a glance than requiring all of them at once.
+ *
+ * The alert thresholds are the same ones configured in the notification
+ * settings panel (and use the same rounded-reading comparison as
+ * detectNotifications, so "who's over the line" always agrees with what
+ * actually triggers a notification).
+ */
+export const matchesQuickFilters = (
+  miner: Miner,
+  filters: QuickFilters,
+  settings: NotificationSettings,
+): boolean => {
+  if (filters.selectedPool && minerPoolUrl(miner) !== filters.selectedPool) {
+    return false;
+  }
+
+  if (
+    filters.selectedDeviceModel &&
+    miner.deviceModel !== filters.selectedDeviceModel
+  ) {
+    return false;
+  }
+
+  const anyAlertActive =
+    filters.alertTemp || filters.alertFan || filters.alertOffline;
+  if (anyAlertActive) {
+    const isOverTemp =
+      filters.alertTemp && Math.round(miner.temp) > settings.tempThreshold;
+    const isOverFan =
+      filters.alertFan && Math.round(miner.fanspeed) > settings.fanThreshold;
+    const isOffline = filters.alertOffline && miner.alive === false;
+    if (!isOverTemp && !isOverFan && !isOffline) return false;
+  }
+
+  return true;
+};
