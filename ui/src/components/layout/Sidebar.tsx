@@ -1,8 +1,10 @@
 // src/components/layout/Sidebar.tsx
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {
   Box,
   Chip,
@@ -18,8 +20,36 @@ import {
 
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
-import { useBuildSHA } from "@/hooks/useMiners";
-import { createAutoRefreshToggledNotification } from "@/utils/minerNotifications";
+import { useAppInfo } from "@/hooks/useMiners";
+import {
+  type AppVersionStatus,
+  shouldNotifyForAppUpdate,
+} from "@/utils/appVersion";
+import {
+  createAppUpdateAvailableNotification,
+  createAutoRefreshToggledNotification,
+} from "@/utils/minerNotifications";
+
+const APP_VERSION_STATUS_STORAGE_KEY = "axeos.appVersionStatus";
+
+const loadPreviousAppVersionStatus = (): AppVersionStatus | undefined => {
+  try {
+    const raw = localStorage.getItem(APP_VERSION_STATUS_STORAGE_KEY);
+    return raw === "unknown" || raw === "upToDate" || raw === "updateAvailable"
+      ? raw
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const savePreviousAppVersionStatus = (status: AppVersionStatus): void => {
+  try {
+    localStorage.setItem(APP_VERSION_STATUS_STORAGE_KEY, status);
+  } catch {
+    // best-effort
+  }
+};
 
 export const SIDEBAR_WIDTH = 240;
 
@@ -29,12 +59,19 @@ interface SidebarProps {
 }
 
 interface SidebarContentProps {
+  buildSHA: string | undefined;
+  versionStatus: "unknown" | "upToDate" | "updateAvailable";
+  releaseUrl: string | null;
   onItemClick?: () => void;
 }
 
-const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
+const SidebarContent: React.FC<SidebarContentProps> = ({
+  buildSHA,
+  versionStatus,
+  releaseUrl,
+  onItemClick,
+}) => {
   const { t } = useTranslation();
-  const buildSHA = useBuildSHA();
   const location = useLocation();
   const boardId = location.pathname.slice(1) || undefined;
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
@@ -231,7 +268,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 0.25,
+              gap: 0.75,
               pt: 1.5,
               pb: 2,
             }}
@@ -244,8 +281,44 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
                 opacity: 0.6,
               }}
             >
-              build {buildSHA}
+              version {buildSHA}
             </Typography>
+
+            {versionStatus === "upToDate" && (
+              <Tooltip title={t("sidebar.versionUpToDate")} arrow>
+                <Chip
+                  icon={
+                    <CheckCircleOutlineIcon
+                      sx={{ fontSize: "14px !important" }}
+                    />
+                  }
+                  label={t("sidebar.versionUpToDate")}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+                />
+              </Tooltip>
+            )}
+            {versionStatus === "updateAvailable" && releaseUrl && (
+              <Tooltip title={t("sidebar.versionUpdateAvailableHint")} arrow>
+                <Chip
+                  icon={
+                    <SystemUpdateAltIcon sx={{ fontSize: "14px !important" }} />
+                  }
+                  label={t("sidebar.versionUpdateAvailable")}
+                  size="small"
+                  color="warning"
+                  clickable
+                  component="a"
+                  href={releaseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="app update available"
+                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+                />
+              </Tooltip>
+            )}
           </Box>
         </>
       )}
@@ -254,6 +327,34 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ onItemClick }) => {
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
+  // Called once here (rather than inside SidebarContent, which mounts
+  // twice -- once for the mobile drawer, once for the desktop permanent
+  // drawer) so the one-shot "update available" notification doesn't
+  // double-fire across both instances.
+  const { buildSHA, versionStatus, releaseUrl } = useAppInfo();
+  const { addNotifications } = useNotifications();
+
+  // The actual GitHub check happens server-side (see internal/appversion),
+  // checked at most once a day and piggybacked on the already-polled
+  // /api/miners response. This just tracks the transition into
+  // "updateAvailable" to fire a one-shot notification per browser --
+  // persisted so a page reload doesn't re-notify for a status that was
+  // already known before the reload (same reasoning as the miner
+  // notifications' snapshot persistence).
+  const previousVersionStatusRef = useRef<AppVersionStatus | undefined>(
+    loadPreviousAppVersionStatus(),
+  );
+  useEffect(() => {
+    if (versionStatus === "unknown") return;
+    if (
+      shouldNotifyForAppUpdate(previousVersionStatusRef.current, versionStatus)
+    ) {
+      addNotifications([createAppUpdateAvailableNotification()]);
+    }
+    previousVersionStatusRef.current = versionStatus;
+    savePreviousAppVersionStatus(versionStatus);
+  }, [versionStatus, addNotifications]);
+
   return (
     <Box
       component="nav"
@@ -273,7 +374,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           },
         }}
       >
-        <SidebarContent onItemClick={onClose} />
+        <SidebarContent
+          buildSHA={buildSHA}
+          versionStatus={versionStatus}
+          releaseUrl={releaseUrl}
+          onItemClick={onClose}
+        />
       </Drawer>
 
       {/* Desktop: permanent, always-visible drawer */}
@@ -289,7 +395,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           },
         }}
       >
-        <SidebarContent />
+        <SidebarContent
+          buildSHA={buildSHA}
+          versionStatus={versionStatus}
+          releaseUrl={releaseUrl}
+        />
       </Drawer>
     </Box>
   );

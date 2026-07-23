@@ -11,7 +11,8 @@ export type NotificationType =
   | "version"
   | "updateAvailable"
   | "settingsUpdated"
-  | "autoRefreshToggled";
+  | "autoRefreshToggled"
+  | "appUpdateAvailable";
 
 export interface NotificationSettings {
   tempThreshold: number;
@@ -266,6 +267,21 @@ export const createAutoRefreshToggledNotification = (
   minerLabel: "",
   type: "autoRefreshToggled",
   detail,
+});
+
+/**
+ * A single, non-miner-specific notification for when a new build of the
+ * dashboard app itself has been published -- distinct from
+ * "updateAvailable", which is about a miner's own firmware. The actual
+ * check runs server-side (internal/appversion in the Go backend); this
+ * just fires once per browser when the polled status first flips to
+ * "updateAvailable" (see appVersion.ts / Sidebar.tsx).
+ */
+export const createAppUpdateAvailableNotification = (): MinerNotification => ({
+  id: nextId(),
+  timestamp: Date.now(),
+  minerLabel: "",
+  type: "appUpdateAvailable",
 });
 
 const SNAPSHOT_STORAGE_PREFIX = "axeos.minerSnapshot.";

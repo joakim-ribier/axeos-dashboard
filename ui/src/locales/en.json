@@ -99,6 +99,11 @@
     "autoRefresh": "Auto-refresh",
     "refreshPage": "Refresh page"
   },
+  "sidebar": {
+    "versionUpToDate": "Up to date",
+    "versionUpdateAvailable": "Update available",
+    "versionUpdateAvailableHint": "New version available — click to view"
+  },
   "notificationSettings": {
     "title": "Notification settings",
     "tempThreshold": "Temp threshold (°C)",
@@ -122,7 +127,8 @@
     "version": "{{miner}} firmware updated: {{value}}",
     "updateAvailable": "{{miner}} has a firmware update available ({{value}})",
     "settingsUpdated": "Notification settings updated: {{value}}",
-    "autoRefreshToggled": "Auto-refresh: {{value}}"
+    "autoRefreshToggled": "Auto-refresh: {{value}}",
+    "appUpdateAvailable": "A new version of the dashboard is available"
   },
   "search": {
     "helpTitle": "Search tips",

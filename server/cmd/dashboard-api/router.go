@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/handler"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
@@ -22,15 +23,17 @@ const minerContextKey contextKey = "miner"
 type Router struct {
 	logger *slog.Logger
 
-	config  config.Config
-	watcher *healtcheck.Watcher
+	config         config.Config
+	watcher        *healtcheck.Watcher
+	versionChecker *appversion.Checker
 }
 
-func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Watcher) *Router {
+func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Watcher, versionChecker *appversion.Checker) *Router {
 	return &Router{
-		logger:  logger.With("namespace", "Router"),
-		config:  config,
-		watcher: watcher,
+		logger:         logger.With("namespace", "Router"),
+		config:         config,
+		watcher:        watcher,
+		versionChecker: versionChecker,
 	}
 }
 
@@ -53,7 +56,7 @@ func (f *Router) Handler() http.Handler {
 	router.Use(middleware.Timeout(30 * time.Second))
 
 	router.Get("/api/miners", func(w http.ResponseWriter, r *http.Request) {
-		handler.ListMiners(f.config, f.watcher, w, r)
+		handler.ListMiners(f.config, f.watcher, f.versionChecker, w, r)
 	})
 	router.Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.config, config.Primary, w, r)

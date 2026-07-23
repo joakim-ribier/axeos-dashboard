@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -9,9 +11,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
+
+// testVersionChecker returns a Checker for a "dev" build, which always
+// reports StatusUnknown without ever making a network call.
+func testVersionChecker() *appversion.Checker {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	return appversion.NewChecker(logger, "http://example.invalid", "dev")
+}
 
 func writeFixture(t *testing.T, path, content string) {
 	t.Helper()
@@ -29,7 +39,7 @@ func TestNewRouter_listMiners(t *testing.T) {
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-1","payload":{"hashRate":500000}}`)
 
 	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
-	router := NewRouter(cfg)
+	router := NewRouter(cfg, testVersionChecker())
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/miners", nil)
@@ -54,7 +64,7 @@ func TestNewRouter_stats(t *testing.T) {
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
-	router := NewRouter(cfg)
+	router := NewRouter(cfg, testVersionChecker())
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/10.0.0.1/stats", nil)
@@ -75,7 +85,7 @@ func TestNewRouter_stats(t *testing.T) {
 }
 
 func TestNewRouter_unknownPath(t *testing.T) {
-	router := NewRouter(config.Config{})
+	router := NewRouter(config.Config{}, testVersionChecker())
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/unknown", nil)

@@ -400,6 +400,13 @@
         "model.MinersResponse": {
             "type": "object",
             "properties": {
+                "appVersionReleaseURL": {
+                    "type": "string"
+                },
+                "appVersionStatus": {
+                    "description": "Whether this dashboard-api/remote-dashboard-api build itself is up to\ndate with GitHub's \"latest\" release (\"unknown\" | \"upToDate\" |\n\"updateAvailable\") — see internal/appversion. Checked server-side at\nmost once a day, so every client reads the same cached answer.",
+                    "type": "string"
+                },
                 "buildSHA": {
                     "description": "Git commit this dashboard-api binary was built from",
                     "type": "string"

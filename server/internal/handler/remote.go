@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
@@ -33,7 +34,7 @@ func boardDataRoot(dataDir, boardID string) string {
 // @Success 200 {object} model.MinersResponse
 // @Failure 404 {object} handler.ErrorResponse "board not found"
 // @Router /api/{boardId}/miners [get]
-func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
+func ListRemoteMiners(cfg config.Config, versionChecker *appversion.Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		boardID := chi.URLParam(r, "boardId")
 		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
@@ -48,9 +49,12 @@ func ListRemoteMiners(cfg config.Config) http.HandlerFunc {
 			return
 		}
 
+		versionCheck := versionChecker.Result()
 		resp := model.MinersResponse{
-			Miners:   make([]model.MinerInfo, 0),
-			BuildSHA: version.GitSHA,
+			Miners:               make([]model.MinerInfo, 0),
+			BuildSHA:             version.GitSHA,
+			AppVersionStatus:     versionCheck.Status,
+			AppVersionReleaseURL: versionCheck.ReleaseURL,
 		}
 
 		for _, entry := range entries {

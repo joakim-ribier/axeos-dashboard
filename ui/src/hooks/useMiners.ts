@@ -19,9 +19,13 @@ export class ApiError extends Error {
   }
 }
 
+export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
+
 interface MinersResult {
   miners: Miner[];
   buildSHA?: string;
+  appVersionStatus: AppVersionStatus;
+  appVersionReleaseURL: string | null;
 }
 
 export const fetchMiners = async (url: string): Promise<MinersResult> => {
@@ -31,10 +35,14 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
       total: number;
       miners: MinerInfo[];
       buildSHA?: string;
+      appVersionStatus?: AppVersionStatus;
+      appVersionReleaseURL?: string;
     }>(url);
     return {
       miners: data.miners.map((raw) => minerSchema.parse(raw)),
       buildSHA: data.buildSHA,
+      appVersionStatus: data.appVersionStatus ?? "unknown",
+      appVersionReleaseURL: data.appVersionReleaseURL ?? null,
     };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
@@ -85,13 +93,22 @@ export const useMiners = (): UseMinersReturn => {
   };
 };
 
+export interface AppInfo {
+  buildSHA: string | undefined;
+  versionStatus: AppVersionStatus;
+  releaseUrl: string | null;
+}
+
 /**
- * Standalone build-SHA lookup for the Sidebar, which renders above the
- * routing tree and therefore has no access to ModeProvider. Derives the
- * miners API path directly from the URL instead, and shares its cache entry
- * with useMiners() via the same query key — no duplicate network fetch.
+ * Standalone build/version-status lookup for the Sidebar, which renders
+ * above the routing tree and therefore has no access to ModeProvider.
+ * Derives the miners API path directly from the URL instead, and shares
+ * its cache entry with useMiners() via the same query key — no duplicate
+ * network fetch. The app-update check itself runs server-side (see
+ * internal/appversion in the Go backend) and just rides along in this
+ * same, already-polled response — no separate client-side GitHub call.
  */
-export const useBuildSHA = (): string | undefined => {
+export const useAppInfo = (): AppInfo => {
   const location = useLocation();
   const boardId = location.pathname.slice(1) || undefined;
   const minersPath = boardId ? `/api/${boardId}/miners` : "/api/miners";
@@ -104,5 +121,9 @@ export const useBuildSHA = (): string | undefined => {
     retry: false,
   });
 
-  return query.data?.buildSHA;
+  return {
+    buildSHA: query.data?.buildSHA,
+    versionStatus: query.data?.appVersionStatus ?? "unknown",
+    releaseUrl: query.data?.appVersionReleaseURL ?? null,
+  };
 };

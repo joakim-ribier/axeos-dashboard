@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
@@ -20,6 +21,14 @@ import (
 
 func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+// testVersionChecker returns a Checker for a "dev" build, which always
+// reports StatusUnknown without ever making a network call -- handler
+// tests only care that the field gets threaded through, not the outcome
+// of a real GitHub check.
+func testVersionChecker() *appversion.Checker {
+	return appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
 }
 
 func withURLParams(r *http.Request, params map[string]string) *http.Request {
@@ -48,7 +57,7 @@ func TestListMiners(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/miners", nil)
 
-	ListMiners(cfg, watcher, w, r)
+	ListMiners(cfg, watcher, testVersionChecker(), w, r)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -129,7 +138,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
 
-		ListRemoteMiners(cfg)(w, r)
+		ListRemoteMiners(cfg, testVersionChecker())(w, r)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -150,7 +159,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/unknown/miners/", nil), map[string]string{"boardId": "unknown"})
 
-		ListRemoteMiners(cfg)(w, r)
+		ListRemoteMiners(cfg, testVersionChecker())(w, r)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("status = %d, want %d for an unknown board", w.Code, http.StatusNotFound)

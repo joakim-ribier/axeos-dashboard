@@ -13,9 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/poolscheduler"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 // @title axeos-dashboard API
@@ -57,7 +59,9 @@ func main() {
 	watcher := healtcheck.NewWatcher(logger, cfg)
 	watcher.Start(&wg)
 
-	NewRouter(logger, cfg, watcher).Listen()
+	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
+
+	NewRouter(logger, cfg, watcher, versionChecker).Listen()
 
 	scheduler := poolscheduler.NewPoolScheduler(logger, cfg)
 	scheduler.Start()

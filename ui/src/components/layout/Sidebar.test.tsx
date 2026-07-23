@@ -12,9 +12,9 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-const mockUseBuildSHA = vi.fn();
+const mockUseAppInfo = vi.fn();
 vi.mock("@/hooks/useMiners", () => ({
-  useBuildSHA: () => mockUseBuildSHA(),
+  useAppInfo: () => mockUseAppInfo(),
 }));
 
 function renderSidebar(initialEntry: string) {
@@ -32,10 +32,14 @@ function renderSidebar(initialEntry: string) {
 describe("Sidebar", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    mockUseAppInfo.mockReturnValue({
+      buildSHA: undefined,
+      versionStatus: "unknown",
+      releaseUrl: null,
+    });
   });
 
   it("renders the brand mark and the Home nav item", () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/");
 
     expect(screen.getAllByText("AxeOS").length).toBeGreaterThan(0);
@@ -43,7 +47,6 @@ describe("Sidebar", () => {
   });
 
   it("shows the current board id (without the word 'board') on a remote route", () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/demo");
 
     expect(screen.getAllByText("demo").length).toBeGreaterThan(0);
@@ -51,7 +54,6 @@ describe("Sidebar", () => {
   });
 
   it("shows the full board id, not truncated to a handful of characters", () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     const longBoardId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     renderSidebar(`/${longBoardId}`);
 
@@ -59,28 +61,29 @@ describe("Sidebar", () => {
   });
 
   it("does not show a board id chip on the local route", () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/");
 
     expect(screen.queryByText("demo")).not.toBeInTheDocument();
   });
 
   it("shows the build SHA when available", () => {
-    mockUseBuildSHA.mockReturnValue("abc1234");
+    mockUseAppInfo.mockReturnValue({
+      buildSHA: "abc1234",
+      versionStatus: "unknown",
+      releaseUrl: null,
+    });
     renderSidebar("/");
 
-    expect(screen.getAllByText("build abc1234").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("version abc1234").length).toBeGreaterThan(0);
   });
 
   it("shows nothing build-related when the SHA is unavailable", () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     renderSidebar("/");
 
-    expect(screen.queryByText(/^build /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^version /)).not.toBeInTheDocument();
   });
 
   it("closes the mobile drawer when the Home nav item is clicked", async () => {
-    mockUseBuildSHA.mockReturnValue(undefined);
     const onClose = vi.fn();
     const user = userEvent.setup();
 
@@ -103,7 +106,6 @@ describe("Sidebar", () => {
 
   describe("auto-refresh toggle", () => {
     it("is enabled by default", () => {
-      mockUseBuildSHA.mockReturnValue(undefined);
       renderSidebar("/");
 
       const switches = screen.getAllByLabelText("auto-refresh");
@@ -112,7 +114,6 @@ describe("Sidebar", () => {
 
     it("reflects a previously-disabled setting from storage", () => {
       window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
-      mockUseBuildSHA.mockReturnValue(undefined);
       renderSidebar("/");
 
       const switches = screen.getAllByLabelText("auto-refresh");
@@ -120,7 +121,6 @@ describe("Sidebar", () => {
     });
 
     it("persists the new value and fires a notification when toggled", async () => {
-      mockUseBuildSHA.mockReturnValue(undefined);
       const user = userEvent.setup();
       renderSidebar("/");
 
@@ -144,7 +144,6 @@ describe("Sidebar", () => {
 
   describe("logo", () => {
     it("reloads the page when clicked", async () => {
-      mockUseBuildSHA.mockReturnValue(undefined);
       const reload = vi.fn();
       Object.defineProperty(window, "location", {
         value: { ...window.location, reload },
@@ -157,6 +156,120 @@ describe("Sidebar", () => {
       await user.click(logos[0]);
 
       expect(reload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("app version status", () => {
+    it("shows nothing extra when the status is unknown", () => {
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "unknown",
+        releaseUrl: null,
+      });
+      renderSidebar("/");
+
+      expect(
+        screen.queryByLabelText("app update available"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows an up-to-date indicator when the running build matches latest", () => {
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "upToDate",
+        releaseUrl: null,
+      });
+      renderSidebar("/");
+
+      expect(
+        screen.getAllByLabelText("sidebar.versionUpToDate", { exact: false })
+          .length,
+      ).toBeGreaterThan(0);
+    });
+
+    it("shows a clickable update-available link to the release when behind", () => {
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "updateAvailable",
+        releaseUrl:
+          "https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest",
+      });
+      renderSidebar("/");
+
+      const links = screen.getAllByLabelText("app update available");
+      expect(links.length).toBeGreaterThan(0);
+      expect(links[0]).toHaveAttribute(
+        "href",
+        "https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest",
+      );
+    });
+
+    it("fires a one-shot notification when the status transitions to updateAvailable", () => {
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "upToDate",
+        releaseUrl: null,
+      });
+      const { rerender } = renderSidebar("/");
+
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "updateAvailable",
+        releaseUrl: "https://example.com/releases/latest",
+      });
+      rerender(
+        <MemoryRouter initialEntries={["/"]}>
+          <RefreshSettingsProvider>
+            <NotificationsProvider>
+              <Sidebar mobileOpen={false} onClose={() => {}} />
+            </NotificationsProvider>
+          </RefreshSettingsProvider>
+        </MemoryRouter>,
+      );
+
+      const stored = JSON.parse(
+        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+      );
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ type: "appUpdateAvailable" });
+    });
+
+    it("does not re-notify on a later poll that still reports updateAvailable", () => {
+      // Mirrors the real app: useAppInfo() is backed by an async query, so
+      // the very first render always sees "unknown" before it resolves --
+      // the transition (and its notification) happens on a later render,
+      // not on mount itself.
+      const sidebarTree = (
+        <MemoryRouter initialEntries={["/"]}>
+          <RefreshSettingsProvider>
+            <NotificationsProvider>
+              <Sidebar mobileOpen={false} onClose={() => {}} />
+            </NotificationsProvider>
+          </RefreshSettingsProvider>
+        </MemoryRouter>
+      );
+
+      const { rerender } = renderSidebar("/");
+
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "updateAvailable",
+        releaseUrl: "https://example.com/releases/latest",
+      });
+      rerender(sidebarTree);
+
+      // Same status again, as if a later 90s poll came back unchanged.
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: "abc1234",
+        versionStatus: "updateAvailable",
+        releaseUrl: "https://example.com/releases/latest",
+      });
+      rerender(sidebarTree);
+
+      const stored = JSON.parse(
+        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+      );
+      expect(stored).toHaveLength(1);
     });
   });
 });

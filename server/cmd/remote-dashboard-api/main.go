@@ -12,7 +12,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 func main() {
@@ -31,7 +33,9 @@ func main() {
 	}
 	logger := newLogger("remote-dashboard", logFile)
 
-	r := NewRouter(cfg)
+	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
+
+	r := NewRouter(cfg, versionChecker)
 
 	port := cfg.Server.Port
 	if port == "" {

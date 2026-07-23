@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 )
@@ -26,7 +27,8 @@ func serverAddr(server *httptest.Server) string {
 func newTestRouter(t *testing.T, cfg config.Config) http.Handler {
 	t.Helper()
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	return NewRouter(testLogger(), cfg, watcher).Handler()
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	return NewRouter(testLogger(), cfg, watcher, versionChecker).Handler()
 }
 
 func TestRouter_listMiners(t *testing.T) {
