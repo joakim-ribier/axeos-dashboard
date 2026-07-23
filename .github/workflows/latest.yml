@@ -5,20 +5,40 @@ on:
     workflows: ["Checks"]
     types: [completed]
     branches: [main]
+  # Manual escape hatch: GitHub's workflow_run trigger occasionally never
+  # fires (or fires very late) due to a platform-side delay/glitch, even
+  # when the triggering "Checks" run genuinely succeeded. Dispatching this
+  # manually from the Actions tab (or `gh workflow run latest.yml`)
+  # publishes "latest" from the current tip of whichever branch you pick
+  # (main, by default) without waiting on that trigger.
+  workflow_dispatch: {}
 
 jobs:
-  # Fails the whole workflow run (instead of silently skipping downstream
-  # jobs) when the triggering "Checks" run didn't succeed — so the badge
-  # actually means "latest matches the last commit on main", not just
-  # "nothing failed" (an all-skipped run would otherwise report success).
+  # Resolves which commit to publish and whether it's safe to proceed.
+  # Automatic runs (triggered by Checks completing) require Checks to have
+  # succeeded -- so the badge actually means "latest matches the last
+  # commit on main", not just "nothing failed" (an all-skipped run would
+  # otherwise report success). A manual run (workflow_dispatch) is an
+  # explicit human override and always proceeds.
   guard:
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
     steps:
-      - name: require Checks to have succeeded
-        if: github.event.workflow_run.conclusion != 'success'
+      - name: require Checks to have succeeded (automatic runs only)
+        if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
         run: |
           echo "::error::Checks did not succeed (conclusion: ${{ github.event.workflow_run.conclusion }}) for ${{ github.event.workflow_run.head_sha }} — refusing to publish 'latest'."
           exit 1
+
+      - name: resolve commit to publish
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
 
   build:
     needs: guard
@@ -29,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ needs.guard.outputs.sha }}
 
       - uses: actions/setup-go@v7
         with:
@@ -43,7 +63,7 @@ jobs:
           GOARCH: ${{ matrix.arch }}
         run: |
           mkdir -p ../dist
-          sha=$(echo "${{ github.event.workflow_run.head_sha }}" | cut -c1-7)
+          sha=$(echo "${{ needs.guard.outputs.sha }}" | cut -c1-7)
           ldflags="-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$sha"
           go build -ldflags "$ldflags" -o ../dist/feeder-${{ matrix.arch }} ./cmd/feeder
           go build -ldflags "$ldflags" -o ../dist/dashboard-api-${{ matrix.arch }} ./cmd/dashboard-api
@@ -56,14 +76,14 @@ jobs:
           retention-days: 1
 
   release:
-    needs: build
+    needs: [guard, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ needs.guard.outputs.sha }}
 
       # Delete any existing "latest" release + tag first. action-gh-release
       # replaces assets with matching names but never removes ones that are no
@@ -99,12 +119,12 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: latest
-          name: "latest (${{ github.event.workflow_run.head_sha }})"
-          target_commitish: ${{ github.event.workflow_run.head_sha }}
+          name: "latest (${{ needs.guard.outputs.sha }})"
+          target_commitish: ${{ needs.guard.outputs.sha }}
           prerelease: true
           make_latest: "true"
           body: |
-            Automatically built from commit ${{ github.event.workflow_run.head_sha }} on `main`, after CI passed.
+            Built from commit ${{ needs.guard.outputs.sha }} on `main`.
             Binaries for linux/arm64 (Raspberry Pi) and linux/amd64 (typical VPS).
             Fetch with `make latest-up` (Pi, dashboard-api + feeder) or
             `make latest-remote-up` (VPS, remote-dashboard-api) — both auto-detect
