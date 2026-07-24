@@ -46,7 +46,7 @@ import { GlobalStats } from "../components/ui/GlobalStats";
 import { MinerCard } from "../components/ui/MinerCard/MinerCard";
 import { OopsPage } from "../components/ui/OopsPage";
 import { PageHeader } from "../components/ui/PageHeader";
-import { ApiError, useMiners } from "../hooks/useMiners";
+import { ApiError, useAppInfo, useMiners } from "../hooks/useMiners";
 
 const getPoolLabel = (url: string): string => {
   try {
@@ -269,6 +269,7 @@ const NotificationSettingsPanel = () => {
 export const Home = () => {
   const { t } = useTranslation();
   const { data, isLoading, error } = useMiners();
+  const { hashboardUrl } = useAppInfo();
   const { boardId } = useMode();
   const { query } = useSearch();
   const { addNotifications } = useNotifications();
@@ -424,9 +425,7 @@ export const Home = () => {
   });
 
   if (error instanceof ApiError && error.status === 403 && boardId) {
-    return (
-      <BoardLockedPage boardId={boardId} hashboardUrl={error.hashboardUrl} />
-    );
+    return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
   }
 
   if (error instanceof ApiError && error.status === 404) {

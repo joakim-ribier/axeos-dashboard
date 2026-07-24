@@ -56,8 +56,9 @@ func (f *Router) Handler() http.Handler {
 	router.Use(middleware.Timeout(30 * time.Second))
 
 	router.Get("/api/miners", func(w http.ResponseWriter, r *http.Request) {
-		handler.ListMiners(f.config, f.watcher, f.versionChecker, w, r)
+		handler.ListMiners(f.config, f.watcher, w, r)
 	})
+	router.Get("/api/info", handler.Info(f.versionChecker, ""))
 	router.Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.config, config.Primary, w, r)
 	})

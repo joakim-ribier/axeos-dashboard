@@ -95,6 +95,34 @@ func TestNewRouter_stats(t *testing.T) {
 	}
 }
 
+// privateAccessChecker returns a Checker rooted at an empty data dir, so
+// every board is treated as private with no valid session -- used to prove
+// /api/info is reachable regardless of board access, unlike /api/{boardId}/miners.
+func privateAccessChecker(t *testing.T) *hashboardaccess.Checker {
+	t.Helper()
+	return hashboardaccess.New(t.TempDir())
+}
+
+func TestNewRouter_infoNotGatedByBoardAccess(t *testing.T) {
+	cfg := config.Config{HashboardURL: "https://hashboard.live"}
+	router := NewRouter(cfg, testVersionChecker(), privateAccessChecker(t))
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/info", nil)
+	router.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	var got model.InfoResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if got.HashboardURL != "https://hashboard.live" {
+		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.live")
+	}
+}
+
 func TestNewRouter_unknownPath(t *testing.T) {
 	router := NewRouter(config.Config{}, testVersionChecker(), publicAccessChecker(t, "demo"))
 

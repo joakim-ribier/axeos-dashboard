@@ -23,9 +23,11 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChec
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 
+	r.Get("/api/info", handler.Info(versionChecker, cfg.HashboardURL))
+
 	r.Route("/api/{boardId}", func(r chi.Router) {
-		r.Use(handler.RequireBoardAccess(accessChecker, cfg.HashboardURL))
-		r.Get("/miners", handler.ListRemoteMiners(cfg, versionChecker, accessChecker))
+		r.Use(handler.RequireBoardAccess(accessChecker))
+		r.Get("/miners", handler.ListRemoteMiners(cfg, accessChecker))
 		r.Get("/{ip}/stats", handler.RemoteStats(cfg))
 	})
 

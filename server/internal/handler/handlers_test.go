@@ -17,7 +17,6 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 func testLogger() *slog.Logger {
@@ -67,7 +66,7 @@ func TestListMiners(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/miners", nil)
 
-	ListMiners(cfg, watcher, testVersionChecker(), w, r)
+	ListMiners(cfg, watcher, w, r)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -85,9 +84,6 @@ func TestListMiners(t *testing.T) {
 	}
 	if len(got.Miners) != 1 || got.Miners[0].IP != "10.0.0.1" {
 		t.Errorf("Miners = %+v, want a single entry for 10.0.0.1", got.Miners)
-	}
-	if got.BuildSHA != version.GitSHA {
-		t.Errorf("BuildSHA = %q, want %q", got.BuildSHA, version.GitSHA)
 	}
 }
 
@@ -148,7 +144,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
 
-		ListRemoteMiners(cfg, testVersionChecker(), testAccessChecker(t))(w, r)
+		ListRemoteMiners(cfg, testAccessChecker(t))(w, r)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -159,9 +155,6 @@ func TestListRemoteMiners(t *testing.T) {
 		}
 		if got.Total != 1 || got.Miners[0].Hostname != "bitaxe-1" {
 			t.Errorf("got %+v, want a single miner bitaxe-1", got)
-		}
-		if got.BuildSHA != version.GitSHA {
-			t.Errorf("BuildSHA = %q, want %q", got.BuildSHA, version.GitSHA)
 		}
 		if got.BoardPublic {
 			t.Error("BoardPublic = true, want false (no accounts/demo.json fixture -> defaults private)")
@@ -176,7 +169,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
 
-		ListRemoteMiners(cfg, testVersionChecker(), accessChecker)(w, r)
+		ListRemoteMiners(cfg, accessChecker)(w, r)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -194,7 +187,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/unknown/miners/", nil), map[string]string{"boardId": "unknown"})
 
-		ListRemoteMiners(cfg, testVersionChecker(), testAccessChecker(t))(w, r)
+		ListRemoteMiners(cfg, testAccessChecker(t))(w, r)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("status = %d, want %d for an unknown board", w.Code, http.StatusNotFound)

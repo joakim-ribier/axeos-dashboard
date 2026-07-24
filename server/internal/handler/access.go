@@ -16,10 +16,10 @@ const sessionCookieName = "hb_session"
 // RequireBoardAccess gates every /api/{boardId}/* route: public boards pass
 // through unconditionally, private boards require a valid hb_session cookie
 // (set by hashboard after a successful magic-link click) that resolves to
-// this exact board. hashboardURL is echoed on the 403 body (see
-// ErrorResponse.HashboardURL) so the frontend can still build its
-// "request access" link/form.
-func RequireBoardAccess(checker *hashboardaccess.Checker, hashboardURL string) func(http.Handler) http.Handler {
+// this exact board. The frontend gets everything it needs to build its
+// "request access" form from the ungated GET /api/info instead of this
+// 403's body — see internal/handler/info.go.
+func RequireBoardAccess(checker *hashboardaccess.Checker) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			boardID := chi.URLParam(r, "boardId")
@@ -35,7 +35,7 @@ func RequireBoardAccess(checker *hashboardaccess.Checker, hashboardURL string) f
 				return
 			}
 			if !allowed {
-				writeErrorResponseWithHashboardURL(w, "this board is private", http.StatusForbidden, hashboardURL)
+				writeErrorResponse(w, "this board is private", http.StatusForbidden)
 				return
 			}
 			next.ServeHTTP(w, r)

@@ -13,12 +13,6 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
-    // Only set on the "board is private" 403 (see RequireBoardAccess on the
-    // Go side) — the request that would normally carry it (a successful
-    // MinersResponse) never got a chance to run, so it's echoed on the
-    // error body instead. Lets BoardLockedPage build its form/link even
-    // though the miners fetch itself failed.
-    public readonly hashboardUrl: string | null = null,
   ) {
     super(message);
     this.name = "ApiError";
@@ -29,10 +23,6 @@ export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
 
 interface MinersResult {
   miners: Miner[];
-  buildSHA?: string;
-  appVersionStatus: AppVersionStatus;
-  appVersionReleaseURL: string | null;
-  hashboardUrl: string | null;
   isPublic: boolean;
 }
 
@@ -42,18 +32,10 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
       configured: number;
       total: number;
       miners: MinerInfo[];
-      buildSHA?: string;
-      appVersionStatus?: AppVersionStatus;
-      appVersionReleaseURL?: string;
-      hashboardURL?: string;
       boardPublic?: boolean;
     }>(url);
     return {
       miners: data.miners.map((raw) => minerSchema.parse(raw)),
-      buildSHA: data.buildSHA,
-      appVersionStatus: data.appVersionStatus ?? "unknown",
-      appVersionReleaseURL: data.appVersionReleaseURL ?? null,
-      hashboardUrl: data.hashboardURL ?? null,
       isPublic: data.boardPublic ?? false,
     };
   } catch (err) {
@@ -61,7 +43,6 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
       throw new ApiError(
         err.response.status,
         err.response.data?.error ?? err.message,
-        err.response.data?.hashboardURL ?? null,
       );
     }
     throw err;
@@ -70,7 +51,6 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
 
 export interface UseMinersReturn {
   data: Miner[] | undefined;
-  buildSHA: string | undefined;
   isLoading: boolean;
   error: Error | null;
   isFetching: boolean;
@@ -101,10 +81,31 @@ export const useMiners = (): UseMinersReturn => {
   return {
     ...query,
     data: query.data?.miners,
-    buildSHA: query.data?.buildSHA,
     refetch: async () => {
       await query.refetch();
     },
+  };
+};
+
+interface InfoResult {
+  buildSHA?: string;
+  appVersionStatus: AppVersionStatus;
+  appVersionReleaseURL: string | null;
+  hashboardUrl: string | null;
+}
+
+export const fetchInfo = async (): Promise<InfoResult> => {
+  const { data } = await axios.get<{
+    buildSHA?: string;
+    appVersionStatus?: AppVersionStatus;
+    appVersionReleaseURL?: string;
+    hashboardURL?: string;
+  }>("/api/info");
+  return {
+    buildSHA: data.buildSHA,
+    appVersionStatus: data.appVersionStatus ?? "unknown",
+    appVersionReleaseURL: data.appVersionReleaseURL ?? null,
+    hashboardUrl: data.hashboardURL ?? null,
   };
 };
 
@@ -117,20 +118,35 @@ export interface AppInfo {
 }
 
 /**
- * Standalone build/version-status lookup for the Sidebar, which renders
+ * Build/version-status/hashboard-link lookup for the Sidebar, which renders
  * above the routing tree and therefore has no access to ModeProvider.
- * Derives the miners API path directly from the URL instead, and shares
- * its cache entry with useMiners() via the same query key — no duplicate
- * network fetch. The app-update check itself runs server-side (see
- * internal/appversion in the Go backend) and just rides along in this
- * same, already-polled response — no separate client-side GitHub call.
+ *
+ * Deliberately two separate queries:
+ * - /api/info is never board-gated (it's server-instance metadata, not
+ *   board data — see internal/handler/info.go), so it stays available even
+ *   when the visitor has no access to a private board.
+ * - the board's own public/private flag IS board data, so it still comes
+ *   from the miners endpoint, deriving the path from the URL directly
+ *   (same reasoning as before) and sharing its cache entry with
+ *   useMiners() via the same query key — no duplicate network fetch. When
+ *   that fetch fails (private board, no session), isPublic just falls back
+ *   to false — acceptable since the locked-board page already makes the
+ *   privacy state obvious.
  */
 export const useAppInfo = (): AppInfo => {
   const location = useLocation();
   const boardId = location.pathname.slice(1) || undefined;
   const minersPath = boardId ? `/api/${boardId}/miners` : "/api/miners";
 
-  const query = useQuery<MinersResult, Error>({
+  const infoQuery = useQuery<InfoResult, Error>({
+    queryKey: ["info"],
+    queryFn: fetchInfo,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+
+  const minersQuery = useQuery<MinersResult, Error>({
     queryKey: ["miners", minersPath],
     queryFn: () => fetchMiners(minersPath),
     staleTime: Infinity,
@@ -139,10 +155,10 @@ export const useAppInfo = (): AppInfo => {
   });
 
   return {
-    buildSHA: query.data?.buildSHA,
-    versionStatus: query.data?.appVersionStatus ?? "unknown",
-    releaseUrl: query.data?.appVersionReleaseURL ?? null,
-    hashboardUrl: query.data?.hashboardUrl ?? null,
-    isPublic: query.data?.isPublic ?? false,
+    buildSHA: infoQuery.data?.buildSHA,
+    versionStatus: infoQuery.data?.appVersionStatus ?? "unknown",
+    releaseUrl: infoQuery.data?.appVersionReleaseURL ?? null,
+    hashboardUrl: infoQuery.data?.hashboardUrl ?? null,
+    isPublic: minersQuery.data?.isPublic ?? false,
   };
 };

@@ -7,12 +7,10 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
 // ---------------------------------------------------------------------------
@@ -30,18 +28,14 @@ import (
 // @Produce json
 // @Success 200 {object} model.MinersResponse
 // @Router /api/miners [get]
-func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, versionChecker *appversion.Checker, w http.ResponseWriter, r *http.Request) {
+func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseWriter, r *http.Request) {
 	root := getDataRoot(cfg.Storage)
 	miners := cfg.GetMiners()
 	fwCache := firmware.LoadCache(root)
-	versionCheck := versionChecker.Result()
 
 	resp := model.MinersResponse{
-		Configured:           len(miners),
-		Miners:               make([]model.MinerInfo, 0, len(miners)),
-		BuildSHA:             version.GitSHA,
-		AppVersionStatus:     versionCheck.Status,
-		AppVersionReleaseURL: versionCheck.ReleaseURL,
+		Configured: len(miners),
+		Miners:     make([]model.MinerInfo, 0, len(miners)),
 	}
 
 	for _, miner := range miners {

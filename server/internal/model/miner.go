@@ -54,7 +54,20 @@ type MinersResponse struct {
 	Configured int         `json:"configured"` // Number of miners in config
 	Total      int         `json:"total"`      // Number of miners successfully loaded
 	Miners     []MinerInfo `json:"miners"`
-	BuildSHA   string      `json:"buildSHA,omitempty"` // Git commit this dashboard-api binary was built from
+
+	// BoardPublic reflects hashboard's Account.Public flag for this board
+	// (remote-dashboard-api only) — meaningless/always false for local
+	// dashboard-api, which has no such concept and whose UI never reads it.
+	BoardPublic bool `json:"boardPublic"`
+}
+
+// InfoResponse is the JSON structure returned by GET /api/info — metadata
+// about this server instance, not any particular board's data. Deliberately
+// its own endpoint, outside any board-access gating: unlike miner data, none
+// of this is board-specific, so it must stay visible even to a visitor
+// locked out of a private board (see RequireBoardAccess).
+type InfoResponse struct {
+	BuildSHA string `json:"buildSHA,omitempty"` // Git commit this binary was built from
 
 	// Whether this dashboard-api/remote-dashboard-api build itself is up to
 	// date with GitHub's "latest" release ("unknown" | "upToDate" |
@@ -64,12 +77,7 @@ type MinersResponse struct {
 	AppVersionReleaseURL string `json:"appVersionReleaseURL,omitempty"`
 
 	// HashboardURL is the base URL of the hashboard instance backing this
-	// board (remote-dashboard-api only, config.HashboardURL) — lets the UI
-	// build a link to the board owner's hashboard account page.
+	// remote-dashboard-api (remote-dashboard-api only, config.HashboardURL)
+	// — lets the UI build a link to the board owner's hashboard account page.
 	HashboardURL string `json:"hashboardURL,omitempty"`
-
-	// BoardPublic reflects hashboard's Account.Public flag for this board
-	// (remote-dashboard-api only) — meaningless/always false for local
-	// dashboard-api, which has no such concept and whose UI never reads it.
-	BoardPublic bool `json:"boardPublic"`
 }

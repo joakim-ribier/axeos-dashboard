@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -32,7 +31,7 @@ func TestRequireBoardAccess_publicBoardPassesThrough(t *testing.T) {
 	writeAccessFixture(t, filepath.Join(dir, "accounts", "someboard0000000.json"), `{"public":true}`)
 	checker := hashboardaccess.New(dir)
 
-	handler := RequireBoardAccess(checker, "https://hashboard.live")(passThroughHandler())
+	handler := RequireBoardAccess(checker)(passThroughHandler())
 
 	w := httptest.NewRecorder()
 	r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/someboard0000000/miners", nil), map[string]string{"boardId": "someboard0000000"})
@@ -43,26 +42,19 @@ func TestRequireBoardAccess_publicBoardPassesThrough(t *testing.T) {
 	}
 }
 
-func TestRequireBoardAccess_privateBoardNoCookieRejectedWithHashboardURL(t *testing.T) {
+func TestRequireBoardAccess_privateBoardNoCookieRejected(t *testing.T) {
 	dir := t.TempDir()
 	writeAccessFixture(t, filepath.Join(dir, "accounts", "someboard0000000.json"), `{"public":false}`)
 	checker := hashboardaccess.New(dir)
 
-	handler := RequireBoardAccess(checker, "https://hashboard.live")(passThroughHandler())
+	handler := RequireBoardAccess(checker)(passThroughHandler())
 
 	w := httptest.NewRecorder()
 	r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/someboard0000000/miners", nil), map[string]string{"boardId": "someboard0000000"})
 	handler.ServeHTTP(w, r)
 
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusForbidden)
-	}
-	var resp ErrorResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-	if resp.HashboardURL != "https://hashboard.live" {
-		t.Errorf("HashboardURL = %q, want %q", resp.HashboardURL, "https://hashboard.live")
+		t.Errorf("status = %d, want %d", w.Code, http.StatusForbidden)
 	}
 }
 
@@ -73,7 +65,7 @@ func TestRequireBoardAccess_privateBoardValidSessionPassesThrough(t *testing.T) 
 		`{"boardId":"someboard0000000","expiresAt":"2999-01-01T00:00:00Z"}`)
 	checker := hashboardaccess.New(dir)
 
-	handler := RequireBoardAccess(checker, "https://hashboard.live")(passThroughHandler())
+	handler := RequireBoardAccess(checker)(passThroughHandler())
 
 	w := httptest.NewRecorder()
 	r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/someboard0000000/miners", nil), map[string]string{"boardId": "someboard0000000"})

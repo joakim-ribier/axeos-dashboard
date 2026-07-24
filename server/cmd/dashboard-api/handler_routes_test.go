@@ -50,6 +50,16 @@ func TestRouter_listMiners(t *testing.T) {
 	}
 }
 
+func TestRouter_info(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/info", nil)
+	newTestRouter(t, config.Config{}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
 func TestRouter_switchPool_noMatchingMinerStillReturnsNoContent(t *testing.T) {
 	cfg := config.Config{} // no bitaxes configured — loop body never runs, no network call
 
