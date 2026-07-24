@@ -27,6 +27,13 @@ type Config struct {
 	Pools       PoolsConfig       `yaml:"pools"`
 	Electricity ElectricityConfig `yaml:"electricity"`
 	Remote      RemoteConfig      `yaml:"remote"`
+
+	// HashboardURL is the base URL of the hashboard instance backing this
+	// remote-dashboard-api (remote-dashboard-api only): where the "private
+	// board" access-request form posts to, and where the board owner's
+	// account-management link points. Not configured by default -- set your
+	// own deployment's URL (e.g. "http://localhost:8090" for local dev).
+	HashboardURL string `yaml:"hashboardURL"`
 }
 
 func (c Config) GetMiners() []Bitaxe {
@@ -166,6 +173,15 @@ func (s StorageConfig) ResolveBoardsDir() string {
 		return s.BoardsDir
 	}
 	return filepath.Join(s.DataDir, "data", "boards")
+}
+
+// ResolveHashboardDataDir returns hashboard's shared data root — the parent
+// of boards/, alongside its accounts/ and sessions/ directories (see
+// hashboard/server/internal/storage.Store) — used to check a board's
+// public/private flag and validate session cookies. No separate config key:
+// boards/ is always a direct child of this same root.
+func (s StorageConfig) ResolveHashboardDataDir() string {
+	return filepath.Dir(s.ResolveBoardsDir())
 }
 
 type EndpointConfig struct {

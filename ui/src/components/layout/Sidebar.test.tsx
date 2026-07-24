@@ -36,6 +36,39 @@ describe("Sidebar", () => {
       buildSHA: undefined,
       versionStatus: "unknown",
       releaseUrl: null,
+      hashboardUrl: null,
+      isPublic: false,
+    });
+  });
+
+  describe("board public/private indicator", () => {
+    it("shows the private icon by default", () => {
+      renderSidebar("/demo");
+
+      expect(
+        screen.getAllByLabelText("board is private").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.queryByLabelText("board is public"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the public icon when the board is public", () => {
+      mockUseAppInfo.mockReturnValue({
+        buildSHA: undefined,
+        versionStatus: "unknown",
+        releaseUrl: null,
+        hashboardUrl: null,
+        isPublic: true,
+      });
+      renderSidebar("/demo");
+
+      expect(
+        screen.getAllByLabelText("board is public").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.queryByLabelText("board is private"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -74,13 +107,15 @@ describe("Sidebar", () => {
     });
     renderSidebar("/");
 
-    expect(screen.getAllByText("version abc1234").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("sidebar.versionLabel").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("shows nothing build-related when the SHA is unavailable", () => {
     renderSidebar("/");
 
-    expect(screen.queryByText(/^version /)).not.toBeInTheDocument();
+    expect(screen.queryByText("sidebar.versionLabel")).not.toBeInTheDocument();
   });
 
   it("closes the mobile drawer when the Home nav item is clicked", async () => {

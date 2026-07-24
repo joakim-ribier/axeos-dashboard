@@ -14,6 +14,7 @@ import (
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
@@ -34,8 +35,9 @@ func main() {
 	logger := newLogger("remote-dashboard", logFile)
 
 	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
+	accessChecker := hashboardaccess.New(cfg.Storage.ResolveHashboardDataDir())
 
-	r := NewRouter(cfg, versionChecker)
+	r := NewRouter(cfg, versionChecker, accessChecker)
 
 	port := cfg.Server.Port
 	if port == "" {

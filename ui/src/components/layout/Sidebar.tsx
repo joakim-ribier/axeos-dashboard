@@ -4,11 +4,15 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import LockIcon from "@mui/icons-material/Lock";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import PublicIcon from "@mui/icons-material/Public";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {
   Box,
   Chip,
   Drawer,
+  Link,
   List,
   ListItemButton,
   ListItemIcon,
@@ -62,6 +66,8 @@ interface SidebarContentProps {
   buildSHA: string | undefined;
   versionStatus: "unknown" | "upToDate" | "updateAvailable";
   releaseUrl: string | null;
+  hashboardUrl: string | null;
+  isPublic: boolean;
   onItemClick?: () => void;
 }
 
@@ -69,6 +75,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   buildSHA,
   versionStatus,
   releaseUrl,
+  hashboardUrl,
+  isPublic,
   onItemClick,
 }) => {
   const { t } = useTranslation();
@@ -165,7 +173,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       </Box>
 
       {boardId && (
-        <Box sx={{ display: "flex", justifyContent: "center", pb: 2, mt: -1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 0.5,
+            pb: 2,
+            mt: -1,
+          }}
+        >
           <Tooltip title={boardId} arrow>
             <Chip
               size="small"
@@ -184,6 +201,42 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               }}
             />
           </Tooltip>
+          <Tooltip
+            title={
+              isPublic
+                ? t("sidebar.boardPublicHint")
+                : t("sidebar.boardPrivateHint")
+            }
+            arrow
+          >
+            <Box
+              component="span"
+              aria-label={isPublic ? "board is public" : "board is private"}
+              sx={{
+                display: "flex",
+                color: isPublic ? "success.main" : "warning.main",
+              }}
+            >
+              {isPublic ? (
+                <PublicIcon sx={{ fontSize: 14 }} />
+              ) : (
+                <LockIcon sx={{ fontSize: 14 }} />
+              )}
+            </Box>
+          </Tooltip>
+          {hashboardUrl && (
+            <Tooltip title={t("sidebar.openHashboardAccount")} arrow>
+              <Link
+                href={`${hashboardUrl}/me`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="open hashboard account"
+                sx={{ display: "flex", color: "text.disabled" }}
+              >
+                <OpenInNewIcon sx={{ fontSize: 14 }} />
+              </Link>
+            </Tooltip>
+          )}
         </Box>
       )}
 
@@ -281,23 +334,25 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
                 opacity: 0.6,
               }}
             >
-              version {buildSHA}
+              {t("sidebar.versionLabel", { sha: buildSHA })}
             </Typography>
 
             {versionStatus === "upToDate" && (
               <Tooltip title={t("sidebar.versionUpToDate")} arrow>
-                <Chip
-                  icon={
-                    <CheckCircleOutlineIcon
-                      sx={{ fontSize: "14px !important" }}
-                    />
-                  }
-                  label={t("sidebar.versionUpToDate")}
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
-                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                    color: "text.disabled",
+                    opacity: 0.6,
+                  }}
+                >
+                  <CheckCircleOutlineIcon sx={{ fontSize: 12 }} />
+                  <Typography variant="caption" sx={{ fontSize: "0.65rem" }}>
+                    {t("sidebar.versionUpToDate")}
+                  </Typography>
+                </Box>
               </Tooltip>
             )}
             {versionStatus === "updateAvailable" && releaseUrl && (
@@ -331,7 +386,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
   // twice -- once for the mobile drawer, once for the desktop permanent
   // drawer) so the one-shot "update available" notification doesn't
   // double-fire across both instances.
-  const { buildSHA, versionStatus, releaseUrl } = useAppInfo();
+  const { buildSHA, versionStatus, releaseUrl, hashboardUrl, isPublic } =
+    useAppInfo();
   const { addNotifications } = useNotifications();
 
   // The actual GitHub check happens server-side (see internal/appversion),
@@ -378,6 +434,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           buildSHA={buildSHA}
           versionStatus={versionStatus}
           releaseUrl={releaseUrl}
+          hashboardUrl={hashboardUrl}
+          isPublic={isPublic}
           onItemClick={onClose}
         />
       </Drawer>
@@ -399,6 +457,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           buildSHA={buildSHA}
           versionStatus={versionStatus}
           releaseUrl={releaseUrl}
+          hashboardUrl={hashboardUrl}
+          isPublic={isPublic}
         />
       </Drawer>
     </Box>

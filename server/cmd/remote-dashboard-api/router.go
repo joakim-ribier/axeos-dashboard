@@ -10,10 +10,11 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/handler"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 )
 
 // NewRouter builds the remote-dashboard-api HTTP router.
-func NewRouter(cfg config.Config, versionChecker *appversion.Checker) http.Handler {
+func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChecker *hashboardaccess.Checker) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -23,7 +24,8 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker) http.Handl
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Route("/api/{boardId}", func(r chi.Router) {
-		r.Get("/miners", handler.ListRemoteMiners(cfg, versionChecker))
+		r.Use(handler.RequireBoardAccess(accessChecker, cfg.HashboardURL))
+		r.Get("/miners", handler.ListRemoteMiners(cfg, versionChecker, accessChecker))
 		r.Get("/{ip}/stats", handler.RemoteStats(cfg))
 	})
 

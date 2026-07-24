@@ -13,6 +13,12 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     message: string,
+    // Only set on the "board is private" 403 (see RequireBoardAccess on the
+    // Go side) — the request that would normally carry it (a successful
+    // MinersResponse) never got a chance to run, so it's echoed on the
+    // error body instead. Lets BoardLockedPage build its form/link even
+    // though the miners fetch itself failed.
+    public readonly hashboardUrl: string | null = null,
   ) {
     super(message);
     this.name = "ApiError";
@@ -26,6 +32,8 @@ interface MinersResult {
   buildSHA?: string;
   appVersionStatus: AppVersionStatus;
   appVersionReleaseURL: string | null;
+  hashboardUrl: string | null;
+  isPublic: boolean;
 }
 
 export const fetchMiners = async (url: string): Promise<MinersResult> => {
@@ -37,18 +45,23 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
       buildSHA?: string;
       appVersionStatus?: AppVersionStatus;
       appVersionReleaseURL?: string;
+      hashboardURL?: string;
+      boardPublic?: boolean;
     }>(url);
     return {
       miners: data.miners.map((raw) => minerSchema.parse(raw)),
       buildSHA: data.buildSHA,
       appVersionStatus: data.appVersionStatus ?? "unknown",
       appVersionReleaseURL: data.appVersionReleaseURL ?? null,
+      hashboardUrl: data.hashboardURL ?? null,
+      isPublic: data.boardPublic ?? false,
     };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       throw new ApiError(
         err.response.status,
         err.response.data?.error ?? err.message,
+        err.response.data?.hashboardURL ?? null,
       );
     }
     throw err;
@@ -79,7 +92,9 @@ export const useMiners = (): UseMinersReturn => {
     refetchInterval: autoRefreshEnabled ? 90_000 : false,
     refetchOnWindowFocus: false,
     retry: (failureCount, err) =>
-      err instanceof ApiError && err.status === 404 ? false : failureCount < 2,
+      err instanceof ApiError && (err.status === 404 || err.status === 403)
+        ? false
+        : failureCount < 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
@@ -97,6 +112,8 @@ export interface AppInfo {
   buildSHA: string | undefined;
   versionStatus: AppVersionStatus;
   releaseUrl: string | null;
+  hashboardUrl: string | null;
+  isPublic: boolean;
 }
 
 /**
@@ -125,5 +142,7 @@ export const useAppInfo = (): AppInfo => {
     buildSHA: query.data?.buildSHA,
     versionStatus: query.data?.appVersionStatus ?? "unknown",
     releaseUrl: query.data?.appVersionReleaseURL ?? null,
+    hashboardUrl: query.data?.hashboardUrl ?? null,
+    isPublic: query.data?.isPublic ?? false,
   };
 };

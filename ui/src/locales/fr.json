@@ -102,7 +102,11 @@
   "sidebar": {
     "versionUpToDate": "À jour",
     "versionUpdateAvailable": "Mise à jour dispo",
-    "versionUpdateAvailableHint": "Nouvelle version disponible — cliquer pour voir"
+    "versionUpdateAvailableHint": "Nouvelle version disponible — cliquer pour voir",
+    "openHashboardAccount": "Gérer ton compte hashboard",
+    "boardPublicHint": "Ce tableau est public — n'importe qui avec le lien peut le voir",
+    "boardPrivateHint": "Ce tableau est privé — seul toi peux le voir",
+    "versionLabel": "Version · {{sha}}"
   },
   "notificationSettings": {
     "title": "Réglages des notifications",
@@ -163,5 +167,13 @@
     "autoRefreshOn": "Actualisation auto activée",
     "autoRefreshOff": "Actualisation auto désactivée"
   },
-  "language": "Langue"
+  "language": "Langue",
+  "boardLocked": {
+    "title": "Ce tableau est privé",
+    "message": "Entre l'email utilisé pour enregistrer ce tableau. S'il correspond, tu recevras un lien pour le déverrouiller.",
+    "emailLabel": "Adresse email",
+    "submit": "Envoyer le lien d'accès",
+    "sending": "Envoi…",
+    "sent": "Si cet email est enregistré pour ce tableau, un lien vient de lui être envoyé."
+  }
 }

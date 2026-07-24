@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
@@ -29,6 +30,15 @@ func testLogger() *slog.Logger {
 // of a real GitHub check.
 func testVersionChecker() *appversion.Checker {
 	return appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+}
+
+// testAccessChecker returns a hashboardaccess.Checker rooted at a fresh,
+// empty temp dir (no accounts/sessions) -- a board is "private, no session"
+// by default, which is fine for handler tests that don't specifically
+// exercise the public/private flag.
+func testAccessChecker(t *testing.T) *hashboardaccess.Checker {
+	t.Helper()
+	return hashboardaccess.New(t.TempDir())
 }
 
 func withURLParams(r *http.Request, params map[string]string) *http.Request {
@@ -138,7 +148,7 @@ func TestListRemoteMiners(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
 
-		ListRemoteMiners(cfg, testVersionChecker())(w, r)
+		ListRemoteMiners(cfg, testVersionChecker(), testAccessChecker(t))(w, r)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -153,13 +163,38 @@ func TestListRemoteMiners(t *testing.T) {
 		if got.BuildSHA != version.GitSHA {
 			t.Errorf("BuildSHA = %q, want %q", got.BuildSHA, version.GitSHA)
 		}
+		if got.BoardPublic {
+			t.Error("BoardPublic = true, want false (no accounts/demo.json fixture -> defaults private)")
+		}
+	})
+
+	t.Run("board marked public", func(t *testing.T) {
+		accessDir := t.TempDir()
+		writeAccessFixture(t, filepath.Join(accessDir, "accounts", "demo.json"), `{"public":true}`)
+		accessChecker := hashboardaccess.New(accessDir)
+
+		w := httptest.NewRecorder()
+		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
+
+		ListRemoteMiners(cfg, testVersionChecker(), accessChecker)(w, r)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+		}
+		var got model.MinersResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if !got.BoardPublic {
+			t.Error("BoardPublic = false, want true")
+		}
 	})
 
 	t.Run("board not found", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/unknown/miners/", nil), map[string]string{"boardId": "unknown"})
 
-		ListRemoteMiners(cfg, testVersionChecker())(w, r)
+		ListRemoteMiners(cfg, testVersionChecker(), testAccessChecker(t))(w, r)
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("status = %d, want %d for an unknown board", w.Code, http.StatusNotFound)

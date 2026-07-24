@@ -13,6 +13,7 @@ import (
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
 
@@ -33,13 +34,23 @@ func writeFixture(t *testing.T, path, content string) {
 	}
 }
 
+// publicAccessChecker returns a hashboardaccess.Checker rooted at a fresh
+// hashboard data dir where boardID is marked public, so router tests can
+// exercise the miners/stats routes without needing a real session cookie.
+func publicAccessChecker(t *testing.T, boardID string) *hashboardaccess.Checker {
+	t.Helper()
+	dir := t.TempDir()
+	writeFixture(t, filepath.Join(dir, "accounts", boardID+".json"), `{"public":true}`)
+	return hashboardaccess.New(dir)
+}
+
 func TestNewRouter_listMiners(t *testing.T) {
 	dir := t.TempDir()
 	writeFixture(t, filepath.Join(dir, "demo", "bitaxes", "10.0.0.1", "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-1","payload":{"hashRate":500000}}`)
 
 	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
-	router := NewRouter(cfg, testVersionChecker())
+	router := NewRouter(cfg, testVersionChecker(), publicAccessChecker(t, "demo"))
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/miners", nil)
@@ -64,7 +75,7 @@ func TestNewRouter_stats(t *testing.T) {
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
-	router := NewRouter(cfg, testVersionChecker())
+	router := NewRouter(cfg, testVersionChecker(), publicAccessChecker(t, "demo"))
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/10.0.0.1/stats", nil)
@@ -85,7 +96,7 @@ func TestNewRouter_stats(t *testing.T) {
 }
 
 func TestNewRouter_unknownPath(t *testing.T) {
-	router := NewRouter(config.Config{}, testVersionChecker())
+	router := NewRouter(config.Config{}, testVersionChecker(), publicAccessChecker(t, "demo"))
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/demo/unknown", nil)

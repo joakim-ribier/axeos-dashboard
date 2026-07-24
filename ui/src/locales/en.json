@@ -102,7 +102,11 @@
   "sidebar": {
     "versionUpToDate": "Up to date",
     "versionUpdateAvailable": "Update available",
-    "versionUpdateAvailableHint": "New version available — click to view"
+    "versionUpdateAvailableHint": "New version available — click to view",
+    "openHashboardAccount": "Manage your hashboard account",
+    "boardPublicHint": "This board is public — anyone with the link can view it",
+    "boardPrivateHint": "This board is private — only you can view it",
+    "versionLabel": "Version · {{sha}}"
   },
   "notificationSettings": {
     "title": "Notification settings",
@@ -163,5 +167,13 @@
     "autoRefreshOn": "Auto-refresh is on",
     "autoRefreshOff": "Auto-refresh is off"
   },
-  "language": "Language"
+  "language": "Language",
+  "boardLocked": {
+    "title": "This board is private",
+    "message": "Enter the email you used to register this board. If it matches, you'll receive a link to unlock it.",
+    "emailLabel": "Email address",
+    "submit": "Send access link",
+    "sending": "Sending…",
+    "sent": "If that email is registered to this board, a link was just sent to it."
+  }
 }

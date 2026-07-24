@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
@@ -34,7 +35,7 @@ func boardDataRoot(dataDir, boardID string) string {
 // @Success 200 {object} model.MinersResponse
 // @Failure 404 {object} handler.ErrorResponse "board not found"
 // @Router /api/{boardId}/miners [get]
-func ListRemoteMiners(cfg config.Config, versionChecker *appversion.Checker) http.HandlerFunc {
+func ListRemoteMiners(cfg config.Config, versionChecker *appversion.Checker, accessChecker *hashboardaccess.Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		boardID := chi.URLParam(r, "boardId")
 		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
@@ -50,11 +51,17 @@ func ListRemoteMiners(cfg config.Config, versionChecker *appversion.Checker) htt
 		}
 
 		versionCheck := versionChecker.Result()
+		isPublic, err := accessChecker.IsPublic(boardID)
+		if err != nil {
+			log.Printf("remote: failed to check public status for %s: %v", boardID, err)
+		}
 		resp := model.MinersResponse{
 			Miners:               make([]model.MinerInfo, 0),
 			BuildSHA:             version.GitSHA,
 			AppVersionStatus:     versionCheck.Status,
 			AppVersionReleaseURL: versionCheck.ReleaseURL,
+			HashboardURL:         cfg.HashboardURL,
+			BoardPublic:          isPublic,
 		}
 
 		for _, entry := range entries {

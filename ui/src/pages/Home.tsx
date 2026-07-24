@@ -41,6 +41,7 @@ import {
 } from "@/utils/minerNotifications";
 import { matchesSearch } from "@/utils/minerSearch";
 
+import { BoardLockedPage } from "../components/ui/BoardLockedPage";
 import { GlobalStats } from "../components/ui/GlobalStats";
 import { MinerCard } from "../components/ui/MinerCard/MinerCard";
 import { OopsPage } from "../components/ui/OopsPage";
@@ -421,6 +422,12 @@ export const Home = () => {
     columnGap: theme.spacing(3),
     rowGap: theme.spacing(3),
   });
+
+  if (error instanceof ApiError && error.status === 403 && boardId) {
+    return (
+      <BoardLockedPage boardId={boardId} hashboardUrl={error.hashboardUrl} />
+    );
+  }
 
   if (error instanceof ApiError && error.status === 404) {
     return (

@@ -62,4 +62,14 @@ type MinersResponse struct {
 	// most once a day, so every client reads the same cached answer.
 	AppVersionStatus     string `json:"appVersionStatus,omitempty"`
 	AppVersionReleaseURL string `json:"appVersionReleaseURL,omitempty"`
+
+	// HashboardURL is the base URL of the hashboard instance backing this
+	// board (remote-dashboard-api only, config.HashboardURL) — lets the UI
+	// build a link to the board owner's hashboard account page.
+	HashboardURL string `json:"hashboardURL,omitempty"`
+
+	// BoardPublic reflects hashboard's Account.Public flag for this board
+	// (remote-dashboard-api only) — meaningless/always false for local
+	// dashboard-api, which has no such concept and whose UI never reads it.
+	BoardPublic bool `json:"boardPublic"`
 }

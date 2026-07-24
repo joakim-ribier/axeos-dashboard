@@ -5,6 +5,7 @@ server:
 storage:
   dataDir: resources                         # root dir: logs written here
   boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty)
+hashboardURL: ""                             # base URL of the hashboard instance backing this board -- not configured by default, set your own (e.g. https://your-hashboard-domain.example in prod, http://localhost:8090 for local dev)
 pools:
   dashboards:
     stratum.braiins.com: "https://pool.braiins.com/mining/overview/{user}"
