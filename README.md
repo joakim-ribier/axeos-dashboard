@@ -13,12 +13,13 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 
 **Key features:**
 - Real-time hashrate, temperature, fan speed, shares and uptime per miner
-- Pool switching (primary ↔ fallback) with optional cron-based schedule
-- Firmware update detection (GitHub releases, configurable per model)
-- Intraday stats chart — last hour or full day (hourly averages)
-- Electricity cost estimation based on configured €/kWh rate
-- Clickable pool dashboard links (Braiins, Atlas, …) auto-resolved from stratum user
-- Health check loop with live reachability indicator per miner card
+- Pool switching (primary ↔ fallback), manual or on a cron-based schedule
+- Firmware update detection against GitHub releases, per device model
+- Today's history chart — last hour or full day, hourly averages
+- Electricity cost estimate (daily/monthly) from your configured €/kWh rate
+- Clickable pool dashboard links (Braiins, Atlas, …), auto-resolved from the stratum user
+- Live reachability check, plus a config-mismatch warning if a device doesn't match its configured MAC
+- Optional remote view via [hashboard.live](https://hashboard.live) — check your miners from anywhere, no VPN
 - EN / FR localization
 
 ---
@@ -29,7 +30,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - [Prerequisites](#prerequisites)
 - [Quick Start (dev)](#quick-start-dev)
 - [Testing](#testing)
-- [Production Deployment](#production-deployment)
+- [Deployment](#deployment)
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
 - [Dashboard Features](#dashboard-features)
@@ -57,20 +58,19 @@ React UI → display + control (restart / pool switch / WiFi)
 
 ## Prerequisites
 
-For the recommended Raspberry Pi setup (`make latest-up` — see [Production Deployment](#production-deployment)):
-nginx, to serve the UI and reverse-proxy the API. No Go, no Node — the release
-binaries are prebuilt, and the UI is a static build served by nginx.
+The recommended Raspberry Pi setup (`make latest-up` — see [Deployment](#deployment))
+fetches prebuilt binaries and a prebuilt UI, so no Go or Node toolchain is
+needed at all on the Pi.
 
-```bash
-apt install -y nginx
-```
-
-Go and Node are only needed if you build from source instead of fetching the
-prebuilt release, or for local development:
+Go and Node are only needed if you build from source instead, or for local development:
 
 ```bash
 apt install -y golang nodejs npm
 ```
+
+nginx isn't needed to run axeos-dashboard itself — it's only used for the
+optional reverse-proxy step in [Deployment](#deployment), which lets you drop
+the `:8080` from the URL.
 
 ---
 
@@ -142,243 +142,26 @@ Neither needs a local Go or npm build — see the Makefile's
 
 ---
 
-## Production Deployment
+## Deployment
 
-Recommended for a Raspberry Pi: fetch the prebuilt `linux/arm64` release (CI-built on every push to `main`) instead of building locally — no Go toolchain needed on the Pi.
-
-### 1. Clone
+Recommended for a Raspberry Pi: fetch the prebuilt `linux/arm64` release
+(CI-built on every push to `main`) instead of building locally — no Go
+toolchain needed on the Pi.
 
 ```bash
 git clone https://github.com/joakim-ribier/axeos-dashboard.git
 cd axeos-dashboard
-```
-
-### 2. Configure
-
-`dashboard.yml` is already committed with sane defaults — edit `resources/dashboard.yml` for your setup (electricity rate, pool dashboards, firmware repos, etc.).
-
-**Create `resources/miners.yml` before going further.** It's gitignored (holds your pool credentials) so it does **not** exist on a fresh clone — copy the full example from [Configuration](#configuration) below and fill in your miners' IPs, models, and pool credentials.
-
-### 3. Install and configure nginx (one-time)
-
-nginx serves the static UI (`ui/dist`) and reverse-proxies `/api` to dashboard-api,
-on port 80 — so you can just open `http://<pi-ip>/` from any device on your LAN,
-no port number to remember. Same pattern as the
-[hashboard](https://github.com/joakim-ribier/hashboard) VPS deployment, just
-without TLS/domains since this is LAN-only.
-
-#### 3.1. Install
-
-```bash
-sudo apt update
-sudo apt install -y nginx
-```
-
-#### 3.2. Create the site config
-
-Create `/etc/nginx/sites-available/axeos-dashboard` — **replace
-`/path/to/axeos-dashboard` with the absolute path to your clone** (from step 1,
-e.g. `/home/pi/axeos-dashboard`):
-
-```nginx
-server {
-    listen 80 default_server;
-    server_name _;
-
-    # Everything under /api/ → dashboard-api (started by `make latest-up`)
-    location /api/ {
-        proxy_pass http://localhost:8080;
-    }
-
-    # Everything else → the static UI, falling back to index.html for
-    # client-side routes (this is a single-page app — see the SPA explainer
-    # earlier in this doc if that's unfamiliar)
-    location / {
-        root /path/to/axeos-dashboard/ui/dist;
-        try_files $uri /index.html;
-    }
-}
-```
-
-If dashboard-api's port isn't the default `8080` (see `MINER_API_PORT` below),
-update the `proxy_pass` line to match.
-
-#### 3.3. Enable the site
-
-```bash
-sudo ln -s /etc/nginx/sites-available/axeos-dashboard /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default   # avoid a conflicting default_server on :80
-sudo nginx -t                                 # validates the config syntax
-sudo systemctl reload nginx
-```
-
-`sudo nginx -t` should print `syntax is ok` / `test is successful` — if it
-doesn't, fix the reported line before reloading.
-
-#### 3.4. Fix the home directory permission (if your clone lives under `~`)
-
-nginx runs as the `www-data` user, which by default **cannot traverse into your
-home directory** — home directories are typically `700` (owner-only). If you skip
-this, every request will 500, and `sudo tail /var/log/nginx/error.log` will show:
-
-```
-[crit] ... stat() "/home/you/axeos-dashboard/ui/dist/index.html" failed
-(13: Permission denied)
-```
-
-Fix (only needs to be done once):
-
-```bash
-chmod o+x ~
-```
-
-This grants **traversal only** ("can pass through", not "can list contents") to
-your home directory — it doesn't expose any other files there. Everything below
-it (`axeos-dashboard/`, `ui/`, `dist/`, and the files inside) already ships with
-normal `755`/`644` permissions from `git clone`, so this one `chmod` is enough —
-you don't need to touch anything else in the path.
-
-If you cloned outside your home directory entirely (e.g. `/opt/axeos-dashboard`),
-you likely don't need this step at all.
-
-#### 3.5. Verify
-
-```bash
-curl -I http://localhost/                # expect: HTTP/1.1 200, Content-Type: text/html
-curl -I http://localhost/some/route      # expect: 200 too (SPA fallback to index.html)
-curl -I http://localhost/api/miners      # expect: 200 (or 401/whatever dashboard-api itself returns)
-```
-
-Then open `http://<pi-ip>/` from another device on the same network.
-
-You won't need to touch nginx again after this — it keeps running as a system
-service, and automatically serves whatever is currently in `ui/dist`. Re-running
-`make latest-up` (step 4) overwrites `ui/dist` with the newest release; nginx
-picks it up on the very next request, no reload needed.
-
-### 4. Run
-
-```bash
+# create resources/miners.yml (gitignored — see Configuration below), then:
 make latest-up
 ```
 
-Downloads the feeder/dashboard-api/remote-dashboard-api binaries (and the UI into
-`ui/dist`, for nginx to serve) from the latest GitHub Release, and starts
-dashboard-api + feeder in a GNU screen session. nginx itself isn't managed by this
-command — it's a system service, configured once in step 3, that keeps running and
-just picks up new files whenever `latest-fetch`/`latest-up` refreshes `ui/dist`.
+This starts dashboard-api + feeder in a background screen session, reachable
+at `http://<pi-ip>:8080`.
 
-```bash
-make latest-down   # stop dashboard-api + feeder
-make dev-attach    # attach to the screen session
-make dev-status    # list running sessions
-```
-
-### 5. Survive reboots (systemd)
-
-nginx already auto-starts on boot (it's a systemd service by default). `make
-latest-up` doesn't — it's a screen session, which doesn't survive a reboot — so
-without this step, a power cycle leaves the UI reachable (served statically by
-nginx) but `/api/*` dead until you SSH in and rerun `make latest-up` by hand.
-
-Create `/etc/systemd/system/axeos-dashboard.service` — **replace both paths**
-with your actual clone location and config file paths from steps 1–2:
-
-```ini
-[Unit]
-Description=axeos-dashboard (dashboard-api + feeder via make latest-up)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/path/to/axeos-dashboard
-ExecStart=/usr/bin/make latest-up CONFIG_FILE=/path/to/config.yml MINERS_FILE=/path/to/miners.yml
-ExecStop=/usr/bin/make latest-down
-Restart=on-failure
-RestartSec=15
-User=your-username
-
-[Install]
-WantedBy=multi-user.target
-```
-
-`Type=oneshot` + `RemainAfterExit=yes` because `make latest-up` itself returns
-quickly once it has spawned the detached screen session — the actual
-long-running processes (dashboard-api, feeder) live inside that session, not as
-children systemd tracks directly. `Restart=on-failure` retries if `latest-fetch`
-fails (e.g. network not ready yet at boot), even though `After=network-online.target`
-should normally prevent that.
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now axeos-dashboard
-```
-
-Every start (including after every reboot) re-runs `make latest-up`, so it
-fetches whatever is the current `latest` GitHub Release at that moment — same
-self-updating behavior as running it by hand.
-
-Verify:
-
-```bash
-sudo systemctl status axeos-dashboard --no-pager   # Active: active (exited); processes listed under CGroup
-curl -I http://localhost/api/miners                # 200 once dashboard-api is up
-```
-
-Manage it like any systemd service from here on:
-
-```bash
-sudo systemctl stop axeos-dashboard      # runs `make latest-down`
-sudo systemctl restart axeos-dashboard   # re-fetches + restarts
-sudo journalctl -u axeos-dashboard -f    # follow logs
-```
-
-### Building from source instead (advanced)
-
-`make dev-up`/`make build` are for local development (e.g. testing a change before opening a PR) — not recommended for deploying on a Pi, since it means installing the Go toolchain there. If you still want to build locally instead of using `make latest-up`:
-
-```bash
-make build
-# → resources/build/server/bin/feeder
-# → resources/build/server/bin/dashboard-api
-# → resources/build/server/bin/remote-dashboard-api
-```
-
-Or run the binaries manually (background processes):
-
-```bash
-# Feeder (background)
-nohup ./resources/build/server/bin/feeder \
-  -config /path/to/dashboard.yml \
-  -miners /path/to/miners.yml \
-  > feeder.log 2>&1 &
-
-# Dashboard API (background)
-nohup ./resources/build/server/bin/dashboard-api \
-  -config /path/to/dashboard.yml \
-  -miners /path/to/miners.yml \
-  > dashboard-api.log 2>&1 &
-
-# UI (static build served by nginx as configured in step 3, or `npm run dev` for local testing)
-cd ui && npm run build   # → ui/dist/
-```
-
-Override API port (default `8080`):
-
-```bash
-MINER_API_PORT=9090 ./resources/build/server/bin/dashboard-api -config dashboard.yml -miners miners.yml
-```
-
-Override dashboard-api/feeder's local data dir (default from config's `storage.dataDir`):
-
-```bash
-BITAXE_DATA_ROOT=/path/to/data ./resources/build/server/bin/dashboard-api -config dashboard.yml -miners miners.yml
-```
-
-remote-dashboard-api has no env var override — its data dir is `storage.boardsDir`
-in `remote-dashboard.yml` (defaults to `{dataDir}/data/boards` when empty).
+**→ See [DEPLOYMENT.md](DEPLOYMENT.md)** for the full step-by-step: nginx as a
+reverse proxy (so you can drop the `:8080` and just open `http://<pi-ip>/`),
+systemd (survive reboots), and building from source instead of using the
+prebuilt release.
 
 ---
 
@@ -456,7 +239,7 @@ stable IP matters regardless).
 ```yaml
 bitaxes:
   - ip: "192.168.1.65"        # reserve this via DHCP so it never changes
-    mac: "aabbccddeeff"       # storage key -- separators optional, normalized either way
+    mac: "aa:bb:cc:dd:ee:ff"  # paste the device's real MAC as-is -- separators optional, normalized automatically
     enabled: true
     hostname: "bitaxe-1"      # shown in the UI; optional
     model: "bitaxe"           # "bitaxe" or "nerdaxe"
@@ -479,7 +262,7 @@ bitaxes:
         target: primary
 
   - ip: "192.168.1.66"
-    mac: "aabbccddee02"
+    mac: "aa:bb:cc:dd:ee:02"
     enabled: true
     hostname: "nerdaxe-1"
     model: "nerdaxe"
@@ -491,7 +274,7 @@ bitaxes:
     fallbackUser: "bc1qxxx...xxx"
 
   - ip: "192.168.1.67"
-    mac: "aabbccddee03"
+    mac: "aa:bb:cc:dd:ee:03"
     enabled: false    # disabled miners are ignored by feeder and API
     hostname: "spare"
     model: "bitaxe"
@@ -506,21 +289,40 @@ bitaxes:
 
 Base URL: `http://localhost:8080`. Config is loaded once at startup — restart the binaries after any config change.
 
-Full reference (both dashboard-api and remote-dashboard-api), generated from Go
-annotations with [swaggo/swag](https://github.com/swaggo/swag):
+Full OpenAPI spec (both dashboard-api and remote-dashboard-api):
 [`swagger.yaml`](server/docs/swagger/swagger.yaml) /
-[`swagger.json`](server/docs/swagger/swagger.json). For a browsable view, paste
-the file into [editor.swagger.io](https://editor.swagger.io).
-
-Regenerate after changing a handler's annotations:
-
-```bash
-make swagger
-```
+[`swagger.json`](server/docs/swagger/swagger.json) — paste either into
+[editor.swagger.io](https://editor.swagger.io) for a browsable view.
 
 ---
 
 ## Dashboard Features
+
+### Top bar & sidebar
+
+- **Notifications** — bell icon with an unread-count badge; opens a list of recent events (temp/fan thresholds crossed, miner offline/online, config errors, firmware updates, dashboard app updates) with a **Clear** button
+- **Auto-refresh** — toggle switch in the sidebar; the top bar shows a small read-only icon for its current state
+- **Language** — EN / FR switcher
+- **App version** — this dashboard-api/remote-dashboard-api build's git SHA, plus "Up to date" or a clickable "Update available" chip linking to the GitHub release (checked server-side once a day — about the dashboard app itself, not miner firmware)
+- **Remote mode only** — a board ID chip with a public/private badge, and a link to manage the board from your hashboard account
+
+### Search & filters
+
+Toggle the filters panel from the funnel icon in the page header.
+
+- Plain text matches hostname, IP, model, pool, stratum user, firmware version
+- Comparisons: `temp>60`, `fan<=50`, `power>15`, `hashrate<0.3`, `uptime>3600` (seconds)
+- Keyword `offline` (negate with `!offline` / `-offline`)
+- Negate any term with `-` / `!`; combine multiple terms with a space — all must match
+- Quick-filter chips for pool, device model, and alerts (high temp / high fan / offline), each showing a live count
+
+### Notification settings
+
+Configurable from the gear icon in the page header (opens in place of the filters panel):
+
+- Temp threshold (°C, default 62) and fan threshold (%, default 75)
+- Toggles: notify on temperature, fan speed, offline, firmware update available, firmware update applied
+- Config-mismatch errors (see below) always notify, regardless of these toggles
 
 ### Global stats bar
 
@@ -539,7 +341,7 @@ make swagger
 - Hostname (or IP as clickable link → opens device web UI)
 - Device model chip + IP link (when hostname is set)
 - Last poll timestamp
-- Health dot: green (alive) · red (unreachable) · grey (first check pending)
+- Health dot: green (alive) · red (unreachable) · grey (first check pending) · orange (config error — see below)
 
 **Hashrate row** — large TH/s value with trend
 
@@ -571,6 +373,20 @@ make swagger
 
 Toggle **1H** (last hour relative to latest data point) or **Day** (hourly averages).
 Fields: Temp (°C) · Fan (%) · Hashrate (TH/s) · Ping (ms).
+
+**Config-mismatch banner** — if a miner's configured `mac:` doesn't match what
+the device itself reports (wrong device at that IP, or a config typo), an
+amber banner appears under the card's header with the error and a
+copy-to-clipboard button, and the health dot turns orange. See the `mac:`
+mismatch check in [Configuration](#configuration).
+
+### Remote mode (`/{boardId}`)
+
+- **Private board** — visitors see a "this board is private" page with an
+  email field; submitting requests a magic-link access email from hashboard
+  (always shows the same generic confirmation, whether or not the email
+  matches the board — no account enumeration)
+- **Unknown or empty board** — a "page not found" message
 
 ---
 

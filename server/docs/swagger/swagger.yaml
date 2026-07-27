@@ -18,6 +18,27 @@ definitions:
       total:
         type: integer
     type: object
+  model.InfoResponse:
+    properties:
+      appVersionReleaseURL:
+        type: string
+      appVersionStatus:
+        description: |-
+          Whether this dashboard-api/remote-dashboard-api build itself is up to
+          date with GitHub's "latest" release ("unknown" | "upToDate" |
+          "updateAvailable") — see internal/appversion. Checked server-side at
+          most once a day, so every client reads the same cached answer.
+        type: string
+      buildSHA:
+        description: Git commit this binary was built from
+        type: string
+      hashboardURL:
+        description: |-
+          HashboardURL is the base URL of the hashboard instance backing this
+          remote-dashboard-api (remote-dashboard-api only, config.HashboardURL)
+          — lets the UI build a link to the board owner's hashboard account page.
+        type: string
+    type: object
   model.MinerInfo:
     properties:
       alive:
@@ -39,6 +60,13 @@ definitions:
       energyJPerTh:
         description: Energy consumption per terahash (Joules per TH)
         type: number
+      error:
+        description: |-
+          Error surfaces a serious inconsistency the UI should call out
+          distinctly from a normal offline/unreachable state -- currently just
+          a mismatch between the configured mac: and what the device itself
+          reports (wrong device at this IP, or a config typo).
+        type: string
       fallbackStratumDashboardURL:
         description: Web dashboard URL for the fallback pool
         type: string
@@ -111,18 +139,12 @@ definitions:
     type: object
   model.MinersResponse:
     properties:
-      appVersionReleaseURL:
-        type: string
-      appVersionStatus:
+      boardPublic:
         description: |-
-          Whether this dashboard-api/remote-dashboard-api build itself is up to
-          date with GitHub's "latest" release ("unknown" | "upToDate" |
-          "updateAvailable") — see internal/appversion. Checked server-side at
-          most once a day, so every client reads the same cached answer.
-        type: string
-      buildSHA:
-        description: Git commit this dashboard-api binary was built from
-        type: string
+          BoardPublic reflects hashboard's Account.Public flag for this board
+          (remote-dashboard-api only) — meaningless/always false for local
+          dashboard-api, which has no such concept and whose UI never reads it.
+        type: boolean
       configured:
         description: Number of miners in config
         type: integer
@@ -199,6 +221,22 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: List miners pushed to a hashboard board (read-only)
       tags:
+      - remote-dashboard-api
+  /api/info:
+    get:
+      description: Returns this binary's git SHA, whether it's up to date with the
+        latest GitHub release, and (remote-dashboard-api only) the hashboard base
+        URL.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.InfoResponse'
+      summary: Server build/version info
+      tags:
+      - dashboard-api
       - remote-dashboard-api
   /api/miners:
     get:

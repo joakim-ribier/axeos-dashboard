@@ -9,6 +9,27 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/info": {
+            "get": {
+                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, and (remote-dashboard-api only) the hashboard base URL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api",
+                    "remote-dashboard-api"
+                ],
+                "summary": "Server build/version info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.InfoResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/miners": {
             "get": {
                 "description": "Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).",
@@ -272,6 +293,26 @@
                 }
             }
         },
+        "model.InfoResponse": {
+            "type": "object",
+            "properties": {
+                "appVersionReleaseURL": {
+                    "type": "string"
+                },
+                "appVersionStatus": {
+                    "description": "Whether this dashboard-api/remote-dashboard-api build itself is up to\ndate with GitHub's \"latest\" release (\"unknown\" | \"upToDate\" |\n\"updateAvailable\") — see internal/appversion. Checked server-side at\nmost once a day, so every client reads the same cached answer.",
+                    "type": "string"
+                },
+                "buildSHA": {
+                    "description": "Git commit this binary was built from",
+                    "type": "string"
+                },
+                "hashboardURL": {
+                    "description": "HashboardURL is the base URL of the hashboard instance backing this\nremote-dashboard-api (remote-dashboard-api only, config.HashboardURL)\n— lets the UI build a link to the board owner's hashboard account page.",
+                    "type": "string"
+                }
+            }
+        },
         "model.MinerInfo": {
             "type": "object",
             "properties": {
@@ -300,6 +341,10 @@
                 "energyJPerTh": {
                     "description": "Energy consumption per terahash (Joules per TH)",
                     "type": "number"
+                },
+                "error": {
+                    "description": "Error surfaces a serious inconsistency the UI should call out\ndistinctly from a normal offline/unreachable state -- currently just\na mismatch between the configured mac: and what the device itself\nreports (wrong device at this IP, or a config typo).",
+                    "type": "string"
                 },
                 "fallbackStratumDashboardURL": {
                     "description": "Web dashboard URL for the fallback pool",
@@ -400,16 +445,9 @@
         "model.MinersResponse": {
             "type": "object",
             "properties": {
-                "appVersionReleaseURL": {
-                    "type": "string"
-                },
-                "appVersionStatus": {
-                    "description": "Whether this dashboard-api/remote-dashboard-api build itself is up to\ndate with GitHub's \"latest\" release (\"unknown\" | \"upToDate\" |\n\"updateAvailable\") — see internal/appversion. Checked server-side at\nmost once a day, so every client reads the same cached answer.",
-                    "type": "string"
-                },
-                "buildSHA": {
-                    "description": "Git commit this dashboard-api binary was built from",
-                    "type": "string"
+                "boardPublic": {
+                    "description": "BoardPublic reflects hashboard's Account.Public flag for this board\n(remote-dashboard-api only) — meaningless/always false for local\ndashboard-api, which has no such concept and whose UI never reads it.",
+                    "type": "boolean"
                 },
                 "configured": {
                     "description": "Number of miners in config",

@@ -39,6 +39,9 @@ cd ui && npm run lint        # ESLint
 cd ui && npm run typecheck   # tsc --noEmit
 cd ui && npm run format      # Prettier
 cd ui && npm run clean:code  # typecheck + lint:fix + format (run before commit)
+
+make swagger        # regenerate server/docs/swagger/ from handler annotations
+                     # (run after touching a handler's @Summary/@Router/etc comments)
 ```
 
 No tests exist yet.
@@ -185,7 +188,7 @@ wifi:
   pwd: ""
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
-    mac: aabbccddeeff          # storage key -- separators optional, normalized either way
+    mac: aa:bb:cc:dd:ee:ff     # the device's real MAC, as-is -- separators optional, normalized automatically
     enabled: true
     hostname: my-miner
     model: bitaxe              # or: nerdaxe
