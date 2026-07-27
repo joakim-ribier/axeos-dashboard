@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestConfig_GetMiners(t *testing.T) {
 	cfg := Config{
@@ -142,6 +145,56 @@ func TestBitaxe_GetWifiSettings(t *testing.T) {
 
 	if got != want {
 		t.Errorf("GetWifiSettings() = %+v, want %+v", got, want)
+	}
+}
+
+func TestConfig_MissingMacWarnings(t *testing.T) {
+	cfg := Config{
+		Bitaxes: []Bitaxe{
+			{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "configured", Enabled: true},
+			{Ip: "10.0.0.2", Hostname: "missing-mac", Enabled: true},
+			{Ip: "10.0.0.3", Hostname: "disabled-and-missing", Enabled: false},
+		},
+	}
+
+	warnings := cfg.MissingMacWarnings()
+	if len(warnings) != 1 {
+		t.Fatalf("warnings = %v, want exactly 1 (disabled miners are never checked)", warnings)
+	}
+	if !strings.Contains(warnings[0], "10.0.0.2") {
+		t.Errorf("warning = %q, want it to mention 10.0.0.2", warnings[0])
+	}
+}
+
+func TestConfig_MissingMacWarnings_noneWhenAllConfigured(t *testing.T) {
+	cfg := Config{
+		Bitaxes: []Bitaxe{
+			{Ip: "10.0.0.1", Mac: "aabbccddeeff", Enabled: true},
+		},
+	}
+	if warnings := cfg.MissingMacWarnings(); len(warnings) != 0 {
+		t.Errorf("warnings = %v, want none", warnings)
+	}
+}
+
+func TestBitaxe_StorageKey(t *testing.T) {
+	tests := []struct {
+		name string
+		mac  string
+		want string
+	}{
+		{"already normalized", "aabbccddeeff", "aabbccddeeff"},
+		{"colon-separated, mixed case", "AA:BB:CC:DD:EE:FF", "aabbccddeeff"},
+		{"hyphen-separated", "aa-bb-cc-dd-ee-ff", "aabbccddeeff"},
+		{"not configured", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := Bitaxe{Ip: "10.0.0.1", Mac: tt.mac}
+			if got := b.StorageKey(); got != tt.want {
+				t.Errorf("StorageKey() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

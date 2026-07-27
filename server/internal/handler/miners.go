@@ -3,6 +3,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -39,10 +40,34 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 	}
 
 	for _, miner := range miners {
-		path := filepath.Join(root, miner.Ip, "latest.json")
+		key := miner.StorageKey()
+		if key == "" {
+			// Already logged loudly once at startup (config.MissingMacWarnings) --
+			// this endpoint can be hit every few seconds by the UI's auto-refresh,
+			// so logging here too would just spam the same message forever.
+			continue
+		}
 
+		status, hasStatus := watcher.GetStatus(miner.Ip)
+
+		path := filepath.Join(root, key, "latest.json")
 		raw, err := decodeLatestJSON(path)
 		if err != nil {
+			if hasStatus && status.MacMismatch {
+				// The feeder has refused every single poll since this mac
+				// was configured (wrong mac from the start, or swapped with
+				// another miner's) -- latest.json never got written, but the
+				// miner must still surface as an error, not vanish silently.
+				resp.Miners = append(resp.Miners, model.MinerInfo{
+					IP:             miner.Ip,
+					Hostname:       miner.Hostname,
+					DeviceModel:    miner.Model,
+					Alive:          status.Alive,
+					AliveCheckedAt: status.CheckedAt.UTC().Format("2006-01-02T15:04:05Z"),
+					Error:          fmt.Sprintf("configured mac %s doesn't match the device's reported %s", key, status.ReportedMac),
+				})
+				continue
+			}
 			log.Printf("ERROR: skipping miner %s: %v", miner.Ip, err)
 			continue
 		}
@@ -50,9 +75,12 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 		latestVersion := fwCache.Models[miner.Model].Version
 		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
 
-		if status, ok := watcher.GetStatus(miner.Ip); ok {
+		if hasStatus {
 			info.Alive = status.Alive
 			info.AliveCheckedAt = status.CheckedAt.UTC().Format("2006-01-02T15:04:05Z")
+			if status.MacMismatch {
+				info.Error = fmt.Sprintf("configured mac %s doesn't match the device's reported %s", key, status.ReportedMac)
+			}
 		}
 
 		resp.Miners = append(resp.Miners, info)

@@ -92,6 +92,11 @@
       "alive": "Accessible",
       "unreachable": "Inaccessible",
       "unknown": "Vérification en attente"
+    },
+    "error": {
+      "macMismatch": "Erreur de configuration",
+      "copy": "Copier",
+      "copied": "Copié !"
     }
   },
   "nav": {
@@ -128,6 +133,8 @@
     "fanRecovered": "{{miner}} : ventilateur revenu à la normale ({{value}}%)",
     "offline": "{{miner}} est hors ligne",
     "online": "{{miner}} est de nouveau en ligne",
+    "deviceError": "{{miner}} a une erreur de configuration : {{value}}",
+    "deviceErrorResolved": "L'erreur de configuration de {{miner}} est résolue",
     "version": "{{miner}} : firmware mis à jour : {{value}}",
     "updateAvailable": "{{miner}} : mise à jour firmware disponible ({{value}})",
     "settingsUpdated": "Réglages de notification mis à jour : {{value}}",

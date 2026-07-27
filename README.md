@@ -44,8 +44,8 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 ```
 Bitaxe devices (HTTP)
     ↓  poll every 2m  (GET /api/system/info)
-feeder → writes  {dataDir}/{ip}/YYYY-MM-DD.jsonl  (append)
-                 {dataDir}/{ip}/latest.json        (overwrite)
+feeder → writes  {dataDir}/{mac}/YYYY-MM-DD.jsonl  (append)
+                 {dataDir}/{mac}/latest.json        (overwrite)
          pushes to hashboard.live if remote.apiKey is set
     ↓  reads latest.json
 miner-api → REST API at /api/miners/*
@@ -448,9 +448,15 @@ remote:
 
 ### `miners.yml` — full example
 
+Storage is keyed by each device's MAC address (`mac:`), not its IP -- so
+it's worth reserving/fixing each device's IP via your router's DHCP anyway
+(the pool/wifi settings below are already tied to a specific `ip:`, so a
+stable IP matters regardless).
+
 ```yaml
 bitaxes:
-  - ip: "192.168.1.65"
+  - ip: "192.168.1.65"        # reserve this via DHCP so it never changes
+    mac: "aabbccddeeff"       # storage key -- separators optional, normalized either way
     enabled: true
     hostname: "bitaxe-1"      # shown in the UI; optional
     model: "bitaxe"           # "bitaxe" or "nerdaxe"
@@ -473,6 +479,7 @@ bitaxes:
         target: primary
 
   - ip: "192.168.1.66"
+    mac: "aabbccddee02"
     enabled: true
     hostname: "nerdaxe-1"
     model: "nerdaxe"
@@ -484,6 +491,7 @@ bitaxes:
     fallbackUser: "bc1qxxx...xxx"
 
   - ip: "192.168.1.67"
+    mac: "aabbccddee03"
     enabled: false    # disabled miners are ignored by feeder and API
     hostname: "spare"
     model: "bitaxe"

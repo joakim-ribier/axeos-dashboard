@@ -50,11 +50,14 @@ No tests exist yet.
 ```
 Bitaxe devices (HTTP)
     ↓  poll every 2m  (GET /api/system/info)
-feeder → writes resources/data/bitaxes/{ip}/YYYY-MM-DD.jsonl  (append)
-                                          {ip}/latest.json     (overwrite)
-         optionally pushes to hashboard via POST /api/push
+feeder → writes resources/data/bitaxes/{mac}/YYYY-MM-DD.jsonl  (append)
+                                          {mac}/latest.json     (overwrite)
+         optionally pushes to hashboard via POST /api/push (includes the
+         already-computed storageKey -- hashboard just uses it verbatim,
+         with no notion of MAC address formatting at all)
     ↓  reads latest.json
-dashboard-api → REST API at /api/miners/*
+dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
+                config's mac: resolves the storage dir)
     ↓  axios + TanStack Query
 React UI → display + control actions (MODE=local → :8080)
     ↓  POST/PUT
@@ -65,15 +68,33 @@ remote-dashboard-api → REST API at /api/{boardId}/miners/*  (read-only, reads 
 React UI → display only (MODE=remote → :8081, route /{boardId})
 ```
 
+Storage is keyed by each device's MAC address (`bitaxes: - mac:`), not its
+IP: a device's IP can change (DHCP, relocation to a different network)
+without losing its history, since the storage key stays the same. There's
+no auto-discovery -- `mac:` is manually configured, same as `ip:`/
+`hostname:`/`model:` (assumes you're already reserving/fixing each device's
+IP on your network, which the rest of this config -- pool/wifi settings --
+already requires anyway). IP is still how the feeder reaches a device over
+the network and how dashboard-api's routes are addressed (`{hostnameOrIp}`)
+-- it's just no longer the storage identity.
+
+Both the feeder and the healthcheck watcher cross-check the configured
+`mac:` against what the device itself reports on every poll. A mismatch
+(wrong device at this IP, or a config typo) means the feeder refuses to
+store that poll at all -- never writes into the wrong device's directory --
+and the watcher flags it as `MinerInfo.error`, surfaced in the UI as a
+distinct amber health indicator plus a `deviceError` notification (not
+gated by a settings toggle, unlike temp/fan/offline).
+
 ### Storage Layout
 
 ```
 resources/data/bitaxes/
-  192.168.1.65/
+  aabbccddee01/
     latest.json          ← overwritten each poll cycle
     2026-06-22.jsonl    ← append-only daily log
     2026-06-21.jsonl
-  192.168.1.66/
+  aabbccddee02/
   ...
 ```
 
@@ -163,7 +184,8 @@ wifi:
   ssid: ""
   pwd: ""
 bitaxes:
-  - ip: 192.168.1.65
+  - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
+    mac: aabbccddeeff          # storage key -- separators optional, normalized either way
     enabled: true
     hostname: my-miner
     model: bitaxe              # or: nerdaxe

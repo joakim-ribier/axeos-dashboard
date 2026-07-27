@@ -70,18 +70,38 @@ func (f *Feeder) runOnce(ctx context.Context) {
 
 	for _, bitaxe := range f.config.Bitaxes {
 		addr := bitaxe.Ip
+		key := bitaxe.StorageKey()
+		if key == "" {
+			f.logger.Error("bitaxe: no mac configured, skipping (set mac: in dashboard.yml)", "ip", addr)
+			continue
+		}
+
 		payload, err := client.FetchSystemInfo(ctx, addr)
 		if err != nil {
 			f.logger.Error("bitaxe fetch error", "ip", addr, "error", err)
 			continue
 		}
 
-		if err := store.Append(now, addr, payload); err != nil {
-			f.logger.Error("storage error", "ip", addr, "error", err)
+		// The device itself must agree with what's configured -- a wrong
+		// device at this IP (network mixup) or a config typo must never
+		// silently write into another device's storage directory.
+		if reportedMac := config.NormalizeMac(extractDeviceMac(payload)); reportedMac != "" && reportedMac != key {
+			f.logger.Error("bitaxe: mac mismatch, refusing to store this poll",
+				"ip", addr, "configuredMac", key, "reportedMac", reportedMac)
+			continue
+		}
+
+		// Storage is keyed by MAC (stable across IP/location changes), not IP.
+		if err := store.Append(now, key, payload); err != nil {
+			f.logger.Error("storage error", "ip", addr, "mac", key, "error", err)
 		} else if f.config.Remote.PushURL != "" && f.config.Remote.APIKey != "" {
 			fwCache := firmware.LoadCache(f.config.Storage.BitaxesDir())
 			latestFW := fwCache.Models[bitaxe.Model].Version
-			go f.pushToRemote(now, addr, bitaxe.Hostname, bitaxe.Model, latestFW, payload)
+			// Push the already-computed storage key, not the raw mac --
+			// hashboard just uses it verbatim as its own directory name, no
+			// need for it to know anything about MAC address formatting at
+			// all (single source of truth for that logic, here).
+			go f.pushToRemote(now, key, addr, bitaxe.Hostname, bitaxe.Model, latestFW, payload)
 		}
 	}
 
@@ -94,9 +114,26 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 }
 
+// extractDeviceMac pulls the macAddr field a device reports flat/top-level
+// in its own response (see internal/healtcheck.MinerCommon) -- used only to
+// cross-check against the configured mac:, never as the storage key itself.
+func extractDeviceMac(payload []byte) string {
+	var m struct {
+		MacAddr string `json:"macAddr"`
+	}
+	if err := json.Unmarshal(payload, &m); err != nil {
+		return ""
+	}
+	return m.MacAddr
+}
+
 type pushSample struct {
-	Timestamp       time.Time       `json:"ts"`
-	IP              string          `json:"ip"`
+	Timestamp time.Time `json:"ts"`
+	IP        string    `json:"ip"`
+	// StorageKey is the already-normalized directory-name key (see
+	// config.Bitaxe.StorageKey) -- hashboard just uses it verbatim, it
+	// never needs to know this is derived from a MAC address at all.
+	StorageKey      string          `json:"storageKey"`
 	Hostname        string          `json:"hostname"`
 	Model           string          `json:"model"`
 	ElectricityRate float64         `json:"electricityRatePerKwh,omitempty"`
@@ -104,10 +141,11 @@ type pushSample struct {
 	Payload         json.RawMessage `json:"payload"`
 }
 
-func (f *Feeder) pushToRemote(now time.Time, ip, hostname, model, latestFirmware string, payload []byte) {
+func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, model, latestFirmware string, payload []byte) {
 	sample := pushSample{
 		Timestamp:       now.UTC().Truncate(time.Second),
 		IP:              ip,
+		StorageKey:      storageKey,
 		Hostname:        hostname,
 		Model:           model,
 		ElectricityRate: f.config.Electricity.RatePerKwh,

@@ -34,9 +34,11 @@ const NOTIFICATION_DOT_COLOR: Partial<Record<NotificationType, string>> = {
   temp: "#f44336",
   fan: "#f44336",
   offline: "#f44336",
+  deviceError: "#ff9800",
   tempRecovered: "#66bb6a",
   fanRecovered: "#66bb6a",
   online: "#66bb6a",
+  deviceErrorResolved: "#66bb6a",
 };
 
 // Passive status indicator, not a control -- the actual on/off toggle lives

@@ -9,6 +9,7 @@ export interface MinerInfo {
   deviceModel?: string;
   alive?: boolean;
   aliveCheckedAt?: string;
+  error?: string;
   version: string;
   latestVersion?: string;
   updateAvailable?: boolean;

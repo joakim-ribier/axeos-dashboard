@@ -113,7 +113,7 @@ func WithMinerCtx(w http.ResponseWriter, r *http.Request, handler func(config.Bi
 
 func MinerCtx(next http.Handler, cfg config.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Resolve the miner from the URL path parameter
+		// Resolve the miner from the URL path parameter (ip/hostname).
 		hostnameOrIp := chi.URLParam(r, "hostnameOrIp")
 		miners := cfg.GetMinersFilterBy(hostnameOrIp)
 		if len(miners) == 0 {

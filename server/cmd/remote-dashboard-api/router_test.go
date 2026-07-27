@@ -71,7 +71,12 @@ func TestNewRouter_listMiners(t *testing.T) {
 func TestNewRouter_stats(t *testing.T) {
 	dir := t.TempDir()
 	today := time.Now().UTC().Format("2006-01-02")
-	writeFixture(t, filepath.Join(dir, "demo", "bitaxes", "10.0.0.1", today+".jsonl"),
+	// Directory is named by MAC; latest.json's embedded ip is what the ip
+	// URL param actually resolves against.
+	minerDir := filepath.Join(dir, "demo", "bitaxes", "aabbccddeeff")
+	writeFixture(t, filepath.Join(minerDir, "latest.json"),
+		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`)
+	writeFixture(t, filepath.Join(minerDir, today+".jsonl"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}

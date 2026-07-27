@@ -36,10 +36,16 @@ type StatsResponse struct {
 // @Failure 404 {object} handler.ErrorResponse "miner not found"
 // @Router /api/miners/{hostnameOrIp}/stats [get]
 func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *http.Request) {
-	// Build the path to today's JSONL file: <dataRoot>/<ip>/YYYY-MM-DD.jsonl
+	key := miner.StorageKey()
+	if key == "" {
+		writeErrorResponse(w, "no mac configured for this miner", http.StatusNotFound)
+		return
+	}
+
+	// Build the path to today's JSONL file: <dataRoot>/<mac>/YYYY-MM-DD.jsonl
 	root := getDataRoot(cfg.Storage)
 	today := time.Now().UTC().Format("2006-01-02")
-	path := filepath.Join(root, miner.Ip, fmt.Sprintf("%s.jsonl", today))
+	path := filepath.Join(root, key, fmt.Sprintf("%s.jsonl", today))
 
 	entries, err := decodeJSONL(path)
 	if err != nil {

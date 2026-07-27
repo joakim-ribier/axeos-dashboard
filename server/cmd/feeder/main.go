@@ -36,6 +36,9 @@ func main() {
 
 	logger := newLogger("feeder", logFile)
 	logger.Info("Feeder running...")
+	for _, w := range cfg.MissingMacWarnings() {
+		logger.Error(w)
+	}
 
 	NewFeeder(logger, cfg).Feed()
 }

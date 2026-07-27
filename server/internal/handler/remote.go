@@ -106,8 +106,22 @@ func RemoteStats(cfg config.Config) http.HandlerFunc {
 		}
 
 		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
+
+		// Storage is keyed by MAC, not IP -- resolve the mac-named directory
+		// whose last-pushed sample reported this IP. On a LAN, only one
+		// device can hold a given IP at any instant, so this is unambiguous.
+		mac, err := resolveMacByIP(root, ip)
+		if err != nil {
+			writeErrorResponse(w, fmt.Sprintf("failed to resolve miner: %v", err), http.StatusInternalServerError)
+			return
+		}
+		if mac == "" {
+			writeErrorResponse(w, fmt.Sprintf("no miner found for ip %q", ip), http.StatusNotFound)
+			return
+		}
+
 		today := time.Now().UTC().Format("2006-01-02")
-		path := filepath.Join(root, ip, fmt.Sprintf("%s.jsonl", today))
+		path := filepath.Join(root, mac, fmt.Sprintf("%s.jsonl", today))
 
 		entries, err := decodeJSONL(path)
 		if err != nil {
@@ -117,11 +131,37 @@ func RemoteStats(cfg config.Config) http.HandlerFunc {
 
 		stats := make([]model.MinerInfo, 0, len(entries))
 		for _, raw := range entries {
-			stats = append(stats, toMinerInfo(raw, syntheticBitaxe(raw, ip), "", "", nil))
+			stats = append(stats, toMinerInfo(raw, syntheticBitaxe(raw, mac), "", "", nil))
 		}
 
 		writeStatsResponse(w, stats)
 	}
+}
+
+// resolveMacByIP scans root's miner directories (there are only ever a
+// handful per board) and returns the name of the one whose latest.json
+// reports the given ip. Returns "" (no error) if none match.
+func resolveMacByIP(root, ip string) (string, error) {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", nil
+		}
+		return "", err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		raw, err := decodeLatestJSON(filepath.Join(root, entry.Name(), "latest.json"))
+		if err != nil {
+			continue
+		}
+		if raw.IP == ip {
+			return entry.Name(), nil
+		}
+	}
+	return "", nil
 }
 
 // aliveFromTimestamp returns alive=true if the timestamp is within the last 10 minutes.
@@ -134,15 +174,16 @@ func aliveFromTimestamp(ts string) (bool, string) {
 	return time.Since(t) < 10*time.Minute, ts
 }
 
-// syntheticBitaxe builds a config.Bitaxe from fields embedded in the PushSample file.
-// Falls back to dirName for IP when the file field is empty (backward compatibility).
+// syntheticBitaxe builds a config.Bitaxe from fields embedded in the
+// PushSample file. Mac is the directory name itself -- always authoritative,
+// since storage is keyed by MAC. Ip is purely informational (the device's
+// real network address at push time, used only for the UI's "open device"
+// link) and is left empty for older pushed data that predates this field --
+// it must never fall back to dirName, which is a MAC, not an IP.
 func syntheticBitaxe(raw latestFileStructure, dirName string) config.Bitaxe {
-	ip := raw.IP
-	if ip == "" {
-		ip = dirName
-	}
 	return config.Bitaxe{
-		Ip:       ip,
+		Ip:       raw.IP,
+		Mac:      dirName,
 		Hostname: raw.Hostname,
 		Model:    raw.Model,
 		Enabled:  true,

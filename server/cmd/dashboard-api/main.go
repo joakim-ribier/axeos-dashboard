@@ -53,6 +53,9 @@ func main() {
 
 	logger := newLogger("dashboard-api", logFile)
 	logger.Info("Server running...")
+	for _, w := range cfg.MissingMacWarnings() {
+		logger.Error(w)
+	}
 
 	var wg sync.WaitGroup
 

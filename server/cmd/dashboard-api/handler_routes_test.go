@@ -87,12 +87,12 @@ func TestRouter_setWifi_disabledByServer(t *testing.T) {
 func TestRouter_stats(t *testing.T) {
 	dir := t.TempDir()
 	today := time.Now().UTC().Format("2006-01-02")
-	writeRouteFixture(t, filepath.Join(dir, "data", "bitaxes", "10.0.0.1", today+".jsonl"),
+	writeRouteFixture(t, filepath.Join(dir, "data", "bitaxes", "aabbccddeeff", today+".jsonl"),
 		`{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{
 		Storage: config.StorageConfig{DataDir: dir},
-		Bitaxes: []config.Bitaxe{{Ip: "10.0.0.1", Hostname: "bitaxe-1", Enabled: true}},
+		Bitaxes: []config.Bitaxe{{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "bitaxe-1", Enabled: true}},
 	}
 
 	t.Run("known miner", func(t *testing.T) {

@@ -5,6 +5,7 @@ import { RestartAltOutlined, VerifiedUserOutlined } from "@mui/icons-material";
 import AirIcon from "@mui/icons-material/Air";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DiamondOutlinedIcon from "@mui/icons-material/DiamondOutlined";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -69,6 +70,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     deviceModel,
     alive,
     aliveCheckedAt,
+    error: configError,
     version,
     latestVersion,
     updateAvailable,
@@ -106,6 +108,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
 
   const [showPoolDetails, setShowPoolDetails] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [configErrorCopied, setConfigErrorCopied] = useState(false);
   const hasLoadedOnce = useRef(false);
   const [selectedChartFields, setSelectedChartFields] =
     useState<(keyof MinerInfo)[]>(DEFAULT_CHART_FIELDS);
@@ -255,11 +258,13 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
             >
               <Tooltip
                 title={
-                  alive === undefined
-                    ? t("miner.health.unknown")
-                    : alive
-                      ? `${t("miner.health.alive")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
-                      : `${t("miner.health.unreachable")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
+                  configError
+                    ? `${t("miner.error.macMismatch")} · ${configError}`
+                    : alive === undefined
+                      ? t("miner.health.unknown")
+                      : alive
+                        ? `${t("miner.health.alive")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
+                        : `${t("miner.health.unreachable")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
                 }
                 arrow
               >
@@ -269,14 +274,16 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                     height: 8,
                     borderRadius: "50%",
                     flexShrink: 0,
-                    backgroundColor:
-                      alive === undefined
+                    backgroundColor: configError
+                      ? "#ff9800"
+                      : alive === undefined
                         ? "rgba(255,255,255,0.2)"
                         : alive
                           ? "#66bb6a"
                           : "#f44336",
-                    boxShadow:
-                      alive === true
+                    boxShadow: configError
+                      ? "0 0 6px #ff9800"
+                      : alive === true
                         ? "0 0 6px #66bb6a"
                         : alive === false
                           ? "0 0 6px #f44336"
@@ -382,6 +389,64 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
             )}
           </Stack>
         </Box>
+
+        {/* Config error -- shown prominently, not buried in a hover tooltip */}
+        {configError && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.75,
+              backgroundColor: "rgba(255,152,0,0.08)",
+              border: "1px solid rgba(255,152,0,0.25)",
+              borderRadius: 1.5,
+              px: 1,
+              py: 0.5,
+            }}
+          >
+            <ErrorOutlineIcon
+              sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
+            />
+            <Typography
+              variant="caption"
+              sx={{
+                color: "warning.main",
+                flex: 1,
+                wordBreak: "break-word",
+                fontSize: "0.7rem",
+                lineHeight: 1.3,
+              }}
+            >
+              {t("miner.error.macMismatch")}: {configError}
+            </Typography>
+            <Tooltip
+              title={
+                configErrorCopied
+                  ? t("miner.error.copied")
+                  : t("miner.error.copy")
+              }
+            >
+              <IconButton
+                size="small"
+                onClick={() => {
+                  navigator.clipboard.writeText(configError).then(() => {
+                    setConfigErrorCopied(true);
+                    setTimeout(() => setConfigErrorCopied(false), 1500);
+                  });
+                }}
+                sx={{ p: 0.25, flexShrink: 0 }}
+              >
+                {configErrorCopied ? (
+                  <CheckCircleIcon
+                    sx={{ fontSize: 13, color: "success.main" }}
+                  />
+                ) : (
+                  <ContentCopyIcon sx={{ fontSize: 13 }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
 
         {/* 2. Hashrate */}
         {loading ? (

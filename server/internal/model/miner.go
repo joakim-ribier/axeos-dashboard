@@ -36,6 +36,12 @@ type MinerInfo struct {
 	Alive          bool   `json:"alive"`
 	AliveCheckedAt string `json:"aliveCheckedAt,omitempty"`
 
+	// Error surfaces a serious inconsistency the UI should call out
+	// distinctly from a normal offline/unreachable state -- currently just
+	// a mismatch between the configured mac: and what the device itself
+	// reports (wrong device at this IP, or a config typo).
+	Error string `json:"error,omitempty"`
+
 	// Pool urls
 	StratumURL                  string `json:"stratumURL"`                    // Hostname of the primary Stratum pool
 	StratumUser                 string `json:"stratumUser"`                   // Username (typically miner ID) for the primary pool

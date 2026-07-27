@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -60,7 +61,7 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 	minerAddr := serverAddr(bitaxeServer)
 	cfg := config.Config{
 		Bitaxes: []config.Bitaxe{
-			{Ip: minerAddr, Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+			{Ip: minerAddr, Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
 		},
 		Endpoints:   config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
 		Storage:     config.StorageConfig{DataDir: dir},
@@ -74,7 +75,8 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 
 	NewFeeder(testLogger(), cfg).runOnce(context.Background())
 
-	latestPath := filepath.Join(cfg.Storage.BitaxesDir(), minerAddr, "latest.json")
+	// Storage is keyed by the configured MAC, not the IP.
+	latestPath := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", "latest.json")
 	data, err := os.ReadFile(latestPath)
 	if err != nil {
 		t.Fatalf("latest.json was not written: %v", err)
@@ -91,6 +93,9 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		if p.body["ip"] != minerAddr {
 			t.Errorf("push body ip = %v, want %v", p.body["ip"], minerAddr)
 		}
+		if p.body["storageKey"] != "aabbccddeeff" {
+			t.Errorf("push body storageKey = %v, want %q", p.body["storageKey"], "aabbccddeeff")
+		}
 		if p.body["hostname"] != "bitaxe-1" {
 			t.Errorf("push body hostname = %v, want %q", p.body["hostname"], "bitaxe-1")
 		}
@@ -104,12 +109,171 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 	}
 }
 
+func TestFeeder_runOnce_matchingReportedMacStoresNormally(t *testing.T) {
+	dir := t.TempDir()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000,"macAddr":"AA:BB:CC:DD:EE:FF"}`))
+	}))
+	defer bitaxeServer.Close()
+
+	minerAddr := serverAddr(bitaxeServer)
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: minerAddr, Mac: "aa:bb:cc:dd:ee:ff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+	}
+
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+
+	macDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
+	if _, err := os.Stat(filepath.Join(macDir, "latest.json")); err != nil {
+		t.Fatalf("expected latest.json under the mac directory when reported mac matches configured: %v", err)
+	}
+}
+
+func TestFeeder_runOnce_pushesTheSameNormalizedStorageKeyUsedLocally(t *testing.T) {
+	dir := t.TempDir()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000,"macAddr":"AA:BB:CC:DD:EE:FF"}`))
+	}))
+	defer bitaxeServer.Close()
+
+	type pushedRequest struct{ body map[string]any }
+	pushCh := make(chan pushedRequest, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var decoded map[string]any
+		_ = json.Unmarshal(body, &decoded)
+		pushCh <- pushedRequest{body: decoded}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer remoteServer.Close()
+
+	minerAddr := serverAddr(bitaxeServer)
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			// Configured with colons -- axeos-dashboard is the single place
+			// that normalizes; hashboard just receives the final key and
+			// uses it verbatim, no MAC-formatting knowledge needed there.
+			{Ip: minerAddr, Mac: "aa:bb:cc:dd:ee:ff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+
+	macDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
+	if _, err := os.Stat(filepath.Join(macDir, "latest.json")); err != nil {
+		t.Fatalf("expected latest.json under the normalized storage key directory: %v", err)
+	}
+
+	select {
+	case p := <-pushCh:
+		if p.body["storageKey"] != "aabbccddeeff" {
+			t.Errorf("push body storageKey = %v, want the same normalized key used locally (%q)", p.body["storageKey"], "aabbccddeeff")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected a push to the remote server, none received")
+	}
+}
+
+func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
+	dir := t.TempDir()
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+
+	// The device actually responding at this IP reports a DIFFERENT mac
+	// than what's configured -- wrong device at this address, or a config
+	// typo. Must never silently write into the configured mac's directory.
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000,"macAddr":"ff:ff:ff:ff:ff:ff"}`))
+	}))
+	defer bitaxeServer.Close()
+
+	type pushedRequest struct{ body map[string]any }
+	pushCh := make(chan pushedRequest, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var decoded map[string]any
+		_ = json.Unmarshal(body, &decoded)
+		pushCh <- pushedRequest{body: decoded}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer remoteServer.Close()
+
+	minerAddr := serverAddr(bitaxeServer)
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: minerAddr, Mac: "AA:BB:CC:DD:EE:FF", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+
+	NewFeeder(logger, cfg).runOnce(context.Background())
+
+	entries, _ := os.ReadDir(cfg.Storage.BitaxesDir())
+	if len(entries) != 0 {
+		t.Errorf("no directory should be created on a mac mismatch, got %v", entries)
+	}
+	if !strings.Contains(logBuf.String(), "mac mismatch") {
+		t.Errorf("expected an error to be logged about the mac mismatch, got log: %s", logBuf.String())
+	}
+
+	select {
+	case <-pushCh:
+		t.Error("must not push to the remote server when the mac mismatches")
+	case <-time.After(200 * time.Millisecond):
+		// expected: no push happened
+	}
+}
+
+func TestFeeder_runOnce_skipsDeviceWithNoMacConfigured(t *testing.T) {
+	dir := t.TempDir()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("device should never be polled when mac: isn't configured")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000}`))
+	}))
+	defer bitaxeServer.Close()
+
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: serverAddr(bitaxeServer), Model: "bitaxe", Enabled: true}, // no Mac set
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+	}
+
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+
+	entries, _ := os.ReadDir(cfg.Storage.BitaxesDir())
+	if len(entries) != 0 {
+		t.Errorf("no directory should be created for a miner with no mac configured, got %v", entries)
+	}
+}
+
 func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 	dir := t.TempDir()
 
 	cfg := config.Config{
 		Bitaxes: []config.Bitaxe{
-			{Ip: "127.0.0.1:1", Model: "bitaxe", Enabled: true},
+			{Ip: "127.0.0.1:1", Mac: "aabbccddeeff", Model: "bitaxe", Enabled: true},
 		},
 		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: 200 * time.Millisecond},
 		Storage:   config.StorageConfig{DataDir: dir},
@@ -118,7 +282,7 @@ func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 
 	NewFeeder(testLogger(), cfg).runOnce(context.Background())
 
-	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "127.0.0.1:1")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")); !os.IsNotExist(err) {
 		t.Error("no data directory should be created for a miner that fails to respond")
 	}
 }

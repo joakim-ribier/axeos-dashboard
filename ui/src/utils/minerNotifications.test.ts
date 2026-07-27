@@ -241,6 +241,59 @@ describe("detectNotifications", () => {
     });
   });
 
+  describe("deviceError", () => {
+    it("notifies when a miner develops a configuration error", () => {
+      const errored: Miner = { ...baseMiner, error: "mac mismatch" };
+      const result = detect([baseMiner], [errored]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        type: "deviceError",
+        minerLabel: "bitaxe-office",
+        detail: "mac mismatch",
+      });
+    });
+
+    it("does not re-notify while the error persists", () => {
+      const errored: Miner = { ...baseMiner, error: "mac mismatch" };
+      expect(detect([errored], [{ ...errored }])).toEqual([]);
+    });
+
+    it("notifies 'deviceErrorResolved' when the error clears", () => {
+      const errored: Miner = { ...baseMiner, error: "mac mismatch" };
+      const result = detect([errored], [baseMiner]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        type: "deviceErrorResolved",
+        minerLabel: "bitaxe-office",
+      });
+    });
+
+    it("notifies immediately on first fetch if already in error (unlike online/offline)", () => {
+      const errored: Miner = { ...baseMiner, error: "mac mismatch" };
+      const result = detect(undefined, [errored]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({ type: "deviceError" });
+    });
+
+    it("never notifies 'deviceErrorResolved' on first fetch (nothing to resolve from)", () => {
+      expect(detect(undefined, [baseMiner])).toEqual([]);
+    });
+
+    it("is not suppressible via NotificationSettings (always notified)", () => {
+      const errored: Miner = { ...baseMiner, error: "mac mismatch" };
+      const settings: NotificationSettings = {
+        ...DEFAULT_NOTIFICATION_SETTINGS,
+      };
+      const result = detect([baseMiner], [errored], settings);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe("deviceError");
+    });
+  });
+
   describe("updateAvailable", () => {
     it("notifies when an update becomes available", () => {
       const pending: Miner = { ...baseMiner, updateAvailable: true };

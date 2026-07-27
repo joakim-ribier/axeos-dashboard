@@ -44,7 +44,7 @@ func TestWatcher_watch(t *testing.T) {
 	}
 
 	w := NewWatcher(testLogger(), cfg)
-	w.watch()
+	w.Watch()
 
 	tests := []struct {
 		name    string
@@ -69,5 +69,86 @@ func TestWatcher_watch(t *testing.T) {
 				t.Errorf("GetStatus(%q).Alive = %v, want %v", tt.ip, status.Alive, tt.wantAlv)
 			}
 		})
+	}
+}
+
+func TestWatcher_watch_flagsMacMismatch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hostname":"bitaxe-1","macAddr":"ff:ff:ff:ff:ff:ff","temp":55}`))
+	}))
+	defer server.Close()
+
+	ip := serverAddr(server)
+	cfg := config.Config{
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Bitaxes: []config.Bitaxe{
+			{Ip: ip, Mac: "AA:BB:CC:DD:EE:FF", Model: "bitaxe", Enabled: true},
+		},
+	}
+
+	w := NewWatcher(testLogger(), cfg)
+	w.Watch()
+
+	status, ok := w.GetStatus(ip)
+	if !ok {
+		t.Fatal("expected a status for the configured ip")
+	}
+	if !status.Alive {
+		t.Error("device did respond, Alive should still be true even on a mac mismatch")
+	}
+	if !status.MacMismatch {
+		t.Error("MacMismatch = false, want true (configured aabbccddeeff != reported ffffffffffff)")
+	}
+	if status.ReportedMac != "ffffffffffff" {
+		t.Errorf("ReportedMac = %q, want %q", status.ReportedMac, "ffffffffffff")
+	}
+}
+
+func TestWatcher_watch_noMismatchWhenMacsAgree(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hostname":"bitaxe-1","macAddr":"aa:bb:cc:dd:ee:ff","temp":55}`))
+	}))
+	defer server.Close()
+
+	ip := serverAddr(server)
+	cfg := config.Config{
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Bitaxes: []config.Bitaxe{
+			{Ip: ip, Mac: "AA:BB:CC:DD:EE:FF", Model: "bitaxe", Enabled: true},
+		},
+	}
+
+	w := NewWatcher(testLogger(), cfg)
+	w.Watch()
+
+	status, _ := w.GetStatus(ip)
+	if status.MacMismatch {
+		t.Error("MacMismatch = true, want false -- configured and reported mac agree (modulo formatting)")
+	}
+}
+
+func TestWatcher_watch_noMismatchWhenNoMacConfigured(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hostname":"bitaxe-1","macAddr":"ff:ff:ff:ff:ff:ff","temp":55}`))
+	}))
+	defer server.Close()
+
+	ip := serverAddr(server)
+	cfg := config.Config{
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Bitaxes: []config.Bitaxe{
+			{Ip: ip, Model: "bitaxe", Enabled: true}, // no Mac configured
+		},
+	}
+
+	w := NewWatcher(testLogger(), cfg)
+	w.Watch()
+
+	status, _ := w.GetStatus(ip)
+	if status.MacMismatch {
+		t.Error("MacMismatch = true, want false -- nothing to compare against without a configured mac")
 	}
 }

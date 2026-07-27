@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,23 @@ func (c Config) GetMiners() []Bitaxe {
 	return out
 }
 
+// MissingMacWarnings returns one message per enabled miner with no mac:
+// configured -- storage is keyed by MAC, so these devices won't be tracked
+// (feeder skips them, dashboard-api can't find their data) until it's set.
+// Meant to be logged loudly at startup, not discovered only once someone
+// happens to hit an API endpoint that touches storage.
+func (c Config) MissingMacWarnings() []string {
+	var warnings []string
+	for _, b := range c.GetMiners() {
+		if b.StorageKey() == "" {
+			warnings = append(warnings, fmt.Sprintf(
+				"miner %s (%s) has no mac: configured in dashboard.yml -- it will be skipped until you set one",
+				b.Ip, b.Hostname))
+		}
+	}
+	return warnings
+}
+
 func (c Config) GetMinersFilterBy(hostnameOrIp string) []Bitaxe {
 	miners := c.GetMiners()
 	if len(hostnameOrIp) == 0 {
@@ -64,6 +82,14 @@ func (c Config) GetMinersFilterBy(hostnameOrIp string) []Bitaxe {
 type Bitaxe struct {
 	Ip       string `yaml:"ip"`
 	Hostname string `yaml:"hostname"`
+
+	// Mac is the device's MAC address (colons/hyphens optional, normalized
+	// by StorageKey) -- the storage-directory key, stable across IP/
+	// location changes unlike Ip. Manually configured, same as Ip/Hostname/
+	// Model -- there's no separate auto-discovery mechanism, so it stays in
+	// sync with whatever the operator already knows to rename data
+	// directories by.
+	Mac string `yaml:"mac"`
 
 	Model string `yaml:"model"`
 
@@ -130,6 +156,27 @@ func (b Bitaxe) GetPoolsSettings(target PoolTarget) (*BitaxeServerSettings, erro
 	default:
 		return nil, fmt.Errorf("pool type '%v' not managed", target)
 	}
+}
+
+// macSeparators strips the colon/hyphen separators a MAC address is
+// conventionally written with -- the stored/pushed form is bare hex (e.g.
+// "aabbccddeeff"), simpler and more portable as a directory name than
+// "aa:bb:cc:dd:ee:ff" (no tool/filesystem quirks to worry about around ':').
+var macSeparators = strings.NewReplacer(":", "", "-", "")
+
+// NormalizeMac strips separators and lowercases a MAC address -- the
+// canonical form used both as the storage key and to compare a configured
+// mac against what a device actually reports.
+func NormalizeMac(mac string) string {
+	return strings.ToLower(macSeparators.Replace(mac))
+}
+
+// StorageKey is the directory name a miner's data lives under -- its
+// (normalized) MAC address, required and manually configured (mac:), same
+// as Ip/Hostname/Model. Empty if not yet configured -- callers must treat
+// that as "this device isn't set up for storage yet", not fall back to Ip.
+func (b Bitaxe) StorageKey() string {
+	return NormalizeMac(b.Mac)
 }
 
 func (b Bitaxe) GetWifiSettings(wifi Wifi) BitaxeWifiSettings {

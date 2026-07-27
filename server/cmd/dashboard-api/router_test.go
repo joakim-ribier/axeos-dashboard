@@ -10,21 +10,23 @@ import (
 )
 
 func TestMinerCtx(t *testing.T) {
-	cfg := config.Config{Bitaxes: []config.Bitaxe{
-		{Ip: "10.0.0.1", Hostname: "bitaxe-1", Enabled: true},
-	}}
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "bitaxe-1", Enabled: true},
+		},
+	}
 
 	router := chi.NewRouter()
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler { return MinerCtx(h, cfg) })
 		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 			WithMinerCtx(w, r, func(miner config.Bitaxe) {
-				_, _ = w.Write([]byte(miner.Ip))
+				_, _ = w.Write([]byte(miner.Ip + " " + miner.Mac))
 			})
 		})
 	})
 
-	t.Run("known miner resolves and reaches the handler", func(t *testing.T) {
+	t.Run("known miner resolves, with its MAC carried through from config", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/api/miners/bitaxe-1/ping", nil)
 
@@ -33,8 +35,8 @@ func TestMinerCtx(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 		}
-		if w.Body.String() != "10.0.0.1" {
-			t.Errorf("body = %q, want %q", w.Body.String(), "10.0.0.1")
+		if w.Body.String() != "10.0.0.1 aabbccddeeff" {
+			t.Errorf("body = %q, want %q", w.Body.String(), "10.0.0.1 aabbccddeeff")
 		}
 	})
 

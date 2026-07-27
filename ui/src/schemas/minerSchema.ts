@@ -10,6 +10,7 @@ export const minerSchema = z.object({
   deviceModel: z.string().optional(),
   alive: z.boolean().optional(),
   aliveCheckedAt: z.string().optional(),
+  error: z.string().optional(),
 
   sharesAccepted: z.number(),
   sharesRejected: z.number(),

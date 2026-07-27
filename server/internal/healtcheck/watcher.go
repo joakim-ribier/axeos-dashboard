@@ -15,6 +15,13 @@ import (
 type HealthStatus struct {
 	Alive     bool
 	CheckedAt time.Time
+
+	// MacMismatch is true when the device actually responding at this IP
+	// reports a MAC different from the one configured (mac:) -- a wrong
+	// device at this address, or a config typo. ReportedMac is what it
+	// actually said, for the error message.
+	MacMismatch bool
+	ReportedMac string
 }
 
 type Watcher struct {
@@ -45,12 +52,12 @@ func (f *Watcher) Start(wg *sync.WaitGroup) {
 		ticker := time.NewTicker(f.config.HealthCheck.Interval)
 		defer ticker.Stop()
 
-		f.watch()
+		f.Watch()
 
 		for {
 			select {
 			case <-ticker.C:
-				f.watch()
+				f.Watch()
 			case <-f.ctx.Done():
 				f.logger.Info("Health check stopped!")
 				return
@@ -72,8 +79,10 @@ func (f *Watcher) GetStatus(ip string) (HealthStatus, bool) {
 	return v.(HealthStatus), true
 }
 
-// watch pings all enabled miners and stores the result.
-func (f *Watcher) watch() {
+// Watch pings all enabled miners once and stores each result -- exported
+// so it can also be triggered synchronously (tests, or a manual refresh),
+// not just via the background ticker started by Start().
+func (f *Watcher) Watch() {
 	f.logger.Info("Health check running...")
 
 	client := bitaxe.NewClient(f.logger, f.config.Endpoints.Info, f.config.Endpoints.Timeout)
@@ -96,8 +105,19 @@ func (f *Watcher) watch() {
 			continue
 		}
 
+		configuredMac := miner.StorageKey()
+		reportedMac := config.NormalizeMac(raw.ToAxeOs().MacAddr)
+		mismatch := configuredMac != "" && reportedMac != "" && reportedMac != configuredMac
+		if mismatch {
+			f.logger.Error("mac mismatch! wrong device at this ip, or a config typo?",
+				"ip", addr, "configuredMac", configuredMac, "reportedMac", reportedMac)
+		}
+
 		f.logger.Info("Ping!", "ip", addr, "data", raw.ToAxeOs())
-		f.statuses.Store(addr, HealthStatus{Alive: true, CheckedAt: now})
+		f.statuses.Store(addr, HealthStatus{
+			Alive: true, CheckedAt: now,
+			MacMismatch: mismatch, ReportedMac: reportedMac,
+		})
 	}
 
 	f.logger.Info("Health check completed!")

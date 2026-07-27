@@ -8,6 +8,8 @@ export type NotificationType =
   | "fanRecovered"
   | "offline"
   | "online"
+  | "deviceError"
+  | "deviceErrorResolved"
   | "version"
   | "updateAvailable"
   | "settingsUpdated"
@@ -174,6 +176,28 @@ export const detectNotifications = (
           type: "online",
         });
       }
+    }
+
+    // Always notified, not gated by a settings toggle -- a mac mismatch is a
+    // data-integrity problem (wrong device at this IP, or a config typo),
+    // not a routine health blip like offline/temp.
+    const hadError = Boolean(prev?.error);
+    const hasError = Boolean(miner.error);
+    if (!hadError && hasError) {
+      notifications.push({
+        id: nextId(),
+        timestamp: Date.now(),
+        minerLabel: label,
+        type: "deviceError",
+        detail: miner.error,
+      });
+    } else if (prev && hadError && !hasError) {
+      notifications.push({
+        id: nextId(),
+        timestamp: Date.now(),
+        minerLabel: label,
+        type: "deviceErrorResolved",
+      });
     }
 
     if (settings.notifyUpdateAvailable) {

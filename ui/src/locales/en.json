@@ -92,6 +92,11 @@
       "alive": "Reachable",
       "unreachable": "Unreachable",
       "unknown": "Health check pending"
+    },
+    "error": {
+      "macMismatch": "Configuration error",
+      "copy": "Copy",
+      "copied": "Copied!"
     }
   },
   "nav": {
@@ -128,6 +133,8 @@
     "fanRecovered": "{{miner}} fan speed back to normal ({{value}}%)",
     "offline": "{{miner}} went offline",
     "online": "{{miner}} is back online",
+    "deviceError": "{{miner}} has a configuration error: {{value}}",
+    "deviceErrorResolved": "{{miner}}'s configuration error is resolved",
     "version": "{{miner}} firmware updated: {{value}}",
     "updateAvailable": "{{miner}} has a firmware update available ({{value}})",
     "settingsUpdated": "Notification settings updated: {{value}}",
