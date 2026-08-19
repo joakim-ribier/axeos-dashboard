@@ -20,7 +20,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Theme } from "@mui/material/styles";
+import { Theme, useTheme } from "@mui/material/styles";
 
 import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
@@ -54,6 +54,118 @@ const getPoolLabel = (url: string): string => {
   } catch {
     return url;
   }
+};
+
+/* ── Pool filter card ────────────────────────────────────────── */
+interface PoolCardProps {
+  label: string;
+  count: number;
+  hashRate?: number;
+  isActive: boolean;
+  tooltip?: string;
+  onClick: () => void;
+}
+
+const PoolCard = ({
+  label,
+  count,
+  hashRate,
+  isActive,
+  tooltip,
+  onClick,
+}: PoolCardProps) => {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const primary = theme.palette.primary.main;
+
+  const card = (
+    <Box
+      onClick={onClick}
+      sx={{
+        cursor: "pointer",
+        px: 2,
+        py: 1.5,
+        borderRadius: 2,
+        border: "1px solid",
+        borderColor: isActive ? primary : "divider",
+        backgroundColor: isActive ? `${primary}14` : "background.paper",
+        boxShadow: isActive ? `0 0 16px ${primary}28` : "none",
+        transition: "all 0.2s ease",
+        minWidth: { xs: 120, sm: 140 },
+        maxWidth: { xs: 160, sm: 200 },
+        flexShrink: 0,
+        overflow: "hidden",
+        userSelect: "none",
+        "&:hover": {
+          borderColor: primary,
+          backgroundColor: `${primary}0a`,
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 1,
+          mb: 0.5,
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            textTransform: "uppercase",
+            letterSpacing: "0.07em",
+            fontWeight: 700,
+            color: isActive ? primary : "text.secondary",
+            lineHeight: 1,
+            flex: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </Typography>
+        {isActive && (
+          <Box
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              backgroundColor: primary,
+              boxShadow: `0 0 6px ${primary}`,
+              flexShrink: 0,
+              mt: 0.25,
+            }}
+          />
+        )}
+      </Box>
+      <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.3 }}>
+        {count}
+        <Typography
+          component="span"
+          variant="caption"
+          color="text.secondary"
+          sx={{ ml: 0.5 }}
+        >
+          {t("dashboard.filter.miners")}
+        </Typography>
+      </Typography>
+      {hashRate !== undefined && (
+        <Typography variant="caption" color="text.secondary">
+          {hashRate.toFixed(2)} TH/s
+        </Typography>
+      )}
+    </Box>
+  );
+
+  return tooltip ? (
+    <Tooltip title={tooltip} arrow>
+      {card}
+    </Tooltip>
+  ) : (
+    card
+  );
 };
 
 /* ── Search ──────────────────────────────────────────────────── */
@@ -346,16 +458,26 @@ export const Home = () => {
   }, [settings, addNotifications, t]);
 
   const poolEntries = useMemo(() => {
-    const map: Record<string, { count: number; label: string }> = {};
+    const map: Record<
+      string,
+      { count: number; hashRate: number; label: string }
+    > = {};
     data?.forEach((m) => {
       const isFallback = m.isUsingFallbackStratum === 1;
       const url = (isFallback ? m.fallbackStratumURL : m.stratumURL) ?? "";
       if (!url) return;
-      if (!map[url]) map[url] = { count: 0, label: getPoolLabel(url) };
+      if (!map[url])
+        map[url] = { count: 0, hashRate: 0, label: getPoolLabel(url) };
       map[url].count++;
+      map[url].hashRate += m.hashRateTHs ?? 0;
     });
     return Object.entries(map);
   }, [data]);
+
+  const totalHashRate = useMemo(
+    () => data?.reduce((s, m) => s + (m.hashRateTHs ?? 0), 0) ?? 0,
+    [data],
+  );
 
   const deviceModelEntries = useMemo(() => {
     const map: Record<string, number> = {};
@@ -492,38 +614,6 @@ export const Home = () => {
           >
             <SearchField />
 
-            {poolEntries.length >= 1 && (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t("dashboard.filter.poolLabel")}
-                </Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                  {poolEntries.length > 1 && (
-                    <Chip
-                      size="small"
-                      label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
-                      color={selectedPool === null ? "primary" : "default"}
-                      variant={selectedPool === null ? "filled" : "outlined"}
-                      onClick={() => setSelectedPool(null)}
-                    />
-                  )}
-                  {poolEntries.map(([url, stats]) => (
-                    <Tooltip key={url} title={url} arrow>
-                      <Chip
-                        size="small"
-                        label={`${stats.label} (${stats.count})`}
-                        color={selectedPool === url ? "primary" : "default"}
-                        variant={selectedPool === url ? "filled" : "outlined"}
-                        onClick={() =>
-                          setSelectedPool(url === selectedPool ? null : url)
-                        }
-                      />
-                    </Tooltip>
-                  ))}
-                </Box>
-              </Box>
-            )}
-
             {deviceModelEntries.length >= 1 && (
               <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary">
@@ -604,6 +694,41 @@ export const Home = () => {
       </Box>
 
       <GlobalStats data={data} isLoading={isLoading} />
+
+      {!isLoading && poolEntries.length >= 1 && (
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1.5,
+            overflowX: "auto",
+            pb: 0.5,
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": { display: "none" },
+          }}
+        >
+          {poolEntries.length > 1 && (
+            <PoolCard
+              label={t("dashboard.filter.all")}
+              count={data?.length ?? 0}
+              hashRate={totalHashRate}
+              isActive={selectedPool === null}
+              onClick={() => setSelectedPool(null)}
+            />
+          )}
+          {poolEntries.map(([url, stats]) => (
+            <PoolCard
+              key={url}
+              label={stats.label}
+              count={stats.count}
+              hashRate={stats.hashRate}
+              isActive={selectedPool === url}
+              tooltip={url}
+              onClick={() => setSelectedPool(url === selectedPool ? null : url)}
+            />
+          ))}
+        </Box>
+      )}
 
       {!isLoading && data && data.length > 0 && filteredData?.length === 0 ? (
         <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
