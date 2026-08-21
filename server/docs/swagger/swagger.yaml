@@ -1,5 +1,56 @@
 basePath: /
 definitions:
+  handler.AlertEntry:
+    properties:
+      alerts:
+        items:
+          $ref: '#/definitions/model.Alert'
+        type: array
+      hostname:
+        type: string
+      minerIp:
+        type: string
+      minerMac:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  handler.AlertEpisode:
+    properties:
+      firstSeen:
+        type: string
+      hostname:
+        type: string
+      lastSeen:
+        type: string
+      message:
+        type: string
+      minerIp:
+        type: string
+      minerMac:
+        type: string
+      occurrences:
+        type: integer
+      peakValue:
+        type: number
+      threshold:
+        type: number
+      type:
+        type: string
+    type: object
+  handler.AlertHistoryResponse:
+    properties:
+      episodes:
+        items:
+          $ref: '#/definitions/handler.AlertEpisode'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
   handler.ErrorResponse:
     properties:
       code:
@@ -17,6 +68,20 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  model.Alert:
+    properties:
+      message:
+        type: string
+      threshold:
+        description: the threshold in effect at calculation time, omitted otherwise
+        type: number
+      type:
+        description: '"tempHigh", "fanHigh", "offline", "macMismatch", "firmwareUpdate"'
+        type: string
+      value:
+        description: the reading that triggered it (temp/fan), omitted otherwise
+        type: number
     type: object
   model.InfoResponse:
     properties:
@@ -41,6 +106,14 @@ definitions:
     type: object
   model.MinerInfo:
     properties:
+      alerts:
+        description: |-
+          Alerts is whatever the feeder computed and persisted at the poll that
+          produced this snapshot (temp/fan out of range, offline, mac mismatch,
+          firmware update) -- the current state as of Timestamp, not a live value.
+        items:
+          $ref: '#/definitions/model.Alert'
+        type: array
       alive:
         description: Health check
         type: boolean
@@ -222,6 +295,70 @@ paths:
       summary: List miners pushed to a hashboard board (read-only)
       tags:
       - remote-dashboard-api
+  /api/{boardId}/miners/alerts:
+    get:
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      - description: max entries to return per miner (default 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.AlertEntry'
+            type: array
+      summary: List the most recent miner alerts for a hashboard board (read-only)
+      tags:
+      - remote-dashboard-api
+  /api/{boardId}/miners/alerts/history:
+    get:
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      - description: the single day to scan (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      - description: page number, 1-based (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: episodes per page (default 50, max 200)
+        in: query
+        name: pageSize
+        type: integer
+      - description: filter to this miner IP only
+        in: query
+        name: ip
+        type: string
+      - description: filter to this alert type only
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AlertHistoryResponse'
+      summary: List a single day's recorded miner alerts for a hashboard board, grouped
+        into episodes and paginated (read-only)
+      tags:
+      - remote-dashboard-api
   /api/info:
     get:
       description: Returns this binary's git SHA, whether it's up to date with the
@@ -293,6 +430,65 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get today's stats for one miner
+      tags:
+      - dashboard-api
+  /api/miners/alerts:
+    get:
+      description: Returns each miner's N most recent alert-bearing entries (today's
+        history only).
+      parameters:
+      - description: max entries to return per miner (default 10)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.AlertEntry'
+            type: array
+      summary: List the most recent miner alerts
+      tags:
+      - dashboard-api
+  /api/miners/alerts/history:
+    get:
+      description: Returns every alert episode (consecutive same-type occurrences
+        collapsed into one) on the given day across all miners, most recently active
+        first, optionally filtered by ip/type.
+      parameters:
+      - description: the single day to scan (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      - description: page number, 1-based (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: episodes per page (default 50, max 200)
+        in: query
+        name: pageSize
+        type: integer
+      - description: filter to this miner IP only
+        in: query
+        name: ip
+        type: string
+      - description: filter to this alert type only
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AlertHistoryResponse'
+      summary: List a single day's recorded miner alerts, grouped into episodes and
+        paginated
       tags:
       - dashboard-api
   /api/miners/pool/fallback/enable:

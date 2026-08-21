@@ -28,6 +28,8 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChec
 	r.Route("/api/{boardId}", func(r chi.Router) {
 		r.Use(handler.RequireBoardAccess(accessChecker))
 		r.Get("/miners", handler.ListRemoteMiners(cfg, accessChecker))
+		r.Get("/miners/alerts", handler.ListRemoteAlerts(cfg))
+		r.Get("/miners/alerts/history", handler.ListRemoteAlertsHistory(cfg))
 		r.Get("/{ip}/stats", handler.RemoteStats(cfg))
 	})
 

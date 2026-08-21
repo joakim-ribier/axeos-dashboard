@@ -1,7 +1,7 @@
 // src/components/ui/OopsPage.tsx
+import { useTranslation } from "react-i18next";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { Box, Button, Typography } from "@mui/material";
-import { useTranslation } from "react-i18next";
 
 interface OopsPageProps {
   titleKey: string;

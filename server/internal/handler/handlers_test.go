@@ -255,6 +255,43 @@ func TestSyntheticBitaxe(t *testing.T) {
 	})
 }
 
+func TestAliveFromTimestamp(t *testing.T) {
+	t.Run("alive when the push is more recent than 3x the pushed interval", func(t *testing.T) {
+		ts := time.Now().UTC().Add(-4 * time.Minute).Format(time.RFC3339)
+		alive, _ := aliveFromTimestamp(ts, 120) // 2m interval -> 6m threshold
+		if !alive {
+			t.Error("alive = false, want true (4m ago, under the 6m threshold)")
+		}
+	})
+
+	t.Run("not alive once the gap exceeds 3x the pushed interval", func(t *testing.T) {
+		ts := time.Now().UTC().Add(-7 * time.Minute).Format(time.RFC3339)
+		alive, _ := aliveFromTimestamp(ts, 120) // 2m interval -> 6m threshold
+		if alive {
+			t.Error("alive = true, want false (7m ago, over the 6m threshold)")
+		}
+	})
+
+	t.Run("falls back to a 10-minute threshold when the interval is unknown (zero)", func(t *testing.T) {
+		recent := time.Now().UTC().Add(-9 * time.Minute).Format(time.RFC3339)
+		if alive, _ := aliveFromTimestamp(recent, 0); !alive {
+			t.Error("alive = false, want true (9m ago, under the 10m fallback)")
+		}
+
+		stale := time.Now().UTC().Add(-11 * time.Minute).Format(time.RFC3339)
+		if alive, _ := aliveFromTimestamp(stale, 0); alive {
+			t.Error("alive = true, want false (11m ago, over the 10m fallback)")
+		}
+	})
+
+	t.Run("a malformed timestamp is never alive", func(t *testing.T) {
+		alive, _ := aliveFromTimestamp("not-a-timestamp", 120)
+		if alive {
+			t.Error("alive = true, want false for an unparseable timestamp")
+		}
+	})
+}
+
 func TestListRemoteMiners(t *testing.T) {
 	dir := t.TempDir()
 	writeTestFile(t, filepath.Join(dir, "demo", "bitaxes", "10.0.0.1", "latest.json"),

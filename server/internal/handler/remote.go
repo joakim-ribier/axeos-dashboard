@@ -71,7 +71,7 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 
 			miner := syntheticBitaxe(raw, entry.Name())
 			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
-			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp)
+			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp, raw.FeederIntervalSeconds)
 			resp.Miners = append(resp.Miners, info)
 		}
 
@@ -164,14 +164,23 @@ func resolveMacByIP(root, ip string) (string, error) {
 	return "", nil
 }
 
-// aliveFromTimestamp returns alive=true if the timestamp is within the last 10 minutes.
-// Used in remote mode where no real-time watcher runs.
-func aliveFromTimestamp(ts string) (bool, string) {
+// aliveFromTimestamp returns alive=true if the timestamp is more recent
+// than pollGapThresholdFor(intervalSeconds) -- used in remote mode, where
+// no real-time watcher runs (see healtcheck.Watcher, local mode only), so
+// "no push in a while" is the only signal available at all. intervalSeconds
+// is the source feeder's own polling interval for this miner (see
+// cmd/feeder.pushSample.FeederIntervalSeconds), read straight off the same
+// decoded sample as ts -- reuses the same 3x-the-interval derivation as
+// alert episode grouping (see pollGapThresholdFor), since it's the same
+// underlying question just applied to a different signal: how long a gap
+// since the feeder was last heard from still counts as "nothing's wrong."
+func aliveFromTimestamp(ts string, intervalSeconds int) (bool, string) {
 	t, err := time.Parse(time.RFC3339, ts)
 	if err != nil {
 		return false, ts
 	}
-	return time.Since(t) < 10*time.Minute, ts
+	threshold := pollGapThresholdFor(time.Duration(intervalSeconds) * time.Second)
+	return time.Since(t) < threshold, ts
 }
 
 // syntheticBitaxe builds a config.Bitaxe from fields embedded in the

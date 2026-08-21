@@ -13,8 +13,8 @@ const makeNotification = (id: string): MinerNotification => ({
   id,
   timestamp: Date.now(),
   minerLabel: "bitaxe-office",
-  type: "temp",
-  detail: "65",
+  type: "autoRefreshToggled",
+  detail: "on",
 });
 
 function wrapperFor(initialEntry: string) {
@@ -166,5 +166,55 @@ describe("NotificationsContext", () => {
     expect(() => renderHook(() => useNotifications())).toThrow(
       /must be used within NotificationsProvider/,
     );
+  });
+
+  describe("readIds / markRead", () => {
+    it("starts with nothing marked read", () => {
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/"),
+      });
+      expect(result.current.readIds.size).toBe(0);
+    });
+
+    it("marks the given ids as read", () => {
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/"),
+      });
+
+      act(() => result.current.markRead(["a", "b"]));
+
+      expect(result.current.readIds.has("a")).toBe(true);
+      expect(result.current.readIds.has("b")).toBe(true);
+      expect(result.current.readIds.has("c")).toBe(false);
+    });
+
+    it("persists read ids across a remount, scoped per board", () => {
+      const { result, unmount } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/boardA"),
+      });
+      act(() => result.current.markRead(["seen"]));
+      unmount();
+
+      const { result: remounted } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/boardA"),
+      });
+      expect(remounted.current.readIds.has("seen")).toBe(true);
+
+      const { result: otherBoard } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/boardB"),
+      });
+      expect(otherBoard.current.readIds.has("seen")).toBe(false);
+    });
+
+    it("clear() does not affect read ids", () => {
+      const { result } = renderHook(() => useNotifications(), {
+        wrapper: wrapperFor("/"),
+      });
+
+      act(() => result.current.markRead(["a"]));
+      act(() => result.current.clear());
+
+      expect(result.current.readIds.has("a")).toBe(true);
+    });
   });
 });

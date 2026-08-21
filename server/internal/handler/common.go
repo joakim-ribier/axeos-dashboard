@@ -3,6 +3,7 @@ package handler
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -42,6 +43,11 @@ type latestFileStructure struct {
 	Payload         PayloadStructure `json:"payload"`
 	ElectricityRate float64          `json:"electricityRatePerKwh,omitempty"`
 	LatestFirmware  string           `json:"latestFirmware,omitempty"`
+	Alerts          []model.Alert    `json:"alerts,omitempty"`
+	// FeederIntervalSeconds is only ever present on data pushed to a remote
+	// board (see cmd/feeder.pushSample) -- local mode has no use for it,
+	// it already knows its own feeder.interval from config directly.
+	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
 }
 
 type PayloadStructure struct {
@@ -206,6 +212,8 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 		FallbackStratumDashboardURL: poolDashboardURL(raw.Payload.FallbackStratumURL, raw.Payload.FallbackStratumUser, dashboards),
 
 		ElectricityRatePerKwh: raw.ElectricityRate,
+
+		Alerts: raw.Alerts,
 	}
 }
 
@@ -263,6 +271,67 @@ func decodeJSONL(path string) ([]latestFileStructure, error) {
 		var raw latestFileStructure
 		if err := json.Unmarshal([]byte(line), &raw); err != nil {
 			log.Printf("warning: skipping malformed JSON line %d in %s: %v", lineNum, path, err)
+			continue
+		}
+		entries = append(entries, raw)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return entries, fmt.Errorf("error reading %s: %w", path, err)
+	}
+	return entries, nil
+}
+
+// alertLine is a minimal decode target for scanning history for alerts --
+// unlike latestFileStructure, it has no Payload field (temps, hashrate,
+// shares, ...), which a full alert-history scan has no use for and which
+// dominates decode cost once it's done for every line ever recorded.
+type alertLine struct {
+	Timestamp string        `json:"ts"`
+	IP        string        `json:"ip,omitempty"`
+	Hostname  string        `json:"hostname,omitempty"`
+	Alerts    []model.Alert `json:"alerts,omitempty"`
+}
+
+// alertMarker only ever appears in a stored line when Alerts is non-empty --
+// the struct tag's `omitempty` drops the field entirely otherwise.
+var alertMarker = []byte(`"alerts":`)
+
+// decodeAlertJSONL reads a `.jsonl` file line by line and returns only the
+// lines that carry at least one alert, decoded into the minimal alertLine.
+// Most stored lines carry no alert at all, so a cheap raw substring check
+// (alertMarker) skips full JSON parsing for the overwhelming majority of
+// lines instead of unmarshaling (and immediately discarding) every one --
+// this is what makes scanning a miner's entire history for alerts, e.g. for
+// GET /api/miners/alerts/history, viable on modest hardware.
+func decodeAlertJSONL(path string) ([]alertLine, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Printf("warning: failed to close file %s: %v", path, err)
+		}
+	}()
+
+	var entries []alertLine
+	lineNum := 0
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Bytes()
+		if len(line) == 0 || !bytes.Contains(line, alertMarker) {
+			continue
+		}
+
+		var raw alertLine
+		if err := json.Unmarshal(line, &raw); err != nil {
+			log.Printf("warning: skipping malformed JSON line %d in %s: %v", lineNum, path, err)
+			continue
+		}
+		if len(raw.Alerts) == 0 {
 			continue
 		}
 		entries = append(entries, raw)

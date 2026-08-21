@@ -13,6 +13,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 
 **Key features:**
 - Real-time hashrate, temperature, fan speed, shares and uptime per miner
+- Server-computed alerts (temp/fan thresholds, offline, config mismatch, firmware update) — a live notification bell plus a paginated, filterable, day-scoped alert history page (grouped into episodes, not one row per poll)
 - Pool switching (primary ↔ fallback), manual or on a cron-based schedule
 - Firmware update detection against GitHub releases, per device model
 - Today's history chart — last hour or full day, hourly averages
@@ -300,7 +301,7 @@ Full OpenAPI spec (both dashboard-api and remote-dashboard-api):
 
 ### Top bar & sidebar
 
-- **Notifications** — bell icon with an unread-count badge; opens a list of recent events (temp/fan thresholds crossed, miner offline/online, config errors, firmware updates, dashboard app updates) with a **Clear** button
+- **Notifications** — bell icon with an unread-count badge; opens a list of every currently *active* alert, alongside dashboard app updates, with a **Clear** button. A *resolution* is also shown once it clears for `tempHigh`/`fanHigh`/`firmwareUpdate` (temp/fan back to normal, firmware updated) — but deliberately not for `offline`/`macMismatch`: those are detected live by a much faster, unpersisted watcher than what the feeder polls and records, so a short blip can clear without ever being written to history, making a "resolved" notification for them unreliable enough to just not show (see [Alerts](#alerts) below)
 - **Auto-refresh** — toggle switch in the sidebar; the top bar shows a small read-only icon for its current state
 - **Language** — EN / FR switcher
 - **App version** — this dashboard-api/remote-dashboard-api build's git SHA, plus "Up to date" or a clickable "Update available" chip linking to the GitHub release (checked server-side once a day — about the dashboard app itself, not miner firmware)
@@ -316,13 +317,58 @@ Toggle the filters panel from the funnel icon in the page header.
 - Negate any term with `-` / `!`; combine multiple terms with a space — all must match
 - Quick-filter chips for pool, device model, and alerts (high temp / high fan / offline), each showing a live count
 
-### Notification settings
+### Alerts
 
-Configurable from the gear icon in the page header (opens in place of the filters panel):
+Alerts are computed server-side by the feeder on every poll — level-triggered
+(present for as long as the condition holds, recomputed fresh each tick, no
+memory of the previous poll) — and persisted alongside that miner's history:
 
-- Temp threshold (°C, default 62) and fan threshold (%, default 75)
-- Toggles: notify on temperature, fan speed, offline, firmware update available, firmware update applied
-- Config-mismatch errors (see below) always notify, regardless of these toggles
+| Type | Trigger | Source |
+|------|---------|--------|
+| `tempHigh` | Chip temperature > 62°C (fixed threshold, not yet user-configurable) | Feeder, every poll |
+| `fanHigh` | Fan speed > 75% (fixed threshold, not yet user-configurable) | Feeder, every poll |
+| `firmwareUpdate` | Device firmware behind the cached latest GitHub release | Feeder, every poll |
+| `offline` | Miner unreachable | Independent healthcheck watcher (live only, not persisted) **and** the feeder's own poll, if it also happens to fail |
+| `macMismatch` | Configured `mac:` doesn't match what the device itself reports | Same dual source as `offline` |
+
+`tempHigh`/`fanHigh`/`firmwareUpdate` have one consistent source (the
+feeder), so both the bell and the history below are fully reliable for
+them. `offline`/`macMismatch` are detected live by a healthcheck watcher
+running far more often than the feeder polls, but that watcher never writes
+to disk — only the feeder's own (much coarser) poll does. A blip shorter
+than one feeder poll cycle can clear without ever being recorded, which is
+exactly why the bell doesn't attempt a "resolved" notification for these
+two (see [Top bar & sidebar](#top-bar--sidebar) above) and why their history
+below can under-report short blips.
+
+For a deeper look, **Alerts** (`/alerts` in the sidebar) lists every alert
+recorded on one day at a time — today by default (fast: reads a single
+small file per miner regardless of how long the deployment has been
+running), or any other day via the calendar picker. Consecutive
+occurrences of the same type on the same miner are grouped server-side
+into one **episode** (`firstSeen`/`lastSeen`/`occurrences`/peak value)
+instead of one row per poll, so a condition that holds for hours doesn't
+bury the page under dozens of near-identical rows — a gap counts as the
+same episode as long as it's under `3 × feeder.interval` (room for one
+missed poll plus network/processing jitter). 50 episodes per page, most
+recently active first, filterable by miner and type, with a "shown of
+total" count (scoped to that day) and a reset-filters button. The
+underlying API enforces the day scope: `date` is a required query param
+on `/api/miners/alerts/history`, not optional. This page doesn't poll on a
+timer even with auto-refresh on — it only refetches when opened or when a
+filter/page changes.
+
+In remote mode, the same page is available per board at `/{boardId}/alerts`,
+read-only, sourced from whatever the feeder last pushed to hashboard. A
+single hashboard.live deployment can be receiving pushes from many
+different axeos-dashboard installations, each with its own
+`feeder.interval`, so remote-dashboard-api has no single interval of its
+own to assume — it reads the source feeder's actual interval back out of
+whatever's already been pushed for that board (every pushed sample carries
+it, the same way it already carries `electricityRatePerKwh`) and derives
+the same `3 ×` threshold from that. It falls back to a fixed 10 minutes
+only for a board with no miners yet, or one pushed by an axeos-dashboard
+version old enough to predate this field.
 
 ### Global stats bar
 

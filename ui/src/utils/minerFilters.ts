@@ -1,6 +1,5 @@
 // src/utils/minerFilters.ts
 import { Miner } from "@/schemas/minerSchema";
-import { NotificationSettings } from "@/utils/minerNotifications";
 
 export interface QuickFilters {
   selectedPool: string | null;
@@ -32,15 +31,14 @@ const minerPoolUrl = (miner: Miner): string | undefined =>
  * active — "show anyone flagged for ANY of these reasons" reads more
  * useful at a glance than requiring all of them at once.
  *
- * The alert thresholds are the same ones configured in the notification
- * settings panel (and use the same rounded-reading comparison as
- * detectNotifications, so "who's over the line" always agrees with what
- * actually triggers a notification).
+ * The alert flags read the miner's own `alerts` field -- computed
+ * server-side by the feeder (see server/internal/model/alert.go) -- so
+ * "who's over the line" always agrees with what's shown in the alerts
+ * history and the notification bell, with no threshold duplicated here.
  */
 export const matchesQuickFilters = (
   miner: Miner,
   filters: QuickFilters,
-  settings: NotificationSettings,
 ): boolean => {
   if (filters.selectedPool && minerPoolUrl(miner) !== filters.selectedPool) {
     return false;
@@ -56,10 +54,9 @@ export const matchesQuickFilters = (
   const anyAlertActive =
     filters.alertTemp || filters.alertFan || filters.alertOffline;
   if (anyAlertActive) {
-    const isOverTemp =
-      filters.alertTemp && Math.round(miner.temp) > settings.tempThreshold;
-    const isOverFan =
-      filters.alertFan && Math.round(miner.fanspeed) > settings.fanThreshold;
+    const alertTypes = new Set(miner.alerts?.map((a) => a.type));
+    const isOverTemp = filters.alertTemp && alertTypes.has("tempHigh");
+    const isOverFan = filters.alertFan && alertTypes.has("fanHigh");
     const isOffline = filters.alertOffline && miner.alive === false;
     if (!isOverTemp && !isOverFan && !isOffline) return false;
   }

@@ -362,6 +362,37 @@ not valid json
 	})
 }
 
+func TestDecodeAlertJSONL(t *testing.T) {
+	dir := t.TempDir()
+
+	t.Run("keeps only lines with a non-empty alerts array", func(t *testing.T) {
+		path := filepath.Join(dir, "day.jsonl")
+		writeTestFile(t, path, `{"ts":"2026-07-14T10:00:00Z","payload":{"temp":51.4}}
+
+not valid json
+{"ts":"2026-07-14T10:01:00Z","payload":{"temp":51.4},"alerts":[]}
+{"ts":"2026-07-14T10:02:00Z","payload":{"temp":66.3},"alerts":[{"type":"tempHigh","value":66.3,"threshold":62}]}
+`)
+
+		got, err := decodeAlertJSONL(path)
+		if err != nil {
+			t.Fatalf("decodeAlertJSONL() unexpected error: %v", err)
+		}
+		if len(got) != 1 {
+			t.Fatalf("decodeAlertJSONL() returned %d entries, want 1 (no-alert/malformed/blank lines skipped)", len(got))
+		}
+		if got[0].Timestamp != "2026-07-14T10:02:00Z" || got[0].Alerts[0].Type != "tempHigh" {
+			t.Errorf("decodeAlertJSONL() = %+v, unexpected content", got)
+		}
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		if _, err := decodeAlertJSONL(filepath.Join(dir, "missing.jsonl")); err == nil {
+			t.Fatal("decodeAlertJSONL() error = nil, want error for missing file")
+		}
+	})
+}
+
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

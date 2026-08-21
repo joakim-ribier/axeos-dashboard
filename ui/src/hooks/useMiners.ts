@@ -6,6 +6,7 @@ import axios from "axios";
 import { useMode } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
+import { boardIdFromPathname } from "@/utils/boardId";
 
 import { type Miner, minerSchema } from "../schemas/minerSchema";
 
@@ -21,7 +22,7 @@ export class ApiError extends Error {
 
 export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
 
-interface MinersResult {
+export interface MinersResult {
   miners: Miner[];
   isPublic: boolean;
 }
@@ -135,7 +136,7 @@ export interface AppInfo {
  */
 export const useAppInfo = (): AppInfo => {
   const location = useLocation();
-  const boardId = location.pathname.slice(1) || undefined;
+  const boardId = boardIdFromPathname(location.pathname);
   const minersPath = boardId ? `/api/${boardId}/miners` : "/api/miners";
 
   const infoQuery = useQuery<InfoResult, Error>({

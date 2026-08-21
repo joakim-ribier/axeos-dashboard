@@ -1,10 +1,11 @@
 // src/components/layout/Sidebar.tsx
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LockIcon from "@mui/icons-material/Lock";
+import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PublicIcon from "@mui/icons-material/Public";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
@@ -29,6 +30,7 @@ import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
 } from "@/utils/appVersion";
+import { boardIdFromPathname } from "@/utils/boardId";
 import {
   createAppUpdateAvailableNotification,
   createAutoRefreshToggledNotification,
@@ -57,6 +59,46 @@ const savePreviousAppVersionStatus = (status: AppVersionStatus): void => {
 
 export const SIDEBAR_WIDTH = 240;
 
+interface NavItemProps {
+  to: string;
+  selected: boolean;
+  icon: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+}
+
+const NavItem: React.FC<NavItemProps> = ({
+  to,
+  selected,
+  icon,
+  label,
+  onClick,
+}) => (
+  <ListItemButton
+    component={RouterLink}
+    to={to}
+    selected={selected}
+    onClick={onClick}
+    sx={{
+      borderRadius: 2,
+      py: 0.75,
+      px: 1.25,
+      minHeight: 40,
+      color: selected ? "primary.main" : "text.secondary",
+      "&.Mui-selected": {
+        bgcolor: "rgba(0,180,255,0.12)",
+        "&:hover": { bgcolor: "rgba(0,180,255,0.16)" },
+      },
+    }}
+  >
+    <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>{icon}</ListItemIcon>
+    <ListItemText
+      primary={label}
+      primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
+    />
+  </ListItemButton>
+);
+
 interface SidebarProps {
   mobileOpen: boolean;
   onClose: () => void;
@@ -81,7 +123,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  const boardId = location.pathname.slice(1) || undefined;
+  const boardId = boardIdFromPathname(location.pathname);
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();
 
@@ -104,8 +146,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       }}
     >
       <Box
-        onClick={() => window.location.reload()}
-        title={t("nav.refreshPage")}
+        component={RouterLink}
+        to={boardId ? `/${boardId}` : "/"}
+        title={t("nav.home")}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -114,7 +157,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           gap: 0.75,
           px: 2,
           py: 3,
-          cursor: "pointer",
+          textDecoration: "none",
           userSelect: "none",
           transition: "opacity 0.15s ease",
           "&:hover": { opacity: 0.75 },
@@ -249,30 +292,31 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         }}
       />
 
-      <List sx={{ px: 2, pt: 2 }}>
-        <ListItemButton
-          selected
+      <List
+        sx={{
+          px: 2,
+          pt: 2,
+          display: "flex",
+          flexDirection: "column",
+          gap: 0.5,
+        }}
+      >
+        <NavItem
+          to={boardId ? `/${boardId}` : "/"}
+          selected={location.pathname === (boardId ? `/${boardId}` : "/")}
+          icon={<DashboardIcon sx={{ fontSize: 18 }} />}
+          label={t("nav.home")}
           onClick={onItemClick}
-          sx={{
-            borderRadius: 2,
-            py: 0.75,
-            px: 1.25,
-            minHeight: 40,
-            color: "primary.main",
-            "&.Mui-selected": {
-              bgcolor: "rgba(0,180,255,0.12)",
-              "&:hover": { bgcolor: "rgba(0,180,255,0.16)" },
-            },
-          }}
-        >
-          <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
-            <DashboardIcon sx={{ fontSize: 18 }} />
-          </ListItemIcon>
-          <ListItemText
-            primary={t("nav.home")}
-            primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
-          />
-        </ListItemButton>
+        />
+        <NavItem
+          to={boardId ? `/${boardId}/alerts` : "/alerts"}
+          selected={
+            location.pathname === (boardId ? `/${boardId}/alerts` : "/alerts")
+          }
+          icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
+          label={t("nav.alerts")}
+          onClick={onItemClick}
+        />
       </List>
 
       <Box

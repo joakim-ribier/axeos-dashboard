@@ -19,27 +19,17 @@ import {
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
+import { useActiveAlerts, useAlertResolutionEffect } from "@/hooks/useAlerts";
 import { formatTimestamp } from "@/utils/format";
-import type { NotificationType } from "@/utils/minerNotifications";
+import {
+  activeAlertsToNotifications,
+  ALERT_TYPE_COLOR,
+  type MinerNotification,
+} from "@/utils/minerNotifications";
 
 interface TopBarProps {
   onMenuClick: () => void;
 }
-
-// A red dot marks a "bad" state -- a threshold exceeded, or a miner gone
-// offline. A green dot marks the same state resolved -- back under the
-// threshold, or back online. version/updateAvailable/settingsUpdated are
-// one-off events, not a two-sided state, so they stay plain text.
-const NOTIFICATION_DOT_COLOR: Partial<Record<NotificationType, string>> = {
-  temp: "#f44336",
-  fan: "#f44336",
-  offline: "#f44336",
-  deviceError: "#ff9800",
-  tempRecovered: "#66bb6a",
-  fanRecovered: "#66bb6a",
-  online: "#66bb6a",
-  deviceErrorResolved: "#66bb6a",
-};
 
 // Passive status indicator, not a control -- the actual on/off toggle lives
 // in the Sidebar. Placed next to the bell since it explains whether the
@@ -71,23 +61,59 @@ const AutoRefreshIndicator: React.FC = () => {
   );
 };
 
+/**
+ * Merges two sources that behave differently on purpose:
+ *  - Currently active alerts (temp/fan/offline/mismatch/firmware) are
+ *    recomputed from the live server feed on every render -- see
+ *    activeAlertsToNotifications. They're never persisted as a one-off
+ *    event, so there's no stale/lost-event state possible: as long as the
+ *    condition is still true server-side, the row is there, page reload or
+ *    not. They also aren't affected by "Clear" for the same reason -- it's
+ *    not a dismissible event, it's live status.
+ *  - Everything else (an alert *resolving*, auto-refresh toggled, a new
+ *    dashboard build available) is a one-off event, pushed into
+ *    NotificationsContext once and persisted there until "Clear".
+ */
 const NotificationBell: React.FC = () => {
   const { t } = useTranslation();
-  const { notifications, clear } = useNotifications();
+  const miners = useActiveAlerts();
+  useAlertResolutionEffect();
+  const {
+    notifications: events,
+    clear,
+    readIds,
+    markRead,
+  } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const notifications: MinerNotification[] = [
+    ...activeAlertsToNotifications(miners),
+    ...events,
+  ].sort((a, b) => b.timestamp - a.timestamp);
+
+  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
+
+  // Marks everything currently on screen as read -- a still-ongoing alert
+  // keeps the same deterministic id (see activeAlertsToNotifications), so
+  // it won't re-trigger the badge on its own; only a genuinely new id
+  // (a different alert, a resolution, a new episode) will.
+  const openNotifications = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+    markRead(notifications.map((n) => n.id));
+  };
 
   return (
     <>
       <IconButton
-        onClick={(e) => setAnchorEl(e.currentTarget)}
+        onClick={openNotifications}
         sx={{ color: "text.secondary" }}
         aria-label="notifications"
       >
         <Badge
-          badgeContent={notifications.length}
+          badgeContent={unreadCount}
           max={99}
           color="error"
-          invisible={notifications.length === 0}
+          invisible={unreadCount === 0}
         >
           <NotificationsNoneIcon />
         </Badge>
@@ -118,7 +144,7 @@ const NotificationBell: React.FC = () => {
           >
             {t("notifications.title")}
           </Typography>
-          {notifications.length > 0 && (
+          {events.length > 0 && (
             <Button
               size="small"
               onClick={clear}
@@ -156,7 +182,7 @@ const NotificationBell: React.FC = () => {
                   "&:last-of-type": { borderBottom: "none", pb: 0 },
                 }}
               >
-                {NOTIFICATION_DOT_COLOR[n.type] && (
+                {ALERT_TYPE_COLOR[n.type] && (
                   <Box
                     sx={{
                       width: 6,
@@ -164,7 +190,7 @@ const NotificationBell: React.FC = () => {
                       borderRadius: "50%",
                       flexShrink: 0,
                       mt: "5px",
-                      backgroundColor: NOTIFICATION_DOT_COLOR[n.type],
+                      backgroundColor: ALERT_TYPE_COLOR[n.type],
                     }}
                   />
                 )}

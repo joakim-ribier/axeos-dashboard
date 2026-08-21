@@ -1,287 +1,294 @@
 // src/utils/minerNotifications.ts
-import { Miner } from "@/schemas/minerSchema";
+import {
+  type Alert,
+  type AlertEntry,
+  type AlertEpisode,
+  type Miner,
+} from "@/schemas/minerSchema";
 
 export type NotificationType =
-  | "temp"
+  | "tempHigh"
   | "tempRecovered"
-  | "fan"
+  | "fanHigh"
   | "fanRecovered"
   | "offline"
-  | "online"
-  | "deviceError"
-  | "deviceErrorResolved"
-  | "version"
-  | "updateAvailable"
-  | "settingsUpdated"
+  | "macMismatch"
+  // No "online" or "macMismatchResolved" -- unlike the other alert types,
+  // offline and macMismatch have no resolved notification (see
+  // resolvedAlertsToNotifications for why).
+  | "firmwareUpdate"
+  | "firmwareResolved"
   | "autoRefreshToggled"
   | "appUpdateAvailable";
-
-export interface NotificationSettings {
-  tempThreshold: number;
-  fanThreshold: number;
-  notifyTemp: boolean;
-  notifyFan: boolean;
-  notifyOffline: boolean;
-  notifyUpdateAvailable: boolean;
-  notifyVersion: boolean;
-}
-
-export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
-  tempThreshold: 62,
-  fanThreshold: 75,
-  notifyTemp: true,
-  notifyFan: true,
-  notifyOffline: true,
-  notifyUpdateAvailable: true,
-  notifyVersion: true,
-};
 
 export interface MinerNotification {
   id: string;
   timestamp: number;
   minerLabel: string;
   type: NotificationType;
-  // Extra data needed to render the message (rounded temp/fan value, or
-  // "oldVersion → newVersion"). Rendered via i18n at display time.
+  // Extra data needed to render the message (rounded temp/fan value, or the
+  // available firmware version). Rendered via i18n at display time. Never
+  // set on a "resolved" notification -- the server only stores alert-
+  // bearing lines, so there's no reading to show for "back to normal".
   detail?: string;
 }
-
-const minerKey = (miner: Miner): string => miner.ip;
-const minerLabel = (miner: Miner): string => miner.hostname || miner.ip;
 
 let idCounter = 0;
 const nextId = (): string => `notif-${Date.now()}-${idCounter++}`;
 
+// The subset of NotificationType a server-computed Alert.type string can
+// actually be (see server/internal/model/alert.go). The rest of
+// NotificationType ("Recovered"/"Resolved" variants, plus the two purely
+// local one-offs below) never comes from the server -- they're synthesized
+// client-side by resolvedAlertsToNotifications.
+export const ALERT_TYPES: readonly NotificationType[] = [
+  "tempHigh",
+  "fanHigh",
+  "offline",
+  "macMismatch",
+  "firmwareUpdate",
+];
+
+const isAlertType = (value: string): value is NotificationType =>
+  (ALERT_TYPES as readonly string[]).includes(value);
+
+// offline and macMismatch are deliberately absent -- see
+// resolvedAlertsToNotifications.
+const RESOLVED_TYPE: Record<string, NotificationType> = {
+  tempHigh: "tempRecovered",
+  fanHigh: "fanRecovered",
+  firmwareUpdate: "firmwareResolved",
+};
+
+// Shared between the notification bell and the Alerts page, so a given
+// alert type always reads the same color everywhere. Red marks a "bad"
+// state (a threshold exceeded, a miner offline, a mac mismatch), orange an
+// informational one (a firmware update available), green the same states
+// resolved.
+export const ALERT_TYPE_COLOR: Partial<Record<NotificationType, string>> = {
+  tempHigh: "#f44336",
+  fanHigh: "#f44336",
+  offline: "#f44336",
+  macMismatch: "#f44336",
+  firmwareUpdate: "#ff9800",
+  tempRecovered: "#66bb6a",
+  fanRecovered: "#66bb6a",
+  firmwareResolved: "#66bb6a",
+};
+
+// Matches server/internal/config.NormalizeMac -- strip separators, lowercase.
+// Needed to join Miner.macAddr (raw, as the device itself reports it, e.g.
+// "AA:BB:CC:DD:EE:FF") against AlertEntry.minerMac (the normalized storage
+// key, e.g. "aabbccddeeff") -- see currentAlertState's doc comment for why
+// both are needed.
+const normalizeMac = (mac: string): string =>
+  mac.replace(/[:-]/g, "").toLowerCase();
+
 /**
- * Compares the previous and current miner lists and returns the
- * notifications for any state worth surfacing, gated by `settings`:
- * - temp crosses above settings.tempThreshold, and back below it again
- *   (if settings.notifyTemp)
- * - fan speed crosses above settings.fanThreshold, and back below it again
- *   (if settings.notifyFan)
- * - a miner goes offline, and comes back online again
- *   (if settings.notifyOffline)
- * - a miner has a pending firmware update available (if settings.notifyUpdateAvailable)
- * - a miner's firmware version actually changed, i.e. an update was applied
- *   (if settings.notifyVersion)
- *
- * temp/fan comparisons use the *rounded* reading (matching what's actually
- * displayed on the miner cards), not the raw sensor float — otherwise a
- * miner sitting right at the threshold (e.g. reading 59.95, then 60.05,
- * then 59.98...) would flap between "exceeded"/"recovered" every poll even
- * though the displayed value never visibly changes.
- *
- * temp/fan/offline/updateAvailable use an implicit neutral baseline when
- * there's no previous snapshot for a miner (first fetch, or a miner that
- * just appeared) — a miner that's already hot/offline/pending-update on
- * the very first load still gets notified, it isn't required to "become"
- * that way while the tab is open. Re-notification is still avoided: once
- * a miner is already in that state, it won't fire again on every
- * subsequent poll while it stays there.
- *
- * The "recovered" side — temp/fan dropping back below the threshold, or a
- * miner coming back online — is the mirror image of the above, whether the
- * underlying state is a numeric threshold or a boolean one. It genuinely
- * needs a real previous reading to compare against — there's nothing to
- * "recover from" on a miner's first appearance, so it never fires there.
- *
- * "version changed" is the other exception — it genuinely needs a real
- * previous version string to diff against, so it never fires on a miner's
- * first appearance either.
+ * One miner's alert state as keyed by normalized mac. See currentAlertState().
  */
-export const detectNotifications = (
-  previous: Miner[] | undefined,
-  current: Miner[],
-  settings: NotificationSettings,
+export type AlertState = Record<
+  string,
+  { label: string; alerts: Partial<Record<NotificationType, Alert>> }
+>;
+
+/**
+ * Builds each miner's *live* alert state from the miners list (GET
+ * /api/miners), not the alert-history endpoint -- the history endpoint
+ * only ever stores lines that had an alert, so once a problem clears,
+ * nothing new is appended for it and its last entry stays frozen on the
+ * old, resolved reading forever. There's no way to tell "still active"
+ * from "was active once, nothing since" from that history alone.
+ *
+ * temp/fan/firmwareUpdate come from Miner.alerts, refreshed on every
+ * successful feeder poll (see server/internal/model/miner.go). offline and
+ * macMismatch instead come from Miner.alive/Miner.error -- a separate,
+ * independent watcher mechanism that keeps updating even while the
+ * feeder's own poll is failing, which is exactly the case that matters for
+ * "is the miner offline right now" (see CLAUDE.md's healthcheck section).
+ */
+export const currentAlertState = (miners: Miner[]): AlertState => {
+  const state: AlertState = {};
+
+  for (const miner of miners) {
+    const mac = normalizeMac(miner.macAddr);
+    const alerts: Partial<Record<NotificationType, Alert>> = {};
+
+    for (const alert of miner.alerts ?? []) {
+      if (isAlertType(alert.type)) alerts[alert.type] = alert;
+    }
+    if (miner.alive === false) alerts.offline = { type: "offline" };
+    if (miner.error) {
+      alerts.macMismatch = { type: "macMismatch", message: miner.error };
+    }
+
+    state[mac] = {
+      label: miner.hostname || miner.ip || mac,
+      alerts,
+    };
+  }
+
+  return state;
+};
+
+/**
+ * Turns the *current* alert state into one notification per active alert --
+ * this is what makes an ongoing alert always visible, however long it's
+ * been active for: it's recomputed from the live miners list on every call
+ * rather than fired once and then relying on a persisted event to still be
+ * around later. The id is deterministic (`active-{mac}-{type}`) so React
+ * doesn't treat every poll as a new row.
+ */
+export const activeAlertsToNotifications = (
+  miners: Miner[],
 ): MinerNotification[] => {
-  const previousByKey = new Map((previous ?? []).map((m) => [minerKey(m), m]));
   const notifications: MinerNotification[] = [];
+  const state = currentAlertState(miners);
 
-  for (const miner of current) {
-    const prev = previousByKey.get(minerKey(miner));
-    const label = minerLabel(miner);
+  for (const miner of miners) {
+    const mac = normalizeMac(miner.macAddr);
+    const minerState = state[mac];
+    const timestamp = Date.parse(miner.timestamp) || Date.now();
 
-    if (settings.notifyTemp) {
-      const prevTemp = prev ? Math.round(prev.temp) : -Infinity;
-      const currentTemp = Math.round(miner.temp);
-      if (
-        prevTemp <= settings.tempThreshold &&
-        currentTemp > settings.tempThreshold
-      ) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "temp",
-          detail: String(currentTemp),
-        });
-      } else if (
-        prev &&
-        prevTemp > settings.tempThreshold &&
-        currentTemp <= settings.tempThreshold
-      ) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "tempRecovered",
-          detail: String(currentTemp),
-        });
-      }
-    }
-
-    if (settings.notifyFan) {
-      const prevFan = prev ? Math.round(prev.fanspeed) : -Infinity;
-      const currentFan = Math.round(miner.fanspeed);
-      if (
-        prevFan <= settings.fanThreshold &&
-        currentFan > settings.fanThreshold
-      ) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "fan",
-          detail: String(currentFan),
-        });
-      } else if (
-        prev &&
-        prevFan > settings.fanThreshold &&
-        currentFan <= settings.fanThreshold
-      ) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "fanRecovered",
-          detail: String(currentFan),
-        });
-      }
-    }
-
-    if (settings.notifyOffline) {
-      const wasAlive = prev ? prev.alive !== false : true;
-      if (wasAlive && miner.alive === false) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "offline",
-        });
-      } else if (prev && prev.alive === false && miner.alive !== false) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "online",
-        });
-      }
-    }
-
-    // Always notified, not gated by a settings toggle -- a mac mismatch is a
-    // data-integrity problem (wrong device at this IP, or a config typo),
-    // not a routine health blip like offline/temp.
-    const hadError = Boolean(prev?.error);
-    const hasError = Boolean(miner.error);
-    if (!hadError && hasError) {
+    for (const type of ALERT_TYPES) {
+      const alert = minerState.alerts[type];
+      if (!alert) continue;
       notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "deviceError",
-        detail: miner.error,
+        id: `active-${mac}-${type}`,
+        timestamp,
+        minerLabel: minerState.label,
+        type,
+        detail:
+          alert.value !== undefined
+            ? String(Math.round(alert.value))
+            : alert.message,
       });
-    } else if (prev && hadError && !hasError) {
-      notifications.push({
-        id: nextId(),
-        timestamp: Date.now(),
-        minerLabel: label,
-        type: "deviceErrorResolved",
-      });
-    }
-
-    if (settings.notifyUpdateAvailable) {
-      const hadUpdateAvailable = prev?.updateAvailable === true;
-      if (!hadUpdateAvailable && miner.updateAvailable === true) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "updateAvailable",
-          detail: miner.latestVersion,
-        });
-      }
-    }
-
-    if (settings.notifyVersion) {
-      if (prev?.version && miner.version && prev.version !== miner.version) {
-        notifications.push({
-          id: nextId(),
-          timestamp: Date.now(),
-          minerLabel: label,
-          type: "version",
-          detail: `${prev.version} → ${miner.version}`,
-        });
-      }
     }
   }
 
   return notifications;
 };
 
-export interface SettingsDiffEntry {
-  key: keyof NotificationSettings;
-  previousValue: NotificationSettings[keyof NotificationSettings];
-  nextValue: NotificationSettings[keyof NotificationSettings];
-}
-
 /**
- * Pure diff between two settings snapshots — every field whose value
- * actually changed, keyed and raw (no i18n/formatting here; the caller
- * translates field labels and formats units since this file has no
- * dependency on react-i18next).
+ * Reconstructs "resolved" events by cross-referencing the alert *history*
+ * (GET /api/miners/alerts -- used only to find out when a type was last
+ * seen active, for a nicer timestamp) against the *live* miners list (used
+ * to determine whether it's actually still active -- see currentAlertState
+ * for why the history alone can't answer that). For every (miner, type)
+ * that appears anywhere in the fetched history window but isn't part of
+ * that miner's current live state, a resolved notification is synthesized,
+ * anchored to the last history entry where it was still seen active.
+ *
+ * offline and macMismatch are skipped entirely: both are detected live by a
+ * separate, much faster watcher (healthCheck.interval, seconds) than what
+ * the feeder polls and persists to history (minutes) -- a blip shorter than
+ * one feeder poll cycle clears without ever being written to history at
+ * all, so "resolved" would often silently never fire, or fire off a stale
+ * history entry from a much earlier, unrelated incident. The live "still
+ * offline"/"still mismatched" alert (see currentAlertState /
+ * activeAlertsToNotifications) stays accurate regardless -- only the
+ * resolved side is unreliable enough to just not show.
+ *
+ * The id is deterministic (`resolved-{mac}-{type}-{lastActiveTimestamp}`),
+ * so re-running this on every poll while that entry is still within the
+ * fetched history window is safe -- NotificationsContext dedupes by id, so
+ * the same resolution doesn't pile up as a new row each time.
  */
-export const diffNotificationSettings = (
-  previous: NotificationSettings,
-  next: NotificationSettings,
-): SettingsDiffEntry[] => {
-  const keys = Object.keys(next) as (keyof NotificationSettings)[];
-  return keys
-    .filter((key) => previous[key] !== next[key])
-    .map((key) => ({
-      key,
-      previousValue: previous[key],
-      nextValue: next[key],
-    }));
+export const resolvedAlertsToNotifications = (
+  historyEntries: AlertEntry[],
+  miners: Miner[],
+): MinerNotification[] => {
+  const active = currentAlertState(miners);
+
+  const lastActive = new Map<
+    string,
+    { mac: string; type: NotificationType; label: string; timestamp: number }
+  >();
+  for (const entry of historyEntries) {
+    const timestamp = Date.parse(entry.timestamp) || 0;
+    const label = entry.hostname || entry.minerIp || entry.minerMac;
+    for (const alert of entry.alerts) {
+      if (
+        !isAlertType(alert.type) ||
+        alert.type === "offline" ||
+        alert.type === "macMismatch"
+      )
+        continue;
+      const key = `${entry.minerMac}::${alert.type}`;
+      const existing = lastActive.get(key);
+      if (!existing || timestamp > existing.timestamp) {
+        lastActive.set(key, {
+          mac: entry.minerMac,
+          type: alert.type,
+          label,
+          timestamp,
+        });
+      }
+    }
+  }
+
+  const notifications: MinerNotification[] = [];
+  for (const [key, seen] of lastActive) {
+    if (active[seen.mac]?.alerts[seen.type]) continue; // still active, not resolved
+
+    notifications.push({
+      id: `resolved-${key}-${seen.timestamp}`,
+      timestamp: seen.timestamp,
+      minerLabel: seen.label,
+      type: RESOLVED_TYPE[seen.type],
+    });
+  }
+
+  return notifications;
 };
 
 /**
- * A single, non-miner-specific notification acknowledging that the
- * notification settings themselves were changed (e.g. a threshold edited,
- * a notify-toggle flipped). Intentionally a flat "it changed" signal, not a
- * per-miner re-check — see Home.tsx for why re-checking every miner against
- * a settings edit is the wrong call (each intermediate keystroke would
- * otherwise produce its own batch of notifications).
- *
- * `detail` is expected to be a human-readable, already-translated summary
- * of what changed (built from diffNotificationSettings() by the caller,
- * which has access to i18n) — e.g. "Temp threshold: 60°C → 30°C".
+ * One row of the dedicated Alerts page (see hooks/useAlertsHistory.ts) --
+ * one row per alert episode. The server already collapses consecutive
+ * same-(miner, type) occurrences into a single range (see
+ * handler.AlertEpisode), so unlike the bell there's no further grouping to
+ * do here: this just adapts the episode shape to what the row renders.
  */
-export const createSettingsUpdatedNotification = (
-  detail?: string,
-): MinerNotification => ({
-  id: nextId(),
-  timestamp: Date.now(),
-  minerLabel: "",
-  type: "settingsUpdated",
-  detail,
-});
+export interface AlertHistoryRow {
+  id: string;
+  firstSeen: string;
+  lastSeen: string;
+  occurrences: number;
+  minerLabel: string;
+  minerIp?: string;
+  type: NotificationType;
+  detail?: string;
+}
+
+export const episodesToAlertHistoryRows = (
+  episodes: AlertEpisode[],
+): AlertHistoryRow[] => {
+  const rows: AlertHistoryRow[] = [];
+
+  for (const episode of episodes) {
+    if (!isAlertType(episode.type)) continue;
+    rows.push({
+      id: `${episode.minerMac}-${episode.type}-${episode.firstSeen}`,
+      firstSeen: episode.firstSeen,
+      lastSeen: episode.lastSeen,
+      occurrences: episode.occurrences,
+      minerLabel: episode.hostname || episode.minerIp || episode.minerMac,
+      minerIp: episode.minerIp,
+      type: episode.type,
+      detail:
+        episode.peakValue !== undefined
+          ? String(Math.round(episode.peakValue))
+          : episode.message,
+    });
+  }
+
+  return rows;
+};
 
 /**
  * A single, non-miner-specific notification acknowledging that auto-refresh
  * was turned on or off from the Sidebar. `detail` is expected to already be
- * translated by the caller (e.g. "on"/"off"), same convention as
- * createSettingsUpdatedNotification.
+ * translated by the caller (e.g. "on"/"off").
  */
 export const createAutoRefreshToggledNotification = (
   detail: string,
@@ -296,10 +303,10 @@ export const createAutoRefreshToggledNotification = (
 /**
  * A single, non-miner-specific notification for when a new build of the
  * dashboard app itself has been published -- distinct from
- * "updateAvailable", which is about a miner's own firmware. The actual
- * check runs server-side (internal/appversion in the Go backend); this
- * just fires once per browser when the polled status first flips to
- * "updateAvailable" (see appVersion.ts / Sidebar.tsx).
+ * "firmwareUpdate", which is about a miner's own firmware. The actual check
+ * runs server-side (internal/appversion in the Go backend); this just fires
+ * once per browser when the polled status first flips to "updateAvailable"
+ * (see appVersion.ts / Sidebar.tsx).
  */
 export const createAppUpdateAvailableNotification = (): MinerNotification => ({
   id: nextId(),
@@ -307,39 +314,3 @@ export const createAppUpdateAvailableNotification = (): MinerNotification => ({
   minerLabel: "",
   type: "appUpdateAvailable",
 });
-
-const SNAPSHOT_STORAGE_PREFIX = "axeos.minerSnapshot.";
-
-/**
- * Persists the last-seen miner list so a page reload doesn't lose track of
- * what's already been notified about. Without this, detectNotifications'
- * "no previous data" case (which intentionally notifies for anything
- * already in a bad state) would re-fire on every reload instead of once.
- */
-export const loadMinerSnapshot = (boardId?: string): Miner[] | undefined => {
-  try {
-    const raw = localStorage.getItem(
-      `${SNAPSHOT_STORAGE_PREFIX}${boardId ?? "local"}`,
-    );
-    if (!raw) return undefined;
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as Miner[]) : undefined;
-  } catch {
-    return undefined;
-  }
-};
-
-export const saveMinerSnapshot = (
-  boardId: string | undefined,
-  data: Miner[],
-): void => {
-  try {
-    localStorage.setItem(
-      `${SNAPSHOT_STORAGE_PREFIX}${boardId ?? "local"}`,
-      JSON.stringify(data),
-    );
-  } catch {
-    // best-effort only — a failure here just means the next reload treats
-    // this as a fresh baseline again, no functional break.
-  }
-};
