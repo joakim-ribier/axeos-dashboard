@@ -23,6 +23,18 @@ MINERS_FLAG = $(if $(MINERS_FILE),-miners $(MINERS_FILE),)
 GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG       ?= latest
 
+# Target used by `make deploy` — a local build (including uncommitted changes)
+# copied straight to a test server via SSH/rsync, bypassing CI and
+# `make latest-*` entirely, so you can try something out without pushing to
+# main. Both are specific to your own server, so neither is hardcoded here --
+# set them once as environment variables in your shell profile (recommended)
+# so you don't have to repeat them on every call, or pass them inline:
+#   export DEPLOY_HOST=your-ssh-alias
+#   export DEPLOY_DIR=/path/to/axeos-dashboard/on/that/server
+#   make deploy DEPLOY_HOST=other-alias DEPLOY_DIR=/other/path   # one-off override
+DEPLOY_HOST ?= server-dev
+DEPLOY_DIR  ?=
+
 # Auto-detected local architecture, used to pick the right release asset
 # (feeder-$(RELEASE_ARCH), dashboard-api-$(RELEASE_ARCH), ...). Override if
 # `uname -m` reports something unexpected: make latest-fetch RELEASE_ARCH=amd64
@@ -53,7 +65,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart
 
 # ==============================================================================
 # Main Commands
@@ -156,6 +168,9 @@ help:
 	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
 	@echo "  make latest-remote-up          - Start remote-dashboard-api from the latest release (VPS use, no local build)"
 	@echo "  make latest-remote-down        - Stop remote-dashboard-api"
+	@echo "  make build-linux               - Cross-compile dashboard-api/feeder (linux/arm64) and build the UI"
+	@echo "  make deploy                    - build-linux, then copy the result to $(DEPLOY_HOST) (test without pushing to main)"
+	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder from what's on disk, no GitHub fetch"
 	@echo "  make help                      - Show this help message"
 
 # ==============================================================================
@@ -298,3 +313,66 @@ latest-remote-down:
 	-pkill -9 -f "remote-dashboard-api" 2>/dev/null || true
 	-screen -wipe > /dev/null 2>&1 || true
 	@echo ">>> Stopped."
+
+# ==============================================================================
+# Deploy (local build → $(DEPLOY_HOST) — dashboard-api + feeder only, no
+# remote-dashboard-api, for trying out a change on the real Pi without
+# pushing to main or waiting on CI/`make latest-*`. Run `make restart` on the
+# server afterwards to pick it up — `make latest-up` won't do, it always
+# re-fetches from GitHub first and would overwrite what was just copied.)
+# ==============================================================================
+
+# Cross-compile dashboard-api + feeder for the Pi (linux/arm64) and build the UI.
+build-linux:
+	@echo ">>> Cross-compiling dashboard-api + feeder for linux/arm64..."
+	@mkdir -p $(SERVER_BUILD_DIR)
+	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
+	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+	@echo ">>> Building UI..."
+	cd $(UI_DIR) && npm run build
+	@echo ">>> Done."
+
+deploy: build-linux
+	@if [ -z "$(DEPLOY_DIR)" ]; then \
+		echo "Error: DEPLOY_DIR is not set -- export DEPLOY_DIR=/path/to/axeos-dashboard/on/your/server, or pass it inline: make deploy DEPLOY_DIR=/path/to/axeos-dashboard"; \
+		exit 1; \
+	fi
+	@echo ">>> Copying dashboard-api + feeder + UI to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
+	ssh $(DEPLOY_HOST) "mkdir -p $(DEPLOY_DIR)/$(SERVER_BUILD_DIR) $(DEPLOY_DIR)/ui/dist"
+	rsync -avz $(SERVER_BUILD_DIR)/dashboard-api $(SERVER_BUILD_DIR)/feeder $(DEPLOY_HOST):$(DEPLOY_DIR)/$(SERVER_BUILD_DIR)/
+	rsync -avz --delete $(UI_DIR)/dist/ $(DEPLOY_HOST):$(DEPLOY_DIR)/ui/dist/
+	@echo ">>> Done."
+
+# Restart dashboard-api + feeder from whatever's already on disk in
+# $(SERVER_BUILD_DIR) -- i.e. what `make deploy` just copied here. Unlike
+# `latest-up`, this never touches GitHub, so it's the one to run ON
+# $(DEPLOY_HOST) itself after `make deploy` to actually pick up the change.
+# Same screen session as dev-up/latest-up (the one instance running on that
+# server), so this replaces whatever it's currently running.
+restart:
+	@if [ ! -f "$(CONFIG_FILE)" ]; then \
+		echo "Error: CONFIG_FILE '$(CONFIG_FILE)' not found -- pass the real path on this server, e.g. CONFIG_FILE=/path/to/config.yml"; \
+		exit 1; \
+	fi
+	@if [ -n "$(MINERS_FILE)" ] && [ ! -f "$(MINERS_FILE)" ]; then \
+		echo "Error: MINERS_FILE '$(MINERS_FILE)' not found -- pass the real path on this server, e.g. MINERS_FILE=/path/to/miners.yml"; \
+		exit 1; \
+	fi
+	@echo "🚀 Restarting dashboard-api + feeder from the binaries already on disk..."
+
+	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
+	@sleep 1
+
+	screen -dmS $(SCREEN_NAME)
+
+	# --- DASHBOARD API ---
+	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)"
+
+	# --- FEEDER ---
+	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
+
+	@echo "✅ Restarted (dashboard-api + feeder). nginx serves the UI separately."
