@@ -120,8 +120,11 @@ func alertsForMiner(root, key, fallbackIP, fallbackHostname string, limit int) [
 	if err != nil {
 		return nil
 	}
+	if len(lines) > limit {
+		lines = lines[len(lines)-limit:]
+	}
 
-	var out []AlertEntry
+	out := make([]AlertEntry, 0, len(lines))
 	for _, raw := range lines {
 		ip := raw.IP
 		if ip == "" {
@@ -138,9 +141,6 @@ func alertsForMiner(root, key, fallbackIP, fallbackHostname string, limit int) [
 			Hostname:  hostname,
 			Alerts:    raw.Alerts,
 		})
-	}
-	if len(out) > limit {
-		out = out[len(out)-limit:]
 	}
 	return out
 }
