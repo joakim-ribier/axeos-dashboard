@@ -79,6 +79,54 @@ describe("Sidebar", () => {
     expect(screen.getAllByText("nav.home").length).toBeGreaterThan(0);
   });
 
+  describe("nav links", () => {
+    it("renders the Alerts nav item", () => {
+      renderSidebar("/");
+
+      expect(screen.getAllByText("nav.alerts").length).toBeGreaterThan(0);
+    });
+
+    it("links Home/Alerts to the local routes when on the local board", () => {
+      renderSidebar("/");
+
+      const homeLinks = screen
+        .getAllByText("nav.home")
+        .map((el) => el.closest("a"));
+      const alertsLinks = screen
+        .getAllByText("nav.alerts")
+        .map((el) => el.closest("a"));
+
+      expect(homeLinks[0]).toHaveAttribute("href", "/");
+      expect(alertsLinks[0]).toHaveAttribute("href", "/alerts");
+    });
+
+    it("links Home/Alerts to the board-scoped routes when on a remote board", () => {
+      renderSidebar("/demo");
+
+      const homeLinks = screen
+        .getAllByText("nav.home")
+        .map((el) => el.closest("a"));
+      const alertsLinks = screen
+        .getAllByText("nav.alerts")
+        .map((el) => el.closest("a"));
+
+      expect(homeLinks[0]).toHaveAttribute("href", "/demo");
+      expect(alertsLinks[0]).toHaveAttribute("href", "/demo/alerts");
+    });
+
+    it("marks Home as selected on the board root, and Alerts as selected on the alerts route", () => {
+      const { container: homeContainer } = renderSidebar("/demo");
+      const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
+      expect(homeSelected.length).toBeGreaterThan(0);
+      expect(homeSelected[0]).toHaveTextContent("nav.home");
+
+      const { container: alertsContainer } = renderSidebar("/demo/alerts");
+      const alertsSelected = alertsContainer.querySelectorAll(".Mui-selected");
+      expect(alertsSelected.length).toBeGreaterThan(0);
+      expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
+    });
+  });
+
   it("shows the current board id (without the word 'board') on a remote route", () => {
     renderSidebar("/demo");
 
@@ -178,19 +226,18 @@ describe("Sidebar", () => {
   });
 
   describe("logo", () => {
-    it("reloads the page when clicked", async () => {
-      const reload = vi.fn();
-      Object.defineProperty(window, "location", {
-        value: { ...window.location, reload },
-        writable: true,
-      });
-      const user = userEvent.setup();
+    it("links to the local home page", () => {
       renderSidebar("/");
 
       const logos = screen.getAllByText("AxeOS");
-      await user.click(logos[0]);
+      expect(logos[0].closest("a")).toHaveAttribute("href", "/");
+    });
 
-      expect(reload).toHaveBeenCalledTimes(1);
+    it("links to the board's home page in remote mode", () => {
+      renderSidebar("/demo");
+
+      const logos = screen.getAllByText("AxeOS");
+      expect(logos[0].closest("a")).toHaveAttribute("href", "/demo");
     });
   });
 

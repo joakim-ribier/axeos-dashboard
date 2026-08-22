@@ -42,6 +42,11 @@ type MinerInfo struct {
 	// reports (wrong device at this IP, or a config typo).
 	Error string `json:"error,omitempty"`
 
+	// Alerts is whatever the feeder computed and persisted at the poll that
+	// produced this snapshot (temp/fan out of range, offline, mac mismatch,
+	// firmware update) -- the current state as of Timestamp, not a live value.
+	Alerts []Alert `json:"alerts,omitempty"`
+
 	// Pool urls
 	StratumURL                  string `json:"stratumURL"`                    // Hostname of the primary Stratum pool
 	StratumUser                 string `json:"stratumUser"`                   // Username (typically miner ID) for the primary pool

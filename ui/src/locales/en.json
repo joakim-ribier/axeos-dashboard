@@ -101,8 +101,8 @@
   },
   "nav": {
     "home": "Home",
-    "autoRefresh": "Auto-refresh",
-    "refreshPage": "Refresh page"
+    "alerts": "Alerts",
+    "autoRefresh": "Auto-refresh"
   },
   "sidebar": {
     "versionUpToDate": "Up to date",
@@ -113,33 +113,48 @@
     "boardPrivateHint": "This board is private — only you can view it",
     "versionLabel": "Version · {{sha}}"
   },
-  "notificationSettings": {
-    "title": "Notification settings",
-    "tempThreshold": "Temp threshold (°C)",
-    "fanThreshold": "Fan threshold (%)",
-    "notifyTemp": "Notify on temperature",
-    "notifyFan": "Notify on fan speed",
-    "notifyOffline": "Notify when offline",
-    "notifyUpdateAvailable": "Notify on update available",
-    "notifyVersion": "Notify on update applied"
-  },
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet.",
     "clear": "Clear",
-    "temp": "{{miner}} temperature reached {{value}}°C",
-    "tempRecovered": "{{miner}} temperature back to normal ({{value}}°C)",
-    "fan": "{{miner}} fan speed reached {{value}}%",
-    "fanRecovered": "{{miner}} fan speed back to normal ({{value}}%)",
+    "tempHigh": "{{miner}} temperature reached {{value}}°C",
+    "tempRecovered": "{{miner}} temperature back to normal",
+    "fanHigh": "{{miner}} fan speed reached {{value}}%",
+    "fanRecovered": "{{miner}} fan speed back to normal",
     "offline": "{{miner}} went offline",
-    "online": "{{miner}} is back online",
-    "deviceError": "{{miner}} has a configuration error: {{value}}",
-    "deviceErrorResolved": "{{miner}}'s configuration error is resolved",
-    "version": "{{miner}} firmware updated: {{value}}",
-    "updateAvailable": "{{miner}} has a firmware update available ({{value}})",
-    "settingsUpdated": "Notification settings updated: {{value}}",
+    "macMismatch": "{{miner}} has a configuration error: {{value}}",
+    "firmwareUpdate": "{{miner}} has a firmware update available",
+    "firmwareResolved": "{{miner}} firmware is up to date",
     "autoRefreshToggled": "Auto-refresh: {{value}}",
     "appUpdateAvailable": "A new version of the dashboard is available"
+  },
+  "alertsPage": {
+    "header": {
+      "title": "Alerts",
+      "description": "Alerts for the selected day, across every miner"
+    },
+    "filters": {
+      "ipLabel": "IP",
+      "allIps": "All miners",
+      "typeLabel": "Type",
+      "allTypes": "All alert types",
+      "date": "Date",
+      "reset": "Reset filters"
+    },
+    "types": {
+      "tempHigh": "Temperature",
+      "fanHigh": "Fan speed",
+      "offline": "Offline",
+      "macMismatch": "Configuration error",
+      "firmwareUpdate": "Firmware update"
+    },
+    "empty": "No alerts match these filters.",
+    "shownCount": "{{count}} shown of {{total}}",
+    "occurrences": "{{count}} occurrences",
+    "summary": "{{from}}–{{to}} of {{total}}",
+    "pagination": {
+      "rowsPerPage": "Rows per page:"
+    }
   },
   "search": {
     "helpTitle": "Search tips",

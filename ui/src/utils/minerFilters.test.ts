@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { Miner } from "@/schemas/minerSchema";
-import {
-  DEFAULT_NOTIFICATION_SETTINGS,
-  type NotificationSettings,
-} from "@/utils/minerNotifications";
 
 import {
   matchesQuickFilters,
@@ -39,11 +35,8 @@ const baseMiner: Miner = {
   fallbackStratumUser: "wallet.fallback",
 };
 
-const check = (
-  miner: Miner,
-  filters: Partial<QuickFilters>,
-  settings: NotificationSettings = DEFAULT_NOTIFICATION_SETTINGS,
-) => matchesQuickFilters(miner, { ...NO_QUICK_FILTERS, ...filters }, settings);
+const check = (miner: Miner, filters: Partial<QuickFilters>) =>
+  matchesQuickFilters(miner, { ...NO_QUICK_FILTERS, ...filters });
 
 describe("matchesQuickFilters", () => {
   it("matches everything when no filter is active", () => {
@@ -92,14 +85,20 @@ describe("matchesQuickFilters", () => {
   });
 
   describe("alerts", () => {
-    it("matches a miner over the temp threshold when alertTemp is on", () => {
-      const hot: Miner = { ...baseMiner, temp: 90 };
+    it("matches a miner flagged tempHigh by the server when alertTemp is on", () => {
+      const hot: Miner = {
+        ...baseMiner,
+        alerts: [{ type: "tempHigh", value: 90, threshold: 62 }],
+      };
       expect(check(hot, { alertTemp: true })).toBe(true);
       expect(check(baseMiner, { alertTemp: true })).toBe(false);
     });
 
-    it("matches a miner over the fan threshold when alertFan is on", () => {
-      const loud: Miner = { ...baseMiner, fanspeed: 90 };
+    it("matches a miner flagged fanHigh by the server when alertFan is on", () => {
+      const loud: Miner = {
+        ...baseMiner,
+        alerts: [{ type: "fanHigh", value: 90, threshold: 75 }],
+      };
       expect(check(loud, { alertFan: true })).toBe(true);
       expect(check(baseMiner, { alertFan: true })).toBe(false);
     });
@@ -112,7 +111,10 @@ describe("matchesQuickFilters", () => {
 
     it("ORs multiple active alerts together", () => {
       const offline: Miner = { ...baseMiner, alive: false };
-      const hot: Miner = { ...baseMiner, temp: 90 };
+      const hot: Miner = {
+        ...baseMiner,
+        alerts: [{ type: "tempHigh", value: 90, threshold: 62 }],
+      };
 
       // Both alertTemp and alertOffline are active; a miner matching
       // either one should pass, not just one that matches both.
@@ -125,23 +127,23 @@ describe("matchesQuickFilters", () => {
       );
     });
 
-    it("uses the rounded reading against the configured threshold", () => {
-      const settings: NotificationSettings = {
-        ...DEFAULT_NOTIFICATION_SETTINGS,
-        tempThreshold: 60,
+    it("reads the alert flag as-is, with no threshold recomputed client-side", () => {
+      // The raw temp reading is unremarkable, but the server already
+      // flagged this poll as tempHigh (e.g. it briefly spiked) -- the
+      // filter must trust that, not recompute against its own threshold.
+      const flaggedButCool: Miner = {
+        ...baseMiner,
+        temp: 40,
+        alerts: [{ type: "tempHigh", value: 90, threshold: 62 }],
       };
-      const justUnder: Miner = { ...baseMiner, temp: 60.05 }; // rounds to 60
-      expect(check(justUnder, { alertTemp: true }, settings)).toBe(false);
-
-      const justOver: Miner = { ...baseMiner, temp: 60.6 }; // rounds to 61
-      expect(check(justOver, { alertTemp: true }, settings)).toBe(true);
+      expect(check(flaggedButCool, { alertTemp: true })).toBe(true);
     });
   });
 
   it("combines pool, device model, and alerts (all must pass)", () => {
     const hotOnOtherPool: Miner = {
       ...baseMiner,
-      temp: 90,
+      alerts: [{ type: "tempHigh", value: 90, threshold: 62 }],
       stratumURL: "stratum+tcp://other.example.com",
     };
 
@@ -152,7 +154,10 @@ describe("matchesQuickFilters", () => {
       }),
     ).toBe(false);
 
-    const hotOnRightPool: Miner = { ...baseMiner, temp: 90 };
+    const hotOnRightPool: Miner = {
+      ...baseMiner,
+      alerts: [{ type: "tempHigh", value: 90, threshold: 62 }],
+    };
     expect(
       check(hotOnRightPool, {
         selectedPool: "stratum+tcp://pool.example.com",

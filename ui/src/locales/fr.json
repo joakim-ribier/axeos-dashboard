@@ -101,8 +101,8 @@
   },
   "nav": {
     "home": "Accueil",
-    "autoRefresh": "Actualisation auto",
-    "refreshPage": "Actualiser la page"
+    "alerts": "Alertes",
+    "autoRefresh": "Actualisation auto"
   },
   "sidebar": {
     "versionUpToDate": "À jour",
@@ -113,33 +113,48 @@
     "boardPrivateHint": "Ce tableau est privé — seul toi peux le voir",
     "versionLabel": "Version · {{sha}}"
   },
-  "notificationSettings": {
-    "title": "Réglages des notifications",
-    "tempThreshold": "Seuil température (°C)",
-    "fanThreshold": "Seuil ventilateur (%)",
-    "notifyTemp": "Notifier sur température",
-    "notifyFan": "Notifier sur ventilateur",
-    "notifyOffline": "Notifier hors ligne",
-    "notifyUpdateAvailable": "Notifier update disponible",
-    "notifyVersion": "Notifier update appliquée"
-  },
   "notifications": {
     "title": "Notifications",
     "empty": "Aucune notification pour le moment.",
     "clear": "Effacer",
-    "temp": "{{miner}} a atteint {{value}}°C",
-    "tempRecovered": "{{miner}} : température revenue à la normale ({{value}}°C)",
-    "fan": "{{miner}} : ventilateur à {{value}}%",
-    "fanRecovered": "{{miner}} : ventilateur revenu à la normale ({{value}}%)",
+    "tempHigh": "{{miner}} a atteint {{value}}°C",
+    "tempRecovered": "{{miner}} : température revenue à la normale",
+    "fanHigh": "{{miner}} : ventilateur à {{value}}%",
+    "fanRecovered": "{{miner}} : ventilateur revenu à la normale",
     "offline": "{{miner}} est hors ligne",
-    "online": "{{miner}} est de nouveau en ligne",
-    "deviceError": "{{miner}} a une erreur de configuration : {{value}}",
-    "deviceErrorResolved": "L'erreur de configuration de {{miner}} est résolue",
-    "version": "{{miner}} : firmware mis à jour : {{value}}",
-    "updateAvailable": "{{miner}} : mise à jour firmware disponible ({{value}})",
-    "settingsUpdated": "Réglages de notification mis à jour : {{value}}",
+    "macMismatch": "{{miner}} a une erreur de configuration : {{value}}",
+    "firmwareUpdate": "{{miner}} : mise à jour firmware disponible",
+    "firmwareResolved": "{{miner}} : firmware à jour",
     "autoRefreshToggled": "Actualisation auto : {{value}}",
     "appUpdateAvailable": "Une nouvelle version du dashboard est disponible"
+  },
+  "alertsPage": {
+    "header": {
+      "title": "Alertes",
+      "description": "Alertes du jour sélectionné, tous mineurs confondus"
+    },
+    "filters": {
+      "ipLabel": "IP",
+      "allIps": "Tous les mineurs",
+      "typeLabel": "Type",
+      "allTypes": "Tous les types",
+      "date": "Date",
+      "reset": "Réinitialiser les filtres"
+    },
+    "types": {
+      "tempHigh": "Température",
+      "fanHigh": "Ventilateur",
+      "offline": "Hors ligne",
+      "macMismatch": "Erreur de configuration",
+      "firmwareUpdate": "Mise à jour firmware"
+    },
+    "empty": "Aucune alerte ne correspond à ces filtres.",
+    "shownCount": "{{count}} affichées sur {{total}}",
+    "occurrences": "{{count}} occurrences",
+    "summary": "{{from}}–{{to}} sur {{total}}",
+    "pagination": {
+      "rowsPerPage": "Lignes par page :"
+    }
   },
   "search": {
     "helpTitle": "Astuces de recherche",

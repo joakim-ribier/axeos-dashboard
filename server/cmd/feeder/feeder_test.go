@@ -16,6 +16,8 @@ import (
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/storage"
 )
 
 func testLogger() *slog.Logger {
@@ -225,10 +227,37 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 
 	NewFeeder(logger, cfg).runOnce(context.Background())
 
-	entries, _ := os.ReadDir(cfg.Storage.BitaxesDir())
-	if len(entries) != 0 {
-		t.Errorf("no directory should be created on a mac mismatch, got %v", entries)
+	minerDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
+
+	if _, err := os.Stat(filepath.Join(minerDir, "latest.json")); !os.IsNotExist(err) {
+		t.Errorf("latest.json should not be created/updated on a mac mismatch, stat err = %v", err)
 	}
+
+	entries, err := os.ReadDir(minerDir)
+	if err != nil {
+		t.Fatalf("expected a jsonl-only directory to be created for the mismatch alert, got err: %v", err)
+	}
+	var jsonlFound bool
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".jsonl") {
+			jsonlFound = true
+			data, err := os.ReadFile(filepath.Join(minerDir, e.Name()))
+			if err != nil {
+				t.Fatalf("failed to read %s: %v", e.Name(), err)
+			}
+			var sample storage.RawSample
+			if err := json.Unmarshal(bytes.TrimSpace(data), &sample); err != nil {
+				t.Fatalf("failed to unmarshal jsonl line: %v", err)
+			}
+			if len(sample.Alerts) != 1 || sample.Alerts[0].Type != model.AlertMacMismatch {
+				t.Errorf("Alerts = %+v, want one macMismatch alert", sample.Alerts)
+			}
+		}
+	}
+	if !jsonlFound {
+		t.Error("expected a jsonl file recording the mac mismatch alert")
+	}
+
 	if !strings.Contains(logBuf.String(), "mac mismatch") {
 		t.Errorf("expected an error to be logged about the mac mismatch, got log: %s", logBuf.String())
 	}
@@ -282,7 +311,34 @@ func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 
 	NewFeeder(testLogger(), cfg).runOnce(context.Background())
 
-	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")); !os.IsNotExist(err) {
-		t.Error("no data directory should be created for a miner that fails to respond")
+	minerDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
+
+	if _, err := os.Stat(filepath.Join(minerDir, "latest.json")); !os.IsNotExist(err) {
+		t.Errorf("latest.json should not be created for a miner that fails to respond, stat err = %v", err)
+	}
+
+	entries, err := os.ReadDir(minerDir)
+	if err != nil {
+		t.Fatalf("expected a jsonl-only directory to be created for the offline alert, got err: %v", err)
+	}
+	var jsonlFound bool
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".jsonl") {
+			jsonlFound = true
+			data, err := os.ReadFile(filepath.Join(minerDir, e.Name()))
+			if err != nil {
+				t.Fatalf("failed to read %s: %v", e.Name(), err)
+			}
+			var sample storage.RawSample
+			if err := json.Unmarshal(bytes.TrimSpace(data), &sample); err != nil {
+				t.Fatalf("failed to unmarshal jsonl line: %v", err)
+			}
+			if len(sample.Alerts) != 1 || sample.Alerts[0].Type != model.AlertOffline {
+				t.Errorf("Alerts = %+v, want one offline alert", sample.Alerts)
+			}
+		}
+	}
+	if !jsonlFound {
+		t.Error("expected a jsonl file recording the offline alert")
 	}
 }

@@ -50,6 +50,90 @@
                 }
             }
         },
+        "/api/miners/alerts": {
+            "get": {
+                "description": "Returns each miner's N most recent alert-bearing entries (today's history only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List the most recent miner alerts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "max entries to return per miner (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.AlertEntry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/alerts/history": {
+            "get": {
+                "description": "Returns every alert episode (consecutive same-type occurrences collapsed into one) on the given day across all miners, most recently active first, optionally filtered by ip/type.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List a single day's recorded miner alerts, grouped into episodes and paginated",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "the single day to scan (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number, 1-based (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "episodes per page (default 50, max 200)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this miner IP only",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this alert type only",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AlertHistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/miners/pool/fallback/enable": {
             "put": {
                 "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
@@ -221,6 +305,102 @@
                 }
             }
         },
+        "/api/{boardId}/miners/alerts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List the most recent miner alerts for a hashboard board (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "max entries to return per miner (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.AlertEntry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/miners/alerts/history": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "the single day to scan (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number, 1-based (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "episodes per page (default 50, max 200)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this miner IP only",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this alert type only",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AlertHistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/{boardId}/{ip}/stats": {
             "get": {
                 "description": "Returns today's JSONL entries pushed to hashboard.live for a single miner in the board.",
@@ -265,6 +445,84 @@
         }
     },
     "definitions": {
+        "handler.AlertEntry": {
+            "type": "object",
+            "properties": {
+                "alerts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Alert"
+                    }
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "minerIp": {
+                    "type": "string"
+                },
+                "minerMac": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AlertEpisode": {
+            "type": "object",
+            "properties": {
+                "firstSeen": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "lastSeen": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "minerIp": {
+                    "type": "string"
+                },
+                "minerMac": {
+                    "type": "string"
+                },
+                "occurrences": {
+                    "type": "integer"
+                },
+                "peakValue": {
+                    "type": "number"
+                },
+                "threshold": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AlertHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "episodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.AlertEpisode"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -293,6 +551,26 @@
                 }
             }
         },
+        "model.Alert": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "threshold": {
+                    "description": "the threshold in effect at calculation time, omitted otherwise",
+                    "type": "number"
+                },
+                "type": {
+                    "description": "\"tempHigh\", \"fanHigh\", \"offline\", \"macMismatch\", \"firmwareUpdate\"",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "the reading that triggered it (temp/fan), omitted otherwise",
+                    "type": "number"
+                }
+            }
+        },
         "model.InfoResponse": {
             "type": "object",
             "properties": {
@@ -316,6 +594,13 @@
         "model.MinerInfo": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "description": "Alerts is whatever the feeder computed and persisted at the poll that\nproduced this snapshot (temp/fan out of range, offline, mac mismatch,\nfirmware update) -- the current state as of Timestamp, not a live value.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Alert"
+                    }
+                },
                 "alive": {
                     "description": "Health check",
                     "type": "boolean"
