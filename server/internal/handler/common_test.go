@@ -251,10 +251,10 @@ func TestToMinerInfo(t *testing.T) {
 		}
 	})
 
-	t.Run("resolves firmware release url", func(t *testing.T) {
+	t.Run("resolves firmware release url to the specific cached tag", func(t *testing.T) {
 		raw := latestFileStructure{Payload: PayloadStructure{Version: "v1.0"}}
 		got := toMinerInfo(raw, miner, "v2.0", "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest", dashboards)
-		want := "https://github.com/bitaxeorg/esp-miner/releases/latest"
+		want := "https://github.com/bitaxeorg/esp-miner/releases/tag/v2.0"
 		if got.ReleaseURL != want {
 			t.Errorf("ReleaseURL = %q, want %q", got.ReleaseURL, want)
 		}
@@ -271,30 +271,40 @@ func TestToMinerInfo(t *testing.T) {
 
 func TestFirmwareReleaseURL(t *testing.T) {
 	tests := []struct {
-		name   string
-		apiURL string
-		want   string
+		name    string
+		apiURL  string
+		tagName string
+		want    string
 	}{
 		{
-			name:   "converts github api releases url",
-			apiURL: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest",
-			want:   "https://github.com/bitaxeorg/esp-miner/releases/latest",
+			name:    "converts github api releases url to the specific tag page",
+			apiURL:  "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest",
+			tagName: "v2.15.0",
+			want:    "https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.0",
 		},
 		{
-			name:   "empty when not a github api url",
-			apiURL: "",
-			want:   "",
+			name:    "falls back to the latest alias when no tag is cached yet",
+			apiURL:  "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest",
+			tagName: "",
+			want:    "https://github.com/bitaxeorg/esp-miner/releases/latest",
 		},
 		{
-			name:   "empty when url does not match expected github api shape",
-			apiURL: "https://example.com/releases/latest",
-			want:   "",
+			name:    "empty when not a github api url",
+			apiURL:  "",
+			tagName: "v2.15.0",
+			want:    "",
+		},
+		{
+			name:    "empty when url does not match expected github api shape",
+			apiURL:  "https://example.com/releases/latest",
+			tagName: "v2.15.0",
+			want:    "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := firmwareReleaseURL(tt.apiURL); got != tt.want {
-				t.Errorf("firmwareReleaseURL(%q) = %q, want %q", tt.apiURL, got, tt.want)
+			if got := firmwareReleaseURL(tt.apiURL, tt.tagName); got != tt.want {
+				t.Errorf("firmwareReleaseURL(%q, %q) = %q, want %q", tt.apiURL, tt.tagName, got, tt.want)
 			}
 		})
 	}

@@ -150,14 +150,22 @@ func poolDashboardURL(stratumURL, stratumUser string, dashboards map[string]stri
 
 // firmwareReleaseURL converts a GitHub API "latest release" URL (as configured
 // under firmware.repos, e.g. "https://api.github.com/repos/owner/repo/releases/latest")
-// into the equivalent web page URL. Returns "" if apiURL isn't a recognized
-// GitHub API releases URL.
-func firmwareReleaseURL(apiURL string) string {
+// into the web page URL for the given tag. Pointing at the specific tag
+// (rather than at the "/releases/latest" alias) keeps the link in sync with
+// tagName -- the version string shown on the badge -- even when tagName is a
+// stale cached value and GitHub's actual latest release has since moved on.
+// Returns "" if apiURL isn't a recognized GitHub API releases URL.
+func firmwareReleaseURL(apiURL, tagName string) string {
 	const prefix = "https://api.github.com/repos/"
-	if !strings.HasPrefix(apiURL, prefix) {
+	const suffix = "/releases/latest"
+	if !strings.HasPrefix(apiURL, prefix) || !strings.HasSuffix(apiURL, suffix) {
 		return ""
 	}
-	return "https://github.com/" + strings.TrimPrefix(apiURL, prefix)
+	repoPath := strings.TrimSuffix(strings.TrimPrefix(apiURL, prefix), suffix)
+	if tagName == "" {
+		return "https://github.com/" + repoPath + suffix
+	}
+	return "https://github.com/" + repoPath + "/releases/tag/" + tagName
 }
 
 func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVersion, firmwareAPIURL string, dashboards map[string]string) model.MinerInfo {
@@ -189,7 +197,7 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 		Version:         raw.Payload.Version,
 		LatestVersion:   latestFirmwareVersion,
 		UpdateAvailable: updateAvailable,
-		ReleaseURL:      firmwareReleaseURL(firmwareAPIURL),
+		ReleaseURL:      firmwareReleaseURL(firmwareAPIURL, latestFirmwareVersion),
 		UptimeSeconds:   raw.Payload.UptimeSeconds,
 		ResponseTime:    raw.Payload.getResponseTime(miner),
 

@@ -807,7 +807,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
               <Tooltip
                 title={
                   latestVersion
-                    ? `v${latestVersion} ${t("miner.updateAvailable")}`
+                    ? `${latestVersion} ${t("miner.updateAvailable")}`
                     : t("miner.updateAvailable")
                 }
                 arrow
