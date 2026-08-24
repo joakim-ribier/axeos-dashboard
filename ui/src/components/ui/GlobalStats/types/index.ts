@@ -7,6 +7,10 @@ export interface MinerInfo {
   stratumURL?: string;
   fallbackStratumURL?: string;
   sharesAccepted?: number;
+  // Persistent, reboot-surviving cumulative total (see MinerInfo in
+  // @/types/miner) -- unlike sharesAccepted above, this never drops when a
+  // miner itself reboots, so it's what "Total Shares" should actually sum.
+  totalSharesAccepted?: number;
   temp?: number;
   fanspeed?: number;
   electricityRatePerKwh?: number;

@@ -13,6 +13,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 
 **Key features:**
 - Real-time hashrate, temperature, fan speed, shares and uptime per miner
+- Persistent lifetime totals (uptime + shares accepted) per miner that survive device reboots, shown alongside the live session values
 - Server-computed alerts (temp/fan thresholds, offline, config mismatch, firmware update) — a live notification bell plus a paginated, filterable, day-scoped alert history page (grouped into episodes, not one row per poll)
 - Pool switching (primary ↔ fallback), manual or on a cron-based schedule
 - Firmware update detection against GitHub releases, per device model
@@ -35,6 +36,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - [Configuration](#configuration)
 - [API Reference](#api-reference)
 - [Dashboard Features](#dashboard-features)
+- [Persistent Totals](#persistent-totals)
 - [Firmware Update Detection](#firmware-update-detection)
 - [AxeOs Device API](#axeos-device-api)
 - [License](#license)
@@ -128,8 +130,8 @@ Every push to `main` and every pull request targeting `main` runs
 
 When `checks.yml` succeeds on `main`,
 [`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
-feeder/dashboard-api/remote-dashboard-api binaries for **both `linux/arm64`
-(Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI once, and
+feeder/dashboard-api/remote-dashboard-api/rebuild-totals binaries for **both
+`linux/arm64` (Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI once, and
 publishes everything to a rolling `latest` GitHub Release. `make latest-fetch`
 auto-detects the local architecture (`uname -m`) and pulls the matching
 binaries — no need to specify it manually, override with `RELEASE_ARCH=` if
@@ -420,6 +422,10 @@ version old enough to predate this field.
 Toggle **1H** (last hour relative to latest data point) or **Day** (hourly averages).
 Fields: Temp (°C) · Fan (%) · Hashrate (TH/s) · Ping (ms).
 
+**Totals tab** — next to "Today's History", shows each miner's persistent
+lifetime totals (uptime + shares accepted) that survive device reboots — see
+[Persistent Totals](#persistent-totals) for how they're computed.
+
 **Config-mismatch banner** — if a miner's configured `mac:` doesn't match what
 the device itself reports (wrong device at that IP, or a config typo), an
 amber banner appears under the card's header with the error and a
@@ -433,6 +439,49 @@ mismatch check in [Configuration](#configuration).
   (always shows the same generic confirmation, whether or not the email
   matches the board — no account enumeration)
 - **Unknown or empty board** — a "page not found" message
+
+---
+
+## Persistent Totals
+
+Live values like `uptimeSeconds` and `sharesAccepted` are raw counters
+reported by the device itself — they reset to ~0 whenever the miner reboots.
+Alongside them, the dashboard tracks a **persistent total** per miner (total
+uptime, total shares accepted) that keeps growing across reboots instead of
+resetting.
+
+**How it works** — on every feeder poll, `internal/storage.ApplyPoll`
+compares the device's current raw counter to the last value it saw. If it
+went up, the delta is added to the running total. If it went *down* (the
+device rebooted and its own counter reset), the new value is added directly
+instead of a negative delta, so the reboot never loses progress. The result
+is written to `{dataDir}/{mac}/totals.json`, next to `latest.json` — a small
+JSON file, independent of the day-by-day `.jsonl` history.
+
+**Backfilling history** — `totals.json` only starts accumulating from
+whenever this feature was first deployed. To reconstruct it from a miner's
+*entire* JSONL history (replaying the same delta/reset logic from day one),
+use the `rebuild-totals` tool:
+
+```bash
+make build
+make rebuild-totals                             # dry-run, every configured miner
+make rebuild-totals MINER=aabbccddeeff          # dry-run, one miner (mac, hostname, or ip)
+make rebuild-totals DRY_RUN=                    # write it for real, every miner
+```
+
+Safe by design:
+- **Dry-run by default**, both at the Makefile level and in the binary itself — `-dry-run` defaults to `true`; you must pass `-dry-run=false` explicitly to write anything.
+- **Backs up before overwriting** — an existing `totals.json` is copied to `totals.json.bak` first.
+- **Atomic writes** (temp file + rename) — a crash mid-write can never leave a corrupted `totals.json` behind.
+- **Config-driven, not filesystem-driven** — only miners present in your `dashboard.yml`/`miners.yml` are processed, so a stray leftover directory under `{dataDir}` is never picked up silently.
+- Read-only on `.jsonl`/`latest.json` — the only file it ever writes is `totals.json`.
+
+**Remote mode** — when `remote.pushURL`/`remote.apiKey` are configured, the
+feeder also pushes each miner's `totals.json` to hashboard.live
+(`POST /api/push/totals`) right after writing it locally, so a remote board
+shows the same persistent totals. hashboard stores it verbatim — it performs
+no computation of its own, same principle as the rest of what gets pushed.
 
 ---
 

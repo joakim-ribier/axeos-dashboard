@@ -70,7 +70,17 @@ func (s *RawStorage) Append(now time.Time, bitaxeAddr string, payload []byte, al
 
 	// Update latest.json (overwrite) -- only on a successful, coherent poll.
 	latestPath := filepath.Join(dir, "latest.json")
-	return os.WriteFile(latestPath, data, 0o644)
+	if err := os.WriteFile(latestPath, data, 0o644); err != nil {
+		return err
+	}
+
+	// Totals are a secondary, derived feature -- a failure here must never
+	// fail the primary poll (jsonl + latest.json already succeeded above).
+	if err := s.updateTotals(now, bitaxeAddr, payload); err != nil {
+		log.Printf("warning: failed to update totals.json for %s: %v", bitaxeAddr, err)
+	}
+
+	return nil
 }
 
 // AppendAlertOnly records a tick that produced no usable payload (the fetch

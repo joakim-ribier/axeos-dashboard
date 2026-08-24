@@ -1,16 +1,14 @@
 // src/components/ui/MinerCard/MinerActionBar.tsx
 import { useTranslation } from "react-i18next";
-import { RestartAltOutlined, ShowChartOutlined } from "@mui/icons-material";
+import { RestartAltOutlined } from "@mui/icons-material";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
-import { Box, Divider, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
 interface MinerActionBarProps {
   isFallback: boolean;
   onSwitchPool: () => void;
   onRestart: () => void;
   isExecuting: boolean;
-  showChart: boolean;
-  onToggleChart: () => void;
   readOnly?: boolean;
 }
 
@@ -58,15 +56,14 @@ const ActionChip = ({
       }),
     }}
   >
-    <Box sx={{ display: "flex", alignItems: "center", fontSize: 14 }}>
+    <Box sx={{ display: "flex", alignItems: "center", fontSize: 16 }}>
       {icon}
     </Box>
     <Typography
-      variant="caption"
+      variant="body2"
       sx={{
-        fontSize: "0.75rem",
+        fontSize: "0.875rem",
         lineHeight: 1,
-        display: { xs: "none", md: "block" },
       }}
     >
       {label}
@@ -79,8 +76,6 @@ export const MinerActionBar = ({
   onSwitchPool,
   onRestart,
   isExecuting,
-  showChart,
-  onToggleChart,
   readOnly = false,
 }: MinerActionBarProps) => {
   const { t } = useTranslation();
@@ -89,47 +84,41 @@ export const MinerActionBar = ({
     ? t("miner.actions.switchPool.toMain")
     : t("miner.actions.switchPool.toFallback");
 
+  if (readOnly) return null;
+
   return (
     <Box>
-      <Divider />
+      <Box
+        sx={{
+          height: "1px",
+          my: 1.5,
+          background: (theme) =>
+            `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
+        }}
+      />
       <Box
         sx={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "flex-end",
           gap: 0.75,
-          py: 1,
         }}
       >
-        {!readOnly && (
-          <>
-            <ActionChip
-              icon={<SyncAltIcon sx={{ fontSize: 14 }} />}
-              label={switchLabel}
-              color="#29b6f6"
-              hoverBg="rgba(41,182,246,0.1)"
-              onClick={onSwitchPool}
-              disabled={isExecuting}
-            />
-            <ActionChip
-              icon={<RestartAltOutlined sx={{ fontSize: 14 }} />}
-              label={t("miner.actions.restart.label")}
-              color="#ffa726"
-              hoverBg="rgba(255,167,38,0.1)"
-              onClick={onRestart}
-              disabled={isExecuting}
-            />
-          </>
-        )}
-
-        <Box sx={{ flexGrow: 1 }} />
-
         <ActionChip
-          icon={<ShowChartOutlined sx={{ fontSize: 14 }} />}
-          label={t("miner.statsTimeline")}
-          color="#00b4ff"
-          hoverBg="rgba(0,180,255,0.1)"
-          onClick={onToggleChart}
-          active={showChart}
+          icon={<SyncAltIcon sx={{ fontSize: 16 }} />}
+          label={switchLabel}
+          color="#29b6f6"
+          hoverBg="rgba(41,182,246,0.1)"
+          onClick={onSwitchPool}
+          disabled={isExecuting}
+        />
+        <ActionChip
+          icon={<RestartAltOutlined sx={{ fontSize: 16 }} />}
+          label={t("miner.actions.restart.label")}
+          color="#ffa726"
+          hoverBg="rgba(255,167,38,0.1)"
+          onClick={onRestart}
+          disabled={isExecuting}
         />
       </Box>
     </Box>

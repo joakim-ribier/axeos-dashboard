@@ -249,6 +249,38 @@ func decodeLatestJSON(path string) (latestFileStructure, error) {
 	return raw, nil
 }
 
+// totalsFileStructure mirrors the JSON layout of a `totals.json` file (see
+// internal/storage.Totals). Only the cumulative fields are declared; the
+// Last* bookkeeping fields storage uses to detect device reboots are of no
+// use to the API.
+type totalsFileStructure struct {
+	TotalUptimeSeconds  int64 `json:"totalUptimeSeconds"`
+	TotalSharesAccepted int64 `json:"totalSharesAccepted"`
+	TotalSharesRejected int64 `json:"totalSharesRejected"`
+}
+
+// decodeTotalsJSON reads and decodes a single `totals.json` file. Returns an
+// error if the file doesn't exist yet (no poll has written one, or the
+// backfill tool hasn't run) or contains invalid JSON -- callers should treat
+// either case as "no totals available yet", not as a fatal condition.
+func decodeTotalsJSON(path string) (totalsFileStructure, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return totalsFileStructure{}, fmt.Errorf("failed to open %s: %w", path, err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.Printf("warning: failed to close file %s: %v", path, err)
+		}
+	}()
+
+	var raw totalsFileStructure
+	if err := json.NewDecoder(f).Decode(&raw); err != nil {
+		return totalsFileStructure{}, fmt.Errorf("corrupted JSON in %s: %w", path, err)
+	}
+	return raw, nil
+}
+
 // decodeJSONL reads a `.jsonl` file line by line and returns all successfully
 // parsed entries. Malformed lines are logged and skipped so that a single bad
 // entry does not discard the rest of the day's history.

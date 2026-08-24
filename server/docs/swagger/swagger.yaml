@@ -197,6 +197,19 @@ definitions:
         type: number
       timestamp:
         type: string
+      totalSharesAccepted:
+        type: integer
+      totalSharesRejected:
+        type: integer
+      totalUptimeSeconds:
+        description: |-
+          Total* are persistent, reboot-surviving counters (see
+          internal/storage.Totals) -- unlike SharesAccepted/SharesRejected and
+          UptimeSeconds above, which reset whenever the device itself reboots,
+          these keep accumulating for as long as the miner has been tracked.
+          Zero until the feeder has written at least one totals.json for this
+          miner, or until the backfill tool has run.
+        type: integer
       updateAvailable:
         description: True when LatestVersion != Version
         type: boolean

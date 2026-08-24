@@ -72,6 +72,16 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 			miner := syntheticBitaxe(raw, entry.Name())
 			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
 			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp, raw.FeederIntervalSeconds)
+
+			// totals.json is pushed separately from the per-poll sample (see
+			// cmd/feeder.pushTotalsToRemote) -- hashboard stores it verbatim,
+			// same read path as the local dashboard-api (see ListMiners).
+			if totals, err := decodeTotalsJSON(filepath.Join(root, entry.Name(), "totals.json")); err == nil {
+				info.TotalUptimeSeconds = totals.TotalUptimeSeconds
+				info.TotalSharesAccepted = totals.TotalSharesAccepted
+				info.TotalSharesRejected = totals.TotalSharesRejected
+			}
+
 			resp.Miners = append(resp.Miners, info)
 		}
 

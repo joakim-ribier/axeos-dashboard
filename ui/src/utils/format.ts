@@ -68,6 +68,13 @@ export function formatMetric(num: number): string {
   }
 
   const sign = num < 0 ? "-" : "";
+
+  // Below 1000 there's no suffix to justify decimals -- "1.00" reads worse
+  // than "1", so only numbers that actually got scaled down (K/M/G/...) keep
+  // the two decimal places.
+  if (magnitude === 0) {
+    return `${sign}${Math.round(value)}`;
+  }
   return `${sign}${value.toFixed(2)} ${units[magnitude]}`;
 }
 
@@ -89,8 +96,10 @@ export function formatDuration(ms: number): string {
   const days = Math.floor(totalSeconds / (24 * 60 * 60));
   const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
   const mins = Math.floor((totalSeconds % (60 * 60)) / 60);
+  const secs = totalSeconds % 60;
 
   if (days > 0) return `${days}j ${hours}h ${mins}m`;
   if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
+  if (mins > 0) return `${mins}m`;
+  return `${secs}s`;
 }

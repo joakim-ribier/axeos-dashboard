@@ -9,8 +9,10 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DiamondOutlinedIcon from "@mui/icons-material/DiamondOutlined";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import HistoryIcon from "@mui/icons-material/History";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PersonIcon from "@mui/icons-material/Person";
+import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import SpeedIcon from "@mui/icons-material/Speed";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import ThermostatIcon from "@mui/icons-material/Thermostat";
@@ -35,6 +37,7 @@ import { MinerInfo } from "@/types/miner";
 import { formatDuration, formatMetric, formatTimestamp } from "@/utils/format";
 
 import { MinerActionBar } from "./components/MinerActionBar";
+import { MinerTabPanel } from "./components/MinerTabPanel";
 import { MinerStatsChart } from "./MinerStatsChart";
 
 const EXCLUSIVE_FIELDS: Set<keyof MinerInfo> = new Set([
@@ -78,6 +81,8 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     sharesAccepted,
     sharesRejected,
     blockFound,
+    totalUptimeSeconds,
+    totalSharesAccepted,
     responseTime,
     temp,
     fanspeed,
@@ -107,7 +112,12 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
   const poolHostname = poolURL ? extractHostname(poolURL) : "—";
 
   const [showPoolDetails, setShowPoolDetails] = useState(false);
-  const [showChart, setShowChart] = useState(false);
+  // Only one of these panels can be open at a time -- opening one closes
+  // the other, rather than letting both take up space simultaneously.
+  const [activePanel, setActivePanel] = useState<"chart" | "totals" | null>(
+    null,
+  );
+  const showChart = activePanel === "chart";
   const [configErrorCopied, setConfigErrorCopied] = useState(false);
   const hasLoadedOnce = useRef(false);
   const [selectedChartFields, setSelectedChartFields] =
@@ -343,7 +353,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                 <Typography
                   variant="caption"
                   color="text.disabled"
-                  sx={{ fontSize: "0.6rem" }}
+                  sx={{ fontSize: "0.8rem" }}
                 >
                   {formatTimestamp(timestamp)}
                 </Typography>
@@ -361,7 +371,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                 label={deviceModel}
                 size="small"
                 variant="outlined"
-                sx={{ height: 16, fontSize: "0.6rem", borderRadius: 1 }}
+                sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
               />
             )}
             {hostname && ip !== "—" && (
@@ -374,7 +384,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 0.3,
-                  fontSize: "0.6rem",
+                  fontSize: "0.8rem",
                   color: "primary.main",
                   borderRadius: 1,
                   px: 0.4,
@@ -384,7 +394,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                 }}
               >
                 {ip}
-                <OpenInNewIcon sx={{ fontSize: 9, opacity: 0.7 }} />
+                <OpenInNewIcon sx={{ fontSize: 12, opacity: 0.7 }} />
               </Link>
             )}
           </Stack>
@@ -641,8 +651,8 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                 color={isFallback ? "warning" : "success"}
                 variant="outlined"
                 sx={{
-                  height: 20,
-                  fontSize: "0.65rem",
+                  height: 24,
+                  fontSize: "0.8rem",
                   flexShrink: 0,
                   borderRadius: 1,
                 }}
@@ -756,7 +766,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                     size="small"
                     color={isFallback ? "success" : "warning"}
                     variant="outlined"
-                    sx={{ height: 20, fontSize: "0.65rem", borderRadius: 1 }}
+                    sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                   />
                 </Stack>
               )}
@@ -774,7 +784,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
         >
           {uptimeSeconds !== undefined ? (
             <Chip
-              icon={<RestartAltOutlined sx={{ fontSize: "14px !important" }} />}
+              icon={<RestartAltOutlined sx={{ fontSize: "16px !important" }} />}
               label={formatDuration(uptimeSeconds * 1000)}
               size="small"
               color={
@@ -785,7 +795,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                     : "default"
               }
               variant="outlined"
-              sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+              sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
             />
           ) : (
             <Typography variant="caption" color="text.disabled">
@@ -795,13 +805,13 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
             <Chip
               icon={
-                <VerifiedUserOutlined sx={{ fontSize: "14px !important" }} />
+                <VerifiedUserOutlined sx={{ fontSize: "16px !important" }} />
               }
               label={version ?? "—"}
               size="small"
               variant="outlined"
               color={updateAvailable ? "warning" : "default"}
-              sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+              sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
             />
             {updateAvailable && (
               <Tooltip
@@ -842,26 +852,100 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
           onSwitchPool={() => handleSwitchPoolClick(targetPool)}
           onRestart={handleRestartClick}
           isExecuting={isExecuting}
-          showChart={showChart}
-          onToggleChart={() => setShowChart((p) => !p)}
           readOnly={isRemote}
         />
 
-        {/* 7. Chart */}
-        <Collapse in={showChart} timeout="auto" unmountOnExit>
-          <Box sx={{ mt: 1 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              {t("miner.statsTimeline")}
-            </Typography>
-            <MinerStatsChart
-              data={statsData || []}
-              isLoading={statsLoading}
-              selectedFields={selectedChartFields}
-              onFieldToggle={handleFieldToggle}
-              maxHeight={180}
-            />
-          </Box>
-        </Collapse>
+        {/* 7. Chart / Cumulative totals tabs -- content grows directly out
+             of whichever tab is selected (see MinerTabPanel). */}
+        <MinerTabPanel
+          active={activePanel}
+          onSelect={(key) =>
+            setActivePanel((p) =>
+              p === key ? null : (key as "chart" | "totals"),
+            )
+          }
+          tabs={[
+            {
+              key: "chart",
+              icon: <ShowChartOutlined sx={{ fontSize: 16 }} />,
+              label: t("miner.statsTimeline"),
+              content: (
+                <MinerStatsChart
+                  data={statsData || []}
+                  isLoading={statsLoading}
+                  selectedFields={selectedChartFields}
+                  onFieldToggle={handleFieldToggle}
+                  maxHeight={180}
+                />
+              ),
+            },
+            ...(totalUptimeSeconds !== undefined ||
+            totalSharesAccepted !== undefined
+              ? [
+                  {
+                    key: "totals",
+                    icon: <HistoryIcon sx={{ fontSize: 16 }} />,
+                    label: t("miner.totalsLabel"),
+                    content: (
+                      <Stack direction="row" sx={{ width: "100%" }}>
+                        {totalUptimeSeconds !== undefined && (
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ flex: 1 }}
+                          >
+                            <RestartAltOutlined
+                              sx={{ color: "text.secondary", fontSize: 22 }}
+                            />
+                            <Box>
+                              <Typography variant="body1" fontWeight={600}>
+                                {formatDuration(totalUptimeSeconds * 1000)}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {t("miner.totalUptimeLabel")}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        )}
+                        {totalSharesAccepted !== undefined && (
+                          <Tooltip
+                            title={totalSharesAccepted.toLocaleString()}
+                            arrow
+                          >
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{ flex: 1 }}
+                            >
+                              <CheckCircleIcon
+                                sx={{ color: "success.main", fontSize: 22 }}
+                              />
+                              <Box>
+                                <Typography variant="body1" fontWeight={600}>
+                                  {formatMetric(totalSharesAccepted)}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {t("miner.totalSharesLabel")}
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
       </Box>
 
       <ConfirmDialog

@@ -26,7 +26,8 @@
       "kpi": {
         "hashrate": "Total Hashrate",
         "miners": "Miners",
-        "shares": "Total Shares",
+        "shares": "Shares (session)",
+        "sharesAllTime": "All-time: {{value}}",
         "tempFan": "Temp · Fan",
         "maxFan": "Max fan speed",
         "perYear": "yr",
@@ -88,6 +89,9 @@
     "unknown": "Unknown miner",
     "updateAvailable": "Update available",
     "uptime": "Uptime:",
+    "totalUptimeLabel": "Total uptime",
+    "totalSharesLabel": "Total shares accepted",
+    "totalsLabel": "All-time Totals",
     "health": {
       "alive": "Reachable",
       "unreachable": "Unreachable",

@@ -26,7 +26,8 @@
       "kpi": {
         "hashrate": "Hashrate total",
         "miners": "Mineurs",
-        "shares": "Parts totales",
+        "shares": "Parts (session)",
+        "sharesAllTime": "Depuis le début : {{value}}",
         "tempFan": "Temp · Ventil.",
         "maxFan": "Vitesse ventilateur max",
         "perYear": "an",
@@ -88,6 +89,9 @@
     "unknown": "Mineur inconnu",
     "updateAvailable": "Mise à jour disponible",
     "uptime": "Temps de fonctionnement :",
+    "totalUptimeLabel": "Temps de fonctionnement total",
+    "totalSharesLabel": "Total des parts acceptées",
+    "totalsLabel": "Totaux cumulés",
     "health": {
       "alive": "Accessible",
       "unreachable": "Inaccessible",

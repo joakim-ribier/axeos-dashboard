@@ -42,8 +42,8 @@ describe("formatTimestamp", () => {
 });
 
 describe("formatMetric", () => {
-  it("leaves small numbers without a unit suffix", () => {
-    expect(formatMetric(42)).toBe("42.00 ");
+  it("leaves small numbers without a unit suffix or decimals", () => {
+    expect(formatMetric(42)).toBe("42");
   });
 
   it("converts thousands to K", () => {
@@ -59,7 +59,7 @@ describe("formatMetric", () => {
   });
 
   it("handles zero", () => {
-    expect(formatMetric(0)).toBe("0.00 ");
+    expect(formatMetric(0)).toBe("0");
   });
 });
 
@@ -90,7 +90,11 @@ describe("formatDuration", () => {
     expect(formatDuration((26 * 60 * 60 + 5 * 60) * 1000)).toBe("1j 2h 5m");
   });
 
+  it("formats seconds only when under a minute", () => {
+    expect(formatDuration(45 * 1000)).toBe("45s");
+  });
+
   it("handles zero", () => {
-    expect(formatDuration(0)).toBe("0m");
+    expect(formatDuration(0)).toBe("0s");
   });
 });

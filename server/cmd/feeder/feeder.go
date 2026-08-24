@@ -116,6 +116,13 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
 			go f.pushToRemote(now, key, addr, bitaxe.Hostname, bitaxe.Model, latestFW, payload, alerts)
+
+			// totals.json was just (re)written by store.Append above -- push
+			// it separately from the per-poll sample so hashboard can store
+			// it verbatim, with zero computation of its own (see
+			// internal/storage.Totals for who owns the delta/reset logic).
+			totals := storage.ReadTotals(storage.TotalsPath(f.config.Storage.BitaxesDir(), key))
+			go f.pushTotalsToRemote(key, totals)
 		}
 	}
 
@@ -226,10 +233,35 @@ func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, model, la
 		f.logger.Error("push: marshal error", "ip", ip, "error", err)
 		return
 	}
+	f.postToRemote(f.config.Remote.PushURL, body, "sample "+ip)
+}
 
-	req, err := http.NewRequest(http.MethodPost, f.config.Remote.PushURL, bytes.NewReader(body))
+// pushTotals is the body sent to hashboard's totals endpoint -- the storage
+// key plus storage.Totals verbatim (embedded, so its fields flatten into the
+// same JSON object). hashboard stores this file as-is; it never parses or
+// recomputes any of it.
+type pushTotals struct {
+	StorageKey string `json:"storageKey"`
+	storage.Totals
+}
+
+func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
+	body, err := json.Marshal(pushTotals{StorageKey: storageKey, Totals: totals})
 	if err != nil {
-		f.logger.Error("push: request error", "ip", ip, "error", err)
+		f.logger.Error("push: totals marshal error", "mac", storageKey, "error", err)
+		return
+	}
+	f.postToRemote(f.config.Remote.PushURL+"/totals", body, "totals "+storageKey)
+}
+
+// postToRemote sends body as an authenticated JSON POST to hashboard.
+// Shared by pushToRemote and pushTotalsToRemote -- same auth, same timeout,
+// same fire-and-forget error handling (logged, never fatal: a hashboard
+// hiccup must never affect local polling).
+func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		f.logger.Error("push: request error", "context", logCtx, "error", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -238,12 +270,12 @@ func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, model, la
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		f.logger.Error("push: send error", "ip", ip, "error", err)
+		f.logger.Error("push: send error", "context", logCtx, "error", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		f.logger.Error("push: unexpected status", "ip", ip, "status", resp.Status)
+		f.logger.Error("push: unexpected status", "context", logCtx, "status", resp.Status)
 	}
 }

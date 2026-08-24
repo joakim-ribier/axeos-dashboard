@@ -20,6 +20,8 @@ import {
   Typography,
 } from "@mui/material";
 
+import { formatMetric } from "@/utils/format";
+
 import { STORAGE_KEY } from "./constants";
 import { getTrend } from "./helpers";
 import { GlobalStatsProps } from "./types";
@@ -121,6 +123,20 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
 
   const totalShares = React.useMemo(
     () => data?.reduce((s, m) => s + (m.sharesAccepted ?? 0), 0) ?? 0,
+    [data],
+  );
+
+  // Sums each miner's persistent, reboot-surviving cumulative total (falls
+  // back to its live sharesAccepted for a miner whose totals.json hasn't
+  // been written/backfilled yet) -- shown as a secondary figure alongside
+  // the current-session totalShares above, since unlike it this one never
+  // drops when a miner in the fleet reboots.
+  const totalCumulativeShares = React.useMemo(
+    () =>
+      data?.reduce(
+        (s, m) => s + (m.totalSharesAccepted ?? m.sharesAccepted ?? 0),
+        0,
+      ) ?? 0,
     [data],
   );
 
@@ -247,6 +263,9 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
             />
           }
           value={totalShares.toLocaleString()}
+          subValue={t("dashboard.stats.kpi.sharesAllTime", {
+            value: formatMetric(totalCumulativeShares),
+          })}
           label={t("dashboard.stats.kpi.shares")}
           trend={sharesTrend}
           showTrend={prevShares !== undefined}

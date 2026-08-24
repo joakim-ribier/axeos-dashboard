@@ -14,6 +14,16 @@ type MinerInfo struct {
 	SharesRejected int64 `json:"sharesRejected"`
 	BlockFound     int64 `json:"blockFound"`
 
+	// Total* are persistent, reboot-surviving counters (see
+	// internal/storage.Totals) -- unlike SharesAccepted/SharesRejected and
+	// UptimeSeconds above, which reset whenever the device itself reboots,
+	// these keep accumulating for as long as the miner has been tracked.
+	// Zero until the feeder has written at least one totals.json for this
+	// miner, or until the backfill tool has run.
+	TotalUptimeSeconds  int64 `json:"totalUptimeSeconds,omitempty"`
+	TotalSharesAccepted int64 `json:"totalSharesAccepted,omitempty"`
+	TotalSharesRejected int64 `json:"totalSharesRejected,omitempty"`
+
 	Version         string  `json:"version"`              // Firmware version (e.g. "v2.12.2")
 	LatestVersion   string  `json:"latestVersion"`        // Latest firmware version available on GitHub
 	UpdateAvailable bool    `json:"updateAvailable"`      // True when LatestVersion != Version
