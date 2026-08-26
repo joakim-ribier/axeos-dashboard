@@ -9,7 +9,7 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
-**Supported models (tested firmware):** Bitaxe Gamma (`v2.14.1`) · NerdQAxe++ (`V1.0.37.2-LTS`)
+**Supported models (tested firmware):** Bitaxe Gamma (up to `v2.15.0`) · NerdQAxe++ (up to `V1.0.37.3-LTS`)
 
 **Key features:**
 - Real-time hashrate, temperature, fan speed, shares and uptime per miner
