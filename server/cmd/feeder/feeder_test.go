@@ -55,8 +55,14 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
-		pushCh <- pushedRequest{auth: r.Header.Get("Authorization"), body: decoded}
 		w.WriteHeader(http.StatusOK)
+		// runOnce also pushes totals (POST .../totals) concurrently with the
+		// sample push -- only the sample push is under test here, so ignore
+		// the totals request rather than racing both onto the same channel.
+		if r.URL.Path == "/totals" {
+			return
+		}
+		pushCh <- pushedRequest{auth: r.Header.Get("Authorization"), body: decoded}
 	}))
 	defer remoteServer.Close()
 

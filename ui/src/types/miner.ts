@@ -19,6 +19,14 @@ export interface MinerInfo {
   sharesRejected: number;
   blockFound: number;
 
+  // Total* are persistent, reboot-surviving counters -- unlike the fields
+  // above, which reset whenever the device itself reboots, these keep
+  // accumulating for as long as the miner has been tracked. Absent (0) until
+  // the feeder or the backfill tool has written at least one value.
+  totalUptimeSeconds?: number;
+  totalSharesAccepted?: number;
+  totalSharesRejected?: number;
+
   responseTime: number; // ms
 
   temp: number; // (°C)

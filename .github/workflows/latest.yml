@@ -68,6 +68,7 @@ jobs:
           go build -ldflags "$ldflags" -o ../dist/feeder-${{ matrix.arch }} ./cmd/feeder
           go build -ldflags "$ldflags" -o ../dist/dashboard-api-${{ matrix.arch }} ./cmd/dashboard-api
           go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api-${{ matrix.arch }} ./cmd/remote-dashboard-api
+          go build -ldflags "$ldflags" -o ../dist/rebuild-totals-${{ matrix.arch }} ./cmd/rebuild-totals
 
       - uses: actions/upload-artifact@v7
         with:
@@ -136,4 +137,6 @@ jobs:
             dist/dashboard-api-amd64
             dist/remote-dashboard-api-arm64
             dist/remote-dashboard-api-amd64
+            dist/rebuild-totals-arm64
+            dist/rebuild-totals-amd64
             dist/ui-dist.tar.gz

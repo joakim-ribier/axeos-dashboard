@@ -709,6 +709,16 @@
                 "timestamp": {
                     "type": "string"
                 },
+                "totalSharesAccepted": {
+                    "type": "integer"
+                },
+                "totalSharesRejected": {
+                    "type": "integer"
+                },
+                "totalUptimeSeconds": {
+                    "description": "Total* are persistent, reboot-surviving counters (see\ninternal/storage.Totals) -- unlike SharesAccepted/SharesRejected and\nUptimeSeconds above, which reset whenever the device itself reboots,\nthese keep accumulating for as long as the miner has been tracked.\nZero until the feeder has written at least one totals.json for this\nminer, or until the backfill tool has run.",
+                    "type": "integer"
+                },
                 "updateAvailable": {
                     "description": "True when LatestVersion != Version",
                     "type": "boolean"

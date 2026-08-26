@@ -65,7 +65,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart
 
 # ==============================================================================
 # Main Commands
@@ -90,6 +90,10 @@ build:
 	# Build REMOTE-DASHBOARD-API binary
 	@echo "   - Building remote-dashboard-api..."
 	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/remote-dashboard-api ./cmd/remote-dashboard-api
+
+	# Build REBUILD-TOTALS binary (one-off tool, not part of the running stack)
+	@echo "   - Building rebuild-totals..."
+	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
 
 	@echo ">>> Success! Binaries available in $(SERVER_BUILD_DIR)/"
 
@@ -129,6 +133,23 @@ run-feeder:
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
 	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)
 
+# Reconstruct totals.json (persistent, reboot-surviving uptime/shares) from
+# each miner's full JSONL history. Safe by default: DRY_RUN=1 unless
+# overridden, and the tool itself backs up any existing totals.json before
+# overwriting it. Examples:
+#   make rebuild-totals                              # dry-run, all miners
+#   make rebuild-totals MINER=aabbccddeeff            # dry-run, one miner
+#   make rebuild-totals MINER=aabbccddeeff DRY_RUN=   # write it for real, one miner
+#   make rebuild-totals DRY_RUN=                      # write it for real, all miners
+DRY_RUN ?= 1
+MINER ?=
+DRY_RUN_FLAG = $(if $(DRY_RUN),-dry-run=true,-dry-run=false)
+MINER_FLAG = $(if $(MINER),-miner $(MINER),)
+rebuild-totals:
+	@echo ">>> Backfilling totals.json (config: $(CONFIG_FILE))..."
+	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
+	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(MINERS_FLAG) $(DRY_RUN_FLAG) $(MINER_FLAG)
+
 # Run remote-dashboard-api (read-only) with remote-dashboard.yml
 run-remote-dashboard-api:
 	@echo ">>> Starting remote-dashboard-api with config: $(REMOTE_DASHBOARD_CONFIG)..."
@@ -156,6 +177,7 @@ help:
 	@echo "  make clean                     - Remove generated binaries"
 	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
 	@echo "  make run-feeder                - Start feeder with resources/dashboard.yml"
+	@echo "  make rebuild-totals           - Reconstruct totals.json from JSONL history (dry-run by default; DRY_RUN= to write, MINER= to target one miner)"
 	@echo "  make run-remote-dashboard-api  - Start remote-dashboard-api with resources/remote-dashboard.yml"
 	@echo "  make run-dashboard-ui          - Start UI dev server → dashboard-api (:$(DASHBOARD_API_PORT))"
 	@echo "  make run-remote-dashboard-ui   - Start UI dev server → remote-dashboard-api (:$(REMOTE_DASHBOARD_API_PORT))"
@@ -168,7 +190,7 @@ help:
 	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
 	@echo "  make latest-remote-up          - Start remote-dashboard-api from the latest release (VPS use, no local build)"
 	@echo "  make latest-remote-down        - Stop remote-dashboard-api"
-	@echo "  make build-linux               - Cross-compile dashboard-api/feeder (linux/arm64) and build the UI"
+	@echo "  make build-linux               - Cross-compile dashboard-api/feeder/rebuild-totals (linux/arm64) and build the UI"
 	@echo "  make deploy                    - build-linux, then copy the result to $(DEPLOY_HOST) (test without pushing to main)"
 	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder from what's on disk, no GitHub fetch"
 	@echo "  make help                      - Show this help message"
@@ -262,11 +284,20 @@ latest-fetch:
 		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/$$bin; \
 		chmod +x $(SERVER_BUILD_DIR)/$$bin; \
 	done
+	@asset="rebuild-totals-$(RELEASE_ARCH)"; \
+	url=$$(jq -r ".assets[] | select(.name==\"$$asset\") | .browser_download_url" /tmp/axeos-release.json); \
+	if [ -n "$$url" ] && [ "$$url" != "null" ]; then \
+		echo "   - $$asset -> $(SERVER_BUILD_DIR)/rebuild-totals"; \
+		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/rebuild-totals; \
+		chmod +x $(SERVER_BUILD_DIR)/rebuild-totals; \
+	else \
+		echo "   - $$asset not in this release, skipping (one-off tool, not required)"; \
+	fi
 	@ui_url=$$(jq -r '.assets[] | select(.name=="ui-dist.tar.gz") | .browser_download_url' /tmp/axeos-release.json); \
 	echo "   - ui-dist.tar.gz"; \
 	rm -rf $(UI_DIR)/dist && mkdir -p $(UI_DIR)/dist; \
 	curl -sfL "$$ui_url" | tar -xz -C $(UI_DIR)/dist
-	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,dashboard-api,remote-dashboard-api}, $(UI_DIR)/dist/"
+	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,dashboard-api,remote-dashboard-api,rebuild-totals}, $(UI_DIR)/dist/"
 
 # Start the full stack from the latest CI-built release — no local build/toolchain
 # needed. The UI (fetched static files in ui/dist) is served by nginx, configured
@@ -324,10 +355,11 @@ latest-remote-down:
 
 # Cross-compile dashboard-api + feeder for the Pi (linux/arm64) and build the UI.
 build-linux:
-	@echo ">>> Cross-compiling dashboard-api + feeder for linux/arm64..."
+	@echo ">>> Cross-compiling dashboard-api + feeder + rebuild-totals for linux/arm64..."
 	@mkdir -p $(SERVER_BUILD_DIR)
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
 	@echo ">>> Building UI..."
 	cd $(UI_DIR) && npm run build
 	@echo ">>> Done."
@@ -337,9 +369,9 @@ deploy: build-linux
 		echo "Error: DEPLOY_DIR is not set -- export DEPLOY_DIR=/path/to/axeos-dashboard/on/your/server, or pass it inline: make deploy DEPLOY_DIR=/path/to/axeos-dashboard"; \
 		exit 1; \
 	fi
-	@echo ">>> Copying dashboard-api + feeder + UI to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
+	@echo ">>> Copying dashboard-api + feeder + rebuild-totals + UI to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
 	ssh $(DEPLOY_HOST) "mkdir -p $(DEPLOY_DIR)/$(SERVER_BUILD_DIR) $(DEPLOY_DIR)/ui/dist"
-	rsync -avz $(SERVER_BUILD_DIR)/dashboard-api $(SERVER_BUILD_DIR)/feeder $(DEPLOY_HOST):$(DEPLOY_DIR)/$(SERVER_BUILD_DIR)/
+	rsync -avz $(SERVER_BUILD_DIR)/dashboard-api $(SERVER_BUILD_DIR)/feeder $(SERVER_BUILD_DIR)/rebuild-totals $(DEPLOY_HOST):$(DEPLOY_DIR)/$(SERVER_BUILD_DIR)/
 	rsync -avz --delete $(UI_DIR)/dist/ $(DEPLOY_HOST):$(DEPLOY_DIR)/ui/dist/
 	@echo ">>> Done."
 

@@ -75,6 +75,12 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 		latestVersion := fwCache.Models[miner.Model].Version
 		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
 
+		if totals, err := decodeTotalsJSON(filepath.Join(root, key, "totals.json")); err == nil {
+			info.TotalUptimeSeconds = totals.TotalUptimeSeconds
+			info.TotalSharesAccepted = totals.TotalSharesAccepted
+			info.TotalSharesRejected = totals.TotalSharesRejected
+		}
+
 		if hasStatus {
 			info.Alive = status.Alive
 			info.AliveCheckedAt = status.CheckedAt.UTC().Format("2006-01-02T15:04:05Z")
