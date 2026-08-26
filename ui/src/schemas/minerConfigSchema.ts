@@ -1,8 +1,8 @@
 // src/schemas/minerConfigSchema.ts
 import { z } from "zod";
 
-// One poolSchedule entry, as configured in miners.yml -- optional/advanced,
-// still hand-edited in the file for now (see MINERS_DISCOVERY_PLAN.md).
+// One poolSchedule entry, as configured in the managed miners file --
+// optional/advanced, still hand-edited in the file for now.
 export const cronScheduleSchema = z.object({
   cron: z.string(),
   target: z.enum(["primary", "fallback"]),
@@ -31,11 +31,11 @@ export const minerConfigSchema = z.object({
 export type MinerConfig = z.infer<typeof minerConfigSchema>;
 
 // GET /api/config/miners and GET /api/config/discover both respond
-// {"bitaxes": [...]}, mirroring miners.yml's own top-level shape (see
-// handler.bitaxesResponse server-side). lastUpdated is the managed
-// miners.yml file's own mtime (RFC3339) -- only ever set on
-// /api/config/miners responses (list and save), never on a discovery
-// response, which doesn't reflect the file on disk.
+// {"bitaxes": [...]}, mirroring the managed miners file's own top-level
+// shape (see handler.bitaxesResponse server-side). lastUpdated is that
+// file's own mtime (RFC3339) -- only ever set on /api/config/miners
+// responses (list and save), never on a discovery response, which
+// doesn't reflect the file on disk.
 export const bitaxesResponseSchema = z.object({
   bitaxes: z.array(minerConfigSchema),
   lastUpdated: z.string().optional(),
@@ -46,7 +46,7 @@ export const bitaxesResponseSchema = z.object({
 // config.NormalizeMac server-side. Two MACs are the same device iff their
 // normalized forms match, regardless of how each one happens to be
 // formatted (a discovered device's mac comes from the device itself,
-// typically uppercase with colons; a hand-written miners.yml entry could be
-// anything).
+// typically uppercase with colons; a hand-written entry in the managed
+// miners file could be anything).
 export const normalizeMac = (mac: string): string =>
   mac.replace(/[:-]/g, "").toLowerCase();
