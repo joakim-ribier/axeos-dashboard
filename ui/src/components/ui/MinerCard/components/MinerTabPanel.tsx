@@ -29,13 +29,22 @@ export const MinerTabPanel = ({
 
   return (
     <Box>
-      <Box sx={{ display: "flex", gap: 0.5 }}>
+      <Box role="tablist" sx={{ display: "flex", gap: 0.5 }}>
         {tabs.map((tab) => {
           const isActive = tab.key === active;
           return (
             <Box
               key={tab.key}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={0}
               onClick={() => onSelect(tab.key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(tab.key);
+                }
+              }}
               sx={{
                 flex: 1,
                 display: "flex",
@@ -54,6 +63,10 @@ export const MinerTabPanel = ({
                   backgroundColor: isActive
                     ? "action.selected"
                     : "action.hover",
+                },
+                "&:focus-visible": {
+                  outline: "2px solid #00b4ff",
+                  outlineOffset: -2,
                 },
               }}
             >
