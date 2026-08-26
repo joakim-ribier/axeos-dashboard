@@ -31,16 +31,19 @@ import (
 // @host localhost:8080
 // @BasePath /
 func main() {
-	var configPath, minersPath string
+	var configPath, deprecatedMinersPath string
 	flag.StringVar(&configPath, "config", "", "Config path")
-	flag.StringVar(&minersPath, "miners", "", "Miners config path (optional, overrides bitaxes from main config)")
+	// Deprecated -- accepted (not rejected outright) so a not-yet-updated
+	// Makefile/systemd unit/script that still passes it doesn't crash this
+	// binary outright during the switch to the new behavior. Its value is
+	// never read: the managed miners file is always found automatically
+	// next to -config, or via minersFile: inside it (see
+	// config.LoadConfig). Safe to stop passing -miners once every
+	// caller/script has been updated.
+	flag.StringVar(&deprecatedMinersPath, "miners", "", "Deprecated, ignored -- miners.yml is found automatically next to -config, or via minersFile: inside it")
 	flag.Parse()
 
-	loader := config.NewLoaderConfig(configPath)
-	if minersPath != "" {
-		loader = loader.WithMiners(minersPath)
-	}
-	cfg, err := loader.LoadConfig()
+	cfg, err := config.NewLoaderConfig(configPath).LoadConfig()
 	if err != nil {
 		log.Fatalf("Server stopped, config not found: %v", err)
 		return
@@ -53,18 +56,30 @@ func main() {
 
 	logger := newLogger("dashboard-api", logFile)
 	logger.Info("Server running...")
+	if deprecatedMinersPath != "" {
+		logger.Warn("-miners is deprecated and ignored -- remove it, miners.yml is found automatically", "path", deprecatedMinersPath)
+	}
 	for _, w := range cfg.MissingMacWarnings() {
 		logger.Error(w)
 	}
 
 	var wg sync.WaitGroup
 
-	watcher := healtcheck.NewWatcher(logger, cfg)
+	// Shared by the watcher and the router (same process) -- a miner saved
+	// via POST /api/config/miners is picked up by both immediately (Set),
+	// and either one also notices a change made some other way (another
+	// process, hand-editing miners.yml) via its mtime (Reload). The pool
+	// scheduler deliberately doesn't get one: poolSchedule stays a
+	// hand-edited, advanced setting, fixed at startup (see
+	// MINERS_DISCOVERY_PLAN.md).
+	minersStore := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
+
+	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
 	watcher.Start(&wg)
 
 	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
 
-	NewRouter(logger, cfg, watcher, versionChecker).Listen()
+	NewRouter(logger, cfg, watcher, versionChecker).WithMinersStore(minersStore).Listen()
 
 	scheduler := poolscheduler.NewPoolScheduler(logger, cfg)
 	scheduler.Start()

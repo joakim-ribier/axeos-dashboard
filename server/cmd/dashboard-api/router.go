@@ -23,7 +23,14 @@ const minerContextKey contextKey = "miner"
 type Router struct {
 	logger *slog.Logger
 
+	// config is set once at startup and never mutated again -- Bitaxes no
+	// longer lives here at request time, it's read fresh from minersStore
+	// on every request (see snapshotConfig), which is what actually stays
+	// in sync with miners.yml: a save through this same process (POST
+	// /api/config/miners) as well as any other change to the file
+	// (another process, hand-editing) noticed via its mtime.
 	config         config.Config
+	minersStore    *config.MinersStore
 	watcher        *healtcheck.Watcher
 	versionChecker *appversion.Checker
 }
@@ -35,6 +42,32 @@ func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Wa
 		watcher:        watcher,
 		versionChecker: versionChecker,
 	}
+}
+
+// WithMinersStore attaches the shared miners store this Router reads and
+// writes Bitaxes through (see snapshotConfig, the POST /api/config/miners
+// route). Optional: a Router with no store just keeps serving whatever
+// Bitaxes config was constructed with, same as before this feature
+// existed -- useful for tests that don't care about hot-reload.
+func (f *Router) WithMinersStore(store *config.MinersStore) *Router {
+	f.minersStore = store
+	return f
+}
+
+// snapshotConfig returns the current config by value, with Bitaxes
+// refreshed from minersStore (a cheap no-op call when nothing changed on
+// disk since the last one -- see MinersStore.Reload).
+func (f *Router) snapshotConfig() config.Config {
+	cfg := f.config
+	if f.minersStore == nil {
+		return cfg
+	}
+	bitaxes, err := f.minersStore.Reload()
+	if err != nil {
+		f.logger.Error("failed to reload miners config", "error", err)
+	}
+	cfg.Bitaxes = bitaxes
+	return cfg
 }
 
 func (f *Router) Listen() {
@@ -56,32 +89,47 @@ func (f *Router) Handler() http.Handler {
 	router.Use(middleware.Timeout(30 * time.Second))
 
 	router.Get("/api/miners", func(w http.ResponseWriter, r *http.Request) {
-		handler.ListMiners(f.config, f.watcher, w, r)
+		handler.ListMiners(f.snapshotConfig(), f.watcher, w, r)
 	})
-	router.Get("/api/miners/alerts", handler.ListAlerts(f.config))
-	router.Get("/api/miners/alerts/history", handler.ListAlertsHistory(f.config))
+	router.Get("/api/miners/alerts", func(w http.ResponseWriter, r *http.Request) {
+		handler.ListAlerts(f.snapshotConfig())(w, r)
+	})
+	router.Get("/api/miners/alerts/history", func(w http.ResponseWriter, r *http.Request) {
+		handler.ListAlertsHistory(f.snapshotConfig())(w, r)
+	})
 	router.Get("/api/info", handler.Info(f.versionChecker, ""))
+	router.Get("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
+		handler.ListMinersConfig(f.snapshotConfig(), w, r)
+	})
+	router.Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
+		if merged, ok := handler.SaveMinersConfig(f.snapshotConfig(), w, r); ok && f.minersStore != nil {
+			f.minersStore.Set(merged)
+		}
+	})
+	router.Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
+		handler.Discover(f.snapshotConfig(), w, r)
+	})
 	router.Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
-		handler.SwitchPool(f.logger, f.config, config.Primary, w, r)
+		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Primary, w, r)
 	})
 	router.Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
-		handler.SwitchPool(f.logger, f.config, config.Fallback, w, r)
+		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
 	})
 	router.Put("/api/miners/set/wifi", func(w http.ResponseWriter, r *http.Request) {
-		handler.SetWifi(f.logger, f.config, w, r)
+		handler.SetWifi(f.logger, f.snapshotConfig(), w, r)
 	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return MinerCtx(h, f.config)
+			return MinerCtx(h, f.snapshotConfig())
 		})
 		r.Get("/stats", func(w http.ResponseWriter, r *http.Request) {
 			WithMinerCtx(w, r, func(miner config.Bitaxe) {
-				handler.Stats(miner, f.config, w, r)
+				handler.Stats(miner, f.snapshotConfig(), w, r)
 			})
 		})
 		r.Post("/restart", func(w http.ResponseWriter, r *http.Request) {
 			WithMinerCtx(w, r, func(miner config.Bitaxe) {
-				handler.Restart(miner, f.logger, f.config, w)
+				handler.Restart(miner, f.logger, f.snapshotConfig(), w)
 			})
 		})
 	})

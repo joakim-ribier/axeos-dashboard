@@ -303,6 +303,32 @@ func TestFeeder_runOnce_skipsDeviceWithNoMacConfigured(t *testing.T) {
 	}
 }
 
+func TestFeeder_runOnce_skipsDisabledMiner(t *testing.T) {
+	dir := t.TempDir()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("a disabled miner should never be polled")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000}`))
+	}))
+	defer bitaxeServer.Close()
+
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: serverAddr(bitaxeServer), Mac: "aabbccddeeff", Model: "bitaxe", Enabled: false},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+	}
+
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+
+	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")); !os.IsNotExist(err) {
+		t.Errorf("no directory should be created for a disabled miner (err = %v)", err)
+	}
+}
+
 func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 	dir := t.TempDir()
 
@@ -346,5 +372,45 @@ func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 	}
 	if !jsonlFound {
 		t.Error("expected a jsonl file recording the offline alert")
+	}
+}
+
+func TestFeeder_withMinersStore_picksUpMinerAddedAfterConstruction(t *testing.T) {
+	dir := t.TempDir()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000,"version":"v2.0"}`))
+	}))
+	defer bitaxeServer.Close()
+
+	minerAddr := serverAddr(bitaxeServer)
+	minersPath := filepath.Join(dir, "miners.yml")
+
+	cfg := config.Config{
+		// Constructed with nothing configured -- the miner only shows up
+		// once the file is written, simulating a save made via the
+		// Settings UI (a separate dashboard-api process in real usage)
+		// after this Feeder already started.
+		Endpoints:      config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:        config.StorageConfig{DataDir: dir},
+		MinersFilePath: minersPath,
+	}
+	store := config.NewMinersStore(minersPath, nil)
+	feeder := NewFeeder(testLogger(), cfg).WithMinersStore(store)
+
+	feeder.runOnce(context.Background())
+	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", "latest.json")); !os.IsNotExist(err) {
+		t.Fatalf("latest.json exists before the miner was ever configured (err = %v)", err)
+	}
+
+	content := "bitaxes:\n  - ip: " + minerAddr + "\n    mac: aabbccddeeff\n    model: bitaxe\n    hostname: bitaxe-1\n    enabled: true\n"
+	if err := os.WriteFile(minersPath, []byte(content), 0o644); err != nil {
+		t.Fatalf("write miners file: %v", err)
+	}
+
+	feeder.runOnce(context.Background())
+	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", "latest.json")); err != nil {
+		t.Errorf("latest.json still missing after the miner was added via the miners file -- runOnce() didn't reload: %v", err)
 	}
 }

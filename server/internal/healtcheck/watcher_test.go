@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -151,4 +152,46 @@ func TestWatcher_watch_noMismatchWhenNoMacConfigured(t *testing.T) {
 	if status.MacMismatch {
 		t.Error("MacMismatch = true, want false -- nothing to compare against without a configured mac")
 	}
+}
+
+func TestWatcher_withMinersStore_picksUpMinerAddedAfterConstruction(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hostname":"bitaxe-1","macAddr":"aabbccddeeff"}`))
+	}))
+	defer server.Close()
+
+	ip := serverAddr(server)
+	dir := t.TempDir()
+	minersPath := dir + "/miners.yml"
+
+	cfg := config.Config{
+		Endpoints:      config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		MinersFilePath: minersPath,
+		// Constructed with nothing configured -- the miner only shows up
+		// once the file is written, simulating a save made via the
+		// Settings UI (a different, dashboard-api process in real usage)
+		// after this Watcher already started.
+	}
+	store := config.NewMinersStore(minersPath, nil)
+	watcher := NewWatcher(testLogger(), cfg).WithMinersStore(store)
+
+	watcher.Watch()
+	if _, ok := watcher.GetStatus(ip); ok {
+		t.Fatal("miner already has a status before it was ever configured")
+	}
+
+	if err := writeMinersFile(minersPath, ip); err != nil {
+		t.Fatalf("write miners file: %v", err)
+	}
+
+	watcher.Watch()
+	if _, ok := watcher.GetStatus(ip); !ok {
+		t.Error("miner still has no status after being added via the miners file -- Watch() didn't reload")
+	}
+}
+
+func writeMinersFile(path, ip string) error {
+	content := "bitaxes:\n  - ip: " + ip + "\n    mac: aabbccddeeff\n    enabled: true\n"
+	return os.WriteFile(path, []byte(content), 0o644)
 }

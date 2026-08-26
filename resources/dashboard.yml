@@ -1,5 +1,6 @@
 global:
   env: dev
+# minersFile: /path/to/miners.yml # optional — defaults to "miners.yml" next to this file
 server:
   port: "8080"
 storage:

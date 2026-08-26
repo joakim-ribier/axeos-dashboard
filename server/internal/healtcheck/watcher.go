@@ -27,10 +27,11 @@ type HealthStatus struct {
 type Watcher struct {
 	logger *slog.Logger
 
-	config   config.Config
-	ctx      context.Context
-	cancel   context.CancelFunc
-	statuses sync.Map // map[string]HealthStatus
+	config      config.Config
+	minersStore *config.MinersStore
+	ctx         context.Context
+	cancel      context.CancelFunc
+	statuses    sync.Map // map[string]HealthStatus
 }
 
 func NewWatcher(logger *slog.Logger, config config.Config) *Watcher {
@@ -42,6 +43,17 @@ func NewWatcher(logger *slog.Logger, config config.Config) *Watcher {
 		ctx:    ctx,
 		cancel: cancel,
 	}
+}
+
+// WithMinersStore attaches the shared miners store this Watcher reloads
+// config.Bitaxes from at the start of every Watch() cycle -- so a miner
+// saved through the Settings UI starts getting health-checked on the next
+// tick, without a restart. Optional: without one, Watch() just keeps using
+// whatever Bitaxes it was constructed with, same as before this feature
+// existed.
+func (f *Watcher) WithMinersStore(store *config.MinersStore) *Watcher {
+	f.minersStore = store
+	return f
 }
 
 func (f *Watcher) Start(wg *sync.WaitGroup) {
@@ -84,6 +96,14 @@ func (f *Watcher) GetStatus(ip string) (HealthStatus, bool) {
 // not just via the background ticker started by Start().
 func (f *Watcher) Watch() {
 	f.logger.Info("Health check running...")
+
+	if f.minersStore != nil {
+		bitaxes, err := f.minersStore.Reload()
+		if err != nil {
+			f.logger.Error("failed to reload miners config", "error", err)
+		}
+		f.config.Bitaxes = bitaxes
+	}
 
 	client := bitaxe.NewClient(f.logger, f.config.Endpoints.Info, f.config.Endpoints.Timeout)
 

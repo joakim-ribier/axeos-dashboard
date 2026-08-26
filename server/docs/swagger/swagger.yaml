@@ -1,5 +1,55 @@
 basePath: /
 definitions:
+  config.Bitaxe:
+    properties:
+      enabled:
+        type: boolean
+      fallbackPort:
+        type: integer
+      fallbackUrl:
+        type: string
+      fallbackUser:
+        type: string
+      hostname:
+        type: string
+      ip:
+        type: string
+      mac:
+        description: |-
+          Mac is the device's MAC address (colons/hyphens optional, normalized
+          by StorageKey) -- the storage-directory key, stable across IP/
+          location changes unlike Ip. Populated either by hand or by the network
+          discovery flow (see internal/discovery), which reads it straight off
+          the device's own /api/system/info response.
+        type: string
+      model:
+        type: string
+      poolSchedule:
+        items:
+          $ref: '#/definitions/config.CronSchedule'
+        type: array
+      port:
+        type: integer
+      url:
+        type: string
+      user:
+        type: string
+    type: object
+  config.CronSchedule:
+    properties:
+      cron:
+        type: string
+      target:
+        $ref: '#/definitions/config.PoolTarget'
+    type: object
+  config.PoolTarget:
+    enum:
+    - primary
+    - fallback
+    type: string
+    x-enum-varnames:
+    - Primary
+    - Fallback
   handler.AlertEntry:
     properties:
       alerts:
@@ -68,6 +118,15 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  handler.bitaxesResponse:
+    properties:
+      bitaxes:
+        items:
+          $ref: '#/definitions/config.Bitaxe'
+        type: array
+      lastUpdated:
+        type: string
     type: object
   model.Alert:
     properties:
@@ -372,6 +431,94 @@ paths:
         into episodes and paginated (read-only)
       tags:
       - remote-dashboard-api
+  /api/config/discover:
+    get:
+      description: Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24,
+        defaults to the server's own local /24 subnet when both are omitted). ip takes
+        priority if both are set.
+      parameters:
+      - description: Probe exactly this one IP instead of scanning a range (e.g. a
+          device on a different VLAN than the server). Takes priority over cidr.
+        in: query
+        name: ip
+        type: string
+      - description: 'Network range to sweep, e.g. ''192.168.1.0/24'' (max /24 = 254
+          hosts). Omitted: auto-detects and scans the server''s own local /24 subnet.
+          Ignored if ip is set.'
+        in: query
+        name: cidr
+        type: string
+      - description: Per-host probe timeout, e.g. '500ms' or '2s' (default 1s, capped
+          at 3s). Raise it and retry if a scan/probe found nothing on a slow network.
+        in: query
+        name: timeout
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.bitaxesResponse'
+        "400":
+          description: invalid/too-large cidr, or invalid/too-large timeout
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: no AxeOS device found at the given ip
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Discover AxeOS devices on the network
+      tags:
+      - dashboard-api
+  /api/config/miners:
+    get:
+      description: Returns every miner entry in the managed miners config, including
+        disabled ones. Read-only -- see POST/DELETE for writing.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.bitaxesResponse'
+      summary: List configured miners
+      tags:
+      - dashboard-api
+    post:
+      consumes:
+      - application/json
+      description: Upserts one or more miner entries into the managed miners.yml,
+        matched by MAC. New entries are always saved enabled.
+      parameters:
+      - description: Miner entries to add/update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.bitaxesResponse'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: the full, updated list of configured miners
+          schema:
+            $ref: '#/definitions/handler.bitaxesResponse'
+        "400":
+          description: invalid request body or entry
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: server not started with -miners -- nowhere safe to write
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: failed to write the miners file
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Add or update configured miners
+      tags:
+      - dashboard-api
   /api/info:
     get:
       description: Returns this binary's git SHA, whether it's up to date with the

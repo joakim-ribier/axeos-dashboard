@@ -35,6 +35,21 @@ type Config struct {
 	// account-management link points. Not configured by default -- set your
 	// own deployment's URL (e.g. "http://localhost:8090" for local dev).
 	HashboardURL string `yaml:"hashboardURL"`
+
+	// MinersFile optionally overrides where the managed miners config
+	// lives (see internal/discovery, the /settings UI, and
+	// MinersFilePath below). Only needed to move it somewhere other than
+	// the default: a "miners.yml" file sitting right next to whatever
+	// -config file was loaded. Supports "~" and relative paths, resolved
+	// the same way storage.dataDir is.
+	MinersFile string `yaml:"minersFile,omitempty"`
+
+	// MinersFilePath is the actual, resolved path the managed miners
+	// config was loaded from -- MinersFile if set, otherwise the default
+	// sibling "miners.yml" (see LoadConfig). Always set after a successful
+	// load; a runtime detail, never itself read from or written to
+	// dashboard.yml.
+	MinersFilePath string `yaml:"-"`
 }
 
 func (c Config) GetMiners() []Bitaxe {
@@ -80,36 +95,34 @@ func (c Config) GetMinersFilterBy(hostnameOrIp string) []Bitaxe {
 }
 
 type Bitaxe struct {
-	Ip       string `yaml:"ip"`
-	Hostname string `yaml:"hostname"`
+	Ip       string `yaml:"ip" json:"ip"`
+	Hostname string `yaml:"hostname" json:"hostname"`
 
 	// Mac is the device's MAC address (colons/hyphens optional, normalized
 	// by StorageKey) -- the storage-directory key, stable across IP/
-	// location changes unlike Ip. Manually configured, same as Ip/Hostname/
-	// Model -- there's no separate auto-discovery mechanism, so it stays in
-	// sync with whatever the operator already knows to rename data
-	// directories by.
-	Mac string `yaml:"mac"`
+	// location changes unlike Ip. Populated either by hand or by the network
+	// discovery flow (see internal/discovery), which reads it straight off
+	// the device's own /api/system/info response.
+	Mac string `yaml:"mac" json:"mac"`
 
-	Model string `yaml:"model"`
+	Model string `yaml:"model" json:"model"`
 
-	Enabled            bool `yaml:"enabled"`
-	RestartAfterUpdate bool `yaml:"restartAfterUpdate"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
 
-	Url  string `yaml:"url"`
-	Port int    `yaml:"port"`
-	User string `yaml:"user"`
+	Url  string `yaml:"url" json:"url"`
+	Port int    `yaml:"port" json:"port"`
+	User string `yaml:"user" json:"user"`
 
-	FallbackURL  string `yaml:"fallbackUrl"`
-	FallbackPort int    `yaml:"fallbackPort"`
-	FallbackUser string `yaml:"fallbackUser"`
+	FallbackURL  string `yaml:"fallbackUrl" json:"fallbackUrl"`
+	FallbackPort int    `yaml:"fallbackPort" json:"fallbackPort"`
+	FallbackUser string `yaml:"fallbackUser" json:"fallbackUser"`
 
-	PoolSchedule []CronSchedule `yaml:"poolSchedule,omitempty"`
+	PoolSchedule []CronSchedule `yaml:"poolSchedule,omitempty" json:"poolSchedule,omitempty"`
 }
 
 type CronSchedule struct {
-	Cron   string     `yaml:"cron"`
-	Target PoolTarget `yaml:"target"`
+	Cron   string     `yaml:"cron" json:"cron"`
+	Target PoolTarget `yaml:"target" json:"target"`
 }
 
 type Wifi struct {

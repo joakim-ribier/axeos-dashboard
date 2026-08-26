@@ -14,8 +14,13 @@ CONFIG_FILE ?= resources/dashboard.yml
 # Config for remote-dashboard-api (minimal: storage + pools only)
 REMOTE_DASHBOARD_CONFIG ?= resources/remote-dashboard.yml
 
-# Optional path to a separate miners config file (not committed to git)
-# Override on server: make dev-up MINERS_FILE=/path/to/miners.yml
+# Deprecated, kept only as a soft-landing flag -- dashboard-api/feeder/
+# rebuild-totals accept -miners but ignore it (miners.yml is now found
+# automatically next to -config, or via minersFile: inside it, see
+# MINERS_DISCOVERY_PLAN.md). Passing it is harmless either way: an old
+# binary still honors it, a new one just logs a deprecation warning and
+# ignores the value -- kept so a not-yet-updated Makefile/binary on either
+# side of a deploy never crashes on an unrecognized flag.
 MINERS_FILE ?= resources/miners.yml
 MINERS_FLAG = $(if $(MINERS_FILE),-miners $(MINERS_FILE),)
 
@@ -148,7 +153,7 @@ MINER_FLAG = $(if $(MINER),-miner $(MINER),)
 rebuild-totals:
 	@echo ">>> Backfilling totals.json (config: $(CONFIG_FILE))..."
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(MINERS_FLAG) $(DRY_RUN_FLAG) $(MINER_FLAG)
+	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG)
 
 # Run remote-dashboard-api (read-only) with remote-dashboard.yml
 run-remote-dashboard-api:
@@ -384,10 +389,6 @@ deploy: build-linux
 restart:
 	@if [ ! -f "$(CONFIG_FILE)" ]; then \
 		echo "Error: CONFIG_FILE '$(CONFIG_FILE)' not found -- pass the real path on this server, e.g. CONFIG_FILE=/path/to/config.yml"; \
-		exit 1; \
-	fi
-	@if [ -n "$(MINERS_FILE)" ] && [ ! -f "$(MINERS_FILE)" ]; then \
-		echo "Error: MINERS_FILE '$(MINERS_FILE)' not found -- pass the real path on this server, e.g. MINERS_FILE=/path/to/miners.yml"; \
 		exit 1; \
 	fi
 	@echo "🚀 Restarting dashboard-api + feeder from the binaries already on disk..."

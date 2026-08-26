@@ -81,8 +81,8 @@ the `:8080` from the URL.
 
 ```bash
 make build
-make run-feeder        CONFIG=resources/dashboard.yml MINERS_FILE=resources/miners.yml
-make run-dashboard-api CONFIG=resources/dashboard.yml MINERS_FILE=resources/miners.yml
+make run-feeder        CONFIG=resources/dashboard.yml
+make run-dashboard-api CONFIG=resources/dashboard.yml
 make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
@@ -175,9 +175,17 @@ The config is split into **two files** to keep sensitive miner details out of th
 | File | Content | Committed to git |
 |------|---------|-----------------|
 | `dashboard.yml` | Global settings: intervals, endpoints, storage, electricity rate, pool dashboards, firmware repos | Yes |
-| `miners.yml` | List of miners (`bitaxes:` section) with IPs, pool credentials, cron schedules | **No — add to `.gitignore`** |
+| `miners.yml` | List of miners (`bitaxes:` section) with IPs, pool credentials, cron schedules — managed by the `/settings` page (network discovery + add-by-IP), or hand-edited for advanced fields like `poolSchedule` | **No — add to `.gitignore`** |
 
-If `-miners` is omitted, the `bitaxes:` section of `dashboard.yml` is used (backward compatible).
+No flag needed: `miners.yml` is expected right next to whatever file you pass
+to `-config` — feeder and dashboard-api always agree on the same one, so
+there's no way for the two to end up watching different files. To put it
+somewhere else, set `minersFile: /path/to/miners.yml` at the top level of
+`dashboard.yml` instead of passing a path on the command line. A `bitaxes:`
+block written directly in `dashboard.yml` is **not** read — miners always
+come from the managed file. `-miners <path>` still exists on the command
+line for backward compatibility, but is deprecated and ignored (logs a
+warning) — safe to drop from any script that still passes it.
 
 ---
 
@@ -186,6 +194,8 @@ If `-miners` is omitted, the `bitaxes:` section of `dashboard.yml` is used (back
 ```yaml
 global:
   env: dev          # "dev" → stdout only; anything else → writes log files
+
+# minersFile: /path/to/miners.yml   # optional -- defaults to "miners.yml" next to this file
 
 storage:
   dataDir: resources/data/bitaxes   # one sub-folder per miner IP

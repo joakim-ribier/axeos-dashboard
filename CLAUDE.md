@@ -164,13 +164,22 @@ Charts: ApexCharts + Recharts (daily stats, lazy-loaded on first chart open). Va
 Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard).
 Route `/:boardId` → remote mode; route `/` → local mode.
 
-### Config (`resources/dashboard.yml`)
+### Config (`resources/dashboard.yml` + `resources/miners.yml`)
 
-Single YAML controls both binaries:
+Two files, both read by both binaries -- `miners.yml` is always expected
+right next to whatever `-config` file was loaded (override via
+`minersFile:` in `dashboard.yml` if you want it elsewhere), no flag needed,
+nothing to keep in sync between the two binaries. A `bitaxes:` block
+written directly in `dashboard.yml` is **not** read. `-miners <path>` still
+exists on the command line but is deprecated and ignored (logs a warning)
+-- kept only so an older Makefile/script/systemd unit that still passes it
+doesn't crash the binary outright.
 
 ```yaml
+# dashboard.yml
 global:
   env: dev                      # suppresses file logging (stdout only)
+# minersFile: /path/to/miners.yml   # optional -- defaults to miners.yml next to this file
 storage:
   dataDir: resources/data/bitaxes
 feeder:
@@ -186,20 +195,23 @@ wifi:
   on: false
   ssid: ""
   pwd: ""
+```
+
+```yaml
+# miners.yml -- gitignored; managed by the /settings page (network
+# discovery + add-by-IP), or hand-edited for advanced fields like poolSchedule
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
     mac: aa:bb:cc:dd:ee:ff     # the device's real MAC, as-is -- separators optional, normalized automatically
     enabled: true
     hostname: my-miner
     model: bitaxe              # or: nerdaxe
-    primary:
-      url: stratum+tcp://...
-      port: 3333
-      user: wallet.worker
-    fallback:
-      url: stratum+tcp://...
-      port: 3333
-      user: wallet.worker
+    url: stratum.braiins.com
+    port: 3333
+    user: wallet.worker
+    fallbackUrl: solo.atlaspool.io
+    fallbackPort: 3333
+    fallbackUser: wallet.worker
     poolSchedule:              # optional cron-based auto switching
       - cron: "59 23 * * FRI"
         target: fallback

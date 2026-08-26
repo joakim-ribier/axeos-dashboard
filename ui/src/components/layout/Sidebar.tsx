@@ -9,6 +9,7 @@ import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PublicIcon from "@mui/icons-material/Public";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+import WifiFindIcon from "@mui/icons-material/WifiFind";
 import {
   Box,
   Chip,
@@ -65,6 +66,8 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
+  disabled?: boolean;
+  disabledHint?: string;
 }
 
 const NavItem: React.FC<NavItemProps> = ({
@@ -73,31 +76,55 @@ const NavItem: React.FC<NavItemProps> = ({
   icon,
   label,
   onClick,
-}) => (
-  <ListItemButton
-    component={RouterLink}
-    to={to}
-    selected={selected}
-    onClick={onClick}
-    sx={{
-      borderRadius: 2,
-      py: 0.75,
-      px: 1.25,
-      minHeight: 40,
-      color: selected ? "primary.main" : "text.secondary",
-      "&.Mui-selected": {
-        bgcolor: "rgba(0,180,255,0.12)",
-        "&:hover": { bgcolor: "rgba(0,180,255,0.16)" },
-      },
-    }}
-  >
-    <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>{icon}</ListItemIcon>
-    <ListItemText
-      primary={label}
-      primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
-    />
-  </ListItemButton>
-);
+  disabled = false,
+  disabledHint,
+}) => {
+  const button = (
+    <ListItemButton
+      component={RouterLink}
+      to={to}
+      selected={selected}
+      disabled={disabled}
+      // A disabled MUI ListItemButton already greys itself out and blocks
+      // pointer events via its own styles, but the underlying element is
+      // still a react-router <a href> -- tabIndex + swallowing the click
+      // stops keyboard activation and any navigation that might otherwise
+      // slip through.
+      tabIndex={disabled ? -1 : undefined}
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? (e) => e.preventDefault() : onClick}
+      sx={{
+        borderRadius: 2,
+        py: 0.75,
+        px: 1.25,
+        minHeight: 40,
+        color: selected ? "primary.main" : "text.secondary",
+        "&.Mui-selected": {
+          bgcolor: "rgba(0,180,255,0.12)",
+          "&:hover": { bgcolor: "rgba(0,180,255,0.16)" },
+        },
+      }}
+    >
+      <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
+        {icon}
+      </ListItemIcon>
+      <ListItemText
+        primary={label}
+        primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
+      />
+    </ListItemButton>
+  );
+
+  if (!disabled || !disabledHint) return button;
+
+  // A disabled element swallows hover/focus events, so the Tooltip needs a
+  // non-disabled wrapper to actually anchor to.
+  return (
+    <Tooltip title={disabledHint} arrow placement="right">
+      <span>{button}</span>
+    </Tooltip>
+  );
+};
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -316,6 +343,21 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
           label={t("nav.alerts")}
           onClick={onItemClick}
+        />
+        {/* Miner config is a local-server concept (its own miners.yml) --
+            a remote board has no config of its own to edit, so the entry
+            stays visible (so it isn't a surprise once back on the local
+            dashboard) but greyed out and inert while viewing one. */}
+        <NavItem
+          to="/settings"
+          selected={location.pathname === "/settings"}
+          icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
+          label={t("nav.settings")}
+          onClick={onItemClick}
+          disabled={!!boardId}
+          disabledHint={
+            boardId ? t("nav.settingsUnavailableRemote") : undefined
+          }
         />
       </List>
 

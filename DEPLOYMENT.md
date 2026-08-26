@@ -161,7 +161,7 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/path/to/axeos-dashboard
-ExecStart=/usr/bin/make latest-up CONFIG_FILE=/path/to/config.yml MINERS_FILE=/path/to/miners.yml
+ExecStart=/usr/bin/make latest-up CONFIG_FILE=/path/to/config.yml
 ExecStop=/usr/bin/make latest-down
 Restart=on-failure
 RestartSec=15
@@ -216,19 +216,19 @@ make build
 # → resources/build/server/bin/remote-dashboard-api
 ```
 
-Or run the binaries manually (background processes):
+Or run the binaries manually (background processes). Both expect
+`miners.yml` right next to `dashboard.yml` (or wherever `minersFile:` in
+`dashboard.yml` points — see the main [README](README.md#configuration)):
 
 ```bash
 # Feeder (background)
 nohup ./resources/build/server/bin/feeder \
   -config /path/to/dashboard.yml \
-  -miners /path/to/miners.yml \
   > feeder.log 2>&1 &
 
 # Dashboard API (background)
 nohup ./resources/build/server/bin/dashboard-api \
   -config /path/to/dashboard.yml \
-  -miners /path/to/miners.yml \
   > dashboard-api.log 2>&1 &
 
 # UI (static build served by nginx as configured in step 3, or `npm run dev` for local testing)
@@ -238,13 +238,13 @@ cd ui && npm run build   # → ui/dist/
 Override API port (default `8080`):
 
 ```bash
-MINER_API_PORT=9090 ./resources/build/server/bin/dashboard-api -config dashboard.yml -miners miners.yml
+MINER_API_PORT=9090 ./resources/build/server/bin/dashboard-api -config dashboard.yml
 ```
 
 Override dashboard-api/feeder's local data dir (default from config's `storage.dataDir`):
 
 ```bash
-BITAXE_DATA_ROOT=/path/to/data ./resources/build/server/bin/dashboard-api -config dashboard.yml -miners miners.yml
+BITAXE_DATA_ROOT=/path/to/data ./resources/build/server/bin/dashboard-api -config dashboard.yml
 ```
 
 remote-dashboard-api has no env var override — its data dir is `storage.boardsDir`

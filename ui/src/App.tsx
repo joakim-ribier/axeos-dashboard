@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { OopsPage } from "@/components/ui/OopsPage";
+import { RequireMinersConfigured } from "@/components/ui/RequireMinersConfigured";
 import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
@@ -16,6 +17,7 @@ import { SearchProvider } from "@/contexts/SearchContext";
 import i18n from "@/i18n";
 import { Alerts } from "@/pages/Alerts";
 import { Home } from "@/pages/Home";
+import { Settings } from "@/pages/Settings";
 import { getTheme } from "@/theme";
 
 export const App: React.FC = () => {
@@ -61,7 +63,9 @@ export const App: React.FC = () => {
                           path="/"
                           element={
                             <ModeProvider mode="local">
-                              <Home />
+                              <RequireMinersConfigured>
+                                <Home />
+                              </RequireMinersConfigured>
                             </ModeProvider>
                           }
                         />
@@ -69,7 +73,17 @@ export const App: React.FC = () => {
                           path="/alerts"
                           element={
                             <ModeProvider mode="local">
-                              <Alerts />
+                              <RequireMinersConfigured>
+                                <Alerts />
+                              </RequireMinersConfigured>
+                            </ModeProvider>
+                          }
+                        />
+                        <Route
+                          path="/settings"
+                          element={
+                            <ModeProvider mode="local">
+                              <Settings />
                             </ModeProvider>
                           }
                         />
