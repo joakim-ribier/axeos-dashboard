@@ -228,7 +228,25 @@
       "disableAllDescription": "{{count}} active miner(s) will be disabled and stop being polled. Useful in case of a problem (network outage, power cut...). You can re-enable them individually afterwards.",
       "disableAllConfirm": "Disable all",
       "disableAllSuccess": "{{count}} miner(s) disabled.",
-      "lastUpdated": "Last modified: {{date}}"
+      "lastUpdated": "Last modified: {{date}}",
+      "schedule": {
+        "title": "Pool scheduler",
+        "description": "Automatically switch this miner's pool on a cron-based schedule.",
+        "empty": "No schedule configured.",
+        "target": "Target",
+        "primary": "Primary",
+        "fallback": "Fallback",
+        "cronLabel": "Cron expression",
+        "cronPlaceholder": "e.g. 59 59 23 * * FRI",
+        "cronHelp": "Seconds Minutes Hours DayOfMonth Month DayOfWeek",
+        "invalidCron": "Invalid cron expression",
+        "duplicateCron": "This cron expression is already scheduled for this miner",
+        "nextRuns": "Next: {{dates}}",
+        "countTooltip": "{{count}} pool schedule(s) configured",
+        "add": "Add",
+        "adding": "Adding…",
+        "removing": "Removing…"
+      }
     },
     "scan": {
       "title": "Automatic detection",

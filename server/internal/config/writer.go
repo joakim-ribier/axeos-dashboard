@@ -13,8 +13,11 @@ import (
 // SaveMiners writes miners as the managed miners.yml file at path --
 // atomically (temp file + rename, so a reader or a concurrent process
 // never observes a half-written file), backing up whatever was there
-// before under a timestamped name. Creates the parent directory if needed
-// (a fresh install may not have one yet).
+// before to a single sibling ".bak" file (overwritten on every save --
+// only the immediately-previous version is ever kept, not a full
+// history, so repeated saves -- e.g. testing the pool scheduler --
+// don't pile up one backup file per save). Creates the parent directory
+// if needed (a fresh install may not have one yet).
 func SaveMiners(path string, miners []Bitaxe) error {
 	if miners == nil {
 		miners = []Bitaxe{}
@@ -45,9 +48,11 @@ func SaveMiners(path string, miners []Bitaxe) error {
 	return nil
 }
 
-// backupIfExists copies an existing file at path to path + a UTC timestamp
-// suffix before it gets overwritten. A no-op if nothing exists there yet
-// (e.g. the very first save on a fresh install).
+// backupIfExists copies an existing file at path to a single sibling
+// "path.bak" before it gets overwritten, replacing whatever backup was
+// already there -- only the immediately-previous version is ever kept.
+// A no-op if nothing exists there yet (e.g. the very first save on a
+// fresh install).
 func backupIfExists(path string) error {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
@@ -57,6 +62,5 @@ func backupIfExists(path string) error {
 		return err
 	}
 
-	backupPath := fmt.Sprintf("%s.bak-%s", path, time.Now().UTC().Format("20060102T150405Z"))
-	return os.WriteFile(backupPath, data, 0o644)
+	return os.WriteFile(path+".bak", data, 0o644)
 }

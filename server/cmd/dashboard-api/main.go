@@ -64,13 +64,11 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	// Shared by the watcher and the router (same process) -- a miner saved
-	// via POST /api/config/miners is picked up by both immediately (Set),
-	// and either one also notices a change made some other way (another
-	// process, hand-editing the managed miners file) via its mtime
-	// (Reload). The pool scheduler deliberately doesn't get one:
-	// poolSchedule stays a hand-edited, advanced setting, fixed at
-	// startup.
+	// Shared by the watcher, the router and the pool scheduler (same
+	// process) -- a miner saved via POST /api/config/miners is picked up
+	// by all three immediately (Set), and each also notices a change made
+	// some other way (another process, hand-editing the managed miners
+	// file) via its mtime (Reload).
 	minersStore := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 
 	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
@@ -80,7 +78,7 @@ func main() {
 
 	NewRouter(logger, cfg, watcher, versionChecker).WithMinersStore(minersStore).Listen()
 
-	scheduler := poolscheduler.NewPoolScheduler(logger, cfg)
+	scheduler := poolscheduler.NewPoolScheduler(logger, cfg).WithMinersStore(minersStore)
 	scheduler.Start()
 
 	quit := make(chan os.Signal, 1)

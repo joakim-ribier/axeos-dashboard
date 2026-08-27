@@ -146,6 +146,34 @@ func validateBitaxe(b config.Bitaxe) error {
 	if !normalizedMacPattern.MatchString(config.NormalizeMac(b.Mac)) {
 		return fmt.Errorf("mac %q is not a valid MAC address", b.Mac)
 	}
+	if err := validatePoolSchedule(b.PoolSchedule); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validatePoolSchedule checks every entry the same way the scheduler
+// itself would need to accept it -- a bad cron string or an unknown
+// target must be rejected here, at save time, rather than silently
+// failing to register once poolscheduler.Scheduler picks it up. Also
+// rejects two entries with the same (normalized) cron expression on the
+// same miner -- both would fire at the exact same moment and race each
+// other's SwitchPool call, regardless of their targets.
+func validatePoolSchedule(schedule []config.CronSchedule) error {
+	seen := make(map[string]bool, len(schedule))
+	for i, s := range schedule {
+		if err := config.ValidateCronSchedule(s.Cron); err != nil {
+			return fmt.Errorf("poolSchedule[%d]: invalid cron %q: %w", i, s.Cron, err)
+		}
+		if s.Target != config.Primary && s.Target != config.Fallback {
+			return fmt.Errorf("poolSchedule[%d]: target %q must be %q or %q", i, s.Target, config.Primary, config.Fallback)
+		}
+		key := config.NormalizeCronExpression(s.Cron)
+		if seen[key] {
+			return fmt.Errorf("poolSchedule[%d]: duplicate cron %q -- already scheduled for this miner", i, s.Cron)
+		}
+		seen[key] = true
+	}
 	return nil
 }
 

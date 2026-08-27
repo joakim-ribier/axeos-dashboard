@@ -25,6 +25,12 @@ every commit.
   `/settings` route+nav item, `ui.action.minerRestart`/`minerPoolSwitch`
   gate the per-miner action buttons. `remote-dashboard.yml` sets all three
   to `hidden` to keep today's behavior unchanged.
+- ✅ **Per-miner pool scheduler in Settings**: expand a configured miner's
+  row to add/remove cron-based pool switches, with a live human-readable
+  preview and next-run times — no more hand-editing `poolSchedule` in
+  `miners.yml`. Takes effect on dashboard-api immediately (the scheduler
+  now hot-reloads from the same managed miners store as the rest of
+  Settings), no restart needed.
 
 ## To do
 
@@ -54,14 +60,12 @@ every commit.
 
 - **Remote-usable content on the Settings page**: the config-driven
   visibility mechanism exists (see Done), but `/settings` still has
-  nothing a remote viewer could use yet (discovery + `miners.yml` editing
-  are inherently local-only) — `ui.page.settings` is `readonly`-capable
-  but unused until the pool scheduler and user-config sections below
-  land, at which point `remote-dashboard.yml` flips from `hidden` to
-  `readonly` and Settings.tsx renders only what applies.
-- **Per-miner pool scheduler in Settings**: let the cron-based pool
-  schedule (`poolSchedule`) be configured from the `/settings` page
-  instead of hand-editing the managed miners config.
+  nothing a remote viewer could use yet (discovery + the managed miners
+  config, including the pool scheduler, are inherently local-only) —
+  `ui.page.settings` is `readonly`-capable but unused until the
+  user-config section below lands, at which point `remote-dashboard.yml`
+  flips from `hidden` to `readonly` and Settings.tsx renders only what
+  applies.
 - **Rest of user-level config editable from the UI**: settings tied to
   the user/deployment rather than a specific miner, e.g. `electricity`
   (rate per kWh) and `pool.dashboards` — currently only hand-edited in

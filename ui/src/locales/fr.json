@@ -228,7 +228,25 @@
       "disableAllDescription": "{{count}} mineur(s) actif(s) seront désactivés et arrêteront d'être interrogés. Utile en cas de problème (panne réseau, coupure électrique...). Tu pourras les réactiver individuellement ensuite.",
       "disableAllConfirm": "Tout désactiver",
       "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
-      "lastUpdated": "Dernière modification : {{date}}"
+      "lastUpdated": "Dernière modification : {{date}}",
+      "schedule": {
+        "title": "Planificateur de pool",
+        "description": "Bascule automatiquement le pool de ce mineur selon un planning cron.",
+        "empty": "Aucun planning configuré.",
+        "target": "Cible",
+        "primary": "Principal",
+        "fallback": "Secours",
+        "cronLabel": "Expression cron",
+        "cronPlaceholder": "ex. 59 59 23 * * FRI",
+        "cronHelp": "Secondes Minutes Heures JourDuMois Mois JourDeLaSemaine",
+        "invalidCron": "Expression cron invalide",
+        "duplicateCron": "Cette expression cron est déjà planifiée pour ce mineur",
+        "nextRuns": "Prochaines : {{dates}}",
+        "countTooltip": "{{count}} planning(s) de pool configuré(s)",
+        "add": "Ajouter",
+        "adding": "Ajout…",
+        "removing": "Suppression…"
+      }
     },
     "scan": {
       "title": "Détection automatique",
