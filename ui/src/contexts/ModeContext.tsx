@@ -12,7 +12,6 @@ interface ApiPaths {
 interface ModeContextValue {
   mode: Mode;
   boardId: string | undefined;
-  isRemote: boolean;
   apiPaths: ApiPaths;
 }
 
@@ -46,9 +45,7 @@ export const ModeProvider = ({ mode, children }: ModeProviderProps) => {
         };
 
   return (
-    <ModeContext.Provider
-      value={{ mode, boardId, isRemote: mode === "remote", apiPaths }}
-    >
+    <ModeContext.Provider value={{ mode, boardId, apiPaths }}>
       {children}
     </ModeContext.Provider>
   );

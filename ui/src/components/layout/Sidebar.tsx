@@ -26,7 +26,7 @@ import {
 
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
-import { useAppInfo } from "@/hooks/useMiners";
+import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
 import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
@@ -151,6 +151,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const { t } = useTranslation();
   const location = useLocation();
   const boardId = boardIdFromPathname(location.pathname);
+  const { ui } = useUiFeatures();
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();
 
@@ -344,21 +345,28 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           label={t("nav.alerts")}
           onClick={onItemClick}
         />
-        {/* Miner config is a local-server concept (its own miners.yml) --
-            a remote board has no config of its own to edit, so the entry
-            stays visible (so it isn't a surprise once back on the local
+        {/* Hidden outright (not just greyed out) when this instance's own
+            config says so (ui.page.settings: hidden, see config.UIConfig)
+            -- e.g. remote-dashboard-api, which advertises nothing for a
+            page whose route also 404s, see RequireSettingsEnabled. Miner
+            config is otherwise a local-server concept (its own
+            miners.yml): a remote board has no config of its own to edit,
+            so on an instance where Settings *is* enabled the entry stays
+            visible (so it isn't a surprise once back on the local
             dashboard) but greyed out and inert while viewing one. */}
-        <NavItem
-          to="/settings"
-          selected={location.pathname === "/settings"}
-          icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
-          label={t("nav.settings")}
-          onClick={onItemClick}
-          disabled={!!boardId}
-          disabledHint={
-            boardId ? t("nav.settingsUnavailableRemote") : undefined
-          }
-        />
+        {ui.page.settings !== "hidden" && (
+          <NavItem
+            to="/settings"
+            selected={location.pathname === "/settings"}
+            icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
+            label={t("nav.settings")}
+            onClick={onItemClick}
+            disabled={!!boardId}
+            disabledHint={
+              boardId ? t("nav.settingsUnavailableRemote") : undefined
+            }
+          />
+        )}
       </List>
 
       <Box

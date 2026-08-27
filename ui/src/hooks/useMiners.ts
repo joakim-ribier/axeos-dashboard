@@ -6,6 +6,7 @@ import axios from "axios";
 import { useMode } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
+import { DEFAULT_UI_FEATURES, UIFeatures } from "@/types/uiFeatures";
 import { boardIdFromPathname } from "@/utils/boardId";
 
 import { type Miner, minerSchema } from "../schemas/minerSchema";
@@ -93,6 +94,7 @@ interface InfoResult {
   appVersionStatus: AppVersionStatus;
   appVersionReleaseURL: string | null;
   hashboardUrl: string | null;
+  ui: UIFeatures;
 }
 
 export const fetchInfo = async (): Promise<InfoResult> => {
@@ -101,12 +103,14 @@ export const fetchInfo = async (): Promise<InfoResult> => {
     appVersionStatus?: AppVersionStatus;
     appVersionReleaseURL?: string;
     hashboardURL?: string;
+    ui?: UIFeatures;
   }>("/api/info");
   return {
     buildSHA: data.buildSHA,
     appVersionStatus: data.appVersionStatus ?? "unknown",
     appVersionReleaseURL: data.appVersionReleaseURL ?? null,
     hashboardUrl: data.hashboardURL ?? null,
+    ui: data.ui ?? DEFAULT_UI_FEATURES,
   };
 };
 
@@ -117,6 +121,32 @@ export interface AppInfo {
   hashboardUrl: string | null;
   isPublic: boolean;
 }
+
+export interface UseUiFeaturesReturn {
+  ui: UIFeatures;
+  /** True until GET /api/info's first response resolves -- see RequireSettingsEnabled, which waits for this instead of rendering the DEFAULT_UI_FEATURES fallback (everything enabled) and flashing content it may need to hide. */
+  isLoading: boolean;
+}
+
+/**
+ * UI feature flags from GET /api/info (see config.UIConfig) -- the single
+ * React codebase shows everything by default and a page/action opts itself
+ * out based on this instead of hardcoding local/remote-specific behavior.
+ * Shares its cache entry with useAppInfo() (same "info" query key).
+ */
+export const useUiFeatures = (): UseUiFeaturesReturn => {
+  const infoQuery = useQuery<InfoResult, Error>({
+    queryKey: ["info"],
+    queryFn: fetchInfo,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  return {
+    ui: infoQuery.data?.ui ?? DEFAULT_UI_FEATURES,
+    isLoading: infoQuery.isLoading,
+  };
+};
 
 /**
  * Build/version-status/hashboard-link lookup for the Sidebar, which renders

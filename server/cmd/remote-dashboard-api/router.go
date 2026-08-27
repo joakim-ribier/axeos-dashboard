@@ -23,7 +23,7 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChec
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(30 * time.Second))
 
-	r.Get("/api/info", handler.Info(versionChecker, cfg.HashboardURL))
+	r.Get("/api/info", handler.Info(versionChecker, cfg.HashboardURL, cfg.UI))
 
 	r.Route("/api/{boardId}", func(r chi.Router) {
 		r.Use(handler.RequireBoardAccess(accessChecker))

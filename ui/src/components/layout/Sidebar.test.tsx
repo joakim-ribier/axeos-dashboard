@@ -13,8 +13,10 @@ vi.mock("react-i18next", () => ({
 }));
 
 const mockUseAppInfo = vi.fn();
+const mockUseUiFeatures = vi.fn();
 vi.mock("@/hooks/useMiners", () => ({
   useAppInfo: () => mockUseAppInfo(),
+  useUiFeatures: () => mockUseUiFeatures(),
 }));
 
 function renderSidebar(initialEntry: string) {
@@ -38,6 +40,13 @@ describe("Sidebar", () => {
       releaseUrl: null,
       hashboardUrl: null,
       isPublic: false,
+    });
+    mockUseUiFeatures.mockReturnValue({
+      ui: {
+        page: { settings: "enabled" },
+        action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
+      },
+      isLoading: false,
     });
   });
 
@@ -158,6 +167,19 @@ describe("Sidebar", () => {
       });
       settingsLinks[0]?.dispatchEvent(clickEvent);
       expect(clickEvent.defaultPrevented).toBe(true);
+    });
+
+    it("hides the Settings nav item entirely when ui.page.settings is hidden", () => {
+      mockUseUiFeatures.mockReturnValue({
+        ui: {
+          page: { settings: "hidden" },
+          action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
+        },
+        isLoading: false,
+      });
+      renderSidebar("/");
+
+      expect(screen.queryByText("nav.settings")).not.toBeInTheDocument();
     });
   });
 

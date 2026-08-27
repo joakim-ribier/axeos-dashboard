@@ -34,3 +34,13 @@ wifi:
 remote:
   pushURL: "" # push URL from your hashboard dashboard (e.g. https://hashboard.live/api/push)
   apiKey: ""  # API key from your hashboard dashboard
+# ui controls which pages/actions the frontend shows -- every value below
+# is already the default (nothing here restricts anything), spelled out as
+# documentation. Each accepts enabled | readonly | hidden -- see
+# remote-dashboard.yml for a deployment that actually restricts some.
+ui:
+  page:
+    settings: enabled
+  action:
+    minerRestart: enabled
+    minerPoolSwitch: enabled

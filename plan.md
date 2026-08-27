@@ -17,15 +17,26 @@ every commit.
   and save them into the managed miners config, hot-reloaded by the
   feeder and dashboard-api with no restart and no `-miners` flag
   required.
+- ✅ **Config-driven UI visibility**: new `ui:` block in
+  `dashboard.yml`/`remote-dashboard.yml` (`config.UIConfig`, exposed via
+  `GET /api/info`) with a 3-state `enabled`/`readonly`/`hidden` per
+  page/action, defaulting to fully shown — one React codebase instead of
+  hardcoding local/remote differences. `ui.page.settings` gates the
+  `/settings` route+nav item, `ui.action.minerRestart`/`minerPoolSwitch`
+  gate the per-miner action buttons. `remote-dashboard.yml` sets all three
+  to `hidden` to keep today's behavior unchanged.
 
 ## To do
 
 - **Daily alerts email**: send an email each evening summarizing the
   day's alerts.
-- **Fine-grained local/remote UI config**: let `dashboard.yml` control
-  which parts of the UI are shown per mode (e.g. expose the Settings page
-  but only its "remote" sub-section, hiding auto device detection) instead
-  of the current all-or-nothing local/remote split. Next task up.
+- **Remote-usable content on the Settings page**: the config-driven
+  visibility mechanism exists (see Done), but `/settings` still has
+  nothing a remote viewer could use yet (discovery + `miners.yml` editing
+  are inherently local-only) — `ui.page.settings` is `readonly`-capable
+  but unused until the pool scheduler and user-config sections below
+  land, at which point `remote-dashboard.yml` flips from `hidden` to
+  `readonly` and Settings.tsx renders only what applies.
 - **Per-miner pool scheduler in Settings**: let the cron-based pool
   schedule (`poolSchedule`) be configured from the `/settings` page
   instead of hand-editing the managed miners config.

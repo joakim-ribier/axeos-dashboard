@@ -53,6 +53,7 @@
   },
   "miner": {
     "actions": {
+      "disabledHint": "Désactivé par la configuration de ce tableau de bord.",
       "restart": {
         "description": "Demande de redémarrage pour le mineur {{ip}}.",
         "label": "Redémarrer",

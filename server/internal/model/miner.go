@@ -101,4 +101,28 @@ type InfoResponse struct {
 	// remote-dashboard-api (remote-dashboard-api only, config.HashboardURL)
 	// — lets the UI build a link to the board owner's hashboard account page.
 	HashboardURL string `json:"hashboardURL,omitempty"`
+
+	// UI mirrors config.UIConfig (each value normalized, so the frontend
+	// never sees an empty string) -- the single React codebase shows
+	// everything unless a flag here says otherwise, instead of hardcoding
+	// what "local" vs "remote" means.
+	UI UIFeatures `json:"ui"`
+}
+
+type UIFeatures struct {
+	Page   UIPageFeatures   `json:"page"`
+	Action UIActionFeatures `json:"action"`
+}
+
+type UIPageFeatures struct {
+	// Settings: "enabled" | "readonly" | "hidden" -- see config.UIPageConfig.
+	Settings string `json:"settings"`
+}
+
+type UIActionFeatures struct {
+	// MinerRestart/MinerPoolSwitch: "enabled" | "readonly" | "hidden" --
+	// see config.UIActionConfig. "readonly" renders the button disabled
+	// (with a hint), "hidden" doesn't render it at all.
+	MinerRestart    string `json:"minerRestart"`
+	MinerPoolSwitch string `json:"minerPoolSwitch"`
 }

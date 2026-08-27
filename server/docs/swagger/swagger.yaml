@@ -162,6 +162,14 @@ definitions:
           remote-dashboard-api (remote-dashboard-api only, config.HashboardURL)
           — lets the UI build a link to the board owner's hashboard account page.
         type: string
+      ui:
+        allOf:
+        - $ref: '#/definitions/model.UIFeatures'
+        description: |-
+          UI mirrors config.UIConfig (each value normalized, so the frontend
+          never sees an empty string) -- the single React codebase shows
+          everything unless a flag here says otherwise, instead of hardcoding
+          what "local" vs "remote" means.
     type: object
   model.MinerInfo:
     properties:
@@ -300,6 +308,30 @@ definitions:
       total:
         description: Number of miners successfully loaded
         type: integer
+    type: object
+  model.UIActionFeatures:
+    properties:
+      minerPoolSwitch:
+        type: string
+      minerRestart:
+        description: |-
+          MinerRestart/MinerPoolSwitch: "enabled" | "readonly" | "hidden" --
+          see config.UIActionConfig. "readonly" renders the button disabled
+          (with a hint), "hidden" doesn't render it at all.
+        type: string
+    type: object
+  model.UIFeatures:
+    properties:
+      action:
+        $ref: '#/definitions/model.UIActionFeatures'
+      page:
+        $ref: '#/definitions/model.UIPageFeatures'
+    type: object
+  model.UIPageFeatures:
+    properties:
+      settings:
+        description: 'Settings: "enabled" | "readonly" | "hidden" -- see config.UIPageConfig.'
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -522,8 +554,8 @@ paths:
   /api/info:
     get:
       description: Returns this binary's git SHA, whether it's up to date with the
-        latest GitHub release, and (remote-dashboard-api only) the hashboard base
-        URL.
+        latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api
+        only) the hashboard base URL.
       produces:
       - application/json
       responses:

@@ -10,6 +10,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { OopsPage } from "@/components/ui/OopsPage";
 import { RequireMinersConfigured } from "@/components/ui/RequireMinersConfigured";
+import { RequireSettingsEnabled } from "@/components/ui/RequireSettingsEnabled";
 import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
@@ -83,7 +84,9 @@ export const App: React.FC = () => {
                           path="/settings"
                           element={
                             <ModeProvider mode="local">
-                              <Settings />
+                              <RequireSettingsEnabled>
+                                <Settings />
+                              </RequireSettingsEnabled>
                             </ModeProvider>
                           }
                         />
