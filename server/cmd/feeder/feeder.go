@@ -293,7 +293,7 @@ func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
 		f.logger.Error("push: send error", "context", logCtx, "error", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		f.logger.Error("push: unexpected status", "context", logCtx, "status", resp.Status)
