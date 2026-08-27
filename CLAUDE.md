@@ -179,7 +179,7 @@ doesn't crash the binary outright.
 global:
   env: dev                      # suppresses file logging (stdout only)
 storage:
-  dataDir: resources/data/bitaxes
+  dataDir: resources            # root dir -- app appends "data/bitaxes" itself, don't include it here
 feeder:
   interval: 2m
 healthCheck:
@@ -196,8 +196,10 @@ wifi:
 ```
 
 ```yaml
-# miners.yml -- gitignored; managed by the /settings page (network
-# discovery + add-by-IP), or hand-edited for advanced fields like poolSchedule
+# miners.yml -- gitignored; treated as managed data, generated/updated by
+# the /settings page (network discovery + add-by-IP) -- not meant to be
+# hand-edited (a Settings save can overwrite it). poolSchedule below has no
+# UI yet, but don't suggest hand-editing it to add one -- that's in progress.
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
     mac: aa:bb:cc:dd:ee:ff     # the device's real MAC, as-is -- separators optional, normalized automatically
@@ -217,13 +219,14 @@ bitaxes:
         target: primary
 ```
 
-Override dashboard-api port: `MINER_API_PORT` env var (default `8080`).
-Override remote-dashboard-api data dir: `BITAXE_DATA_ROOT` env var (default from `remote-dashboard.yml`).
+Override dashboard-api/remote-dashboard-api port: `server.port` in the config YAML (default `8080`/`8081`) — no env var for this.
+Override dashboard-api's data dir: `BITAXE_DATA_ROOT` env var (default from config's `storage.dataDir`).
+Override remote-dashboard-api's data dir: `storage.boardsDir` in `remote-dashboard.yml` (no env var; defaults to `{dataDir}/data/boards`).
 
 ### Patterns & Constraints
 
 - **No auth** — internal LAN only; no API keys, no CORS restrictions
-- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see README's Testing section)
+- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see [readme/TESTING.md](readme/TESTING.md))
 - **No WebSocket** — polling-based; feeder writes files, API reads files
 - **Graceful shutdown** — both binaries handle SIGINT/SIGTERM
 - **Error handling** — minimal custom types; `fmt.Errorf()` wrapping + structured logging (stdlib only)
