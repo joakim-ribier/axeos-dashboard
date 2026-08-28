@@ -38,6 +38,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { AppSettingsSection } from "@/components/ui/AppSettingsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PoolScheduleEditor } from "@/components/ui/PoolScheduleEditor";
@@ -194,7 +195,12 @@ const ConfiguredMinersTable = ({
                       {m.mac}
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={m.model} />
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={m.model}
+                        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                      />
                     </TableCell>
                     <TableCell align="right">
                       <Chip
@@ -206,6 +212,7 @@ const ConfiguredMinersTable = ({
                         }
                         color={m.enabled ? "success" : "default"}
                         variant={m.enabled ? "filled" : "outlined"}
+                        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                       />
                     </TableCell>
                     <TableCell align="right">
@@ -553,6 +560,8 @@ export const Settings = () => {
           />
         )
       )}
+
+      <AppSettingsSection />
 
       <Paper
         variant="outlined"

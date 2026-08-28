@@ -846,7 +846,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                         rel: "noopener noreferrer",
                       }
                     : {})}
-                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                 />
               </Tooltip>
             )}

@@ -29,10 +29,11 @@ type Router struct {
 	// in sync with miners.yml: a save through this same process (POST
 	// /api/config/miners) as well as any other change to the file
 	// (another process, hand-editing) noticed via its mtime.
-	config         config.Config
-	minersStore    *config.MinersStore
-	watcher        *healtcheck.Watcher
-	versionChecker *appversion.Checker
+	config           config.Config
+	minersStore      *config.MinersStore
+	appSettingsStore *config.AppSettingsStore
+	watcher          *healtcheck.Watcher
+	versionChecker   *appversion.Checker
 }
 
 func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Watcher, versionChecker *appversion.Checker) *Router {
@@ -54,20 +55,52 @@ func (f *Router) WithMinersStore(store *config.MinersStore) *Router {
 	return f
 }
 
-// snapshotConfig returns the current config by value, with Bitaxes
-// refreshed from minersStore (a cheap no-op call when nothing changed on
-// disk since the last one -- see MinersStore.Reload).
+// WithAppSettingsStore attaches the shared app-settings store this Router
+// reads and writes Electricity/Pools/Remote/Firmware.Repos through (see
+// snapshotConfig, the POST /api/config/settings route). Optional, same
+// reasoning as WithMinersStore.
+func (f *Router) WithAppSettingsStore(store *config.AppSettingsStore) *Router {
+	f.appSettingsStore = store
+	return f
+}
+
+// snapshotConfig returns the current config by value, with Bitaxes and the
+// managed app settings refreshed from their respective stores (a cheap
+// no-op call when nothing changed on disk since the last one -- see
+// MinersStore.Reload / AppSettingsStore.Reload).
 func (f *Router) snapshotConfig() config.Config {
 	cfg := f.config
-	if f.minersStore == nil {
-		return cfg
+	if f.minersStore != nil {
+		bitaxes, err := f.minersStore.Reload()
+		if err != nil {
+			f.logger.Error("failed to reload miners config", "error", err)
+		}
+		cfg.Bitaxes = bitaxes
 	}
-	bitaxes, err := f.minersStore.Reload()
-	if err != nil {
-		f.logger.Error("failed to reload miners config", "error", err)
+	if f.appSettingsStore != nil {
+		settings, err := f.appSettingsStore.Reload()
+		if err != nil {
+			f.logger.Error("failed to reload app settings", "error", err)
+		}
+		settings.ApplyTo(&cfg)
 	}
-	cfg.Bitaxes = bitaxes
 	return cfg
+}
+
+// currentAppSettings returns the settings.yml overrides as they
+// currently stand (possibly zero-value if no store is attached or nothing
+// was ever saved) -- unlike snapshotConfig, this is the raw override-only
+// value, not merged with the built-in defaults (see handler.GetAppSettings,
+// which needs both separately).
+func (f *Router) currentAppSettings() config.AppSettingsFile {
+	if f.appSettingsStore == nil {
+		return config.AppSettingsFile{}
+	}
+	settings, err := f.appSettingsStore.Reload()
+	if err != nil {
+		f.logger.Error("failed to reload app settings", "error", err)
+	}
+	return settings
 }
 
 func (f *Router) Listen() {
@@ -104,6 +137,14 @@ func (f *Router) Handler() http.Handler {
 	router.Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		if merged, ok := handler.SaveMinersConfig(f.snapshotConfig(), w, r); ok && f.minersStore != nil {
 			f.minersStore.Set(merged)
+		}
+	})
+	router.Get("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
+		handler.GetAppSettings(f.snapshotConfig(), f.currentAppSettings(), w, r)
+	})
+	router.Post("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
+		if saved, ok := handler.SaveAppSettings(f.snapshotConfig(), w, r); ok && f.appSettingsStore != nil {
+			f.appSettingsStore.Set(saved)
 		}
 	})
 	router.Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {

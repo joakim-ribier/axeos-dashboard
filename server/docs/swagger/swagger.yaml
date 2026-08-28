@@ -1,5 +1,23 @@
 basePath: /
 definitions:
+  config.AppSettingsFile:
+    properties:
+      electricity:
+        $ref: '#/definitions/config.ElectricityConfig'
+      firmware:
+        $ref: '#/definitions/config.AppSettingsFirmware'
+      pools:
+        $ref: '#/definitions/config.PoolsConfig'
+      remote:
+        $ref: '#/definitions/config.RemoteConfig'
+    type: object
+  config.AppSettingsFirmware:
+    properties:
+      repos:
+        additionalProperties:
+          type: string
+        type: object
+    type: object
   config.Bitaxe:
     properties:
       enabled:
@@ -42,6 +60,13 @@ definitions:
       target:
         $ref: '#/definitions/config.PoolTarget'
     type: object
+  config.ElectricityConfig:
+    properties:
+      ratePerKwh:
+        description: RatePerKwh is the electricity cost in euros per kilowatt-hour
+          (e.g. 0.1915 for 19.15 cts/kWh).
+        type: number
+    type: object
   config.Model:
     enum:
     - bitaxe
@@ -58,6 +83,25 @@ definitions:
     x-enum-varnames:
     - Primary
     - Fallback
+  config.PoolsConfig:
+    properties:
+      dashboards:
+        additionalProperties:
+          type: string
+        description: |-
+          Dashboards maps a stratum pool hostname to its web dashboard URL
+          template. Use {user} as placeholder — replaced by the account part
+          of the stratum user (before the first dot). Example:
+          "stratum.braiins.com" -> "https://pool.braiins.com/mining/overview/{user}"
+        type: object
+    type: object
+  config.RemoteConfig:
+    properties:
+      apiKey:
+        type: string
+      pushURL:
+        type: string
+    type: object
   handler.AlertEntry:
     properties:
       alerts:
@@ -126,6 +170,47 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  handler.appSettingsDefaults:
+    properties:
+      firmware:
+        $ref: '#/definitions/config.AppSettingsFirmware'
+      pools:
+        $ref: '#/definitions/config.PoolsConfig'
+    type: object
+  handler.appSettingsReadOnly:
+    properties:
+      feederInterval:
+        type: string
+      firmwareCacheCheckedAt:
+        description: |-
+          FirmwareCacheCheckedAt is the most recent CheckedAt across every
+          model in the firmware cache (RFC3339, UTC) -- omitted if the cache
+          is empty (nothing checked yet, e.g. fresh install or no miner has
+          triggered a check). Lets the UI show "was this actually run" rather
+          than just the configured TTL.
+        type: string
+      firmwareCacheTTL:
+        type: string
+      healthCheckInterval:
+        type: string
+    type: object
+  handler.appSettingsResponse:
+    properties:
+      defaults:
+        $ref: '#/definitions/handler.appSettingsDefaults'
+      electricity:
+        $ref: '#/definitions/config.ElectricityConfig'
+      firmware:
+        $ref: '#/definitions/config.AppSettingsFirmware'
+      lastUpdated:
+        type: string
+      pools:
+        $ref: '#/definitions/config.PoolsConfig'
+      readOnly:
+        $ref: '#/definitions/handler.appSettingsReadOnly'
+      remote:
+        $ref: '#/definitions/config.RemoteConfig'
     type: object
   handler.bitaxesResponse:
     properties:
@@ -557,6 +642,54 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Add or update configured miners
+      tags:
+      - dashboard-api
+  /api/config/settings:
+    get:
+      description: Returns the settings.yml overrides, the built-in defaults for pool
+        dashboards/firmware repos, and a read-only snapshot of process-launch settings
+        (poll intervals, firmware cache TTL) shown for visibility only.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.appSettingsResponse'
+      summary: Get app settings
+      tags:
+      - dashboard-api
+    post:
+      consumes:
+      - application/json
+      description: Validates and persists the editable subset of app settings to settings.yml.
+      parameters:
+      - description: Settings to save
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/config.AppSettingsFile'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.appSettingsResponse'
+        "400":
+          description: invalid settings
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: server has no resolvable config path -- nowhere safe to write
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: failed to write the app-settings file
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Save app settings
       tags:
       - dashboard-api
   /api/info:

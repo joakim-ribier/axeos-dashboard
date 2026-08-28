@@ -212,7 +212,7 @@
     },
     "configured": {
       "title": "Configured miners",
-      "description": "{{count}} miner(s) configured in miners.yml",
+      "description": "{{count}} miner(s) configured",
       "hostname": "Name",
       "ip": "IP",
       "mac": "MAC",
@@ -246,6 +246,51 @@
         "add": "Add",
         "adding": "Adding…",
         "removing": "Removing…"
+      }
+    },
+    "appSettings": {
+      "title": "App settings",
+      "description": "Operational settings you might change without redeploying.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "App settings saved.",
+      "electricity": {
+        "title": "Electricity",
+        "rateLabel": "Rate (€/kWh)"
+      },
+      "pools": {
+        "title": "Pool dashboards",
+        "description": "Maps a stratum pool hostname to its web dashboard URL template. Use {user} as a placeholder for the account part of the stratum user.",
+        "empty": "No pool dashboard available.",
+        "hostLabel": "Pool hostname",
+        "urlLabel": "Dashboard URL",
+        "missingUserPlaceholder": "Must contain {user}",
+        "add": "Add",
+        "remove": "Remove"
+      },
+      "remote": {
+        "title": "Remote (hashboard)",
+        "pushUrlLabel": "Push URL",
+        "apiKeyLabel": "API key",
+        "showApiKey": "Show API key",
+        "hideApiKey": "Hide API key"
+      },
+      "firmware": {
+        "title": "Firmware repos",
+        "hint": "Built-in, not editable from here.",
+        "modelLabel": "Model",
+        "urlLabel": "Repository URL"
+      },
+      "readOnly": {
+        "title": "Process settings (read-only)",
+        "hint": "Restart the app to change these.",
+        "settingLabel": "Setting",
+        "valueLabel": "Value",
+        "lastRunLabel": "Last run",
+        "feederIntervalLabel": "Feeder poll interval",
+        "healthCheckIntervalLabel": "Health check interval",
+        "firmwareCacheTTLLabel": "Firmware cache TTL",
+        "never": "Never"
       }
     },
     "scan": {

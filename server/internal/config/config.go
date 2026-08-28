@@ -35,7 +35,13 @@ type Config struct {
 	Storage     StorageConfig     `yaml:"storage"`
 	Endpoints   EndpointConfig    `yaml:"endpoints"`
 	Firmware    FirmwareConfig    `yaml:"firmware"`
-	Pools       PoolsConfig       `yaml:"pools"`
+	// Pools.Dashboards is computed at load time, not read from dashboard.yml
+	// (see PoolsConfig.Dashboards) -- the outer field carries no yaml tag so
+	// a pools: block left in dashboard.yml is silently ignored. AppSettingsFile.Pools
+	// below is the one that still reads from YAML (settings.yml's own
+	// pools: block, holding overrides only), since it's a distinct field
+	// with its own tag even though it shares the PoolsConfig type.
+	Pools       PoolsConfig       `yaml:"-"`
 	Electricity ElectricityConfig `yaml:"electricity"`
 	Remote      RemoteConfig      `yaml:"remote"`
 	UI          UIConfig          `yaml:"ui"`
@@ -52,6 +58,18 @@ type Config struct {
 	// loaded (see LoadConfig). Always set after a successful load; a
 	// runtime detail, never itself read from or written to dashboard.yml.
 	MinersFilePath string `yaml:"-"`
+
+	// AppSettingsFile optionally overrides where the managed app-settings
+	// config lives (see the /settings page's "app settings" section).
+	// Same resolution rules as MinersFile.
+	AppSettingsFile string `yaml:"appSettingsFile,omitempty"`
+
+	// AppSettingsFilePath is the actual, resolved path the managed
+	// app-settings config was loaded from -- AppSettingsFile if set,
+	// otherwise the default sibling "settings.yml" (see LoadConfig).
+	// Always set after a successful load; a runtime detail, never itself
+	// read from or written to dashboard.yml.
+	AppSettingsFilePath string `yaml:"-"`
 }
 
 func (c Config) GetMiners() []Bitaxe {
@@ -276,25 +294,99 @@ type EndpointConfig struct {
 }
 
 type FirmwareConfig struct {
-	CacheTTL time.Duration     `yaml:"cacheTTL"`
-	Repos    map[string]string `yaml:"repos"`
+	CacheTTL time.Duration `yaml:"cacheTTL"`
+	// Repos is computed at load time (DefaultFirmwareRepos merged with any
+	// settings.yml override, see mergeFirmwareRepos) -- no longer read
+	// straight from dashboard.yml/remote-dashboard.yml, so it carries no
+	// yaml tag; a firmware.repos: block left in either file is silently
+	// ignored, same treatment as storage.retentionDays.
+	Repos map[string]string `yaml:"-"`
 }
 
+// PoolsConfig is shared by two different roles, each populated a
+// different way -- see the comments at each usage site:
+//   - Config.Pools: never read from YAML (outer field has no yaml tag);
+//     computed at load time as DefaultPoolDashboards merged with whatever
+//     override AppSettingsFile.Pools carries (see mergePoolDashboards).
+//     This is the "effective" view every consumer (toMinerInfo, etc.) reads.
+//   - AppSettingsFile.Pools: read straight from settings.yml's own
+//     pools: block, holding the user's custom/override entries only --
+//     this is why Dashboards itself keeps its yaml tag, even though
+//     Config.Pools's outer field doesn't use it.
 type PoolsConfig struct {
-	// Dashboards maps a stratum pool hostname to its web dashboard URL template.
-	// Use {user} as placeholder — replaced by the account part of the stratum user (before the first dot).
-	// Example: "stratum.braiins.com" -> "https://pool.braiins.com/mining/overview/{user}"
-	Dashboards map[string]string `yaml:"dashboards"`
+	// Dashboards maps a stratum pool hostname to its web dashboard URL
+	// template. Use {user} as placeholder — replaced by the account part
+	// of the stratum user (before the first dot). Example:
+	// "stratum.braiins.com" -> "https://pool.braiins.com/mining/overview/{user}"
+	Dashboards map[string]string `yaml:"dashboards" json:"dashboards"`
 }
 
 type ElectricityConfig struct {
 	// RatePerKwh is the electricity cost in euros per kilowatt-hour (e.g. 0.1915 for 19.15 cts/kWh).
-	RatePerKwh float64 `yaml:"ratePerKwh"`
+	RatePerKwh float64 `yaml:"ratePerKwh" json:"ratePerKwh"`
 }
 
 type RemoteConfig struct {
-	PushURL string `yaml:"pushURL"`
-	APIKey  string `yaml:"apiKey"`
+	PushURL string `yaml:"pushURL" json:"pushURL"`
+	APIKey  string `yaml:"apiKey" json:"apiKey"`
+}
+
+// AppSettingsFile is the shape of the managed settings.yml file --
+// the operational subset of dashboard.yml's config that's editable from
+// the /settings page (see readme/CONFIGURATION.md). Everything else
+// (feeder.interval, healthCheck.interval, firmware.cacheTTL, server.port,
+// storage.dataDir, ...) stays hand-edited-only in dashboard.yml: it's
+// either process-launch config (no hot-reload exists for it) or a
+// deployment-topology decision, not something an operator needs to
+// change without a restart.
+type AppSettingsFile struct {
+	Electricity ElectricityConfig   `yaml:"electricity" json:"electricity"`
+	Pools       PoolsConfig         `yaml:"pools" json:"pools"`
+	Remote      RemoteConfig        `yaml:"remote" json:"remote"`
+	Firmware    AppSettingsFirmware `yaml:"firmware" json:"firmware"`
+}
+
+// AppSettingsFirmware only ever carries Repos -- CacheTTL is process-launch
+// config, not part of the managed/editable file (see AppSettingsFile). Keyed
+// by Model (not a plain string) so an unknown model key is rejected at
+// validation time rather than silently stored where nothing will ever read
+// it back.
+type AppSettingsFirmware struct {
+	Repos map[Model]string `yaml:"repos" json:"repos"`
+}
+
+// ApplyTo overwrites cfg's operational subset with this AppSettingsFile's
+// values. Electricity/Remote are a full replace, same as always.
+// Pools.Dashboards/Firmware.Repos are handled differently: they're always
+// recomputed as a fresh merge of the built-in defaults
+// (DefaultPoolDashboards/DefaultFirmwareRepos) overlaid by whatever
+// overrides this AppSettingsFile carries -- never an in-place mutation of
+// cfg's existing map, so an override removed from settings.yml since
+// the last reload actually disappears from the effective view instead of
+// lingering in a shared map. Shared by LoadConfig (applying
+// settings.yml at startup) and Router.snapshotConfig/Feeder.runOnce
+// (applying a live reload on every request/tick).
+func (a AppSettingsFile) ApplyTo(cfg *Config) {
+	cfg.Electricity = a.Electricity
+	cfg.Remote = a.Remote
+	cfg.Pools.Dashboards = mergePoolDashboards(a.Pools.Dashboards)
+	cfg.Firmware.Repos = mergeFirmwareRepos(a.Firmware.Repos)
+}
+
+// AppSettingsSnapshot builds an AppSettingsFile from this Config's current
+// Electricity/Remote values, seeding AppSettingsStore before
+// settings.yml has ever been saved (see cmd/dashboard-api/main.go,
+// cmd/feeder/main.go). Pools/Firmware intentionally start with no
+// overrides recorded -- the built-in defaults already cover them (merged
+// in at read time by ApplyTo/GetAppSettings), and seeding this snapshot
+// with the merged view instead would make GET /api/config/settings show
+// the defaults as if they were user overrides, which would then get
+// written into settings.yml verbatim on the very first Save.
+func (c Config) AppSettingsSnapshot() AppSettingsFile {
+	return AppSettingsFile{
+		Electricity: c.Electricity,
+		Remote:      c.Remote,
+	}
 }
 
 // UIVisibility is a three-state switch for one page or action in the

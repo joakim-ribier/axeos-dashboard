@@ -131,6 +131,76 @@
                 }
             }
         },
+        "/api/config/settings": {
+            "get": {
+                "description": "Returns the settings.yml overrides, the built-in defaults for pool dashboards/firmware repos, and a read-only snapshot of process-launch settings (poll intervals, firmware cache TTL) shown for visibility only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Get app settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Validates and persists the editable subset of app settings to settings.yml.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Save app settings",
+                "parameters": [
+                    {
+                        "description": "Settings to save",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/config.AppSettingsFile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid settings",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "server has no resolvable config path -- nowhere safe to write",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "failed to write the app-settings file",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/info": {
             "get": {
                 "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api only) the hashboard base URL.",
@@ -557,6 +627,34 @@
         }
     },
     "definitions": {
+        "config.AppSettingsFile": {
+            "type": "object",
+            "properties": {
+                "electricity": {
+                    "$ref": "#/definitions/config.ElectricityConfig"
+                },
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                },
+                "remote": {
+                    "$ref": "#/definitions/config.RemoteConfig"
+                }
+            }
+        },
+        "config.AppSettingsFirmware": {
+            "type": "object",
+            "properties": {
+                "repos": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "config.Bitaxe": {
             "type": "object",
             "properties": {
@@ -613,6 +711,15 @@
                 }
             }
         },
+        "config.ElectricityConfig": {
+            "type": "object",
+            "properties": {
+                "ratePerKwh": {
+                    "description": "RatePerKwh is the electricity cost in euros per kilowatt-hour (e.g. 0.1915 for 19.15 cts/kWh).",
+                    "type": "number"
+                }
+            }
+        },
         "config.Model": {
             "type": "string",
             "enum": [
@@ -634,6 +741,29 @@
                 "Primary",
                 "Fallback"
             ]
+        },
+        "config.PoolsConfig": {
+            "type": "object",
+            "properties": {
+                "dashboards": {
+                    "description": "Dashboards maps a stratum pool hostname to its web dashboard URL\ntemplate. Use {user} as placeholder — replaced by the account part\nof the stratum user (before the first dot). Example:\n\"stratum.braiins.com\" -\u003e \"https://pool.braiins.com/mining/overview/{user}\"",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "config.RemoteConfig": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "type": "string"
+                },
+                "pushURL": {
+                    "type": "string"
+                }
+            }
         },
         "handler.AlertEntry": {
             "type": "object",
@@ -738,6 +868,61 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.appSettingsDefaults": {
+            "type": "object",
+            "properties": {
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                }
+            }
+        },
+        "handler.appSettingsReadOnly": {
+            "type": "object",
+            "properties": {
+                "feederInterval": {
+                    "type": "string"
+                },
+                "firmwareCacheCheckedAt": {
+                    "description": "FirmwareCacheCheckedAt is the most recent CheckedAt across every\nmodel in the firmware cache (RFC3339, UTC) -- omitted if the cache\nis empty (nothing checked yet, e.g. fresh install or no miner has\ntriggered a check). Lets the UI show \"was this actually run\" rather\nthan just the configured TTL.",
+                    "type": "string"
+                },
+                "firmwareCacheTTL": {
+                    "type": "string"
+                },
+                "healthCheckInterval": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.appSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "defaults": {
+                    "$ref": "#/definitions/handler.appSettingsDefaults"
+                },
+                "electricity": {
+                    "$ref": "#/definitions/config.ElectricityConfig"
+                },
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "lastUpdated": {
+                    "type": "string"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                },
+                "readOnly": {
+                    "$ref": "#/definitions/handler.appSettingsReadOnly"
+                },
+                "remote": {
+                    "$ref": "#/definitions/config.RemoteConfig"
                 }
             }
         },

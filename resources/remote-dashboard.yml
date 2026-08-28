@@ -6,17 +6,11 @@ storage:
   dataDir: resources                         # root dir: logs written here
   boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty)
 hashboardURL: ""                             # base URL of the hashboard instance backing this board -- not configured by default, set your own (e.g. https://your-hashboard-domain.example in prod, http://localhost:8090 for local dev)
-pools:
-  dashboards:
-    stratum.braiins.com: "https://pool.braiins.com/mining/overview/{user}"
-    solo.atlaspool.io: "https://atlaspool.io/dashboard.html?wallet={user}"
-firmware:
-  # Same model->repo mapping as dashboard.yml — only used here to build the
-  # "view release" link on the update badge (no cacheTTL needed: this binary
-  # never checks GitHub itself, it just reads latestFirmware from the pushed sample).
-  repos:
-    bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
-    nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"
+# Pool dashboard links and per-model firmware repo URLs (used to build the
+# "view release" link on the update badge) come from the same built-in
+# defaults as dashboard.yml -- see server/internal/config/defaults.go.
+# No cacheTTL setting needed here: this binary never checks GitHub itself,
+# it just reads latestFirmware from the pushed sample.
 ui:
   # Settings is a local-miner-config concept (network discovery, editing
   # miners.yml) with nothing remote-relevant yet -- hidden until it grows

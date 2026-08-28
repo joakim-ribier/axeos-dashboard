@@ -151,8 +151,8 @@ mismatch check in [Configuration](CONFIGURATION.md).
 
 ### Settings (`/settings`)
 
-Local mode only — manages the managed `miners.yml` file (see
-[Configuration](CONFIGURATION.md)). Three sections:
+Local mode only — manages the managed `miners.yml` and `settings.yml`
+files (see [Configuration](CONFIGURATION.md)). Four sections:
 
 - **Configured miners** — every miner currently in `miners.yml`, including
   disabled ones, with enable/disable and a **disable all** button. Clicking
@@ -162,6 +162,18 @@ Local mode only — manages the managed `miners.yml` file (see
   AxeOS devices and lists what it finds, ready to select and save.
 - **Add by IP** — probes one address directly, for a device the scan can't
   reach (different subnet, firewall).
+- **App settings** — electricity rate, custom pool dashboard links, and
+  remote (hashboard) push credentials, editable in `settings.yml` without
+  hand-editing `dashboard.yml` or restarting either binary. Each of these
+  three saves itself immediately (its own Save button for electricity/
+  remote, instant save on adding or removing a pool) rather than one
+  global Save. Well-known pool dashboards and firmware repo URLs are
+  built into the binary, shown read-only next to the editable custom-pool
+  list; firmware repos aren't overridable from this UI at all. A last
+  section shows process-launch settings that genuinely need a restart to
+  change (`feeder.interval`, `healthCheck.interval`, `firmware.cacheTTL`),
+  each with an at-a-glance, color-coded last-run indicator so a stuck
+  feeder or health-check loop is visible without digging through logs.
 
 **Pool scheduler** — per miner, add or remove cron-based automatic pool
 switches (e.g. "switch to fallback every Friday at 23:59:59, back to

@@ -24,8 +24,9 @@ import (
 type Feeder struct {
 	logger *slog.Logger
 
-	config      config.Config
-	minersStore *config.MinersStore
+	config           config.Config
+	minersStore      *config.MinersStore
+	appSettingsStore *config.AppSettingsStore
 }
 
 func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
@@ -43,6 +44,16 @@ func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
 // constructed with, same as before this feature existed.
 func (f *Feeder) WithMinersStore(store *config.MinersStore) *Feeder {
 	f.minersStore = store
+	return f
+}
+
+// WithAppSettingsStore attaches the shared app-settings store this Feeder
+// reloads Electricity/Remote/Firmware.Repos from at the start of every
+// runOnce() cycle -- so a setting saved through /settings (a separate
+// dashboard-api process) applies to the feeder's next tick, without a
+// restart. Optional, same reasoning as WithMinersStore.
+func (f *Feeder) WithAppSettingsStore(store *config.AppSettingsStore) *Feeder {
+	f.appSettingsStore = store
 	return f
 }
 
@@ -80,6 +91,14 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			f.logger.Error("failed to reload miners config", "error", err)
 		}
 		f.config.Bitaxes = bitaxes
+	}
+
+	if f.appSettingsStore != nil {
+		settings, err := f.appSettingsStore.Reload()
+		if err != nil {
+			f.logger.Error("failed to reload app settings", "error", err)
+		}
+		settings.ApplyTo(&f.config)
 	}
 
 	if err := os.MkdirAll(f.config.Storage.BitaxesDir(), 0o755); err != nil {
