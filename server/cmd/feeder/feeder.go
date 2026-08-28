@@ -124,7 +124,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			continue
 		}
 
-		latestFW := fwCache.Models[bitaxe.Model].Version
+		latestFW := fwCache.Models[string(bitaxe.Model)].Version
 		alerts := computeAlerts(payload, latestFW)
 
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
@@ -135,7 +135,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// hashboard just uses it verbatim as its own directory name, no
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
-			go f.pushToRemote(now, key, addr, bitaxe.Hostname, bitaxe.Model, latestFW, payload, alerts)
+			go f.pushToRemote(now, key, addr, bitaxe.Hostname, string(bitaxe.Model), latestFW, payload, alerts)
 
 			// totals.json was just (re)written by store.Append above -- push
 			// it separately from the per-poll sample so hashboard can store
@@ -148,7 +148,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 
 	models := make(map[string]struct{})
 	for _, b := range f.config.GetMiners() {
-		models[b.Model] = struct{}{}
+		models[string(b.Model)] = struct{}{}
 	}
 	for model := range models {
 		firmware.CheckAndCache(model, f.config.Firmware.Repos, f.config.Firmware.CacheTTL, f.config.Storage.BitaxesDir(), f.logger)

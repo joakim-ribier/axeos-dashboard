@@ -92,19 +92,6 @@ func TestClient_UpdateSystemStratumSettings(t *testing.T) {
 	}
 }
 
-func TestClient_UpdateSystemWifiSettings_errorStatus(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-	}))
-	defer server.Close()
-
-	c := NewClient(testLogger(), "api/system", time.Second)
-	err := c.UpdateSystemWifiSettings(serverAddr(server), config.BitaxeWifiSettings{Name: "ssid"})
-	if err == nil {
-		t.Fatal("UpdateSystemWifiSettings() error = nil, want error for non-200 status")
-	}
-}
-
 func TestClient_Restart(t *testing.T) {
 	var gotMethod string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

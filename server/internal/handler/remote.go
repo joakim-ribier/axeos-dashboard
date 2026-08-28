@@ -70,7 +70,7 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 			}
 
 			miner := syntheticBitaxe(raw, entry.Name())
-			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
+			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[string(miner.Model)], cfg.Pools.Dashboards)
 			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp, raw.FeederIntervalSeconds)
 
 			// totals.json is pushed separately from the per-poll sample (see
@@ -204,7 +204,7 @@ func syntheticBitaxe(raw latestFileStructure, dirName string) config.Bitaxe {
 		Ip:       raw.IP,
 		Mac:      dirName,
 		Hostname: raw.Hostname,
-		Model:    raw.Model,
+		Model:    config.Model(raw.Model),
 		Enabled:  true,
 	}
 }

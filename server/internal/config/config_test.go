@@ -83,7 +83,8 @@ func TestConfig_GetMinersFilterBy(t *testing.T) {
 
 func TestBitaxe_GetPoolsSettings(t *testing.T) {
 	miner := Bitaxe{
-		Url: "primary.pool", Port: 3333, User: "user.primary",
+		Model: "bitaxe",
+		Url:   "primary.pool", Port: 3333, User: "user.primary",
 		FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "user.fallback",
 	}
 
@@ -94,19 +95,26 @@ func TestBitaxe_GetPoolsSettings(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:   "primary keeps fallback as fallback",
+			// Primary/fallback URL/port/user always stay in their own
+			// fixed slots -- switching pools is entirely carried by
+			// UseFallbackStratum, not by which pool's data sits in which
+			// slot (see GetPoolsSettings' doc comment on
+			// BitaxeServerSettings.UseFallbackStratum for why).
+			name:   "primary requests useFallbackStratum=false",
 			target: Primary,
 			want: &BitaxeServerSettings{
 				Url: "primary.pool", Port: 3333, User: "user.primary",
 				FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "user.fallback",
+				UseFallbackStratum: false,
 			},
 		},
 		{
-			name:   "fallback swaps primary and fallback",
+			name:   "fallback requests useFallbackStratum=true, slots unchanged",
 			target: Fallback,
 			want: &BitaxeServerSettings{
-				Url: "fallback.pool", Port: 4444, User: "user.fallback",
-				FallbackURL: "primary.pool", FallbackPort: 3333, FallbackUser: "user.primary",
+				Url: "primary.pool", Port: 3333, User: "user.primary",
+				FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "user.fallback",
+				UseFallbackStratum: true,
 			},
 		},
 		{
@@ -136,15 +144,50 @@ func TestBitaxe_GetPoolsSettings(t *testing.T) {
 	}
 }
 
-func TestBitaxe_GetWifiSettings(t *testing.T) {
-	miner := Bitaxe{Hostname: "bitaxe-1"}
-	wifi := Wifi{Name: "my-ssid", Pwd: "secret"}
+func TestBitaxe_GetPoolsSettings_nerdaxeSwapsURLsInstead(t *testing.T) {
+	// NerdQAxePlus firmware has no useFallbackStratum-style field -- its
+	// failover manager always tries whichever pool is in the *primary*
+	// slot first (see GetPoolsSettings' doc comment), so switching pools
+	// means swapping which pool's data sits in that slot.
+	miner := Bitaxe{
+		Model: "nerdaxe",
+		Url:   "primary.pool", Port: 3333, User: "user.primary",
+		FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "user.fallback",
+	}
 
-	got := miner.GetWifiSettings(wifi)
-	want := BitaxeWifiSettings{Name: "my-ssid", Pwd: "secret", Hostname: "bitaxe-1"}
+	tests := []struct {
+		name   string
+		target PoolTarget
+		want   *BitaxeServerSettings
+	}{
+		{
+			name:   "primary keeps fallback as fallback",
+			target: Primary,
+			want: &BitaxeServerSettings{
+				Url: "primary.pool", Port: 3333, User: "user.primary",
+				FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "user.fallback",
+			},
+		},
+		{
+			name:   "fallback swaps primary and fallback",
+			target: Fallback,
+			want: &BitaxeServerSettings{
+				Url: "fallback.pool", Port: 4444, User: "user.fallback",
+				FallbackURL: "primary.pool", FallbackPort: 3333, FallbackUser: "user.primary",
+			},
+		},
+	}
 
-	if got != want {
-		t.Errorf("GetWifiSettings() = %+v, want %+v", got, want)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := miner.GetPoolsSettings(tt.target)
+			if err != nil {
+				t.Fatalf("GetPoolsSettings(%q) unexpected error: %v", tt.target, err)
+			}
+			if *got != *tt.want {
+				t.Errorf("GetPoolsSettings(%q) = %+v, want %+v", tt.target, *got, *tt.want)
+			}
+		})
 	}
 }
 

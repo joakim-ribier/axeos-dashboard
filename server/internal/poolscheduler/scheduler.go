@@ -84,7 +84,7 @@ func (s *Scheduler) rebuild(bitaxes []config.Bitaxe) {
 			_, err := s.cron.AddFunc(schedule.Cron, func() {
 				s.logger.Info("Switching to a new pool!", "ip", miner.Ip, "pool", schedule.Target)
 
-				axeOs.SwitchPool(miner, schedule.Target)
+				_ = axeOs.SwitchPool(miner, schedule.Target) // already logged internally on failure
 			})
 
 			if err != nil {

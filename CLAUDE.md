@@ -66,7 +66,7 @@ dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
     ↓  axios + TanStack Query
 React UI → display + control actions (MODE=local → :8080)
     ↓  POST/PUT
-Bitaxe devices (restart / pool switch / WiFi)
+Bitaxe devices (restart / pool switch)
 
 remote-dashboard-api → REST API at /api/{boardId}/miners/*  (read-only, reads remote board data dir)
     ↓  axios + TanStack Query
@@ -78,7 +78,7 @@ IP: a device's IP can change (DHCP, relocation to a different network)
 without losing its history, since the storage key stays the same. There's
 no auto-discovery -- `mac:` is manually configured, same as `ip:`/
 `hostname:`/`model:` (assumes you're already reserving/fixing each device's
-IP on your network, which the rest of this config -- pool/wifi settings --
+IP on your network, which the rest of this config -- pool settings --
 already requires anyway). IP is still how the feeder reaches a device over
 the network and how dashboard-api's routes are addressed (`{hostnameOrIp}`)
 -- it's just no longer the storage identity.
@@ -112,12 +112,12 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
-| `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `UpdateSystemWifiSettings`, `Restart`) |
-| `internal/axeos/` | High-level orchestration: `SwitchPool()`, `SetWifi()`, `Restart()` — calls bitaxe client, optionally restarts after config change |
+| `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
+| `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/poolscheduler/` | robfig/cron v3 jobs for timed pool switching (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
-| `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` for Primary/Fallback swap |
+| `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots) |
 | `internal/model/` | `MinerInfo` (23 fields) / `MinersResponse` JSON types |
 | `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions |
 
@@ -129,7 +129,6 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `GET` | `/api/miners/{hostnameOrIp}/stats` | `Stats()` | Today's JSONL entries for one miner |
 | `POST` | `/api/miners/{hostnameOrIp}/restart` | `Restart()` | Proxies restart to device |
 | `PUT` | `/api/miners/pool/{primary\|fallback}/enable` | `SwitchPool()` | Switches stratum pool |
-| `PUT` | `/api/miners/set/wifi` | `SetWifi()` | Updates WiFi credentials |
 
 `MinerCtx` middleware resolves `hostnameOrIp` URL param → config entry, injects into request context.
 
@@ -191,10 +190,6 @@ endpoints:
   info: api/system/info
   system: api/system
   restart: api/system/restart
-wifi:
-  on: false
-  ssid: ""
-  pwd: ""
 ```
 
 ```yaml

@@ -65,6 +65,21 @@ describe("useMinerAction", () => {
       await result.current.switchPool("10.0.0.1", "primary");
     });
 
-    expect(result.current.error).toBe("Failed to switch pool");
+    expect(result.current.error).toBe("Request failed");
+  });
+
+  it("clearError resets the error state", async () => {
+    mockedAxios.post.mockRejectedValueOnce(new Error("network down"));
+    const { result } = renderHook(() => useMinerAction());
+
+    await act(async () => {
+      await result.current.restartMiner("10.0.0.1");
+    });
+    expect(result.current.error).toBe("network down");
+
+    act(() => {
+      result.current.clearError();
+    });
+    expect(result.current.error).toBeNull();
   });
 });

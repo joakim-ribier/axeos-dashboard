@@ -143,9 +143,9 @@ func (f *Watcher) Watch() {
 	f.logger.Info("Health check completed!")
 }
 
-func parseAxeOsDeviceResponse(response []byte, model string) (AxeOsModel, error) {
+func parseAxeOsDeviceResponse(response []byte, model config.Model) (AxeOsModel, error) {
 	switch model {
-	case "bitaxe":
+	case config.ModelBitaxe:
 		var v Bitaxe
 		err := json.Unmarshal(response, &v)
 		return v, err

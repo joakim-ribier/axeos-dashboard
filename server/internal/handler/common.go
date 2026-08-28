@@ -94,14 +94,14 @@ type StratumConfig struct {
 }
 
 func (p PayloadStructure) getResponseTime(miner config.Bitaxe) float64 {
-	if miner.Model == "bitaxe" {
+	if miner.Model == config.ModelBitaxe {
 		return p.ResponseTime
 	}
 	return p.Ping
 }
 
 func (p PayloadStructure) getIsUsingFallbackStratum(miner config.Bitaxe) int64 {
-	if miner.Model == "bitaxe" {
+	if miner.Model == config.ModelBitaxe {
 		return p.IsUsingFallbackStratum
 	}
 	if p.StratumConfig.UsingFallback {
@@ -127,7 +127,7 @@ func (p PayloadStructure) getDeviceModel(miner config.Bitaxe) string {
 	if p.BoardVersion != "" {
 		return "Bitaxe " + p.BoardVersion
 	}
-	return miner.Model
+	return string(miner.Model)
 }
 
 // toMinerInfo converts a parsed latestFileStructure into the API-facing

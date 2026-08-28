@@ -44,7 +44,7 @@ healthCheck:
 endpoints:
   timeout: 5s
   info:    api/system/info       # GET  — read device stats
-  system:  api/system            # PUT  — push pool / wifi settings
+  system:  api/system            # PUT  — push pool settings
   restart: api/system/restart    # POST — restart device
 
 electricity:
@@ -64,11 +64,6 @@ firmware:
   repos:
     bitaxe:   "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
     nerdaxe:  "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"
-
-wifi:
-  on:   false
-  ssid: ""
-  pwd:  ""
 
 remote:
   pushURL: ""   # push URL from your hashboard dashboard (e.g. https://hashboard.live/api/push)

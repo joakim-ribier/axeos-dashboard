@@ -61,10 +61,6 @@ func (c *Client) UpdateSystemStratumSettings(addr string, settings config.Bitaxe
 	return c.patch(http.MethodPatch, addr, settings)
 }
 
-func (c *Client) UpdateSystemWifiSettings(addr string, settings config.BitaxeWifiSettings) error {
-	return c.patch(http.MethodPatch, addr, settings)
-}
-
 func (c *Client) Restart(addr string) error {
 	return c.patch(http.MethodPost, addr, []byte{})
 }

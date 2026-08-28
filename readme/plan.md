@@ -70,6 +70,9 @@ every commit.
   the user/deployment rather than a specific miner, e.g. `electricity`
   (rate per kWh) and `pool.dashboards` — currently only hand-edited in
   `dashboard.yml`.
+- **Configurable auto-restart of a miner via a cron**: let a miner be
+  restarted on its own schedule (independent of the pool scheduler),
+  same cron-based mechanism.
 
 ## Known bugs
 
