@@ -30,8 +30,8 @@ import {
 } from "@mui/material";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useMode } from "@/contexts/ModeContext";
 import { useMinerAction } from "@/hooks/useMinerActions";
+import { useUiFeatures } from "@/hooks/useMiners";
 import { useMinerStats } from "@/hooks/useMinerStats";
 import { MinerInfo } from "@/types/miner";
 import { formatDuration, formatMetric, formatTimestamp } from "@/utils/format";
@@ -62,7 +62,7 @@ interface Props {
 }
 
 export const MinerCard = ({ minerInfo, loading, error }: Props) => {
-  const { isRemote } = useMode();
+  const { ui } = useUiFeatures();
   const { t } = useTranslation();
 
   const {
@@ -852,7 +852,8 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
           onSwitchPool={() => handleSwitchPoolClick(targetPool)}
           onRestart={handleRestartClick}
           isExecuting={isExecuting}
-          readOnly={isRemote}
+          switchPoolVisibility={ui.action.minerPoolSwitch}
+          restartVisibility={ui.action.minerRestart}
         />
 
         {/* 7. Chart / Cumulative totals tabs -- content grows directly out

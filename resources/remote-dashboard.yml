@@ -17,3 +17,16 @@ firmware:
   repos:
     bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
     nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"
+ui:
+  # Settings is a local-miner-config concept (network discovery, editing
+  # miners.yml) with nothing remote-relevant yet -- hidden until it grows
+  # sections a remote visitor can actually use (pool scheduler, user
+  # config -- see plan.md), at which point this becomes "readonly".
+  page:
+    settings: hidden
+  # remote-dashboard-api is read-only by design (no restart/pool-switch
+  # endpoints exist here at all) -- hidden so the dashboard doesn't show
+  # buttons that would just 404.
+  action:
+    minerRestart: hidden
+    minerPoolSwitch: hidden

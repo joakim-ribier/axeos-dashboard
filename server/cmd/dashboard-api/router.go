@@ -97,7 +97,7 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/miners/alerts/history", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListAlertsHistory(f.snapshotConfig())(w, r)
 	})
-	router.Get("/api/info", handler.Info(f.versionChecker, ""))
+	router.Get("/api/info", handler.Info(f.versionChecker, "", f.config.UI))
 	router.Get("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListMinersConfig(f.snapshotConfig(), w, r)
 	})

@@ -28,6 +28,7 @@ type Config struct {
 	Pools       PoolsConfig       `yaml:"pools"`
 	Electricity ElectricityConfig `yaml:"electricity"`
 	Remote      RemoteConfig      `yaml:"remote"`
+	UI          UIConfig          `yaml:"ui"`
 
 	// HashboardURL is the base URL of the hashboard instance backing this
 	// remote-dashboard-api (remote-dashboard-api only): where the "private
@@ -262,4 +263,58 @@ type ElectricityConfig struct {
 type RemoteConfig struct {
 	PushURL string `yaml:"pushURL"`
 	APIKey  string `yaml:"apiKey"`
+}
+
+// UIVisibility is a three-state switch for one page or action in the
+// frontend: fully usable, visible but inert, or not shown at all. What
+// "ReadOnly" actually means is up to whichever component reads it -- a
+// page with both read-only content and a write action (e.g. Settings: the
+// configured-miners table plus its save button) can show the former and
+// hide the latter; a single button (e.g. restart) just renders itself
+// disabled, with a hint explaining why.
+type UIVisibility string
+
+const (
+	UIEnabled  UIVisibility = "enabled"
+	UIReadOnly UIVisibility = "readonly"
+	UIHidden   UIVisibility = "hidden"
+)
+
+// Normalized defaults the zero value (unset in dashboard.yml) to "enabled"
+// -- one React codebase shows everything unless an operator opts a
+// specific page/action out, rather than the frontend hardcoding what
+// "local" vs "remote" means.
+func (v UIVisibility) Normalized() UIVisibility {
+	if v == "" {
+		return UIEnabled
+	}
+	return v
+}
+
+// UIConfig restricts which pages/actions this instance's frontend shows,
+// dashboard-api and remote-dashboard-api alike. Read by GET /api/info (see
+// internal/handler/info.go) and applied client-side; not itself an
+// authorization boundary on its own -- e.g. remote-dashboard-api never
+// exposes the /api/config/* endpoints the Settings page calls regardless
+// of what Page.Settings is set to.
+type UIConfig struct {
+	Page   UIPageConfig   `yaml:"page"`
+	Action UIActionConfig `yaml:"action"`
+}
+
+type UIPageConfig struct {
+	// Settings controls the /settings page (miner discovery + config
+	// editing): "enabled" (default) shows it in full, "readonly" shows it
+	// without any write action, "hidden" hides the page and its nav entry
+	// entirely.
+	Settings UIVisibility `yaml:"settings"`
+}
+
+type UIActionConfig struct {
+	// MinerRestart/MinerPoolSwitch control the per-miner "restart" and
+	// "switch pool" buttons on the dashboard: "enabled" shows a working
+	// button, "readonly" shows it disabled (with a hint), "hidden" doesn't
+	// render it at all.
+	MinerRestart    UIVisibility `yaml:"minerRestart"`
+	MinerPoolSwitch UIVisibility `yaml:"minerPoolSwitch"`
 }

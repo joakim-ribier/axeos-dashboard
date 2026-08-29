@@ -133,7 +133,7 @@
         },
         "/api/info": {
             "get": {
-                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, and (remote-dashboard-api only) the hashboard base URL.",
+                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api only) the hashboard base URL.",
                 "produces": [
                     "application/json"
                 ],
@@ -791,6 +791,14 @@
                 "hashboardURL": {
                     "description": "HashboardURL is the base URL of the hashboard instance backing this\nremote-dashboard-api (remote-dashboard-api only, config.HashboardURL)\n— lets the UI build a link to the board owner's hashboard account page.",
                     "type": "string"
+                },
+                "ui": {
+                    "description": "UI mirrors config.UIConfig (each value normalized, so the frontend\nnever sees an empty string) -- the single React codebase shows\neverything unless a flag here says otherwise, instead of hardcoding\nwhat \"local\" vs \"remote\" means.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UIFeatures"
+                        }
+                    ]
                 }
             }
         },
@@ -960,6 +968,38 @@
                 "total": {
                     "description": "Number of miners successfully loaded",
                     "type": "integer"
+                }
+            }
+        },
+        "model.UIActionFeatures": {
+            "type": "object",
+            "properties": {
+                "minerPoolSwitch": {
+                    "type": "string"
+                },
+                "minerRestart": {
+                    "description": "MinerRestart/MinerPoolSwitch: \"enabled\" | \"readonly\" | \"hidden\" --\nsee config.UIActionConfig. \"readonly\" renders the button disabled\n(with a hint), \"hidden\" doesn't render it at all.",
+                    "type": "string"
+                }
+            }
+        },
+        "model.UIFeatures": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/model.UIActionFeatures"
+                },
+                "page": {
+                    "$ref": "#/definitions/model.UIPageFeatures"
+                }
+            }
+        },
+        "model.UIPageFeatures": {
+            "type": "object",
+            "properties": {
+                "settings": {
+                    "description": "Settings: \"enabled\" | \"readonly\" | \"hidden\" -- see config.UIPageConfig.",
+                    "type": "string"
                 }
             }
         }

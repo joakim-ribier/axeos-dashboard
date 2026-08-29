@@ -53,6 +53,7 @@
   },
   "miner": {
     "actions": {
+      "disabledHint": "Disabled by this dashboard's configuration.",
       "restart": {
         "description": "Restart miner {{ip}}.",
         "label": "Restart",
