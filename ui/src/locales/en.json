@@ -106,6 +106,8 @@
   "nav": {
     "home": "Home",
     "alerts": "Alerts",
+    "settings": "Settings",
+    "settingsUnavailableRemote": "Not available while viewing a remote board — go back to your own dashboard first.",
     "autoRefresh": "Auto-refresh"
   },
   "sidebar": {
@@ -201,5 +203,57 @@
     "submit": "Send access link",
     "sending": "Sending…",
     "sent": "If that email is registered to this board, a link was just sent to it."
+  },
+  "settingsPage": {
+    "header": {
+      "title": "Miner setup",
+      "description": "Automatically detect your AxeOS miners on the network, or add them manually by IP."
+    },
+    "configured": {
+      "title": "Configured miners",
+      "description": "{{count}} miner(s) configured in miners.yml",
+      "hostname": "Name",
+      "ip": "IP",
+      "mac": "MAC",
+      "model": "Model",
+      "status": "Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "actions": "Actions",
+      "disable": "Disable",
+      "enable": "Enable",
+      "disableAll": "Disable all",
+      "disableAllTitle": "Disable all miners?",
+      "disableAllDescription": "{{count}} active miner(s) will be disabled and stop being polled. Useful in case of a problem (network outage, power cut...). You can re-enable them individually afterwards.",
+      "disableAllConfirm": "Disable all",
+      "disableAllSuccess": "{{count}} miner(s) disabled.",
+      "lastUpdated": "Last modified: {{date}}"
+    },
+    "scan": {
+      "title": "Automatic detection",
+      "description": "Scans the local network for AxeOS miners (bitaxe, nerdaxe).",
+      "action": "Start detection",
+      "searching": "Searching…"
+    },
+    "manual": {
+      "title": "Add by IP",
+      "description": "For a miner the scan doesn't find (different subnet, firewall…).",
+      "action": "Search"
+    },
+    "discovery": {
+      "unknownHostname": "Unnamed miner",
+      "pool": "Pool: {{url}}:{{port}}",
+      "fallbackPool": "Fallback: {{url}}:{{port}}",
+      "noPool": "No pool configured on this miner",
+      "noneFound": "No miners found.",
+      "retryLonger": "Retry with a longer timeout",
+      "resultsCount": "{{count}} miner(s) found",
+      "selectAll": "Select all",
+      "deselectAll": "Deselect all",
+      "selectedCount": "{{count}} miner(s) selected",
+      "saveSelected": "Save selection",
+      "saving": "Saving…",
+      "saveSuccess": "{{count}} miner(s) saved — active within moments."
+    }
   }
 }

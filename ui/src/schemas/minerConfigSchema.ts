@@ -1,0 +1,52 @@
+// src/schemas/minerConfigSchema.ts
+import { z } from "zod";
+
+// One poolSchedule entry, as configured in miners.yml -- optional/advanced,
+// still hand-edited in the file for now (see MINERS_DISCOVERY_PLAN.md).
+export const cronScheduleSchema = z.object({
+  cron: z.string(),
+  target: z.enum(["primary", "fallback"]),
+});
+
+export type CronSchedule = z.infer<typeof cronScheduleSchema>;
+
+// Mirrors config.Bitaxe (server/internal/config/config.go) field for field --
+// this is both what GET /api/config/miners and GET /api/config/discover
+// return, and what a future POST /api/config/miners will accept as-is.
+export const minerConfigSchema = z.object({
+  ip: z.string(),
+  hostname: z.string(),
+  mac: z.string(),
+  model: z.string(),
+  enabled: z.boolean(),
+  url: z.string(),
+  port: z.number(),
+  user: z.string(),
+  fallbackUrl: z.string(),
+  fallbackPort: z.number(),
+  fallbackUser: z.string(),
+  poolSchedule: z.array(cronScheduleSchema).optional(),
+});
+
+export type MinerConfig = z.infer<typeof minerConfigSchema>;
+
+// GET /api/config/miners and GET /api/config/discover both respond
+// {"bitaxes": [...]}, mirroring miners.yml's own top-level shape (see
+// handler.bitaxesResponse server-side). lastUpdated is the managed
+// miners.yml file's own mtime (RFC3339) -- only ever set on
+// /api/config/miners responses (list and save), never on a discovery
+// response, which doesn't reflect the file on disk.
+export const bitaxesResponseSchema = z.object({
+  bitaxes: z.array(minerConfigSchema),
+  lastUpdated: z.string().optional(),
+});
+
+// normalizeMac strips the colon/hyphen separators a MAC address is
+// conventionally written with and lowercases it -- mirrors
+// config.NormalizeMac server-side. Two MACs are the same device iff their
+// normalized forms match, regardless of how each one happens to be
+// formatted (a discovered device's mac comes from the device itself,
+// typically uppercase with colons; a hand-written miners.yml entry could be
+// anything).
+export const normalizeMac = (mac: string): string =>
+  mac.replace(/[:-]/g, "").toLowerCase();

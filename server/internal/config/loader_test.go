@@ -23,9 +23,6 @@ server:
   port: "8080"
 storage:
   dataDir: `+dir+`
-bitaxes:
-  - ip: 10.0.0.1
-    enabled: true
 `)
 
 	got, err := NewLoaderConfig(configPath).LoadConfig()
@@ -38,9 +35,6 @@ bitaxes:
 	}
 	if got.Storage.DataDir != dir {
 		t.Errorf("Storage.DataDir = %q, want %q (absolute, cleaned)", got.Storage.DataDir, dir)
-	}
-	if len(got.Bitaxes) != 1 || got.Bitaxes[0].Ip != "10.0.0.1" {
-		t.Errorf("Bitaxes = %+v, want a single miner at 10.0.0.1", got.Bitaxes)
 	}
 }
 
@@ -62,11 +56,13 @@ func TestLoadConfig_LoadConfig_invalidYaml(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_WithMiners(t *testing.T) {
+func TestLoadConfig_inlineBitaxesIsIgnored(t *testing.T) {
+	// A miners.yml-style bitaxes: block hand-written directly in the main
+	// config is no longer read from -- the managed miners file (default:
+	// sibling miners.yml, none exists here) is always the source of truth,
+	// so this must come back empty rather than picking up the inline list.
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yml")
-	minersPath := filepath.Join(dir, "miners.yml")
-
 	writeFile(t, configPath, `
 storage:
   dataDir: `+dir+`
@@ -74,7 +70,26 @@ bitaxes:
   - ip: 10.0.0.1
     enabled: true
 `)
-	writeFile(t, minersPath, `
+
+	got, err := NewLoaderConfig(configPath).LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig() unexpected error: %v", err)
+	}
+	if len(got.Bitaxes) != 0 {
+		t.Errorf("Bitaxes = %+v, want empty -- inline bitaxes: must be ignored", got.Bitaxes)
+	}
+}
+
+func TestLoadConfig_minersFile_defaultsToSiblingOfConfig(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yml")
+	writeFile(t, configPath, `
+storage:
+  dataDir: `+dir+`
+`)
+	// "miners.yml" right next to config.yml must be picked up
+	// automatically, no flag/key needed.
+	writeFile(t, filepath.Join(dir, "miners.yml"), `
 bitaxes:
   - ip: 10.0.0.99
     enabled: true
@@ -82,20 +97,25 @@ bitaxes:
     enabled: false
 `)
 
-	got, err := NewLoaderConfig(configPath).WithMiners(minersPath).LoadConfig()
+	got, err := NewLoaderConfig(configPath).LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig() unexpected error: %v", err)
 	}
 
 	if len(got.Bitaxes) != 2 {
-		t.Fatalf("Bitaxes = %+v, want the 2 miners from the separate miners file (overriding config.yml)", got.Bitaxes)
+		t.Fatalf("Bitaxes = %+v, want the 2 miners from the sibling miners.yml", got.Bitaxes)
 	}
 	if got.Bitaxes[0].Ip != "10.0.0.99" {
 		t.Errorf("Bitaxes[0].Ip = %q, want %q", got.Bitaxes[0].Ip, "10.0.0.99")
 	}
+	if want := filepath.Join(dir, "miners.yml"); got.MinersFilePath != want {
+		t.Errorf("MinersFilePath = %q, want %q", got.MinersFilePath, want)
+	}
 }
 
-func TestLoadConfig_WithMiners_missingFile(t *testing.T) {
+func TestLoadConfig_minersFile_missingSiblingYieldsEmptyNotError(t *testing.T) {
+	// A fresh install before ever adding a miner through the
+	// network-discovery UI: no miners.yml exists next to config.yml yet.
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "config.yml")
 	writeFile(t, configPath, `
@@ -103,9 +123,29 @@ storage:
   dataDir: `+dir+`
 `)
 
-	_, err := NewLoaderConfig(configPath).WithMiners("/does/not/exist.yml").LoadConfig()
+	got, err := NewLoaderConfig(configPath).LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig() unexpected error: %v", err)
+	}
+	if len(got.Bitaxes) != 0 {
+		t.Errorf("Bitaxes = %+v, want empty", got.Bitaxes)
+	}
+}
+
+func TestLoadConfig_minersFile_invalidYaml(t *testing.T) {
+	// Unlike a missing file, a *malformed existing* miners file is still a
+	// real mistake worth surfacing as an error.
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yml")
+	writeFile(t, configPath, `
+storage:
+  dataDir: `+dir+`
+`)
+	writeFile(t, filepath.Join(dir, "miners.yml"), `not: [valid: yaml`)
+
+	_, err := NewLoaderConfig(configPath).LoadConfig()
 	if err == nil {
-		t.Fatal("LoadConfig() error = nil, want error for missing miners file")
+		t.Fatal("LoadConfig() error = nil, want error for invalid miners yaml")
 	}
 }
 

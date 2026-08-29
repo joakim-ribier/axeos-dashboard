@@ -9,6 +9,128 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/config/discover": {
+            "get": {
+                "description": "Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24, defaults to the server's own local /24 subnet when both are omitted). ip takes priority if both are set.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Discover AxeOS devices on the network",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Probe exactly this one IP instead of scanning a range (e.g. a device on a different VLAN than the server). Takes priority over cidr.",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Network range to sweep, e.g. '192.168.1.0/24' (max /24 = 254 hosts). Omitted: auto-detects and scans the server's own local /24 subnet. Ignored if ip is set.",
+                        "name": "cidr",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-host probe timeout, e.g. '500ms' or '2s' (default 1s, capped at 3s). Raise it and retry if a scan/probe found nothing on a slow network.",
+                        "name": "timeout",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid/too-large cidr, or invalid/too-large timeout",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no AxeOS device found at the given ip",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/config/miners": {
+            "get": {
+                "description": "Returns every miner entry in the managed miners config, including disabled ones. Read-only -- see POST/DELETE for writing.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List configured miners",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Upserts one or more miner entries into the managed miners.yml, matched by MAC. New entries are always saved enabled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Add or update configured miners",
+                "parameters": [
+                    {
+                        "description": "Miner entries to add/update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "the full, updated list of configured miners",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body or entry",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "server not started with -miners -- nowhere safe to write",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "failed to write the miners file",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/info": {
             "get": {
                 "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, and (remote-dashboard-api only) the hashboard base URL.",
@@ -445,6 +567,73 @@
         }
     },
     "definitions": {
+        "config.Bitaxe": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "fallbackPort": {
+                    "type": "integer"
+                },
+                "fallbackUrl": {
+                    "type": "string"
+                },
+                "fallbackUser": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "mac": {
+                    "description": "Mac is the device's MAC address (colons/hyphens optional, normalized\nby StorageKey) -- the storage-directory key, stable across IP/\nlocation changes unlike Ip. Populated either by hand or by the network\ndiscovery flow (see internal/discovery), which reads it straight off\nthe device's own /api/system/info response.",
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "poolSchedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.CronSchedule"
+                    }
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.CronSchedule": {
+            "type": "object",
+            "properties": {
+                "cron": {
+                    "type": "string"
+                },
+                "target": {
+                    "$ref": "#/definitions/config.PoolTarget"
+                }
+            }
+        },
+        "config.PoolTarget": {
+            "type": "string",
+            "enum": [
+                "primary",
+                "fallback"
+            ],
+            "x-enum-varnames": [
+                "Primary",
+                "Fallback"
+            ]
+        },
         "handler.AlertEntry": {
             "type": "object",
             "properties": {
@@ -548,6 +737,20 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.bitaxesResponse": {
+            "type": "object",
+            "properties": {
+                "bitaxes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.Bitaxe"
+                    }
+                },
+                "lastUpdated": {
+                    "type": "string"
                 }
             }
         },

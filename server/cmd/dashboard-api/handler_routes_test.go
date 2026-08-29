@@ -60,6 +60,90 @@ func TestRouter_info(t *testing.T) {
 	}
 }
 
+func TestRouter_configMiners(t *testing.T) {
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{{Ip: "10.0.0.1", Mac: "aabbccddeeff", Enabled: true}},
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/config/miners", nil)
+	newTestRouter(t, cfg).ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
+
+func TestRouter_saveMinersConfig_reflectedImmediatelyBySubsequentGet(t *testing.T) {
+	dir := t.TempDir()
+	cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}
+	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
+
+	watcher := healtcheck.NewWatcher(testLogger(), cfg)
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).Handler()
+
+	body := `{"bitaxes":[{"ip":"10.0.0.5","mac":"aabbccddeeff","hostname":"new-miner","enabled":false}]}`
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/config/miners", strings.NewReader(body))
+	router.ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST status = %d, want %d, body = %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Same router instance, no restart -- GET must already see the save,
+	// even though nothing on disk needs to change mtime to trigger a
+	// reload here (see MinersStore.Set, called right after the write).
+	w2 := httptest.NewRecorder()
+	r2 := httptest.NewRequest(http.MethodGet, "/api/config/miners", nil)
+	router.ServeHTTP(w2, r2)
+
+	if !strings.Contains(w2.Body.String(), "new-miner") {
+		t.Errorf("GET /api/config/miners body = %s, want the just-saved miner reflected", w2.Body.String())
+	}
+}
+
+func TestRouter_minersStore_picksUpExternalFileChangeOnNextRequest(t *testing.T) {
+	dir := t.TempDir()
+	minersPath := filepath.Join(dir, "miners.yml")
+	cfg := config.Config{MinersFilePath: minersPath}
+	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
+
+	watcher := healtcheck.NewWatcher(testLogger(), cfg)
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).Handler()
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/config/miners", nil))
+	if strings.Contains(w.Body.String(), "hand-edited") {
+		t.Fatalf("body = %s, want nothing before the file is written", w.Body.String())
+	}
+
+	// Nothing went through this process's own POST/Set -- this simulates
+	// another process (or the operator by hand) writing miners.yml
+	// directly. Only the mtime-based Reload() can catch this.
+	if err := os.WriteFile(minersPath, []byte("bitaxes:\n  - ip: 10.0.0.1\n    mac: aabbccddeeff\n    hostname: hand-edited\n"), 0o644); err != nil {
+		t.Fatalf("write miners file: %v", err)
+	}
+
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, httptest.NewRequest(http.MethodGet, "/api/config/miners", nil))
+	if !strings.Contains(w2.Body.String(), "hand-edited") {
+		t.Errorf("body = %s, want the externally-written miner picked up", w2.Body.String())
+	}
+}
+
+func TestRouter_discover_tooLargeRangeReturnsBadRequest(t *testing.T) {
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/config/discover?cidr=10.0.0.0/8", nil)
+	newTestRouter(t, config.Config{}).ServeHTTP(w, r)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+}
+
 func TestRouter_switchPool_noMatchingMinerStillReturnsNoContent(t *testing.T) {
 	cfg := config.Config{} // no bitaxes configured — loop body never runs, no network call
 

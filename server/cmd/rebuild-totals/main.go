@@ -8,10 +8,11 @@
 // first shipped this feature -- this backfills everything recorded before
 // that point.
 //
-// Only enabled miners present in config (-config, or -miners if given) are
-// processed -- deliberately, not everything found on disk: a stray/leftover
-// directory under storage.dir (an old test, a typo, a decommissioned miner
-// nobody meant to touch again) never gets silently picked up.
+// Only enabled miners present in config (-config, and its managed miners
+// file -- see internal/config.LoadConfig) are processed -- deliberately,
+// not everything found on disk: a stray/leftover directory under
+// storage.dir (an old test, a typo, a decommissioned miner nobody meant to
+// touch again) never gets silently picked up.
 //
 // Read-only on .jsonl/latest.json: the only file this tool ever writes is
 // totals.json, and an existing one is backed up to totals.json.bak first.
@@ -33,23 +34,23 @@ import (
 )
 
 func main() {
-	var configPath, minersPath, minerFilter string
+	var configPath, minerFilter, deprecatedMinersPath string
 	var dryRun bool
 	flag.StringVar(&configPath, "config", "", "Config path (required)")
-	flag.StringVar(&minersPath, "miners", "", "Miners config path (optional, overrides bitaxes from main config -- same as feeder/dashboard-api)")
 	flag.StringVar(&minerFilter, "miner", "", "Restrict to one miner (mac, hostname, or ip) -- default: all configured miners")
 	flag.BoolVar(&dryRun, "dry-run", true, "If true (the default), only compute and print totals -- pass -dry-run=false to actually write totals.json")
+	// Deprecated -- see the identical flag in cmd/dashboard-api/main.go.
+	flag.StringVar(&deprecatedMinersPath, "miners", "", "Deprecated, ignored -- miners.yml is found automatically next to -config, or via minersFile: inside it")
 	flag.Parse()
 
 	if configPath == "" {
 		log.Fatal("missing -config")
 	}
-
-	loader := config.NewLoaderConfig(configPath)
-	if minersPath != "" {
-		loader = loader.WithMiners(minersPath)
+	if deprecatedMinersPath != "" {
+		log.Printf("warning: -miners is deprecated and ignored (%q) -- remove it, miners.yml is found automatically", deprecatedMinersPath)
 	}
-	cfg, err := loader.LoadConfig()
+
+	cfg, err := config.NewLoaderConfig(configPath).LoadConfig()
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}

@@ -18,4 +18,8 @@ describe("boardIdFromPathname", () => {
   it("returns undefined for the local alerts route", () => {
     expect(boardIdFromPathname("/alerts")).toBeUndefined();
   });
+
+  it("returns undefined for the local settings route", () => {
+    expect(boardIdFromPathname("/settings")).toBeUndefined();
+  });
 });

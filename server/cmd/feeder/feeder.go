@@ -24,7 +24,8 @@ import (
 type Feeder struct {
 	logger *slog.Logger
 
-	config config.Config
+	config      config.Config
+	minersStore *config.MinersStore
 }
 
 func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
@@ -32,6 +33,17 @@ func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
 		logger: logger.With("namespace", "feeder"),
 		config: config,
 	}
+}
+
+// WithMinersStore attaches the shared miners store this Feeder reloads
+// config.Bitaxes from at the start of every runOnce() cycle -- so a miner
+// saved through the Settings UI (a separate dashboard-api process) starts
+// getting polled on the feeder's next tick, without a restart. Optional: a
+// Feeder with no store just keeps polling whatever Bitaxes it was
+// constructed with, same as before this feature existed.
+func (f *Feeder) WithMinersStore(store *config.MinersStore) *Feeder {
+	f.minersStore = store
+	return f
 }
 
 func (f *Feeder) Feed() {
@@ -62,6 +74,14 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	now := time.Now()
 	f.logger.Info("Fetching miners stats", "ts", now.UTC().Truncate(time.Second))
 
+	if f.minersStore != nil {
+		bitaxes, err := f.minersStore.Reload()
+		if err != nil {
+			f.logger.Error("failed to reload miners config", "error", err)
+		}
+		f.config.Bitaxes = bitaxes
+	}
+
 	if err := os.MkdirAll(f.config.Storage.BitaxesDir(), 0o755); err != nil {
 		log.Fatalf("cannot create data dir: %v", err)
 	}
@@ -70,7 +90,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	store := storage.NewRawStorage(f.config.Storage.BitaxesDir(), f.config.Electricity.RatePerKwh)
 	fwCache := firmware.LoadCache(f.config.Storage.BitaxesDir())
 
-	for _, bitaxe := range f.config.Bitaxes {
+	for _, bitaxe := range f.config.GetMiners() {
 		addr := bitaxe.Ip
 		key := bitaxe.StorageKey()
 		if key == "" {

@@ -14,11 +14,6 @@ CONFIG_FILE ?= resources/dashboard.yml
 # Config for remote-dashboard-api (minimal: storage + pools only)
 REMOTE_DASHBOARD_CONFIG ?= resources/remote-dashboard.yml
 
-# Optional path to a separate miners config file (not committed to git)
-# Override on server: make dev-up MINERS_FILE=/path/to/miners.yml
-MINERS_FILE ?= resources/miners.yml
-MINERS_FLAG = $(if $(MINERS_FILE),-miners $(MINERS_FILE),)
-
 # GitHub repo + release used by `make latest-*` (fetch CI-built binaries for the local architecture instead of building locally)
 GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG       ?= latest
@@ -125,13 +120,13 @@ clean:
 run-dashboard-api:
 	@echo ">>> Starting dashboard-api with config: $(CONFIG_FILE)..."
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)
+	@$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)
 
 # Run feeder with the specified configuration file
 run-feeder:
 	@echo ">>> Starting feeder with config: $(CONFIG_FILE)..."
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)
+	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)
 
 # Reconstruct totals.json (persistent, reboot-surviving uptime/shares) from
 # each miner's full JSONL history. Safe by default: DRY_RUN=1 unless
@@ -148,7 +143,7 @@ MINER_FLAG = $(if $(MINER),-miner $(MINER),)
 rebuild-totals:
 	@echo ">>> Backfilling totals.json (config: $(CONFIG_FILE))..."
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(MINERS_FLAG) $(DRY_RUN_FLAG) $(MINER_FLAG)
+	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG)
 
 # Run remote-dashboard-api (read-only) with remote-dashboard.yml
 run-remote-dashboard-api:
@@ -222,12 +217,12 @@ dev-up: build
 	# --- DASHBOARD API ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)"
 
 	# --- FEEDER ---
 	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
 	@echo "✅ Dev environment started. Use 'make dev-attach' to connect."
 
@@ -313,12 +308,12 @@ latest-up: latest-fetch
 	# --- DASHBOARD API ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)"
 
 	# --- FEEDER ---
 	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
 	@echo "✅ Latest environment started (dashboard-api + feeder). nginx serves the UI separately."
 	@echo "   Use 'make dev-attach' to connect to the screen session."
@@ -386,10 +381,6 @@ restart:
 		echo "Error: CONFIG_FILE '$(CONFIG_FILE)' not found -- pass the real path on this server, e.g. CONFIG_FILE=/path/to/config.yml"; \
 		exit 1; \
 	fi
-	@if [ -n "$(MINERS_FILE)" ] && [ ! -f "$(MINERS_FILE)" ]; then \
-		echo "Error: MINERS_FILE '$(MINERS_FILE)' not found -- pass the real path on this server, e.g. MINERS_FILE=/path/to/miners.yml"; \
-		exit 1; \
-	fi
 	@echo "🚀 Restarting dashboard-api + feeder from the binaries already on disk..."
 
 	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
@@ -400,11 +391,11 @@ restart:
 	# --- DASHBOARD API ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)"
 
 	# --- FEEDER ---
 	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
 		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE) $(MINERS_FLAG)"
+		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
 	@echo "✅ Restarted (dashboard-api + feeder). nginx serves the UI separately."

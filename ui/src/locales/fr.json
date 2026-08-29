@@ -106,6 +106,8 @@
   "nav": {
     "home": "Accueil",
     "alerts": "Alertes",
+    "settings": "Configuration",
+    "settingsUnavailableRemote": "Indisponible en consultant un board distant — reviens d'abord sur ton propre tableau de bord.",
     "autoRefresh": "Actualisation auto"
   },
   "sidebar": {
@@ -201,5 +203,57 @@
     "submit": "Envoyer le lien d'accès",
     "sending": "Envoi…",
     "sent": "Si cet email est enregistré pour ce tableau, un lien vient de lui être envoyé."
+  },
+  "settingsPage": {
+    "header": {
+      "title": "Configuration des mineurs",
+      "description": "Détecte automatiquement tes mineurs AxeOS sur le réseau, ou ajoute-les manuellement par IP."
+    },
+    "configured": {
+      "title": "Mineurs configurés",
+      "description": "{{count}} mineur(s) configuré(s) dans miners.yml",
+      "hostname": "Nom",
+      "ip": "IP",
+      "mac": "MAC",
+      "model": "Modèle",
+      "status": "État",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "actions": "Actions",
+      "disable": "Désactiver",
+      "enable": "Activer",
+      "disableAll": "Tout désactiver",
+      "disableAllTitle": "Désactiver tous les mineurs ?",
+      "disableAllDescription": "{{count}} mineur(s) actif(s) seront désactivés et arrêteront d'être interrogés. Utile en cas de problème (panne réseau, coupure électrique...). Tu pourras les réactiver individuellement ensuite.",
+      "disableAllConfirm": "Tout désactiver",
+      "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
+      "lastUpdated": "Dernière modification : {{date}}"
+    },
+    "scan": {
+      "title": "Détection automatique",
+      "description": "Scanne le réseau local à la recherche de mineurs AxeOS (bitaxe, nerdaxe).",
+      "action": "Lancer la détection",
+      "searching": "Recherche en cours…"
+    },
+    "manual": {
+      "title": "Ajouter par IP",
+      "description": "Pour un mineur que le scan ne trouve pas (autre sous-réseau, pare-feu…).",
+      "action": "Rechercher"
+    },
+    "discovery": {
+      "unknownHostname": "Mineur sans nom",
+      "pool": "Pool : {{url}}:{{port}}",
+      "fallbackPool": "Secours : {{url}}:{{port}}",
+      "noPool": "Aucun pool configuré sur ce mineur",
+      "noneFound": "Aucun mineur détecté.",
+      "retryLonger": "Réessayer avec un délai plus long",
+      "resultsCount": "{{count}} mineur(s) trouvé(s)",
+      "selectAll": "Tout sélectionner",
+      "deselectAll": "Tout désélectionner",
+      "selectedCount": "{{count}} mineur(s) sélectionné(s)",
+      "saveSelected": "Enregistrer la sélection",
+      "saving": "Enregistrement…",
+      "saveSuccess": "{{count}} mineur(s) enregistré(s) — actif dans quelques instants."
+    }
   }
 }

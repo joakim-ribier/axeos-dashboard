@@ -7,7 +7,7 @@
 // are a single path segment, and boardIdFromPathname has no access to
 // which <Route> actually matched (it runs in components mounted above the
 // routing tree -- see below).
-const LOCAL_ONLY_ROUTES = new Set(["alerts"]);
+const LOCAL_ONLY_ROUTES = new Set(["alerts", "settings"]);
 
 /**
  * Extracts the boardId from a URL pathname -- just the first path segment,

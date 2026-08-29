@@ -52,9 +52,9 @@ export const fetchAlertsHistory = async (
  * next page's have arrived.
  *
  * No refetchInterval, unlike useMiners/useAlerts -- this is history, not a
- * live view: it only needs to be fetched when the page is first opened or a
- * filter/page changes (i.e. whenever the query key changes), never on a
- * timer just because auto-refresh happens to be on.
+ * live view: it only needs to be fetched when the page is (re)opened or a
+ * filter/page changes, never on a timer just because auto-refresh happens
+ * to be on.
  *
  * enabled: !!filters.date -- date is required by the API (a request without
  * one 400s), so this is a hard backstop against ever firing the request
@@ -69,6 +69,12 @@ export const useAlertsHistory = (filters: AlertHistoryFilters) => {
     queryFn: () => fetchAlertsHistory(apiPaths.alertsHistory, filters),
     enabled: !!filters.date,
     staleTime: Infinity,
+    // Same reasoning as useMiners: staleTime: Infinity alone would keep
+    // serving whatever was cached from the first visit on every later
+    // mount (e.g. navigating away and back). This makes arriving on the
+    // Alerts page always fetch current data, regardless of how you got
+    // there.
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
     retry: false,
     placeholderData: keepPreviousData,

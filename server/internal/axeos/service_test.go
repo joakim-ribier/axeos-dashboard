@@ -44,30 +44,19 @@ func TestAxeOs_Restart(t *testing.T) {
 
 func TestAxeOs_SwitchPool(t *testing.T) {
 	tests := []struct {
-		name               string
-		target             config.PoolTarget
-		restartAfterUpdate bool
-		wantURL            string
-		wantRestartCalled  bool
+		name    string
+		target  config.PoolTarget
+		wantURL string
 	}{
 		{
-			name:              "primary settings sent",
-			target:            config.Primary,
-			wantURL:           "primary.pool",
-			wantRestartCalled: false,
+			name:    "primary settings sent, then restarts to apply them",
+			target:  config.Primary,
+			wantURL: "primary.pool",
 		},
 		{
-			name:              "fallback settings sent",
-			target:            config.Fallback,
-			wantURL:           "fallback.pool",
-			wantRestartCalled: false,
-		},
-		{
-			name:               "restarts after update when configured",
-			target:             config.Primary,
-			restartAfterUpdate: true,
-			wantURL:            "primary.pool",
-			wantRestartCalled:  true,
+			name:    "fallback settings sent, then restarts to apply them",
+			target:  config.Fallback,
+			wantURL: "fallback.pool",
 		},
 	}
 
@@ -95,7 +84,7 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 				System: "api/system", Restart: "api/system/restart", Timeout: time.Second,
 			}}
 			miner := config.Bitaxe{
-				Ip: serverAddr(server), RestartAfterUpdate: tt.restartAfterUpdate,
+				Ip:  serverAddr(server),
 				Url: "primary.pool", Port: 3333, User: "acct.primary",
 				FallbackURL: "fallback.pool", FallbackPort: 4444, FallbackUser: "acct.fallback",
 			}
@@ -105,8 +94,8 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 			if gotSettings.Url != tt.wantURL {
 				t.Errorf("settings.Url = %q, want %q", gotSettings.Url, tt.wantURL)
 			}
-			if restartCalled != tt.wantRestartCalled {
-				t.Errorf("restart called = %v, want %v", restartCalled, tt.wantRestartCalled)
+			if !restartCalled {
+				t.Error("expected a restart after the pool switch to apply it")
 			}
 		})
 	}
@@ -142,7 +131,7 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 		cfg := config.Config{Endpoints: config.EndpointConfig{
 			System: "api/system", Restart: "api/system/restart", Timeout: time.Second,
 		}}
-		miner := config.Bitaxe{Ip: serverAddr(server), RestartAfterUpdate: true}
+		miner := config.Bitaxe{Ip: serverAddr(server)}
 
 		NewAxeOs(testLogger(), cfg).SwitchPool(miner, config.Primary)
 
@@ -172,7 +161,7 @@ func TestAxeOs_SetWifi(t *testing.T) {
 		Endpoints: config.EndpointConfig{System: "api/system", Restart: "api/system/restart", Timeout: time.Second},
 		Wifi:      config.Wifi{Name: "my-ssid", Pwd: "secret"},
 	}
-	miner := config.Bitaxe{Ip: serverAddr(server), Hostname: "bitaxe-1", RestartAfterUpdate: true}
+	miner := config.Bitaxe{Ip: serverAddr(server), Hostname: "bitaxe-1"}
 
 	NewAxeOs(testLogger(), cfg).SetWifi(miner)
 
@@ -181,6 +170,6 @@ func TestAxeOs_SetWifi(t *testing.T) {
 		t.Errorf("settings = %+v, want %+v", gotSettings, want)
 	}
 	if !restartCalled {
-		t.Error("expected a restart after the wifi update since RestartAfterUpdate is true")
+		t.Error("expected a restart after the wifi update to apply it")
 	}
 }

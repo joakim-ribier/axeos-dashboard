@@ -8,6 +8,11 @@ import globals from "globals";
 import simpleImportSort from "eslint-plugin-simple-import-sort"; // 👈 ajout
 
 export default [
+  // Build output (gitignored, not source) -- "lint ." + --ext .js otherwise
+  // picks up the bundled/minified production JS under dist/ and reports
+  // thousands of irrelevant errors against it.
+  { ignores: ["dist/**", "dist-ssr/**"] },
+
   js.configs.recommended,
 
   // --- FRONTEND (React + TypeScript) ---

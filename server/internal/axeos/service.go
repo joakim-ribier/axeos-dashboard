@@ -44,7 +44,7 @@ func (a AxeOs) SwitchPool(miner config.Bitaxe, poolType config.PoolTarget) {
 
 	a.logger.Info("Pool enabled!", "ip", miner.Ip, "pool", poolType)
 
-	a.restartAfterUpdate(miner)
+	a.Restart(miner)
 }
 
 func (a AxeOs) SetWifi(miner config.Bitaxe) {
@@ -57,11 +57,5 @@ func (a AxeOs) SetWifi(miner config.Bitaxe) {
 	}
 	a.logger.Info("Wifi settings updated successfully.", "ip", miner.Ip)
 
-	a.restartAfterUpdate(miner)
-}
-
-func (a AxeOs) restartAfterUpdate(miner config.Bitaxe) {
-	if miner.RestartAfterUpdate {
-		a.Restart(miner)
-	}
+	a.Restart(miner)
 }
