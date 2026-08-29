@@ -120,7 +120,7 @@ func isValidBoardID(id string) bool {
 		return false
 	}
 	for _, c := range id {
-		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
 			return false
 		}
 	}
@@ -135,7 +135,7 @@ func isValidHexToken(token string) bool {
 		return false
 	}
 	for _, c := range token {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
 			return false
 		}
 	}

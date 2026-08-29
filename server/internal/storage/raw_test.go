@@ -73,7 +73,7 @@ func TestRawStorage_Append_appendsAcrossCalls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open jsonl file: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	lineCount := 0
 	scanner := bufio.NewScanner(f)

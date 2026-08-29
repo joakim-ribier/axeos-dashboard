@@ -33,7 +33,9 @@ make run-remote-dashboard-ui                                    # Vite dev serve
 
 ```bash
 make build         # compile all binaries → resources/build/server/bin/
-make lintAll       # golangci-lint on Go packages
+make lintAll       # golangci-lint on Go packages -- requires golangci-lint v2.13.1 installed
+                   # locally (e.g. `brew install golangci-lint`), same version CI pins in
+                   # .github/workflows/checks.yml -- keep both in sync when bumping
 
 cd ui && npm run lint        # ESLint
 cd ui && npm run typecheck   # tsc --noEmit
