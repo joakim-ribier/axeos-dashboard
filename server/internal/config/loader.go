@@ -19,11 +19,9 @@ func NewLoaderConfig(path string) LoadConfig {
 
 // LoadConfig reads the main config file and the managed miners file
 // alongside it. The miners file's location is never something you have to
-// pass on the command line: it defaults to "miners.yml" sitting right next
-// to path, and can only be moved by setting minersFile: in the main config
-// itself (see Config.MinersFile) -- one less flag to keep in sync between
-// dashboard-api and feeder, and one less way for the two to end up pointed
-// at different files.
+// pass on the command line: it's always "miners.yml" sitting right next to
+// path -- one less flag to keep in sync between dashboard-api and feeder,
+// and one less way for the two to end up pointed at different files.
 func (cfg LoadConfig) LoadConfig() (Config, error) {
 	data, err := os.ReadFile(cfg.path)
 	if err != nil {
@@ -41,7 +39,7 @@ func (cfg LoadConfig) LoadConfig() (Config, error) {
 	}
 	config.Storage.DataDir = dataDir
 
-	minersPath, err := cfg.resolveMinersPath(config.MinersFile)
+	minersPath, err := cfg.resolveMinersPath()
 	if err != nil {
 		return Config{}, err
 	}
@@ -55,15 +53,9 @@ func (cfg LoadConfig) LoadConfig() (Config, error) {
 	return config, nil
 }
 
-// resolveMinersPath returns where the managed miners file lives: override
-// (resolved the same way as any other path in this config, so "~" and
-// relative paths work) if set, otherwise a "miners.yml" sibling of the
-// main config file.
-func (cfg LoadConfig) resolveMinersPath(override string) (string, error) {
-	if override != "" {
-		return cfg.resolvePath(override)
-	}
-
+// resolveMinersPath returns where the managed miners file lives: a
+// "miners.yml" sibling of the main config file.
+func (cfg LoadConfig) resolveMinersPath() (string, error) {
 	configDir, err := cfg.resolvePath(filepath.Dir(cfg.path))
 	if err != nil {
 		return "", err

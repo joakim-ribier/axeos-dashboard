@@ -36,19 +36,10 @@ type Config struct {
 	// own deployment's URL (e.g. "http://localhost:8090" for local dev).
 	HashboardURL string `yaml:"hashboardURL"`
 
-	// MinersFile optionally overrides where the managed miners config
-	// lives (see internal/discovery, the /settings UI, and
-	// MinersFilePath below). Only needed to move it somewhere other than
-	// the default: a "miners.yml" file sitting right next to whatever
-	// -config file was loaded. Supports "~" and relative paths, resolved
-	// the same way storage.dataDir is.
-	MinersFile string `yaml:"minersFile,omitempty"`
-
-	// MinersFilePath is the actual, resolved path the managed miners
-	// config was loaded from -- MinersFile if set, otherwise the default
-	// sibling "miners.yml" (see LoadConfig). Always set after a successful
-	// load; a runtime detail, never itself read from or written to
-	// dashboard.yml.
+	// MinersFilePath is the resolved path of the managed miners config: a
+	// "miners.yml" file sitting right next to whatever -config file was
+	// loaded (see LoadConfig). Always set after a successful load; a
+	// runtime detail, never itself read from or written to dashboard.yml.
 	MinersFilePath string `yaml:"-"`
 }
 

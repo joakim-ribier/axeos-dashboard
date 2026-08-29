@@ -217,8 +217,8 @@ make build
 ```
 
 Or run the binaries manually (background processes). Both expect
-`miners.yml` right next to `dashboard.yml` (or wherever `minersFile:` in
-`dashboard.yml` points — see the main [README](README.md#configuration)):
+`miners.yml` right next to `dashboard.yml` (see the main
+[README](README.md#configuration)):
 
 ```bash
 # Feeder (background)

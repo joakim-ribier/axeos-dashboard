@@ -179,9 +179,7 @@ The config is split into **two files** to keep sensitive miner details out of th
 
 No flag needed: `miners.yml` is expected right next to whatever file you pass
 to `-config` — feeder and dashboard-api always agree on the same one, so
-there's no way for the two to end up watching different files. To put it
-somewhere else, set `minersFile: /path/to/miners.yml` at the top level of
-`dashboard.yml` instead of passing a path on the command line. A `bitaxes:`
+there's no way for the two to end up watching different files. A `bitaxes:`
 block written directly in `dashboard.yml` is **not** read — miners always
 come from the managed file. `-miners <path>` still exists on the command
 line for backward compatibility, but is deprecated and ignored (logs a
@@ -194,8 +192,6 @@ warning) — safe to drop from any script that still passes it.
 ```yaml
 global:
   env: dev          # "dev" → stdout only; anything else → writes log files
-
-# minersFile: /path/to/miners.yml   # optional -- defaults to "miners.yml" next to this file
 
 storage:
   dataDir: resources/data/bitaxes   # one sub-folder per miner IP

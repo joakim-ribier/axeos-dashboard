@@ -167,9 +167,8 @@ Route `/:boardId` → remote mode; route `/` → local mode.
 ### Config (`resources/dashboard.yml` + `resources/miners.yml`)
 
 Two files, both read by both binaries -- `miners.yml` is always expected
-right next to whatever `-config` file was loaded (override via
-`minersFile:` in `dashboard.yml` if you want it elsewhere), no flag needed,
-nothing to keep in sync between the two binaries. A `bitaxes:` block
+right next to whatever `-config` file was loaded, no flag needed, nothing
+to keep in sync between the two binaries. A `bitaxes:` block
 written directly in `dashboard.yml` is **not** read. `-miners <path>` still
 exists on the command line but is deprecated and ignored (logs a warning)
 -- kept only so an older Makefile/script/systemd unit that still passes it
@@ -179,7 +178,6 @@ doesn't crash the binary outright.
 # dashboard.yml
 global:
   env: dev                      # suppresses file logging (stdout only)
-# minersFile: /path/to/miners.yml   # optional -- defaults to miners.yml next to this file
 storage:
   dataDir: resources/data/bitaxes
 feeder:

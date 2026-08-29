@@ -87,8 +87,8 @@ func TestLoadConfig_minersFile_defaultsToSiblingOfConfig(t *testing.T) {
 storage:
   dataDir: `+dir+`
 `)
-	// No minersFile: override -- "miners.yml" right next to config.yml
-	// must be picked up automatically, no flag/key needed.
+	// "miners.yml" right next to config.yml must be picked up
+	// automatically, no flag/key needed.
 	writeFile(t, filepath.Join(dir, "miners.yml"), `
 bitaxes:
   - ip: 10.0.0.99
@@ -110,45 +110,6 @@ bitaxes:
 	}
 	if want := filepath.Join(dir, "miners.yml"); got.MinersFilePath != want {
 		t.Errorf("MinersFilePath = %q, want %q", got.MinersFilePath, want)
-	}
-}
-
-func TestLoadConfig_minersFile_override(t *testing.T) {
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "config.yml")
-	customPath := filepath.Join(dir, "elsewhere", "custom-miners.yml")
-	if err := os.MkdirAll(filepath.Dir(customPath), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-
-	writeFile(t, configPath, `
-storage:
-  dataDir: `+dir+`
-minersFile: `+customPath+`
-`)
-	writeFile(t, customPath, `
-bitaxes:
-  - ip: 10.0.0.5
-    enabled: true
-`)
-	// A sibling miners.yml also exists -- it must be ignored once
-	// minersFile: points somewhere else.
-	writeFile(t, filepath.Join(dir, "miners.yml"), `
-bitaxes:
-  - ip: 10.0.0.1
-    enabled: true
-`)
-
-	got, err := NewLoaderConfig(configPath).LoadConfig()
-	if err != nil {
-		t.Fatalf("LoadConfig() unexpected error: %v", err)
-	}
-
-	if len(got.Bitaxes) != 1 || got.Bitaxes[0].Ip != "10.0.0.5" {
-		t.Fatalf("Bitaxes = %+v, want the single miner from the overridden minersFile path", got.Bitaxes)
-	}
-	if got.MinersFilePath != customPath {
-		t.Errorf("MinersFilePath = %q, want %q", got.MinersFilePath, customPath)
 	}
 }
 
