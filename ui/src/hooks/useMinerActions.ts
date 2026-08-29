@@ -2,11 +2,14 @@
 import { useState } from "react";
 import axios from "axios";
 
+import { extractErrorMessage } from "@/utils/apiError";
+
 export interface UseMinerActionReturn {
   restartMiner: (minerIp: string) => Promise<void>;
   switchPool: (minerIp: string, target: string) => Promise<void>;
   isExecuting: boolean;
   error: string | null;
+  clearError: () => void;
 }
 
 export const useMinerAction = (): UseMinerActionReturn => {
@@ -19,9 +22,7 @@ export const useMinerAction = (): UseMinerActionReturn => {
     try {
       await axios.post(`/api/miners/${minerIp}/restart`);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to restart miner";
-      setError(msg);
+      setError(extractErrorMessage(err));
     } finally {
       setIsExecuting(false);
     }
@@ -35,11 +36,17 @@ export const useMinerAction = (): UseMinerActionReturn => {
         params: { miner: minerIp },
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to switch pool");
+      setError(extractErrorMessage(err));
     } finally {
       setIsExecuting(false);
     }
   };
 
-  return { restartMiner, switchPool, isExecuting, error };
+  return {
+    restartMiner,
+    switchPool,
+    isExecuting,
+    error,
+    clearError: () => setError(null),
+  };
 };

@@ -115,9 +115,6 @@ func (f *Router) Handler() http.Handler {
 	router.Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
 	})
-	router.Put("/api/miners/set/wifi", func(w http.ResponseWriter, r *http.Request) {
-		handler.SetWifi(f.logger, f.snapshotConfig(), w, r)
-	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
 			return MinerCtx(h, f.snapshotConfig())

@@ -27,10 +27,6 @@ firmware:
   repos:
     bitaxe: "https://api.github.com/repos/bitaxeorg/esp-miner/releases/latest"
     nerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest"
-wifi:
-  on: false
-  ssid: ""
-  pwd: ""
 remote:
   pushURL: "" # push URL from your hashboard dashboard (e.g. https://hashboard.live/api/push)
   apiKey: ""  # API key from your hashboard dashboard

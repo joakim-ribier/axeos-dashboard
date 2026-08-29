@@ -274,6 +274,12 @@
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "502": {
+                        "description": "one or more miners didn't apply the change (unreachable, or rejected the request)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -296,31 +302,9 @@
                 "responses": {
                     "204": {
                         "description": "No Content"
-                    }
-                }
-            }
-        },
-        "/api/miners/set/wifi": {
-            "put": {
-                "description": "Pushes the configured WiFi SSID/password to miner(s) and restarts them. Disabled unless wifi.on is set in config.",
-                "tags": [
-                    "dashboard-api"
-                ],
-                "summary": "Update WiFi credentials",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Miner IP or hostname — omit to apply to all configured miners",
-                        "name": "miner",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
                     },
-                    "405": {
-                        "description": "WiFi updates disabled by config",
+                    "502": {
+                        "description": "one or more miners didn't apply the change (unreachable, or rejected the request)",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -350,6 +334,12 @@
                     },
                     "404": {
                         "description": "miner not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the miner is unreachable or rejected the restart request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -593,7 +583,7 @@
                     "type": "string"
                 },
                 "model": {
-                    "type": "string"
+                    "$ref": "#/definitions/config.Model"
                 },
                 "poolSchedule": {
                     "type": "array",
@@ -622,6 +612,17 @@
                     "$ref": "#/definitions/config.PoolTarget"
                 }
             }
+        },
+        "config.Model": {
+            "type": "string",
+            "enum": [
+                "bitaxe",
+                "nerdaxe"
+            ],
+            "x-enum-varnames": [
+                "ModelBitaxe",
+                "ModelNerdaxe"
+            ]
         },
         "config.PoolTarget": {
             "type": "string",

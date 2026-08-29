@@ -23,7 +23,7 @@ definitions:
           the device's own /api/system/info response.
         type: string
       model:
-        type: string
+        $ref: '#/definitions/config.Model'
       poolSchedule:
         items:
           $ref: '#/definitions/config.CronSchedule'
@@ -42,6 +42,14 @@ definitions:
       target:
         $ref: '#/definitions/config.PoolTarget'
     type: object
+  config.Model:
+    enum:
+    - bitaxe
+    - nerdaxe
+    type: string
+    x-enum-varnames:
+    - ModelBitaxe
+    - ModelNerdaxe
   config.PoolTarget:
     enum:
     - primary
@@ -597,6 +605,10 @@ paths:
           description: miner not found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+        "502":
+          description: the miner is unreachable or rejected the restart request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
       summary: Restart a miner
       tags:
       - dashboard-api
@@ -695,6 +707,11 @@ paths:
       responses:
         "204":
           description: No Content
+        "502":
+          description: one or more miners didn't apply the change (unreachable, or
+            rejected the request)
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
       summary: Switch stratum pool
       tags:
       - dashboard-api
@@ -710,26 +727,12 @@ paths:
       responses:
         "204":
           description: No Content
-      summary: Switch stratum pool
-      tags:
-      - dashboard-api
-  /api/miners/set/wifi:
-    put:
-      description: Pushes the configured WiFi SSID/password to miner(s) and restarts
-        them. Disabled unless wifi.on is set in config.
-      parameters:
-      - description: Miner IP or hostname — omit to apply to all configured miners
-        in: query
-        name: miner
-        type: string
-      responses:
-        "204":
-          description: No Content
-        "405":
-          description: WiFi updates disabled by config
+        "502":
+          description: one or more miners didn't apply the change (unreachable, or
+            rejected the request)
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Update WiFi credentials
+      summary: Switch stratum pool
       tags:
       - dashboard-api
 swagger: "2.0"

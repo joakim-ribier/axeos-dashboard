@@ -61,7 +61,7 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 				resp.Miners = append(resp.Miners, model.MinerInfo{
 					IP:             miner.Ip,
 					Hostname:       miner.Hostname,
-					DeviceModel:    miner.Model,
+					DeviceModel:    string(miner.Model),
 					Alive:          status.Alive,
 					AliveCheckedAt: status.CheckedAt.UTC().Format("2006-01-02T15:04:05Z"),
 					Error:          fmt.Sprintf("configured mac %s doesn't match the device's reported %s", key, status.ReportedMac),
@@ -72,8 +72,8 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 			continue
 		}
 
-		latestVersion := fwCache.Models[miner.Model].Version
-		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[miner.Model], cfg.Pools.Dashboards)
+		latestVersion := fwCache.Models[string(miner.Model)].Version
+		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[string(miner.Model)], cfg.Pools.Dashboards)
 
 		if totals, err := decodeTotalsJSON(filepath.Join(root, key, "totals.json")); err == nil {
 			info.TotalUptimeSeconds = totals.TotalUptimeSeconds

@@ -156,18 +156,6 @@ func TestRouter_switchPool_noMatchingMinerStillReturnsNoContent(t *testing.T) {
 	}
 }
 
-func TestRouter_setWifi_disabledByServer(t *testing.T) {
-	cfg := config.Config{Wifi: config.Wifi{On: false}}
-
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPut, "/api/miners/set/wifi", nil)
-	newTestRouter(t, cfg).ServeHTTP(w, r)
-
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("status = %d, want %d when wifi updates are disabled", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
 func TestRouter_stats(t *testing.T) {
 	dir := t.TempDir()
 	today := time.Now().UTC().Format("2006-01-02")

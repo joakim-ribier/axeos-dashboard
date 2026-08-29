@@ -24,6 +24,7 @@ import {
   IconButton,
   Link,
   Skeleton,
+  Snackbar,
   Stack,
   Tooltip,
   Typography,
@@ -160,7 +161,13 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     setDialogConfig({ open: false, actionType: null });
   };
 
-  const { restartMiner, switchPool, isExecuting } = useMinerAction();
+  const {
+    restartMiner,
+    switchPool,
+    isExecuting,
+    error: actionError,
+    clearError: clearActionError,
+  } = useMinerAction();
   const {
     data: statsData,
     isLoading: statsLoading,
@@ -957,6 +964,13 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
         description={dialogSettings.description}
         actionLabel={dialogSettings.actionLabel}
         actionColor={dialogSettings.actionColor}
+      />
+
+      <Snackbar
+        open={actionError !== null}
+        autoHideDuration={5000}
+        onClose={clearActionError}
+        message={actionError ?? ""}
       />
     </Box>
   );

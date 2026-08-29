@@ -66,11 +66,11 @@ type deviceProbeResponse struct {
 	DeviceModel string `json:"deviceModel"`
 }
 
-func (r deviceProbeResponse) guessModel() string {
+func (r deviceProbeResponse) guessModel() config.Model {
 	if r.DeviceModel != "" {
-		return "nerdaxe"
+		return config.ModelNerdaxe
 	}
-	return "bitaxe"
+	return config.ModelBitaxe
 }
 
 // toBitaxe builds a ready-to-save config.Bitaxe entry from what the device

@@ -15,6 +15,17 @@ const (
 	Fallback PoolTarget = "fallback"
 )
 
+// Model identifies which device family a miner is -- the two values this
+// project actually knows how to talk to. Response parsing, field naming,
+// and (see GetPoolsSettings) how a pool switch is even performed all
+// differ by model.
+type Model string
+
+const (
+	ModelBitaxe  Model = "bitaxe"
+	ModelNerdaxe Model = "nerdaxe"
+)
+
 type Config struct {
 	Global      GlobalConfig      `yaml:"global"`
 	Server      ServerConfig      `yaml:"server"`
@@ -22,7 +33,6 @@ type Config struct {
 	HealthCheck HealthCheckConfig `yaml:"healthCheck"`
 	Bitaxes     []Bitaxe          `yaml:"bitaxes"`
 	Storage     StorageConfig     `yaml:"storage"`
-	Wifi        Wifi              `yaml:"wifi"`
 	Endpoints   EndpointConfig    `yaml:"endpoints"`
 	Firmware    FirmwareConfig    `yaml:"firmware"`
 	Pools       PoolsConfig       `yaml:"pools"`
@@ -97,7 +107,7 @@ type Bitaxe struct {
 	// the device's own /api/system/info response.
 	Mac string `yaml:"mac" json:"mac"`
 
-	Model string `yaml:"model" json:"model"`
+	Model Model `yaml:"model" json:"model"`
 
 	Enabled bool `yaml:"enabled" json:"enabled"`
 
@@ -117,12 +127,6 @@ type CronSchedule struct {
 	Target PoolTarget `yaml:"target" json:"target"`
 }
 
-type Wifi struct {
-	On   bool   `yaml:"on"`
-	Name string `yaml:"ssid"`
-	Pwd  string `yaml:"pwd"`
-}
-
 type BitaxeServerSettings struct {
 	Url          string `json:"stratumURL"`
 	Port         int    `json:"stratumPort"`
@@ -130,17 +134,54 @@ type BitaxeServerSettings struct {
 	FallbackURL  string `json:"fallbackStratumURL"`
 	FallbackPort int    `json:"fallbackStratumPort"`
 	FallbackUser string `json:"fallbackStratumUser"`
+
+	// UseFallbackStratum is the field that actually selects which pool a
+	// bitaxe (ESP-Miner) device connects to -- ESP-Miner persists it in
+	// NVS independently of which URL sits in the primary/fallback slots
+	// (see main/http_server/http_server.c's check_settings_and_update, and
+	// nvs_config.c's useFallbackStratum default). Swapping the URL fields
+	// between slots without ever sending this flag looked like it worked
+	// on older firmware, but stopped applying once ESP-Miner started
+	// strictly honoring its own persisted value (bitaxeorg/ESP-Miner#1823,
+	// shipped in v2.15.0) -- the device just kept using whichever pool
+	// useFallbackStratum already pointed at. NerdQAxePlus (nerdaxe) has no
+	// equivalent field -- see GetPoolsSettings.
+	UseFallbackStratum bool `json:"useFallbackStratum"`
 }
 
-type BitaxeWifiSettings struct {
-	Name     string `json:"ssid"`
-	Pwd      string `json:"wifiPass"`
-	Hostname string `json:"hostname"`
-}
-
+// GetPoolsSettings builds the PATCH /api/system payload that makes target
+// the active pool -- the two supported models need genuinely different
+// payloads, because they select the active pool in genuinely different
+// ways:
+//
+//   - bitaxe (ESP-Miner firmware): primary/fallback URLs always stay in
+//     their own fixed slots; UseFallbackStratum is the only thing that
+//     actually switches the active pool (see its doc comment above).
+//   - nerdaxe (NerdQAxePlus firmware): has no such field at all -- its
+//     failover stratum manager (main/stratum/stratum_manager_fallback.cpp)
+//     always tries whichever pool is in the *primary* slot first, and
+//     only falls back to the secondary slot if the primary is actually
+//     unreachable. The only way to make a specific pool active is to put
+//     its settings in the primary slot, so target's pool is swapped into
+//     Url/Port/User here and the other one into the Fallback* fields.
 func (b Bitaxe) GetPoolsSettings(target PoolTarget) (*BitaxeServerSettings, error) {
 	switch target {
-	case Primary:
+	case Primary, Fallback:
+	default:
+		return nil, fmt.Errorf("pool type '%v' not managed", target)
+	}
+
+	if b.Model != ModelBitaxe {
+		if target == Fallback {
+			return &BitaxeServerSettings{
+				Url:          b.FallbackURL,
+				Port:         b.FallbackPort,
+				User:         b.FallbackUser,
+				FallbackURL:  b.Url,
+				FallbackPort: b.Port,
+				FallbackUser: b.User,
+			}, nil
+		}
 		return &BitaxeServerSettings{
 			Url:          b.Url,
 			Port:         b.Port,
@@ -149,18 +190,17 @@ func (b Bitaxe) GetPoolsSettings(target PoolTarget) (*BitaxeServerSettings, erro
 			FallbackPort: b.FallbackPort,
 			FallbackUser: b.FallbackUser,
 		}, nil
-	case Fallback:
-		return &BitaxeServerSettings{
-			Url:          b.FallbackURL,
-			Port:         b.FallbackPort,
-			User:         b.FallbackUser,
-			FallbackURL:  b.Url,
-			FallbackPort: b.Port,
-			FallbackUser: b.User,
-		}, nil
-	default:
-		return nil, fmt.Errorf("pool type '%v' not managed", target)
 	}
+
+	return &BitaxeServerSettings{
+		Url:                b.Url,
+		Port:               b.Port,
+		User:               b.User,
+		FallbackURL:        b.FallbackURL,
+		FallbackPort:       b.FallbackPort,
+		FallbackUser:       b.FallbackUser,
+		UseFallbackStratum: target == Fallback,
+	}, nil
 }
 
 // macSeparators strips the colon/hyphen separators a MAC address is
@@ -182,14 +222,6 @@ func NormalizeMac(mac string) string {
 // that as "this device isn't set up for storage yet", not fall back to Ip.
 func (b Bitaxe) StorageKey() string {
 	return NormalizeMac(b.Mac)
-}
-
-func (b Bitaxe) GetWifiSettings(wifi Wifi) BitaxeWifiSettings {
-	return BitaxeWifiSettings{
-		Name:     wifi.Name,
-		Pwd:      wifi.Pwd,
-		Hostname: b.Hostname,
-	}
 }
 
 type GlobalConfig struct {
