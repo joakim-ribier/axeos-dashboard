@@ -36,5 +36,6 @@ go.work.sum
 resources/data/*
 resources/build
 resources/miners.yml
+resources/miners.yml.bak
 *.log
 server/feeder

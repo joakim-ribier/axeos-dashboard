@@ -248,6 +248,85 @@ func TestSaveMinersConfig_validation(t *testing.T) {
 	}
 }
 
+func TestSaveMinersConfig_poolScheduleValidation(t *testing.T) {
+	tests := []struct {
+		name     string
+		schedule []config.CronSchedule
+	}{
+		{
+			name:     "invalid cron (missing seconds field)",
+			schedule: []config.CronSchedule{{Cron: "59 23 * * FRI", Target: config.Fallback}},
+		},
+		{
+			name:     "garbage cron",
+			schedule: []config.CronSchedule{{Cron: "not a cron expression", Target: config.Fallback}},
+		},
+		{
+			name:     "unknown target",
+			schedule: []config.CronSchedule{{Cron: "59 59 23 * * FRI", Target: "backup"}},
+		},
+		{
+			name: "duplicate cron, same target",
+			schedule: []config.CronSchedule{
+				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+			},
+		},
+		{
+			name: "duplicate cron, different target",
+			schedule: []config.CronSchedule{
+				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+				{Cron: "59 59 23 * * FRI", Target: config.Primary},
+			},
+		},
+		{
+			name: "duplicate cron, differing only by spacing/case",
+			schedule: []config.CronSchedule{
+				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+				{Cron: "59  59 23 * * fri", Target: config.Primary},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}
+
+			w, _, ok := postSaveMiners(t, cfg, bitaxesResponse{Bitaxes: []config.Bitaxe{
+				{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", PoolSchedule: tt.schedule},
+			}})
+
+			if ok {
+				t.Fatal("SaveMinersConfig() ok = true, want false")
+			}
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("status = %d, want %d, body = %s", w.Code, http.StatusBadRequest, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestSaveMinersConfig_validPoolScheduleRoundTrips(t *testing.T) {
+	dir := t.TempDir()
+	cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}
+
+	schedule := []config.CronSchedule{
+		{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+		{Cron: "59 59 23 * * SUN", Target: config.Primary},
+	}
+	w, merged, ok := postSaveMiners(t, cfg, bitaxesResponse{Bitaxes: []config.Bitaxe{
+		{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", PoolSchedule: schedule},
+	}})
+
+	if !ok {
+		t.Fatalf("SaveMinersConfig() ok = false, status = %d, body = %s", w.Code, w.Body.String())
+	}
+	if len(merged) != 1 || len(merged[0].PoolSchedule) != 2 {
+		t.Fatalf("merged = %+v, want the 2-entry schedule preserved", merged)
+	}
+}
+
 func TestSaveMinersConfig_emptyBodyRejected(t *testing.T) {
 	dir := t.TempDir()
 	cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}

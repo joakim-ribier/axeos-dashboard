@@ -197,9 +197,9 @@ wifi:
 
 ```yaml
 # miners.yml -- gitignored; treated as managed data, generated/updated by
-# the /settings page (network discovery + add-by-IP) -- not meant to be
-# hand-edited (a Settings save can overwrite it). poolSchedule below has no
-# UI yet, but don't suggest hand-editing it to add one -- that's in progress.
+# the /settings page (network discovery + add-by-IP, and -- per miner,
+# click its row to expand -- the pool scheduler editor) -- not meant to be
+# hand-edited (a Settings save can overwrite it).
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
     mac: aa:bb:cc:dd:ee:ff     # the device's real MAC, as-is -- separators optional, normalized automatically
@@ -212,10 +212,10 @@ bitaxes:
     fallbackUrl: solo.atlaspool.io
     fallbackPort: 3333
     fallbackUser: wallet.worker
-    poolSchedule:              # optional cron-based auto switching
-      - cron: "59 23 * * FRI"
+    poolSchedule:              # optional cron-based auto switching (seconds field included)
+      - cron: "59 59 23 * * FRI"
         target: fallback
-      - cron: "59 23 * * SUN"
+      - cron: "59 59 23 * * SUN"
         target: primary
 ```
 

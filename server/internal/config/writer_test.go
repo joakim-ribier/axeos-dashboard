@@ -53,15 +53,7 @@ func TestSaveMiners_backsUpExistingFileBeforeOverwriting(t *testing.T) {
 		t.Fatalf("SaveMiners() error = %v", err)
 	}
 
-	matches, err := filepath.Glob(path + ".bak-*")
-	if err != nil {
-		t.Fatalf("glob: %v", err)
-	}
-	if len(matches) != 1 {
-		t.Fatalf("backup files = %d, want exactly 1", len(matches))
-	}
-
-	backup, err := os.ReadFile(matches[0])
+	backup, err := os.ReadFile(path + ".bak")
 	if err != nil {
 		t.Fatalf("read backup: %v", err)
 	}
@@ -78,12 +70,39 @@ func TestSaveMiners_noBackupOnFirstSave(t *testing.T) {
 		t.Fatalf("SaveMiners() error = %v", err)
 	}
 
-	matches, err := filepath.Glob(path + ".bak-*")
+	if _, err := os.Stat(path + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("backup file present after the first save (err = %v), want none (nothing existed to back up)", err)
+	}
+}
+
+func TestSaveMiners_reusesSingleBackupFileAcrossSaves(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "miners.yml")
+
+	if err := SaveMiners(path, []Bitaxe{{Ip: "10.0.0.1", Mac: "aabbccddeeff"}}); err != nil {
+		t.Fatalf("first SaveMiners() error = %v", err)
+	}
+	if err := SaveMiners(path, []Bitaxe{{Ip: "10.0.0.2", Mac: "aabbccddeeff"}}); err != nil {
+		t.Fatalf("second SaveMiners() error = %v", err)
+	}
+	if err := SaveMiners(path, []Bitaxe{{Ip: "10.0.0.3", Mac: "aabbccddeeff"}}); err != nil {
+		t.Fatalf("third SaveMiners() error = %v", err)
+	}
+
+	matches, err := filepath.Glob(path + ".bak*")
 	if err != nil {
 		t.Fatalf("glob: %v", err)
 	}
-	if len(matches) != 0 {
-		t.Errorf("backup files = %d, want 0 (nothing existed to back up)", len(matches))
+	if len(matches) != 1 {
+		t.Fatalf("backup files = %d (%v), want exactly 1 regardless of how many saves happened", len(matches), matches)
+	}
+
+	backup, err := os.ReadFile(path + ".bak")
+	if err != nil {
+		t.Fatalf("read backup: %v", err)
+	}
+	if !strings.Contains(string(backup), "10.0.0.2") {
+		t.Errorf("backup content = %q, want it to reflect the second save (the one right before the last)", backup)
 	}
 }
 

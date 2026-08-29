@@ -9,6 +9,7 @@ doc details what the dashboard actually does, screen by screen.
   - [Alerts](#alerts)
   - [Global stats bar](#global-stats-bar)
   - [Miner card](#miner-card)
+  - [Settings (`/settings`)](#settings-settings)
   - [Remote mode (`/{boardId}`)](#remote-mode-boardid)
 - [Persistent Totals](#persistent-totals)
 - [Firmware Update Detection](#firmware-update-detection)
@@ -147,6 +148,39 @@ the device itself reports (wrong device at that IP, or a config typo), an
 amber banner appears under the card's header with the error and a
 copy-to-clipboard button, and the health dot turns orange. See the `mac:`
 mismatch check in [Configuration](CONFIGURATION.md).
+
+### Settings (`/settings`)
+
+Local mode only — manages the managed `miners.yml` file (see
+[Configuration](CONFIGURATION.md)). Three sections:
+
+- **Configured miners** — every miner currently in `miners.yml`, including
+  disabled ones, with enable/disable and a **disable all** button. Clicking
+  a row expands it in place to reveal that miner's **pool scheduler**
+  (below) without navigating away.
+- **Automatic detection** — scans the local network (or a given CIDR) for
+  AxeOS devices and lists what it finds, ready to select and save.
+- **Add by IP** — probes one address directly, for a device the scan can't
+  reach (different subnet, firewall).
+
+**Pool scheduler** — per miner, add or remove cron-based automatic pool
+switches (e.g. "switch to fallback every Friday at 23:59:59, back to
+primary every Sunday"):
+
+- The cron expression is a raw 6-field string, **seconds included**
+  (`sec min hour dayOfMonth month dayOfWeek`) — as you type, a live,
+  fully client-side translation shows what it means in plain language plus
+  the next few times it would fire, and anything that doesn't parse is
+  rejected before it can be submitted.
+- A schedule that duplicates one already configured for that miner (same
+  expression, regardless of spacing/case or target) is rejected too — both
+  would otherwise fire at the exact same moment.
+- A small badge next to a miner's name shows how many schedules it has
+  without needing to expand the row.
+- Every add/remove saves immediately, the same way the rest of this page
+  does — and the running `dashboard-api` picks up the change and
+  reschedules its cron jobs on its own within one `healthCheck.interval`
+  tick, no restart needed.
 
 ### Remote mode (`/{boardId}`)
 

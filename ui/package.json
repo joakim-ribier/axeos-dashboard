@@ -27,6 +27,8 @@
     "apexcharts": "^5.3.6",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
+    "cron-parser": "^5.10.0",
+    "cronstrue": "^3.24.0",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",

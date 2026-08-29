@@ -91,9 +91,19 @@ generates and updates it for you:
   whatever changed on the device side, e.g. a new IP or a pool switched
   from the miner's own web UI)
 - Each miner can be **enabled/disabled** from the same page
+- Click a configured miner's row to expand its **pool scheduler**: add or
+  remove cron-based pool switches (e.g. "switch to fallback every Friday
+  at 23:59:59") without hand-editing `poolSchedule`. The cron expression
+  is a raw 6-field string, seconds included (`sec min hour dayOfMonth
+  month dayOfWeek`) — the editor shows a live human-readable translation
+  and the next few run times as you type, and rejects anything that
+  doesn't parse before it's saved. A schedule change takes effect on
+  dashboard-api immediately, no restart needed, same as the rest of this
+  file.
 - The file is created automatically on first save — nothing needs to exist
-  beforehand — and every save keeps a timestamped backup
-  (`miners.yml.bak-<UTC timestamp>`) next to it
+  beforehand — and every save backs up whatever was there right before to
+  a single `miners.yml.bak` next to it (overwritten on each save, so it's
+  always just the one-before-last version, not a growing pile of files)
 - dashboard-api and feeder both pick up any change to the file within their
   normal poll cycle, no restart needed — whether the change came from
   Settings or from hand-editing
@@ -114,4 +124,9 @@ bitaxes:
     fallbackUrl:  "solo.atlaspool.io"
     fallbackPort: 3333
     fallbackUser: "bc1qxxx...xxx"
+    poolSchedule:                    # optional, editable from Settings
+      - cron: "59 59 23 * * FRI"     # sec min hour dayOfMonth month dayOfWeek
+        target: "fallback"
+      - cron: "59 59 23 * * SUN"
+        target: "primary"
 ```

@@ -3,7 +3,9 @@ package poolscheduler
 import (
 	"io"
 	"log/slog"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
@@ -75,4 +77,92 @@ func TestScheduler_startAndStopDoNotPanic(t *testing.T) {
 	s := NewPoolScheduler(testLogger(), cfg)
 	s.Start()
 	s.Stop()
+}
+
+// entryCount reads the current cron entry count under the scheduler's own
+// mutex -- needed because Start() runs a background reload goroutine that
+// can reassign s.cron concurrently (see rebuild); reading s.cron directly
+// from a test without this would race under `go test -race`.
+func (s *Scheduler) entryCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.cron.Entries())
+}
+
+func TestScheduler_reloadRebuildsJobsWhenScheduleChangesOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "miners.yml")
+
+	initial := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true}}
+	if err := config.SaveMiners(path, initial); err != nil {
+		t.Fatalf("seed miners file: %v", err)
+	}
+
+	store := config.NewMinersStore(path, initial)
+	cfg := config.Config{
+		Bitaxes:     initial,
+		HealthCheck: config.HealthCheckConfig{Interval: 10 * time.Millisecond},
+	}
+
+	s := NewPoolScheduler(testLogger(), cfg).WithMinersStore(store)
+	s.Start()
+	defer s.Stop()
+
+	if got := s.entryCount(); got != 0 {
+		t.Fatalf("initial entries = %d, want 0 (no schedule configured yet)", got)
+	}
+
+	// Give the mtime a chance to actually move forward before rewriting --
+	// some filesystems have coarse (1s) mtime resolution, and Reload()
+	// only re-reads when mtime changes.
+	time.Sleep(1100 * time.Millisecond)
+	updated := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, PoolSchedule: []config.CronSchedule{
+		{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+	}}}
+	if err := config.SaveMiners(path, updated); err != nil {
+		t.Fatalf("save updated miners file: %v", err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if s.entryCount() == 1 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("entries after reload = %d, want 1 within the deadline", s.entryCount())
+}
+
+func TestScheduler_reloadDoesNotDuplicateJobsWhenNothingChanged(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "miners.yml")
+
+	bitaxes := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, PoolSchedule: []config.CronSchedule{
+		{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+	}}}
+	if err := config.SaveMiners(path, bitaxes); err != nil {
+		t.Fatalf("seed miners file: %v", err)
+	}
+
+	store := config.NewMinersStore(path, bitaxes)
+	cfg := config.Config{
+		Bitaxes:     bitaxes,
+		HealthCheck: config.HealthCheckConfig{Interval: 5 * time.Millisecond},
+	}
+
+	s := NewPoolScheduler(testLogger(), cfg).WithMinersStore(store)
+	s.Start()
+	defer s.Stop()
+
+	// Nothing on disk changes across many reload ticks -- the registered
+	// job count must stay exactly 1 throughout, never grow (this is the
+	// scenario a naive "always rebuild on reload, appending instead of
+	// replacing" bug would fail).
+	deadline := time.Now().Add(200 * time.Millisecond)
+	for time.Now().Before(deadline) {
+		if got := s.entryCount(); got != 1 {
+			t.Fatalf("entries = %d, want exactly 1 (no duplicate registration across reload ticks)", got)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }

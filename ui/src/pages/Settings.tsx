@@ -1,13 +1,15 @@
 // src/pages/Settings.tsx
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoltIcon from "@mui/icons-material/Bolt";
 import DeselectIcon from "@mui/icons-material/Deselect";
 import DeveloperBoardIcon from "@mui/icons-material/DeveloperBoard";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RouterIcon from "@mui/icons-material/Router";
 import SaveIcon from "@mui/icons-material/Save";
+import ScheduleIcon from "@mui/icons-material/Schedule";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
@@ -20,6 +22,8 @@ import {
   Checkbox,
   Chip,
   CircularProgress,
+  Collapse,
+  IconButton,
   Paper,
   Skeleton,
   Snackbar,
@@ -30,11 +34,13 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PoolScheduleEditor } from "@/components/ui/PoolScheduleEditor";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
@@ -47,15 +53,18 @@ const ConfiguredMinersTable = ({
   togglingMac,
   onToggleEnabled,
   onDisableAllClick,
+  saveMiners,
 }: {
   miners: MinerConfig[];
   lastUpdated: string | undefined;
   togglingMac: string | null;
   onToggleEnabled: (miner: MinerConfig) => void;
   onDisableAllClick: () => void;
+  saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
 }) => {
   const { t } = useTranslation();
   const enabledCount = miners.filter((m) => m.enabled).length;
+  const [expandedMac, setExpandedMac] = useState<string | null>(null);
 
   return (
     <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
@@ -108,6 +117,7 @@ const ConfiguredMinersTable = ({
         <Table size="small">
           <TableHead>
             <TableRow>
+              <TableCell sx={{ width: 40 }} />
               <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
               <TableCell>{t("settingsPage.configured.ip")}</TableCell>
               <TableCell>{t("settingsPage.configured.mac")}</TableCell>
@@ -123,50 +133,125 @@ const ConfiguredMinersTable = ({
           <TableBody>
             {miners.map((m) => {
               const isToggling = togglingMac === normalizeMac(m.mac);
+              const key = normalizeMac(m.mac);
+              const isExpanded = expandedMac === key;
+              const toggleExpanded = () =>
+                setExpandedMac((current) => (current === key ? null : key));
               return (
-                <TableRow key={m.mac} hover>
-                  <TableCell>{m.hostname || "—"}</TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>{m.ip}</TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>
-                    {m.mac}
-                  </TableCell>
-                  <TableCell>
-                    <Chip size="small" variant="outlined" label={m.model} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Chip
-                      size="small"
-                      label={
-                        m.enabled
-                          ? t("settingsPage.configured.enabled")
-                          : t("settingsPage.configured.disabled")
-                      }
-                      color={m.enabled ? "success" : "default"}
-                      variant={m.enabled ? "filled" : "outlined"}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      size="small"
-                      color={m.enabled ? "warning" : "success"}
-                      disabled={isToggling}
-                      onClick={() => onToggleEnabled(m)}
-                      startIcon={
-                        isToggling ? (
-                          <CircularProgress size={14} color="inherit" />
-                        ) : m.enabled ? (
-                          <PauseIcon fontSize="small" />
-                        ) : (
-                          <PlayArrowIcon fontSize="small" />
-                        )
-                      }
+                <Fragment key={m.mac}>
+                  <TableRow
+                    hover
+                    onClick={toggleExpanded}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    <TableCell>
+                      <IconButton size="small">
+                        <KeyboardArrowDownIcon
+                          fontSize="small"
+                          sx={{
+                            transition: "transform 0.15s ease",
+                            transform: isExpanded ? "rotate(180deg)" : "none",
+                          }}
+                        />
+                      </IconButton>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.75,
+                        }}
+                      >
+                        {m.hostname || "—"}
+                        {(m.poolSchedule?.length ?? 0) > 0 && (
+                          <Tooltip
+                            title={t(
+                              "settingsPage.configured.schedule.countTooltip",
+                              {
+                                count: m.poolSchedule?.length ?? 0,
+                              },
+                            )}
+                          >
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              icon={<ScheduleIcon fontSize="small" />}
+                              label={m.poolSchedule?.length}
+                              sx={{
+                                height: 20,
+                                "& .MuiChip-icon": { fontSize: 14 },
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "monospace" }}>
+                      {m.ip}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "monospace" }}>
+                      {m.mac}
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" variant="outlined" label={m.model} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Chip
+                        size="small"
+                        label={
+                          m.enabled
+                            ? t("settingsPage.configured.enabled")
+                            : t("settingsPage.configured.disabled")
+                        }
+                        color={m.enabled ? "success" : "default"}
+                        variant={m.enabled ? "filled" : "outlined"}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color={m.enabled ? "warning" : "success"}
+                        disabled={isToggling}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleEnabled(m);
+                        }}
+                        startIcon={
+                          isToggling ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : m.enabled ? (
+                            <PauseIcon fontSize="small" />
+                          ) : (
+                            <PlayArrowIcon fontSize="small" />
+                          )
+                        }
+                      >
+                        {m.enabled
+                          ? t("settingsPage.configured.disable")
+                          : t("settingsPage.configured.enable")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      sx={{
+                        py: 0,
+                        borderBottom: isExpanded ? undefined : "none",
+                      }}
                     >
-                      {m.enabled
-                        ? t("settingsPage.configured.disable")
-                        : t("settingsPage.configured.enable")}
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                      <Collapse in={isExpanded} unmountOnExit>
+                        <Box sx={{ px: 2 }}>
+                          <PoolScheduleEditor
+                            miner={m}
+                            saveMiners={saveMiners}
+                          />
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
               );
             })}
           </TableBody>
@@ -464,6 +549,7 @@ export const Settings = () => {
             togglingMac={togglingMac}
             onToggleEnabled={(m) => void handleToggleEnabled(m)}
             onDisableAllClick={() => setDisableAllOpen(true)}
+            saveMiners={saveMiners}
           />
         )
       )}
