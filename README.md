@@ -41,6 +41,8 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - [AxeOs Device API](#axeos-device-api)
 - [License](#license)
 
+See [`plan.md`](plan.md) for the running development plan — ideas, in-progress features, and known bugs to fix, updated as work continues.
+
 ---
 
 ## Architecture

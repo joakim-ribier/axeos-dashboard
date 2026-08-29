@@ -28,18 +28,18 @@ const postMinersConfig = async (
 
 export interface UseMinersConfigReturn {
   data: MinerConfig[] | undefined;
-  /** miners.yml's own last-modified time (RFC3339), straight from the file's mtime -- undefined until the first fetch resolves. */
+  /** The managed miners file's own last-modified time (RFC3339), straight from the file's mtime -- undefined until the first fetch resolves. */
   lastUpdated: string | undefined;
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
   /**
-   * Adds/updates the given miners in the managed miners.yml (upserted by
+   * Adds/updates the given miners in the managed miners file (upserted by
    * MAC server-side). Resolves with the full, updated list on success and
    * refreshes `data` to match -- effective immediately on dashboard-api
    * (see Router.WithMinersStore), and picked up by the feeder (a separate
    * process) within one of its own polling cycles via mtime-based
-   * hot-reload (see config.MinersStore, MINERS_DISCOVERY_PLAN.md Phase 4)
+   * hot-reload (see config.MinersStore)
    * -- no restart needed either way.
    */
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
@@ -48,11 +48,11 @@ export interface UseMinersConfigReturn {
 }
 
 /**
- * The managed miners config (every entry in miners.yml, including disabled
- * ones) -- distinct from useMiners(), which is dashboard *data* (enabled,
- * reachable miners' live stats). Drives the "already configured" table on
- * the Settings page and the onboarding redirect when it's empty (see
- * RequireMinersConfigured).
+ * The managed miners config (every entry in the managed miners file,
+ * including disabled ones) -- distinct from useMiners(), which is
+ * dashboard *data* (enabled, reachable miners' live stats). Drives the
+ * "already configured" table on the Settings page and the onboarding
+ * redirect when it's empty (see RequireMinersConfigured).
  */
 export const useMinersConfig = (): UseMinersConfigReturn => {
   const queryClient = useQueryClient();

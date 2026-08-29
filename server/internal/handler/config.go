@@ -14,9 +14,10 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/discovery"
 )
 
-// bitaxesResponse wraps a list of miner entries the same way miners.yml
-// itself is shaped (bitaxes: [...]) -- shared by every handler in this file
-// that returns Bitaxe entries (discovered or already configured).
+// bitaxesResponse wraps a list of miner entries the same way the managed
+// miners file itself is shaped (bitaxes: [...]) -- shared by every
+// handler in this file that returns Bitaxe entries (discovered or
+// already configured).
 // LastUpdated is the managed miners file's own mtime (RFC3339, UTC), omitted
 // when there's no file to stat yet (fresh install) or on a discovery
 // response, which never reflects the file on disk.
@@ -71,7 +72,7 @@ var normalizedMacPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 // this is also how a future edit/toggle flow reuses this same endpoint.
 //
 // @Summary Add or update configured miners
-// @Description Upserts one or more miner entries into the managed miners.yml, matched by MAC. New entries are always saved enabled.
+// @Description Upserts one or more miner entries into the managed miners file, matched by MAC. New entries are always saved enabled.
 // @Tags dashboard-api
 // @Accept json
 // @Param request body handler.bitaxesResponse true "Miner entries to add/update"
@@ -88,8 +89,8 @@ var normalizedMacPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 // save right away without a restart. The feeder (a separate OS process)
 // and dashboard-api's own health-check/pool-scheduler loops still won't
 // pick up the change until they're restarted, or until hot-reload lands
-// (see MINERS_DISCOVERY_PLAN.md, Phase 4) -- this only keeps the config
-// *listing* self-consistent, not the live dashboard data.
+// -- this only keeps the config *listing* self-consistent, not the live
+// dashboard data.
 func SaveMinersConfig(cfg config.Config, w http.ResponseWriter, r *http.Request) ([]config.Bitaxe, bool) {
 	if cfg.MinersFilePath == "" {
 		writeErrorResponse(w,
@@ -131,7 +132,7 @@ func SaveMinersConfig(cfg config.Config, w http.ResponseWriter, r *http.Request)
 
 // validateBitaxe checks the handful of fields a saved entry can't do
 // without -- everything else (pools, model) is free-form, same as
-// hand-writing miners.yml.
+// hand-writing the managed miners file.
 func validateBitaxe(b config.Bitaxe) error {
 	if b.Ip == "" {
 		return fmt.Errorf("ip is required")
@@ -189,9 +190,10 @@ func upsertBitaxes(existing, incoming []config.Bitaxe) ([]config.Bitaxe, error) 
 //     server's own local /24 subnet (auto-detected) -- the common case of
 //     "scan whatever network this server is on".
 //
-// Either way, each device found comes back as a ready-to-save
-// miners.yml-shaped entry, pre-filled from what the device itself reports
-// (hostname, mac, guessed model, and its currently configured pool).
+// Either way, each device found comes back as a ready-to-save entry
+// shaped like the managed miners file, pre-filled from what the device
+// itself reports (hostname, mac, guessed model, and its currently
+// configured pool).
 //
 // @Summary Discover AxeOS devices on the network
 // @Description Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24, defaults to the server's own local /24 subnet when both are omitted). ip takes priority if both are set.

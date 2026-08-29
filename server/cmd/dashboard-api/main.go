@@ -37,10 +37,9 @@ func main() {
 	// Makefile/systemd unit/script that still passes it doesn't crash this
 	// binary outright during the switch to the new behavior. Its value is
 	// never read: the managed miners file is always found automatically
-	// next to -config, or via minersFile: inside it (see
-	// config.LoadConfig). Safe to stop passing -miners once every
-	// caller/script has been updated.
-	flag.StringVar(&deprecatedMinersPath, "miners", "", "Deprecated, ignored -- miners.yml is found automatically next to -config, or via minersFile: inside it")
+	// next to -config (see config.LoadConfig). Safe to stop passing
+	// -miners once every caller/script has been updated.
+	flag.StringVar(&deprecatedMinersPath, "miners", "", "Deprecated, ignored -- the managed miners file is found automatically next to -config")
 	flag.Parse()
 
 	cfg, err := config.NewLoaderConfig(configPath).LoadConfig()
@@ -57,7 +56,7 @@ func main() {
 	logger := newLogger("dashboard-api", logFile)
 	logger.Info("Server running...")
 	if deprecatedMinersPath != "" {
-		logger.Warn("-miners is deprecated and ignored -- remove it, miners.yml is found automatically", "path", deprecatedMinersPath)
+		logger.Warn("-miners is deprecated and ignored -- remove it, the managed miners file is found automatically", "path", deprecatedMinersPath)
 	}
 	for _, w := range cfg.MissingMacWarnings() {
 		logger.Error(w)
@@ -68,10 +67,10 @@ func main() {
 	// Shared by the watcher and the router (same process) -- a miner saved
 	// via POST /api/config/miners is picked up by both immediately (Set),
 	// and either one also notices a change made some other way (another
-	// process, hand-editing miners.yml) via its mtime (Reload). The pool
-	// scheduler deliberately doesn't get one: poolSchedule stays a
-	// hand-edited, advanced setting, fixed at startup (see
-	// MINERS_DISCOVERY_PLAN.md).
+	// process, hand-editing the managed miners file) via its mtime
+	// (Reload). The pool scheduler deliberately doesn't get one:
+	// poolSchedule stays a hand-edited, advanced setting, fixed at
+	// startup.
 	minersStore := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 
 	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
