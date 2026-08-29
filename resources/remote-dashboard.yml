@@ -21,7 +21,7 @@ ui:
   # Settings is a local-miner-config concept (network discovery, editing
   # miners.yml) with nothing remote-relevant yet -- hidden until it grows
   # sections a remote visitor can actually use (pool scheduler, user
-  # config -- see plan.md), at which point this becomes "readonly".
+  # config -- see readme/plan.md), at which point this becomes "readonly".
   page:
     settings: hidden
   # remote-dashboard-api is read-only by design (no restart/pool-switch

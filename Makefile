@@ -296,7 +296,7 @@ latest-fetch:
 
 # Start the full stack from the latest CI-built release — no local build/toolchain
 # needed. The UI (fetched static files in ui/dist) is served by nginx, configured
-# once outside of this Makefile — see README's Production Deployment section.
+# once outside of this Makefile — see readme/DEPLOYMENT.md.
 latest-up: latest-fetch
 	@echo "🚀 Starting latest environment (prebuilt from CI, no local build)..."
 

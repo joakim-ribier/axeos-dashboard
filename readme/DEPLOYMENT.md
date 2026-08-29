@@ -6,7 +6,7 @@ way. Recommended path: fetch the prebuilt `linux/arm64` release (CI-built on
 every push to `main`) instead of building locally — no Go toolchain needed on
 the Pi itself.
 
-See the main [README](README.md) for architecture, features, and the full
+See the main [README](../README.md) for architecture, features, and the full
 config reference — this doc only covers getting a fresh machine running.
 
 ## 1. Clone
@@ -21,10 +21,45 @@ cd axeos-dashboard
 `resources/dashboard.yml` is already committed with sane defaults — edit it
 for your setup (electricity rate, pool dashboards, firmware repos, etc.).
 
-**Create `resources/miners.yml` before going further.** It's gitignored (holds
-your pool credentials) so it does **not** exist on a fresh clone — copy the
-full example from the README's [Configuration](README.md#configuration)
-section and fill in your miners' IPs, MACs, models, and pool credentials.
+You don't need to create `miners.yml` yourself — there's nothing to copy or
+fill in before going further. It doesn't exist on a fresh clone, and that's
+fine: once dashboard-api is running (step 4), open the app and go to
+**Settings**, where a network scan or "add by IP" finds your miners and
+creates/updates `miners.yml` for you. See [Configuration](CONFIGURATION.md)
+for what that file ends up containing and the couple of things (like
+cron-based pool schedules) still worth hand-editing.
+
+### Recommended: keep config outside the clone
+
+The example above keeps `dashboard.yml`/`miners.yml` inside the repo clone
+(`resources/`), which is the simplest setup. In practice, on a long-lived
+box, it's worth moving both **out** of the clone entirely so that
+`git pull` / re-cloning for an update never touches your real config, and so
+your data directory doesn't live inside a directory git considers part of
+the repo. This is the layout a real production Pi in this project uses:
+
+```
+~/axeos-bitaxe-dashboard/
+  config.yml              # renamed dashboard.yml -- storage.dataDir points at this same dir
+  miners.yml               # auto-created by the /settings page on first save -- not something you place here yourself
+  dashboard-api.log         # written directly under dataDir when global.env != dev
+  feeder.log
+  data/                     # {dataDir}/data -- the app appends "data/bitaxes" itself, always
+    bitaxes/                #   -- see storage.dataDir in Configuration
+    firmware_cache.json
+  sources/
+    axeos-dashboard/        # the actual git clone -- `make latest-up` is run from here
+```
+
+With this layout, `storage.dataDir` in `config.yml` is set to
+`~/axeos-bitaxe-dashboard` itself (one level above `sources/`, and
+**without** a trailing `/data/bitaxes` — see the `dataDir` note in
+[Configuration](CONFIGURATION.md), it's appended automatically), and every
+`make` invocation (manual, or from the systemd unit in step 5) passes
+absolute paths: `CONFIG_FILE=~/axeos-bitaxe-dashboard/config.yml` — see
+step 5's `ExecStart` for the exact form. Nothing else in this guide changes;
+just substitute your own config/data paths wherever `resources/dashboard.yml`
+or `/path/to/...` appears below.
 
 ## 3. Install and configure nginx (one-time)
 
@@ -67,7 +102,8 @@ server {
 }
 ```
 
-If dashboard-api's port isn't the default `8080` (see `MINER_API_PORT` below),
+If dashboard-api's port isn't the default `8080` (set via `server.port` in
+`dashboard.yml`/`config.yml` — see [Configuration](CONFIGURATION.md)),
 update the `proxy_pass` line to match.
 
 ### 3.3. Enable the site
@@ -202,6 +238,58 @@ sudo systemctl restart axeos-dashboard   # re-fetches + restarts
 sudo journalctl -u axeos-dashboard -f    # follow logs
 ```
 
+**In practice**, `systemctl enable` is mainly a reboot safety net — day to
+day it's normal to manage the screen session by hand instead
+(`make latest-up`/`make latest-down`/`make dev-attach` from an SSH session),
+which leaves the systemd unit `enabled` but sitting `inactive (dead)` in
+`systemctl status` even while dashboard-api/feeder are actually running fine
+under `screen`. That's expected — `systemctl status` only reflects processes
+it started itself, not ones you started manually in the same screen session
+name. If you always go through `systemctl start`/`stop`, status stays
+accurate throughout.
+
+Two more things worth knowing if you inspect a real unit file with
+`systemctl cat axeos-dashboard`:
+- `MINERS_FILE=...` may still be present in an older `ExecStart` alongside
+  `CONFIG_FILE=...` — harmless. `-miners` is deprecated (logged as a `WARN`
+  on every start, see [Configuration](CONFIGURATION.md)) but ignored, and
+  since `miners.yml` already sits next to `config.yml`, it's found
+  automatically either way. Safe to drop `MINERS_FILE=...` from the unit
+  the next time you touch it, but not urgent.
+- There's no way to point `miners.yml` somewhere else anymore — it's
+  always resolved right next to `config.yml`. If your unit's
+  `CONFIG_FILE` lives in a different directory than `miners.yml`, move
+  one to match the other.
+
+## Logs & housekeeping
+
+With `global.env` set to anything other than `dev` (i.e. real deployments —
+see [Configuration](CONFIGURATION.md)), dashboard-api and feeder each write
+structured JSON logs to a file next to your data: `{storage.dataDir}/dashboard-api.log`
+and `{storage.dataDir}/feeder.log`. Nothing ships a log-rotation policy for
+these out of the box, and feeder in particular logs one line per device per
+poll — on a box with several miners polled every couple of minutes, an
+unrotated log can reach several hundred MB within days. Set up `logrotate`
+for them; a minimal config works:
+
+```
+# /etc/logrotate.d/axeos-dashboard
+/path/to/axeos-bitaxe-dashboard/*.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+
+`copytruncate` matters here — the running feeder/dashboard-api processes
+hold the log file open for the life of the process (no signal-based
+"reopen" support), so a plain `rotate` that renames the file out from under
+them would silently keep writing into the renamed (soon deleted) file
+instead of a fresh one.
+
 ## Building from source instead (advanced)
 
 `make dev-up`/`make build` are for local development (e.g. testing a change
@@ -217,8 +305,8 @@ make build
 ```
 
 Or run the binaries manually (background processes). Both expect
-`miners.yml` right next to `dashboard.yml` (see the main
-[README](README.md#configuration)):
+`miners.yml` right next to `dashboard.yml` (see
+[Configuration](CONFIGURATION.md)):
 
 ```bash
 # Feeder (background)
@@ -235,10 +323,13 @@ nohup ./resources/build/server/bin/dashboard-api \
 cd ui && npm run build   # → ui/dist/
 ```
 
-Override API port (default `8080`):
+Override the API port (default `8080` for dashboard-api, `8081` for
+remote-dashboard-api): set `server.port` in the config YAML — there's no
+env var for this:
 
-```bash
-MINER_API_PORT=9090 ./resources/build/server/bin/dashboard-api -config dashboard.yml
+```yaml
+server:
+  port: "9090"
 ```
 
 Override dashboard-api/feeder's local data dir (default from config's `storage.dataDir`):
