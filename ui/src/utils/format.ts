@@ -103,3 +103,23 @@ export function formatDuration(ms: number): string {
   if (mins > 0) return `${mins}m`;
   return `${secs}s`;
 }
+
+// ---------------------------------------------------------------------------
+// Helper: parse a Go time.Duration.String() value (e.g. "2m0s", "24h0m0s",
+// "500ms") into milliseconds -- used to compare a configured poll interval
+// against how long ago something last actually happened, client-side.
+// ---------------------------------------------------------------------------
+export function parseGoDuration(s?: string): number {
+  if (!s) return 0;
+  const unitMs: Record<string, number> = {
+    h: 3_600_000,
+    m: 60_000,
+    s: 1_000,
+    ms: 1,
+  };
+  let total = 0;
+  for (const match of s.matchAll(/(\d+(?:\.\d+)?)(h|ms|m|s)/g)) {
+    total += parseFloat(match[1]) * unitMs[match[2]];
+  }
+  return total;
+}

@@ -453,7 +453,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               <Tooltip title={t("sidebar.versionUpdateAvailableHint")} arrow>
                 <Chip
                   icon={
-                    <SystemUpdateAltIcon sx={{ fontSize: "14px !important" }} />
+                    <SystemUpdateAltIcon sx={{ fontSize: "16px !important" }} />
                   }
                   label={t("sidebar.versionUpdateAvailable")}
                   size="small"
@@ -464,7 +464,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="app update available"
-                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                 />
               </Tooltip>
             )}

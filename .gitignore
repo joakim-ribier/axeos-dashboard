@@ -37,5 +37,7 @@ resources/data/*
 resources/build
 resources/miners.yml
 resources/miners.yml.bak
+resources/settings.yml
+resources/settings.yml.bak
 *.log
 server/feeder

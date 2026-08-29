@@ -46,7 +46,11 @@ func main() {
 	// Router/Watcher get) -- see config.MinersStore.Reload, called at the
 	// top of every runOnce().
 	minersStore := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
-	NewFeeder(logger, cfg).WithMinersStore(minersStore).Feed()
+	appSettingsStore := config.NewAppSettingsStore(cfg.AppSettingsFilePath, cfg.AppSettingsSnapshot())
+	NewFeeder(logger, cfg).
+		WithMinersStore(minersStore).
+		WithAppSettingsStore(appSettingsStore).
+		Feed()
 }
 
 func newLogger(appName, logFile string) *slog.Logger {

@@ -117,9 +117,9 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/poolscheduler/` | robfig/cron v3 jobs for timed pool switching (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
-| `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots) |
+| `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots); `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
 | `internal/model/` | `MinerInfo` (23 fields) / `MinersResponse` JSON types |
-| `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions |
+| `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions; `config.go` also serves `/api/config/miners` and `/api/config/settings` (read/write the two managed YAML files) |
 
 #### API Endpoints
 
@@ -165,20 +165,42 @@ Charts: ApexCharts + Recharts (daily stats, lazy-loaded on first chart open). Va
 Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard).
 Route `/:boardId` → remote mode; route `/` → local mode.
 
-### Config (`resources/dashboard.yml` + `resources/miners.yml`)
+### Config (`resources/dashboard.yml` + `resources/settings.yml` + `resources/miners.yml`)
 
-Two files, both read by both binaries -- `miners.yml` is always expected
-right next to whatever `-config` file was loaded, no flag needed, nothing
-to keep in sync between the two binaries. A `bitaxes:` block
-written directly in `dashboard.yml` is **not** read. `-miners <path>` still
-exists on the command line but is deprecated and ignored (logs a warning)
--- kept only so an older Makefile/script/systemd unit that still passes it
-doesn't crash the binary outright.
+Three files, all read by both binaries -- `settings.yml` and
+`miners.yml` are always expected right next to whatever `-config` file was
+loaded (override via `appSettingsFile:` in `dashboard.yml` if you want
+`settings.yml` elsewhere -- `miners.yml`'s location can't be overridden,
+see PR #3), no flag needed, nothing to keep in sync between the two
+binaries. `dashboard.yml` holds process-launch settings (read once
+at startup, no hot-reload -- shown read-only on `/settings`); electricity
+rate and remote push credentials live in `settings.yml` instead,
+editable from `/settings` without a restart -- see
+`readme/CONFIGURATION.md` for the full field list. A `bitaxes:` block
+written directly in `dashboard.yml` is **not** read. `-miners <path>`
+still exists on the command line but is deprecated and ignored (logs a
+warning) -- kept only so an older Makefile/script/systemd unit that still
+passes it doesn't crash the binary outright.
+
+Pool dashboard links and firmware repo URLs are **not** config at all in
+the usual sense: they're built into the binary (`internal/config/defaults.go`
+-- `DefaultPoolDashboards`, `DefaultFirmwareRepos`), so a new pool or a
+fixed repo URL ships in a release rather than requiring every deployment
+to edit YAML. `settings.yml`'s `pools.dashboards`/`firmware.repos`
+carry **overrides only** (an extra pool, or a per-model repo URL to use
+instead of the built-in one) -- the effective map every consumer reads
+(`Config.Pools.Dashboards`/`Config.Firmware.Repos`) is always defaults
+merged with these overrides, recomputed on every load/reload so a removed
+override actually falls back to the built-in value. `/settings` only
+exposes the `pools.dashboards` half of this (add/remove a custom pool);
+`firmware.repos` shows as a frozen, read-only table there -- an override
+for it only happens by hand-editing `settings.yml` directly.
 
 ```yaml
 # dashboard.yml
 global:
   env: dev                      # suppresses file logging (stdout only)
+# appSettingsFile: /path/to/settings.yml   # optional -- defaults to settings.yml next to this file
 storage:
   dataDir: resources            # root dir -- app appends "data/bitaxes" itself, don't include it here
 feeder:
@@ -190,6 +212,29 @@ endpoints:
   info: api/system/info
   system: api/system
   restart: api/system/restart
+firmware:
+  cacheTTL: 24h                 # repos: not set here -- built-in defaults, see internal/config/defaults.go
+# electricity / remote: see settings.yml -- only used from here as
+# initial values the first time settings.yml doesn't exist yet.
+```
+
+```yaml
+# settings.yml -- gitignored; treated as managed data, generated/updated
+# by the /settings page's "App settings" section. Applies to dashboard-api
+# immediately and to the feeder on its next poll cycle, no restart needed.
+electricity:
+  ratePerKwh: 0.1915
+pools:
+  dashboards:
+    # extra pool(s), or an override for a built-in one -- see defaults.go
+    myprivatepool.example.com: "https://myprivatepool.example.com/u/{user}"
+firmware:
+  repos:
+    # only set the model(s) you actually want to override
+    bitaxe: "https://api.github.com/repos/myfork/esp-miner/releases/latest"
+remote:
+  pushURL: ""
+  apiKey: ""
 ```
 
 ```yaml

@@ -32,7 +32,7 @@ See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every s
 
 | Doc | Covers |
 |-----|--------|
-| [readme/CONFIGURATION.md](readme/CONFIGURATION.md) | `dashboard.yml` / `miners.yml` — every field, full examples |
+| [readme/CONFIGURATION.md](readme/CONFIGURATION.md) | `dashboard.yml` / `settings.yml` / `miners.yml` — every field, full examples |
 | [readme/FEATURES.md](readme/FEATURES.md) | Every dashboard screen: top bar, filters, alerts, miner card, remote mode, persistent totals, firmware detection |
 | [readme/TESTING.md](readme/TESTING.md) | Running the Go/UI test suites, what CI runs |
 | [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Step-by-step Raspberry Pi setup: nginx reverse proxy, systemd, building from source |
@@ -90,8 +90,8 @@ make run-remote-dashboard-api  # read-only API on :8081, reads resources/remote-
 make run-remote-dashboard-ui   # Vite dev server → :8081; open /{boardId} in browser
 ```
 
-Config format (`dashboard.yml` / `miners.yml`) is documented in
-[readme/CONFIGURATION.md](readme/CONFIGURATION.md).
+Config format (`dashboard.yml` / `settings.yml` / `miners.yml`) is
+documented in [readme/CONFIGURATION.md](readme/CONFIGURATION.md).
 
 ---
 

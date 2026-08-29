@@ -267,4 +267,3 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 		}
 	})
 }
-

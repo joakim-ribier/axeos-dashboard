@@ -31,6 +31,27 @@ every commit.
   `miners.yml`. Takes effect on dashboard-api immediately (the scheduler
   now hot-reloads from the same managed miners store as the rest of
   Settings), no restart needed.
+- ✅ **Rest of user-level config editable from the UI**: electricity rate,
+  custom pool dashboards, and remote (hashboard) push credentials now live
+  in a new managed `settings.yml`, editable from a new "App settings"
+  section on `/settings` — no more hand-editing `dashboard.yml` +
+  restarting both binaries for these. Each section saves itself
+  immediately (its own Save button for electricity/remote, instant save on
+  adding/removing a pool) rather than one global Save, and always sends
+  the server's own last-known state for every other section so an
+  unconfirmed edit sitting in one field can never block or leak into
+  another section's save. Well-known pool dashboard links and firmware
+  repo URLs are built into the binary
+  (`server/internal/config/defaults.go`) rather than duplicated per
+  deployment, so fixing/adding one is a code change + `latest-up`;
+  `settings.yml` only stores custom pool extras on top of that built-in
+  list (firmware repos are shown read-only, not overridable from this UI
+  at all). Launch-time settings that genuinely need a restart
+  (`feeder.interval`, `healthCheck.interval`, `firmware.cacheTTL`) are
+  shown read-only too, each next to an at-a-glance last-run indicator
+  (derived from already-loaded miner data, color-coded stale/fresh) so a
+  stuck feeder or health-check loop is visible without digging through
+  logs.
 
 ## To do
 
@@ -59,17 +80,30 @@ every commit.
 ### Settings
 
 - **Remote-usable content on the Settings page**: the config-driven
-  visibility mechanism exists (see Done), but `/settings` still has
-  nothing a remote viewer could use yet (discovery + the managed miners
-  config, including the pool scheduler, are inherently local-only) —
-  `ui.page.settings` is `readonly`-capable but unused until the
-  user-config section below lands, at which point `remote-dashboard.yml`
-  flips from `hidden` to `readonly` and Settings.tsx renders only what
-  applies.
-- **Rest of user-level config editable from the UI**: settings tied to
-  the user/deployment rather than a specific miner, e.g. `electricity`
-  (rate per kWh) and `pool.dashboards` — currently only hand-edited in
-  `dashboard.yml`.
+  visibility mechanism exists (see Done), and app settings are now
+  editable from `/settings` (see Done), but `/settings` still has nothing
+  a remote viewer could use yet — everything there today (discovery, the
+  managed miners config including the pool scheduler, and the new app
+  settings section) writes to the local dashboard-api's own managed files,
+  which doesn't apply to a remote board; today, if reached anyway (nothing
+  currently blocks on `readonly`, only on `hidden` -- see
+  `RequireSettingsEnabled`), each section fails differently against
+  `remote-dashboard-api`'s missing `/api/config/*` routes: the miners
+  table + pool scheduler silently vanish (their hook's `error` is never
+  read), the app settings form renders fully but blank (same gap), and
+  only the discovery/scan section surfaces a (generic) error. Direction
+  agreed: the feeder pushes the miners/settings config (not just live
+  stats) to the remote board alongside its existing data push --
+  `remote.apiKey`/`pushURL` themselves excluded from what's pushed/exposed,
+  since leaking that back out over a read-only remote view would be a real
+  secret exposure -- and `remote-dashboard-api` grows the same
+  `GET /api/config/*` routes reading from that pushed data, so the exact
+  same React components render either side with no remote-specific
+  branching. `readonly` then becomes a real third state (today identical
+  to `enabled` in the actual code): page renders, every write affordance
+  (Save buttons, Add/remove, discovery, enable/disable, restart/switch
+  pool) disabled, not hidden. At that point `remote-dashboard.yml` flips
+  `ui.page.settings` from `hidden` to `readonly`.
 - **Configurable auto-restart of a miner via a cron**: let a miner be
   restarted on its own schedule (independent of the pool scheduler),
   same cron-based mechanism.

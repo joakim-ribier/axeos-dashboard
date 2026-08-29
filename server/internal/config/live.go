@@ -113,3 +113,91 @@ func (s *MinersStore) snapshot() []Bitaxe {
 	copy(out, s.bitaxes)
 	return out
 }
+
+// AppSettingsStore keeps the operational subset of config (electricity
+// rate, pool dashboard links, remote push credentials, firmware repos --
+// see AppSettingsFile) in sync with its backing settings.yml file, the
+// same live-reload principle as MinersStore. The one deliberate
+// difference: a *missing* file is never treated as "these settings are
+// now empty" -- Reload() just keeps serving whatever this store was
+// constructed with (dashboard.yml's own values at startup, see
+// LoadConfig.applyAppSettings) until a save through /settings actually
+// creates the file. Safe for concurrent use.
+type AppSettingsStore struct {
+	path string
+
+	mu       sync.Mutex
+	settings AppSettingsFile
+	modTime  time.Time
+}
+
+func NewAppSettingsStore(path string, initial AppSettingsFile) *AppSettingsStore {
+	return &AppSettingsStore{path: path, settings: initial}
+}
+
+// Reload returns the current settings, re-reading the file first if its
+// mtime has moved since the last read. On a read/parse error, or if the
+// file doesn't exist (yet), it keeps serving the last-known settings
+// rather than an error/empty value.
+func (s *AppSettingsStore) Reload() (AppSettingsFile, error) {
+	if s.path == "" {
+		return s.snapshot(), nil
+	}
+
+	info, err := os.Stat(s.path)
+	if os.IsNotExist(err) {
+		return s.snapshot(), nil
+	}
+	if err != nil {
+		return s.snapshot(), err
+	}
+
+	s.mu.Lock()
+	unchanged := info.ModTime().Equal(s.modTime)
+	s.mu.Unlock()
+	if unchanged {
+		return s.snapshot(), nil
+	}
+
+	data, err := os.ReadFile(s.path)
+	if err != nil {
+		return s.snapshot(), err
+	}
+	var settings AppSettingsFile
+	if err := yaml.Unmarshal(data, &settings); err != nil {
+		return s.snapshot(), err
+	}
+
+	s.mu.Lock()
+	s.settings = settings
+	s.modTime = info.ModTime()
+	s.mu.Unlock()
+
+	return s.snapshot(), nil
+}
+
+// Set replaces the in-memory settings immediately -- used right after this
+// same process writes path itself (see handler.SaveAppSettings), mirroring
+// MinersStore.Set.
+func (s *AppSettingsStore) Set(settings AppSettingsFile) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.settings = settings
+	if s.path != "" {
+		if info, err := os.Stat(s.path); err == nil {
+			s.modTime = info.ModTime()
+		}
+	}
+}
+
+// snapshot returns the current settings by value. Unlike MinersStore's
+// snapshot, this doesn't deep-copy the maps nested inside (Pools.Dashboards,
+// Firmware.Repos) -- every caller either only reads them, or replaces the
+// whole AppSettingsFile wholesale (Reload/Set always assign a freshly
+// unmarshaled/decoded value, never mutate a shared one in place), so
+// aliasing them here is safe.
+func (s *AppSettingsStore) snapshot() AppSettingsFile {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.settings
+}

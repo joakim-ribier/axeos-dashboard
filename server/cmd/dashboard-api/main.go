@@ -71,12 +71,22 @@ func main() {
 	// file) via its mtime (Reload).
 	minersStore := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 
+	// Shared with the feeder (same host) -- a save via POST
+	// /api/config/settings is picked up by this process immediately
+	// (Set), and the feeder notices it on its own within one poll cycle
+	// (Reload, mtime-based). See config.AppSettingsFile for what's in it
+	// and why the rest of dashboard.yml stays hand-edited-only.
+	appSettingsStore := config.NewAppSettingsStore(cfg.AppSettingsFilePath, cfg.AppSettingsSnapshot())
+
 	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
 	watcher.Start(&wg)
 
 	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
 
-	NewRouter(logger, cfg, watcher, versionChecker).WithMinersStore(minersStore).Listen()
+	NewRouter(logger, cfg, watcher, versionChecker).
+		WithMinersStore(minersStore).
+		WithAppSettingsStore(appSettingsStore).
+		Listen()
 
 	scheduler := poolscheduler.NewPoolScheduler(logger, cfg).WithMinersStore(minersStore)
 	scheduler.Start()

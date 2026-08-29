@@ -212,7 +212,7 @@
     },
     "configured": {
       "title": "Mineurs configurés",
-      "description": "{{count}} mineur(s) configuré(s) dans miners.yml",
+      "description": "{{count}} mineur(s) configuré(s)",
       "hostname": "Nom",
       "ip": "IP",
       "mac": "MAC",
@@ -246,6 +246,51 @@
         "add": "Ajouter",
         "adding": "Ajout…",
         "removing": "Suppression…"
+      }
+    },
+    "appSettings": {
+      "title": "Réglages de l'application",
+      "description": "Réglages opérationnels que tu peux vouloir changer sans redéployer.",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveSuccess": "Réglages enregistrés.",
+      "electricity": {
+        "title": "Électricité",
+        "rateLabel": "Tarif (€/kWh)"
+      },
+      "pools": {
+        "title": "Dashboards des pools",
+        "description": "Associe un hostname de pool stratum à son modèle d'URL de dashboard. Utilise {user} comme placeholder pour la partie compte de l'utilisateur stratum.",
+        "empty": "Aucun dashboard de pool disponible.",
+        "hostLabel": "Hostname du pool",
+        "urlLabel": "URL du dashboard",
+        "missingUserPlaceholder": "Doit contenir {user}",
+        "add": "Ajouter",
+        "remove": "Supprimer"
+      },
+      "remote": {
+        "title": "Remote (hashboard)",
+        "pushUrlLabel": "URL de push",
+        "apiKeyLabel": "Clé API",
+        "showApiKey": "Afficher la clé API",
+        "hideApiKey": "Masquer la clé API"
+      },
+      "firmware": {
+        "title": "Repos firmware",
+        "hint": "Intégré, non modifiable ici.",
+        "modelLabel": "Modèle",
+        "urlLabel": "URL du repo"
+      },
+      "readOnly": {
+        "title": "Réglages process (lecture seule)",
+        "hint": "Redémarre l'application pour changer ça.",
+        "settingLabel": "Réglage",
+        "valueLabel": "Valeur",
+        "lastRunLabel": "Dernière itération",
+        "feederIntervalLabel": "Intervalle de poll du feeder",
+        "healthCheckIntervalLabel": "Intervalle de health check",
+        "firmwareCacheTTLLabel": "Cache firmware (TTL)",
+        "never": "Jamais"
       }
     },
     "scan": {

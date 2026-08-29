@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"time"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/discovery"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 )
 
 // bitaxesResponse wraps a list of miner entries the same way the managed
@@ -39,15 +41,16 @@ type bitaxesResponse struct {
 // @Success 200 {object} handler.bitaxesResponse
 // @Router /api/config/miners [get]
 func ListMinersConfig(cfg config.Config, w http.ResponseWriter, _ *http.Request) {
-	writeBitaxesResponse(w, cfg.Bitaxes, minersFileLastUpdated(cfg.MinersFilePath))
+	writeBitaxesResponse(w, cfg.Bitaxes, managedFileLastUpdated(cfg.MinersFilePath))
 }
 
-// minersFileLastUpdated stats the managed miners file and returns its mtime
-// as RFC3339 (UTC) -- the same precision SaveMiners' own header comment
-// uses. Returns "" if path is empty (no managed file configured) or the
-// file can't be stat'd (e.g. not written yet), so the field is simply
-// omitted from the response rather than surfacing a spurious error.
-func minersFileLastUpdated(path string) string {
+// managedFileLastUpdated stats a managed config file (miners.yml,
+// settings.yml, ...) and returns its mtime as RFC3339 (UTC) -- the
+// same precision SaveMiners'/SaveAppSettings' own header comment uses.
+// Returns "" if path is empty (no managed file configured) or the file
+// can't be stat'd (e.g. not written yet), so the field is simply omitted
+// from the response rather than surfacing a spurious error.
+func managedFileLastUpdated(path string) string {
 	if path == "" {
 		return ""
 	}
@@ -126,7 +129,7 @@ func SaveMinersConfig(cfg config.Config, w http.ResponseWriter, r *http.Request)
 		return nil, false
 	}
 
-	writeBitaxesResponse(w, merged, minersFileLastUpdated(cfg.MinersFilePath))
+	writeBitaxesResponse(w, merged, managedFileLastUpdated(cfg.MinersFilePath))
 	return merged, true
 }
 
@@ -298,6 +301,191 @@ func writeBitaxesResponse(w http.ResponseWriter, bitaxes []config.Bitaxe, lastUp
 	}
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(bitaxesResponse{Bitaxes: bitaxes, LastUpdated: lastUpdated}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+// appSettingsResponse is the shape of GET/POST /api/config/settings.
+// config.AppSettingsFile here carries the user's overrides only --
+// Pools.Dashboards/Firmware.Repos are whatever's actually stored in
+// settings.yml (possibly empty), not the merged effective view
+// (see Defaults for that). Also carries a read-only snapshot of a few
+// process-launch settings shown for visibility only. Those never round-trip
+// through SaveAppSettings: no hot-reload exists for them, so changing them
+// still means hand-editing dashboard.yml and restarting, same as before
+// this endpoint existed.
+type appSettingsResponse struct {
+	config.AppSettingsFile
+	Defaults    appSettingsDefaults `json:"defaults"`
+	ReadOnly    appSettingsReadOnly `json:"readOnly"`
+	LastUpdated string              `json:"lastUpdated,omitempty"`
+}
+
+// appSettingsDefaults is the built-in registry (config.DefaultPoolDashboards/
+// config.DefaultFirmwareRepos) the UI displays read-only next to the
+// editable override lists -- adding a well-known pool or fixing a
+// firmware repo URL is a code change (see server/internal/config/defaults.go),
+// not something this endpoint ever writes to.
+type appSettingsDefaults struct {
+	Pools    config.PoolsConfig         `json:"pools"`
+	Firmware config.AppSettingsFirmware `json:"firmware"`
+}
+
+func defaultAppSettings() appSettingsDefaults {
+	return appSettingsDefaults{
+		Pools:    config.PoolsConfig{Dashboards: config.DefaultPoolDashboards},
+		Firmware: config.AppSettingsFirmware{Repos: config.DefaultFirmwareRepos},
+	}
+}
+
+type appSettingsReadOnly struct {
+	FeederInterval      string `json:"feederInterval"`
+	HealthCheckInterval string `json:"healthCheckInterval"`
+	FirmwareCacheTTL    string `json:"firmwareCacheTTL"`
+	// FirmwareCacheCheckedAt is the most recent CheckedAt across every
+	// model in the firmware cache (RFC3339, UTC) -- omitted if the cache
+	// is empty (nothing checked yet, e.g. fresh install or no miner has
+	// triggered a check). Lets the UI show "was this actually run" rather
+	// than just the configured TTL.
+	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
+}
+
+// latestFirmwareCheck returns the most recent ModelCache.CheckedAt across
+// every model in cache, or the zero time if cache has no entries yet.
+func latestFirmwareCheck(cache firmware.Cache) time.Time {
+	var latest time.Time
+	for _, mc := range cache.Models {
+		if mc.CheckedAt.After(latest) {
+			latest = mc.CheckedAt
+		}
+	}
+	return latest
+}
+
+// GetAppSettings returns the current settings.yml overrides plus the
+// built-in defaults and the read-only process-launch settings (see
+// appSettingsResponse). Read-only: no file is touched here, current is
+// whatever the caller already has in memory for the managed file (see
+// Router's GET /api/config/settings route, which reloads the shared
+// AppSettingsStore) and cfg is the already-merged config (see
+// Router.snapshotConfig) used only for the read-only process settings.
+//
+// @Summary Get app settings
+// @Description Returns the settings.yml overrides, the built-in defaults for pool dashboards/firmware repos, and a read-only snapshot of process-launch settings (poll intervals, firmware cache TTL) shown for visibility only.
+// @Tags dashboard-api
+// @Produce json
+// @Success 200 {object} handler.appSettingsResponse
+// @Router /api/config/settings [get]
+func GetAppSettings(cfg config.Config, current config.AppSettingsFile, w http.ResponseWriter, _ *http.Request) {
+	writeAppSettingsResponse(w, cfg, current)
+}
+
+// SaveAppSettings validates and persists the editable app settings
+// (electricity rate, pool dashboard links, remote push credentials,
+// firmware repos) to the managed settings.yml file.
+//
+// @Summary Save app settings
+// @Description Validates and persists the editable subset of app settings to settings.yml.
+// @Tags dashboard-api
+// @Accept json
+// @Param request body config.AppSettingsFile true "Settings to save"
+// @Produce json
+// @Success 200 {object} handler.appSettingsResponse
+// @Failure 400 {object} handler.ErrorResponse "invalid settings"
+// @Failure 409 {object} handler.ErrorResponse "server has no resolvable config path -- nowhere safe to write"
+// @Failure 500 {object} handler.ErrorResponse "failed to write the app-settings file"
+// @Router /api/config/settings [post]
+//
+// Returns the saved settings and true on success -- the router uses this
+// to update its own in-memory store immediately (see
+// config.AppSettingsStore.Set), same contract as SaveMinersConfig.
+func SaveAppSettings(cfg config.Config, w http.ResponseWriter, r *http.Request) (config.AppSettingsFile, bool) {
+	if cfg.AppSettingsFilePath == "" {
+		writeErrorResponse(w, "dashboard-api has no resolvable config path -- there's no managed file to write to", http.StatusConflict)
+		return config.AppSettingsFile{}, false
+	}
+
+	var settings config.AppSettingsFile
+	if err := json.NewDecoder(r.Body).Decode(&settings); err != nil {
+		writeErrorResponse(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		return config.AppSettingsFile{}, false
+	}
+
+	if err := validateAppSettings(settings); err != nil {
+		writeErrorResponse(w, err.Error(), http.StatusBadRequest)
+		return config.AppSettingsFile{}, false
+	}
+
+	if err := config.SaveAppSettings(cfg.AppSettingsFilePath, settings); err != nil {
+		writeErrorResponse(w, "failed to save app settings: "+err.Error(), http.StatusInternalServerError)
+		return config.AppSettingsFile{}, false
+	}
+
+	writeAppSettingsResponse(w, cfg, settings)
+	return settings, true
+}
+
+// validateAppSettings checks the handful of things a saved entry can't do
+// without -- everything else is free-form, same principle as
+// validateBitaxe/validatePoolSchedule.
+func validateAppSettings(s config.AppSettingsFile) error {
+	if s.Electricity.RatePerKwh < 0 {
+		return fmt.Errorf("electricity.ratePerKwh must not be negative")
+	}
+	for host, dashboardURL := range s.Pools.Dashboards {
+		if host == "" {
+			return fmt.Errorf("pools.dashboards: a pool hostname is empty")
+		}
+		if dashboardURL == "" {
+			return fmt.Errorf("pools.dashboards[%s]: dashboard URL is empty", host)
+		}
+	}
+	if s.Remote.PushURL != "" {
+		if _, err := url.ParseRequestURI(s.Remote.PushURL); err != nil {
+			return fmt.Errorf("remote.pushURL %q is not a valid URL: %w", s.Remote.PushURL, err)
+		}
+	}
+	for model, repo := range s.Firmware.Repos {
+		if model != config.ModelBitaxe && model != config.ModelNerdaxe {
+			return fmt.Errorf("firmware.repos: unknown model %q (must be %q or %q)", model, config.ModelBitaxe, config.ModelNerdaxe)
+		}
+		if repo == "" {
+			return fmt.Errorf("firmware.repos[%s]: repo URL is empty", model)
+		}
+		if _, err := url.ParseRequestURI(repo); err != nil {
+			return fmt.Errorf("firmware.repos[%s] %q is not a valid URL: %w", model, repo, err)
+		}
+	}
+	return nil
+}
+
+func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings config.AppSettingsFile) {
+	// A zero-value AppSettingsFile (e.g. before settings.yml has ever
+	// been saved) has nil maps here, which encode as JSON null -- the
+	// frontend's Zod schema expects an object (possibly empty), not null.
+	if settings.Pools.Dashboards == nil {
+		settings.Pools.Dashboards = map[string]string{}
+	}
+	if settings.Firmware.Repos == nil {
+		settings.Firmware.Repos = map[config.Model]string{}
+	}
+	readOnly := appSettingsReadOnly{
+		FeederInterval:      cfg.Feeder.Interval.String(),
+		HealthCheckInterval: cfg.HealthCheck.Interval.String(),
+		FirmwareCacheTTL:    cfg.Firmware.CacheTTL.String(),
+	}
+	fwCache := firmware.LoadCache(getDataRoot(cfg.Storage))
+	if checkedAt := latestFirmwareCheck(fwCache); !checkedAt.IsZero() {
+		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
+	}
+	resp := appSettingsResponse{
+		AppSettingsFile: settings,
+		Defaults:        defaultAppSettings(),
+		ReadOnly:        readOnly,
+		LastUpdated:     managedFileLastUpdated(cfg.AppSettingsFilePath),
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
