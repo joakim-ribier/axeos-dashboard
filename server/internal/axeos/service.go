@@ -35,6 +35,8 @@ func NewAxeOs(logger *slog.Logger, config config.Config) AxeOs {
 func (a AxeOs) Restart(miner config.Bitaxe) error {
 	client := bitaxe.NewClient(a.logger, a.cfg.Endpoints.Restart, a.cfg.Endpoints.Timeout)
 
+	// Let any just-sent settings update actually reach flash first (see
+	// RestartDelay's doc comment) before rebooting the device.
 	time.Sleep(RestartDelay)
 
 	a.logger.Info("Restarting miner...", "ip", miner.Ip)
