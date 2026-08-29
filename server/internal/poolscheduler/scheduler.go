@@ -21,9 +21,17 @@ type Scheduler struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
 
-	mu          sync.Mutex
-	cron        *cron.Cron
-	running     bool
+	mu      sync.Mutex
+	cron    *cron.Cron
+	running bool
+
+	// fingerprint is a condensed string of every enabled miner's
+	// poolSchedule (see the fingerprint() function below), captured each
+	// time the cron jobs are (re)built. Comparing it against a freshly
+	// computed one on each reload tick is how the scheduler tells "the
+	// config actually changed, rebuild the jobs" apart from "nothing
+	// changed, this tick is a no-op" -- without it, every tick would stop
+	// and restart the cron for nothing.
 	fingerprint string
 }
 
