@@ -42,12 +42,12 @@ definitions:
         type: string
       model:
         $ref: '#/definitions/config.Model'
-      poolSchedule:
+      port:
+        type: integer
+      schedule:
         items:
           $ref: '#/definitions/config.CronSchedule'
         type: array
-      port:
-        type: integer
       url:
         type: string
       user:
@@ -55,10 +55,10 @@ definitions:
     type: object
   config.CronSchedule:
     properties:
+      action:
+        $ref: '#/definitions/config.ScheduleAction'
       cron:
         type: string
-      target:
-        $ref: '#/definitions/config.PoolTarget'
     type: object
   config.ElectricityConfig:
     properties:
@@ -75,14 +75,6 @@ definitions:
     x-enum-varnames:
     - ModelBitaxe
     - ModelNerdaxe
-  config.PoolTarget:
-    enum:
-    - primary
-    - fallback
-    type: string
-    x-enum-varnames:
-    - Primary
-    - Fallback
   config.PoolsConfig:
     properties:
       dashboards:
@@ -102,6 +94,16 @@ definitions:
       pushURL:
         type: string
     type: object
+  config.ScheduleAction:
+    enum:
+    - switch_primary
+    - switch_fallback
+    - restart
+    type: string
+    x-enum-varnames:
+    - ActionSwitchPrimary
+    - ActionSwitchFallback
+    - ActionRestart
   handler.AlertEntry:
     properties:
       alerts:
@@ -613,7 +615,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Upserts one or more miner entries into the managed miners.yml,
+      description: Upserts one or more miner entries into the managed miners file,
         matched by MAC. New entries are always saved enabled.
       parameters:
       - description: Miner entries to add/update

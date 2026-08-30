@@ -1,4 +1,4 @@
-// src/components/ui/PoolScheduleEditor.tsx
+// src/components/ui/ScheduleEditor.tsx
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
@@ -29,24 +29,22 @@ import {
 } from "@/utils/cron";
 import { formatTimestamp } from "@/utils/format";
 
-interface PoolScheduleEditorProps {
+interface ScheduleEditorProps {
   miner: MinerConfig;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
 }
 
-/** Per-miner pool scheduler editor: shows the currently saved poolSchedule
- * entries and a small form to add another one. Every add/remove persists
+/** Per-miner scheduler editor: shows the currently saved schedule entries
+ * (each a cron expression plus the action it runs -- switch to a pool, or
+ * restart) and a small form to add another one. Every add/remove persists
  * immediately via saveMiners (POST /api/config/miners upserts by MAC),
  * same pattern as the enable/disable toggle in ConfiguredMinersTable. */
-export const PoolScheduleEditor = ({
-  miner,
-  saveMiners,
-}: PoolScheduleEditorProps) => {
+export const ScheduleEditor = ({ miner, saveMiners }: ScheduleEditorProps) => {
   const { t, i18n } = useTranslation();
-  const schedule = miner.poolSchedule ?? [];
+  const schedule = miner.schedule ?? [];
 
   const [cron, setCron] = useState("");
-  const [target, setTarget] = useState<CronSchedule["target"]>("fallback");
+  const [action, setAction] = useState<CronSchedule["action"]>("restart");
   const [isAdding, setIsAdding] = useState(false);
   const [removingIndex, setRemovingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +68,7 @@ export const PoolScheduleEditor = ({
   const persist = async (updated: CronSchedule[]) => {
     setError(null);
     try {
-      await saveMiners([{ ...miner, poolSchedule: updated }]);
+      await saveMiners([{ ...miner, schedule: updated }]);
     } catch (err) {
       setError(extractErrorMessage(err));
       throw err;
@@ -81,7 +79,7 @@ export const PoolScheduleEditor = ({
     if (!trimmedCron || cronIsInvalid || cronIsDuplicate) return;
     setIsAdding(true);
     try {
-      await persist([...schedule, { cron: trimmedCron, target }]);
+      await persist([...schedule, { cron: trimmedCron, action }]);
       setCron("");
     } catch {
       // error already surfaced via `error` below
@@ -121,7 +119,7 @@ export const PoolScheduleEditor = ({
         <Stack spacing={1}>
           {schedule.map((entry, index) => (
             <Box
-              key={`${entry.cron}-${entry.target}-${index}`}
+              key={`${entry.cron}-${entry.action}-${index}`}
               sx={{
                 display: "flex",
                 alignItems: "center",
@@ -139,7 +137,7 @@ export const PoolScheduleEditor = ({
               <Chip
                 size="small"
                 variant="outlined"
-                label={t(`settingsPage.configured.schedule.${entry.target}`)}
+                label={t(`settingsPage.configured.schedule.${entry.action}`)}
               />
               <Typography
                 variant="caption"
@@ -199,16 +197,19 @@ export const PoolScheduleEditor = ({
         <TextField
           size="small"
           select
-          label={t("settingsPage.configured.schedule.target")}
-          value={target}
-          onChange={(e) => setTarget(e.target.value as CronSchedule["target"])}
-          sx={{ minWidth: 140 }}
+          label={t("settingsPage.configured.schedule.action")}
+          value={action}
+          onChange={(e) => setAction(e.target.value as CronSchedule["action"])}
+          sx={{ minWidth: 170 }}
         >
-          <MenuItem value="primary">
-            {t("settingsPage.configured.schedule.primary")}
+          <MenuItem value="switch_primary">
+            {t("settingsPage.configured.schedule.switch_primary")}
           </MenuItem>
-          <MenuItem value="fallback">
-            {t("settingsPage.configured.schedule.fallback")}
+          <MenuItem value="switch_fallback">
+            {t("settingsPage.configured.schedule.switch_fallback")}
+          </MenuItem>
+          <MenuItem value="restart">
+            {t("settingsPage.configured.schedule.restart")}
           </MenuItem>
         </TextField>
         <Button

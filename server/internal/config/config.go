@@ -137,12 +137,26 @@ type Bitaxe struct {
 	FallbackPort int    `yaml:"fallbackPort" json:"fallbackPort"`
 	FallbackUser string `yaml:"fallbackUser" json:"fallbackUser"`
 
-	PoolSchedule []CronSchedule `yaml:"poolSchedule,omitempty" json:"poolSchedule,omitempty"`
+	Schedule []CronSchedule `yaml:"schedule,omitempty" json:"schedule,omitempty"`
 }
 
+// ScheduleAction is the action a scheduled job runs when its cron fires --
+// either of the two pool switches a miner already supports manually, or a
+// plain restart. Kept distinct from PoolTarget (which only ever means
+// "which pool slot", used by the manual switch endpoint and
+// GetPoolsSettings): a scheduled entry needs a third value action can take
+// that a manual switch never does.
+type ScheduleAction string
+
+const (
+	ActionSwitchPrimary  ScheduleAction = "switch_primary"
+	ActionSwitchFallback ScheduleAction = "switch_fallback"
+	ActionRestart        ScheduleAction = "restart"
+)
+
 type CronSchedule struct {
-	Cron   string     `yaml:"cron" json:"cron"`
-	Target PoolTarget `yaml:"target" json:"target"`
+	Cron   string         `yaml:"cron" json:"cron"`
+	Action ScheduleAction `yaml:"action" json:"action"`
 }
 
 type BitaxeServerSettings struct {

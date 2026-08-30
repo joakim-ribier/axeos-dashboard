@@ -115,7 +115,7 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
-| `internal/poolscheduler/` | robfig/cron v3 jobs for timed pool switching (seconds precision, configured per-miner in YAML) |
+| `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
 | `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots); `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
 | `internal/model/` | `MinerInfo` (23 fields) / `MinersResponse` JSON types |
@@ -240,7 +240,7 @@ remote:
 ```yaml
 # miners.yml -- gitignored; treated as managed data, generated/updated by
 # the /settings page (network discovery + add-by-IP, and -- per miner,
-# click its row to expand -- the pool scheduler editor) -- not meant to be
+# click its row to expand -- the scheduler editor) -- not meant to be
 # hand-edited (a Settings save can overwrite it).
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
@@ -254,11 +254,11 @@ bitaxes:
     fallbackUrl: solo.atlaspool.io
     fallbackPort: 3333
     fallbackUser: wallet.worker
-    poolSchedule:              # optional cron-based auto switching (seconds field included)
+    schedule:                  # optional cron-based auto actions (seconds field included)
       - cron: "59 59 23 * * FRI"
-        target: fallback
+        action: switch_fallback   # switch_primary | switch_fallback | restart
       - cron: "59 59 23 * * SUN"
-        target: primary
+        action: switch_primary
 ```
 
 Override dashboard-api/remote-dashboard-api port: `server.port` in the config YAML (default `8080`/`8081`) — no env var for this.

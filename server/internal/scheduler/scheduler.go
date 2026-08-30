@@ -1,8 +1,9 @@
-// cmd/dashboard-api/poolscheduler/scheduler.go
-package poolscheduler
+// cmd/dashboard-api/scheduler/scheduler.go
+package scheduler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -26,7 +27,7 @@ type Scheduler struct {
 	running bool
 
 	// fingerprint is a condensed string of every enabled miner's
-	// poolSchedule (see the fingerprint() function below), captured each
+	// schedule (see the fingerprint() function below), captured each
 	// time the cron jobs are (re)built. Comparing it against a freshly
 	// computed one on each reload tick is how the scheduler tells "the
 	// config actually changed, rebuild the jobs" apart from "nothing
@@ -35,11 +36,11 @@ type Scheduler struct {
 	fingerprint string
 }
 
-func NewPoolScheduler(logger *slog.Logger, config config.Config) *Scheduler {
+func NewScheduler(logger *slog.Logger, config config.Config) *Scheduler {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	s := &Scheduler{
-		logger: logger.With("namespace", "PoolScheduler"),
+		logger: logger.With("namespace", "Scheduler"),
 		config: config,
 		ctx:    ctx,
 		cancel: cancel,
@@ -51,14 +52,31 @@ func NewPoolScheduler(logger *slog.Logger, config config.Config) *Scheduler {
 }
 
 // WithMinersStore attaches the shared miners store this Scheduler reloads
-// from on every reload tick (see Start) -- so a poolSchedule saved through
-// the Settings UI takes effect without a dashboard-api restart, the same
-// way the healthcheck watcher already picks up miners.yml changes.
+// from on every reload tick (see Start) -- so a schedule saved through the
+// Settings UI takes effect without a dashboard-api restart, the same way
+// the healthcheck watcher already picks up miners.yml changes.
 // Optional: without one, the scheduler just keeps running the jobs it was
 // built with at construction time, same as before this feature existed.
 func (s *Scheduler) WithMinersStore(store *config.MinersStore) *Scheduler {
 	s.minersStore = store
 	return s
+}
+
+// execute runs the one action a scheduled entry can trigger. Both
+// SwitchPool and Restart already log internally on failure, so a caller
+// looping over jobs (rebuild below) only needs the error to decide whether
+// to log the (rare) "unknown action" case.
+func execute(axeOs axeos.AxeOs, miner config.Bitaxe, action config.ScheduleAction) error {
+	switch action {
+	case config.ActionSwitchPrimary:
+		return axeOs.SwitchPool(miner, config.Primary)
+	case config.ActionSwitchFallback:
+		return axeOs.SwitchPool(miner, config.Fallback)
+	case config.ActionRestart:
+		return axeOs.Restart(miner)
+	default:
+		return fmt.Errorf("unknown schedule action %q", action)
+	}
 }
 
 // rebuild stops whatever cron instance is currently running (if any),
@@ -76,24 +94,26 @@ func (s *Scheduler) rebuild(bitaxes []config.Bitaxe) {
 	s.cron = cron.New(cron.WithSeconds(), cron.WithLocation(time.Local))
 	axeOs := axeos.NewAxeOs(s.logger, s.config)
 
-	s.logger.Info("Pool scheduler configure...")
+	s.logger.Info("Scheduler configure...")
 	for _, miner := range bitaxes {
-		for _, schedule := range miner.PoolSchedule {
-			s.logger.Info("New job scheduled!", "ip", miner.Ip, "cron", schedule.Cron, "pool", schedule.Target)
+		for _, schedule := range miner.Schedule {
+			s.logger.Info("New job scheduled!", "ip", miner.Ip, "cron", schedule.Cron, "action", schedule.Action)
 
 			_, err := s.cron.AddFunc(schedule.Cron, func() {
-				s.logger.Info("Switching to a new pool!", "ip", miner.Ip, "pool", schedule.Target)
+				s.logger.Info("Running scheduled action!", "ip", miner.Ip, "action", schedule.Action)
 
-				_ = axeOs.SwitchPool(miner, schedule.Target) // already logged internally on failure
+				if err := execute(axeOs, miner, schedule.Action); err != nil {
+					s.logger.Error("Scheduled action failed!", "ip", miner.Ip, "action", schedule.Action, "error", err)
+				}
 			})
 
 			if err != nil {
-				s.logger.Error("Failed to add new scheduled job!", "ip", miner.Ip, "cron", schedule.Cron, "pool", schedule.Target, "error", err)
+				s.logger.Error("Failed to add new scheduled job!", "ip", miner.Ip, "cron", schedule.Cron, "action", schedule.Action, "error", err)
 				continue
 			}
 		}
 	}
-	s.logger.Info("Pool scheduler completed.")
+	s.logger.Info("Scheduler completed.")
 
 	s.fingerprint = fingerprint(bitaxes)
 	if s.running {
@@ -101,20 +121,20 @@ func (s *Scheduler) rebuild(bitaxes []config.Bitaxe) {
 	}
 }
 
-// fingerprint condenses every enabled miner's pool schedule into a string
-// -- cheap to compare between reload ticks, so a reload that found no
-// actual change to poolSchedule (the common case: nothing changed on
-// disk, or an unrelated field like ip/hostname changed) doesn't stop and
-// restart the cron for nothing.
+// fingerprint condenses every enabled miner's schedule into a string --
+// cheap to compare between reload ticks, so a reload that found no actual
+// change to schedule (the common case: nothing changed on disk, or an
+// unrelated field like ip/hostname changed) doesn't stop and restart the
+// cron for nothing.
 func fingerprint(bitaxes []config.Bitaxe) string {
 	var b strings.Builder
 	for _, miner := range bitaxes {
-		for _, schedule := range miner.PoolSchedule {
+		for _, schedule := range miner.Schedule {
 			b.WriteString(miner.Ip)
 			b.WriteByte('|')
 			b.WriteString(schedule.Cron)
 			b.WriteByte('|')
-			b.WriteString(string(schedule.Target))
+			b.WriteString(string(schedule.Action))
 			b.WriteByte(';')
 		}
 	}
@@ -122,7 +142,7 @@ func fingerprint(bitaxes []config.Bitaxe) string {
 }
 
 func (s *Scheduler) Start() {
-	s.logger.Info("Pool scheduler running...")
+	s.logger.Info("Scheduler running...")
 
 	s.mu.Lock()
 	s.running = true
@@ -149,9 +169,9 @@ func (s *Scheduler) Start() {
 }
 
 // reload re-reads miners.yml via the shared store and rebuilds the cron
-// jobs only if a miner's poolSchedule actually changed -- cheap to call
-// every tick (MinersStore.Reload itself is a no-op past one os.Stat when
-// the file's mtime hasn't moved).
+// jobs only if a miner's schedule actually changed -- cheap to call every
+// tick (MinersStore.Reload itself is a no-op past one os.Stat when the
+// file's mtime hasn't moved).
 func (s *Scheduler) reload() {
 	bitaxes, err := s.minersStore.Reload()
 	if err != nil {
@@ -170,12 +190,12 @@ func (s *Scheduler) reload() {
 		return
 	}
 
-	s.logger.Info("Pool schedule changed, rebuilding jobs...")
+	s.logger.Info("Schedule changed, rebuilding jobs...")
 	s.rebuild(enabled)
 }
 
 func (s *Scheduler) Stop() {
-	s.logger.Info("Pool scheduler stopped!")
+	s.logger.Info("Scheduler stopped!")
 	s.cancel()
 
 	s.mu.Lock()
