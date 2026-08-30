@@ -81,7 +81,7 @@
                 }
             },
             "post": {
-                "description": "Upserts one or more miner entries into the managed miners.yml, matched by MAC. New entries are always saved enabled.",
+                "description": "Upserts one or more miner entries into the managed miners file, matched by MAC. New entries are always saved enabled.",
                 "consumes": [
                     "application/json"
                 ],
@@ -683,14 +683,14 @@
                 "model": {
                     "$ref": "#/definitions/config.Model"
                 },
-                "poolSchedule": {
+                "port": {
+                    "type": "integer"
+                },
+                "schedule": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/config.CronSchedule"
                     }
-                },
-                "port": {
-                    "type": "integer"
                 },
                 "url": {
                     "type": "string"
@@ -703,11 +703,11 @@
         "config.CronSchedule": {
             "type": "object",
             "properties": {
+                "action": {
+                    "$ref": "#/definitions/config.ScheduleAction"
+                },
                 "cron": {
                     "type": "string"
-                },
-                "target": {
-                    "$ref": "#/definitions/config.PoolTarget"
                 }
             }
         },
@@ -729,17 +729,6 @@
             "x-enum-varnames": [
                 "ModelBitaxe",
                 "ModelNerdaxe"
-            ]
-        },
-        "config.PoolTarget": {
-            "type": "string",
-            "enum": [
-                "primary",
-                "fallback"
-            ],
-            "x-enum-varnames": [
-                "Primary",
-                "Fallback"
             ]
         },
         "config.PoolsConfig": {
@@ -764,6 +753,19 @@
                     "type": "string"
                 }
             }
+        },
+        "config.ScheduleAction": {
+            "type": "string",
+            "enum": [
+                "switch_primary",
+                "switch_fallback",
+                "restart"
+            ],
+            "x-enum-varnames": [
+                "ActionSwitchPrimary",
+                "ActionSwitchFallback",
+                "ActionRestart"
+            ]
         },
         "handler.AlertEntry": {
             "type": "object",

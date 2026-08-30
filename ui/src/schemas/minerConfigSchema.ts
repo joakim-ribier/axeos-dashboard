@@ -1,11 +1,12 @@
 // src/schemas/minerConfigSchema.ts
 import { z } from "zod";
 
-// One poolSchedule entry, as configured in the managed miners file --
-// optional/advanced, still hand-edited in the file for now.
+// One schedule entry, as configured in the managed miners file -- the
+// action a cron-triggered job runs for this miner (switch to a given
+// pool, or restart).
 export const cronScheduleSchema = z.object({
   cron: z.string(),
-  target: z.enum(["primary", "fallback"]),
+  action: z.enum(["switch_primary", "switch_fallback", "restart"]),
 });
 
 export type CronSchedule = z.infer<typeof cronScheduleSchema>;
@@ -25,7 +26,7 @@ export const minerConfigSchema = z.object({
   fallbackUrl: z.string(),
   fallbackPort: z.number(),
   fallbackUser: z.string(),
-  poolSchedule: z.array(cronScheduleSchema).optional(),
+  schedule: z.array(cronScheduleSchema).optional(),
 });
 
 export type MinerConfig = z.infer<typeof minerConfigSchema>;

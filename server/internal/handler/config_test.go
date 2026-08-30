@@ -248,42 +248,42 @@ func TestSaveMinersConfig_validation(t *testing.T) {
 	}
 }
 
-func TestSaveMinersConfig_poolScheduleValidation(t *testing.T) {
+func TestSaveMinersConfig_scheduleValidation(t *testing.T) {
 	tests := []struct {
 		name     string
 		schedule []config.CronSchedule
 	}{
 		{
 			name:     "invalid cron (missing seconds field)",
-			schedule: []config.CronSchedule{{Cron: "59 23 * * FRI", Target: config.Fallback}},
+			schedule: []config.CronSchedule{{Cron: "59 23 * * FRI", Action: config.ActionSwitchFallback}},
 		},
 		{
 			name:     "garbage cron",
-			schedule: []config.CronSchedule{{Cron: "not a cron expression", Target: config.Fallback}},
+			schedule: []config.CronSchedule{{Cron: "not a cron expression", Action: config.ActionSwitchFallback}},
 		},
 		{
-			name:     "unknown target",
-			schedule: []config.CronSchedule{{Cron: "59 59 23 * * FRI", Target: "backup"}},
+			name:     "unknown action",
+			schedule: []config.CronSchedule{{Cron: "59 59 23 * * FRI", Action: "backup"}},
 		},
 		{
-			name: "duplicate cron, same target",
+			name: "duplicate cron, same action",
 			schedule: []config.CronSchedule{
-				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
-				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
+				{Cron: "59 59 23 * * FRI", Action: config.ActionSwitchFallback},
+				{Cron: "59 59 23 * * FRI", Action: config.ActionSwitchFallback},
 			},
 		},
 		{
-			name: "duplicate cron, different target",
+			name: "duplicate cron, different action",
 			schedule: []config.CronSchedule{
-				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
-				{Cron: "59 59 23 * * FRI", Target: config.Primary},
+				{Cron: "59 59 23 * * FRI", Action: config.ActionSwitchFallback},
+				{Cron: "59 59 23 * * FRI", Action: config.ActionRestart},
 			},
 		},
 		{
 			name: "duplicate cron, differing only by spacing/case",
 			schedule: []config.CronSchedule{
-				{Cron: "59 59 23 * * FRI", Target: config.Fallback},
-				{Cron: "59  59 23 * * fri", Target: config.Primary},
+				{Cron: "59 59 23 * * FRI", Action: config.ActionSwitchFallback},
+				{Cron: "59  59 23 * * fri", Action: config.ActionSwitchPrimary},
 			},
 		},
 	}
@@ -294,7 +294,7 @@ func TestSaveMinersConfig_poolScheduleValidation(t *testing.T) {
 			cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}
 
 			w, _, ok := postSaveMiners(t, cfg, bitaxesResponse{Bitaxes: []config.Bitaxe{
-				{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", PoolSchedule: tt.schedule},
+				{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", Schedule: tt.schedule},
 			}})
 
 			if ok {
@@ -307,22 +307,22 @@ func TestSaveMinersConfig_poolScheduleValidation(t *testing.T) {
 	}
 }
 
-func TestSaveMinersConfig_validPoolScheduleRoundTrips(t *testing.T) {
+func TestSaveMinersConfig_validScheduleRoundTrips(t *testing.T) {
 	dir := t.TempDir()
 	cfg := config.Config{MinersFilePath: filepath.Join(dir, "miners.yml")}
 
 	schedule := []config.CronSchedule{
-		{Cron: "59 59 23 * * FRI", Target: config.Fallback},
-		{Cron: "59 59 23 * * SUN", Target: config.Primary},
+		{Cron: "59 59 23 * * FRI", Action: config.ActionSwitchFallback},
+		{Cron: "59 59 23 * * SUN", Action: config.ActionRestart},
 	}
 	w, merged, ok := postSaveMiners(t, cfg, bitaxesResponse{Bitaxes: []config.Bitaxe{
-		{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", PoolSchedule: schedule},
+		{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", Schedule: schedule},
 	}})
 
 	if !ok {
 		t.Fatalf("SaveMinersConfig() ok = false, status = %d, body = %s", w.Code, w.Body.String())
 	}
-	if len(merged) != 1 || len(merged[0].PoolSchedule) != 2 {
+	if len(merged) != 1 || len(merged[0].Schedule) != 2 {
 		t.Fatalf("merged = %+v, want the 2-entry schedule preserved", merged)
 	}
 }

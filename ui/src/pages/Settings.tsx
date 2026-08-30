@@ -41,7 +41,7 @@ import {
 import { AppSettingsSection } from "@/components/ui/AppSettingsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PoolScheduleEditor } from "@/components/ui/PoolScheduleEditor";
+import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
@@ -165,12 +165,12 @@ const ConfiguredMinersTable = ({
                         }}
                       >
                         {m.hostname || "—"}
-                        {(m.poolSchedule?.length ?? 0) > 0 && (
+                        {(m.schedule?.length ?? 0) > 0 && (
                           <Tooltip
                             title={t(
                               "settingsPage.configured.schedule.countTooltip",
                               {
-                                count: m.poolSchedule?.length ?? 0,
+                                count: m.schedule?.length ?? 0,
                               },
                             )}
                           >
@@ -178,7 +178,7 @@ const ConfiguredMinersTable = ({
                               size="small"
                               variant="outlined"
                               icon={<ScheduleIcon fontSize="small" />}
-                              label={m.poolSchedule?.length}
+                              label={m.schedule?.length}
                               sx={{
                                 height: 20,
                                 "& .MuiChip-icon": { fontSize: 14 },
@@ -250,10 +250,7 @@ const ConfiguredMinersTable = ({
                     >
                       <Collapse in={isExpanded} unmountOnExit>
                         <Box sx={{ px: 2 }}>
-                          <PoolScheduleEditor
-                            miner={m}
-                            saveMiners={saveMiners}
-                          />
+                          <ScheduleEditor miner={m} saveMiners={saveMiners} />
                         </Box>
                       </Collapse>
                     </TableCell>
@@ -508,7 +505,7 @@ export const Settings = () => {
   // Re-selecting an already-configured device is how the operator forces a
   // refresh of its ip/hostname/model/pool from what the device reports
   // right now (e.g. after an IP change, or to recover from a bad manual
-  // edit) -- but a fresh probe never knows about enabled/poolSchedule
+  // edit) -- but a fresh probe never knows about enabled/schedule
   // (advanced, hand-edited-only field), so both are carried over from the
   // existing entry rather than clobbered with the probe's own defaults
   // (enabled: true, no schedule).
@@ -518,7 +515,7 @@ export const Settings = () => {
     return {
       ...d,
       enabled: existing.enabled,
-      poolSchedule: existing.poolSchedule,
+      schedule: existing.schedule,
     };
   });
 

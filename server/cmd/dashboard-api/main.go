@@ -16,7 +16,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/poolscheduler"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/scheduler"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
 
@@ -64,7 +64,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	// Shared by the watcher, the router and the pool scheduler (same
+	// Shared by the watcher, the router and the scheduler (same
 	// process) -- a miner saved via POST /api/config/miners is picked up
 	// by all three immediately (Set), and each also notices a change made
 	// some other way (another process, hand-editing the managed miners
@@ -88,8 +88,8 @@ func main() {
 		WithAppSettingsStore(appSettingsStore).
 		Listen()
 
-	scheduler := poolscheduler.NewPoolScheduler(logger, cfg).WithMinersStore(minersStore)
-	scheduler.Start()
+	sched := scheduler.NewScheduler(logger, cfg).WithMinersStore(minersStore)
+	sched.Start()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -97,7 +97,7 @@ func main() {
 
 	logger.Info("Shutting down server...")
 
-	scheduler.Stop()
+	sched.Stop()
 	watcher.Stop()
 
 	wg.Wait()

@@ -156,7 +156,7 @@ files (see [Configuration](CONFIGURATION.md)). Four sections:
 
 - **Configured miners** — every miner currently in `miners.yml`, including
   disabled ones, with enable/disable and a **disable all** button. Clicking
-  a row expands it in place to reveal that miner's **pool scheduler**
+  a row expands it in place to reveal that miner's **scheduler**
   (below) without navigating away.
 - **Automatic detection** — scans the local network (or a given CIDR) for
   AxeOS devices and lists what it finds, ready to select and save.
@@ -175,9 +175,9 @@ files (see [Configuration](CONFIGURATION.md)). Four sections:
   each with an at-a-glance, color-coded last-run indicator so a stuck
   feeder or health-check loop is visible without digging through logs.
 
-**Pool scheduler** — per miner, add or remove cron-based automatic pool
-switches (e.g. "switch to fallback every Friday at 23:59:59, back to
-primary every Sunday"):
+**Scheduler** — per miner, add or remove cron-based automatic jobs: switch
+to primary, switch to fallback, or restart (e.g. "switch to fallback every
+Friday at 23:59:59, back to primary every Sunday"):
 
 - The cron expression is a raw 6-field string, **seconds included**
   (`sec min hour dayOfMonth month dayOfWeek`) — as you type, a live,
@@ -185,7 +185,7 @@ primary every Sunday"):
   the next few times it would fire, and anything that doesn't parse is
   rejected before it can be submitted.
 - A schedule that duplicates one already configured for that miner (same
-  expression, regardless of spacing/case or target) is rejected too — both
+  expression, regardless of spacing/case or action) is rejected too — both
   would otherwise fire at the exact same moment.
 - A small badge next to a miner's name shows how many schedules it has
   without needing to expand the row.

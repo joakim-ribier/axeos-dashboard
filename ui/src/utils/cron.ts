@@ -6,7 +6,7 @@ import "cronstrue/locales/fr";
 
 // Mirrors the field spec the server-side scheduler and config.ValidateCronSchedule
 // use (seconds field included, e.g. "59 59 23 * * FRI") -- everything here
-// is purely for the live preview in PoolScheduleEditor, the actual save is
+// is purely for the live preview in ScheduleEditor, the actual save is
 // still validated server-side.
 
 /** Human-readable translation of a cron expression (e.g. "At 23:59:59, only

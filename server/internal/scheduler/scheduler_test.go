@@ -1,4 +1,4 @@
-package poolscheduler
+package scheduler
 
 import (
 	"io"
@@ -14,53 +14,53 @@ func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
-func TestNewPoolScheduler_registersJobsForEnabledMinersOnly(t *testing.T) {
+func TestNewScheduler_registersJobsForEnabledMinersOnly(t *testing.T) {
 	cfg := config.Config{
 		Bitaxes: []config.Bitaxe{
 			{
 				Ip: "10.0.0.1", Enabled: true,
-				PoolSchedule: []config.CronSchedule{
-					{Cron: "0 0 0 * * SAT", Target: config.Fallback},
-					{Cron: "0 0 0 * * MON", Target: config.Primary},
+				Schedule: []config.CronSchedule{
+					{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchFallback},
+					{Cron: "0 0 0 * * MON", Action: config.ActionSwitchPrimary},
 				},
 			},
 			{
 				Ip: "10.0.0.2", Enabled: true,
-				PoolSchedule: []config.CronSchedule{
-					{Cron: "0 30 12 * * *", Target: config.Fallback},
+				Schedule: []config.CronSchedule{
+					{Cron: "0 30 12 * * *", Action: config.ActionRestart},
 				},
 			},
 			{
 				// Disabled miners are filtered out by config.GetMiners() and must not get any job.
 				Ip: "10.0.0.3", Enabled: false,
-				PoolSchedule: []config.CronSchedule{
-					{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+				Schedule: []config.CronSchedule{
+					{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchFallback},
 				},
 			},
 		},
 	}
 
-	s := NewPoolScheduler(testLogger(), cfg)
+	s := NewScheduler(testLogger(), cfg)
 
 	if got, want := len(s.cron.Entries()), 3; got != want {
 		t.Errorf("registered cron entries = %d, want %d", got, want)
 	}
 }
 
-func TestNewPoolScheduler_invalidCronExpressionIsSkipped(t *testing.T) {
+func TestNewScheduler_invalidCronExpressionIsSkipped(t *testing.T) {
 	cfg := config.Config{
 		Bitaxes: []config.Bitaxe{
 			{
 				Ip: "10.0.0.1", Enabled: true,
-				PoolSchedule: []config.CronSchedule{
-					{Cron: "not a valid cron expression", Target: config.Fallback},
-					{Cron: "0 0 0 * * SAT", Target: config.Primary},
+				Schedule: []config.CronSchedule{
+					{Cron: "not a valid cron expression", Action: config.ActionSwitchFallback},
+					{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchPrimary},
 				},
 			},
 		},
 	}
 
-	s := NewPoolScheduler(testLogger(), cfg)
+	s := NewScheduler(testLogger(), cfg)
 
 	if got, want := len(s.cron.Entries()), 1; got != want {
 		t.Errorf("registered cron entries = %d, want %d (the invalid expression must be skipped, not crash)", got, want)
@@ -69,12 +69,12 @@ func TestNewPoolScheduler_invalidCronExpressionIsSkipped(t *testing.T) {
 
 func TestScheduler_startAndStopDoNotPanic(t *testing.T) {
 	cfg := config.Config{Bitaxes: []config.Bitaxe{
-		{Ip: "10.0.0.1", Enabled: true, PoolSchedule: []config.CronSchedule{
-			{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+		{Ip: "10.0.0.1", Enabled: true, Schedule: []config.CronSchedule{
+			{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchFallback},
 		}},
 	}}
 
-	s := NewPoolScheduler(testLogger(), cfg)
+	s := NewScheduler(testLogger(), cfg)
 	s.Start()
 	s.Stop()
 }
@@ -104,7 +104,7 @@ func TestScheduler_reloadRebuildsJobsWhenScheduleChangesOnDisk(t *testing.T) {
 		HealthCheck: config.HealthCheckConfig{Interval: 10 * time.Millisecond},
 	}
 
-	s := NewPoolScheduler(testLogger(), cfg).WithMinersStore(store)
+	s := NewScheduler(testLogger(), cfg).WithMinersStore(store)
 	s.Start()
 	defer s.Stop()
 
@@ -116,8 +116,8 @@ func TestScheduler_reloadRebuildsJobsWhenScheduleChangesOnDisk(t *testing.T) {
 	// some filesystems have coarse (1s) mtime resolution, and Reload()
 	// only re-reads when mtime changes.
 	time.Sleep(1100 * time.Millisecond)
-	updated := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, PoolSchedule: []config.CronSchedule{
-		{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+	updated := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, Schedule: []config.CronSchedule{
+		{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchFallback},
 	}}}
 	if err := config.SaveMiners(path, updated); err != nil {
 		t.Fatalf("save updated miners file: %v", err)
@@ -137,8 +137,8 @@ func TestScheduler_reloadDoesNotDuplicateJobsWhenNothingChanged(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "miners.yml")
 
-	bitaxes := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, PoolSchedule: []config.CronSchedule{
-		{Cron: "0 0 0 * * SAT", Target: config.Fallback},
+	bitaxes := []config.Bitaxe{{Ip: "10.0.0.1", Enabled: true, Schedule: []config.CronSchedule{
+		{Cron: "0 0 0 * * SAT", Action: config.ActionSwitchFallback},
 	}}}
 	if err := config.SaveMiners(path, bitaxes); err != nil {
 		t.Fatalf("seed miners file: %v", err)
@@ -150,7 +150,7 @@ func TestScheduler_reloadDoesNotDuplicateJobsWhenNothingChanged(t *testing.T) {
 		HealthCheck: config.HealthCheckConfig{Interval: 5 * time.Millisecond},
 	}
 
-	s := NewPoolScheduler(testLogger(), cfg).WithMinersStore(store)
+	s := NewScheduler(testLogger(), cfg).WithMinersStore(store)
 	s.Start()
 	defer s.Stop()
 
