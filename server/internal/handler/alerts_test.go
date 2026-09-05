@@ -382,13 +382,13 @@ func TestListAlertsHistory(t *testing.T) {
 
 func TestListRemoteAlertsHistory(t *testing.T) {
 	dir := t.TempDir()
-	writeTestFile(t, filepath.Join(dir, "demo", "bitaxes", "aabbccddeeff", "2026-07-13.jsonl"),
+	writeTestFile(t, filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff", "2026-07-13.jsonl"),
 		`{"ts":"2026-07-13T09:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","alerts":[{"type":"offline"}]}`+"\n")
-	writeTestFile(t, filepath.Join(dir, "demo", "bitaxes", "aabbccddeeff", "2026-07-14.jsonl"),
+	writeTestFile(t, filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff", "2026-07-14.jsonl"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","alerts":[{"type":"tempHigh","value":65,"threshold":62}]}`+"\n"+
 			`{"ts":"2026-07-14T10:05:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","alerts":[{"type":"tempHigh","value":68,"threshold":62}]}`+"\n")
 
-	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 
 	t.Run("date is required -- a request without one is rejected", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -442,9 +442,9 @@ func TestListRemoteAlertsHistory(t *testing.T) {
 		// minutes -- a 3x threshold of 6 minutes, which the 7-minute gap
 		// exceeds. Splitting into two episodes proves boardFeederInterval's
 		// value is what's actually driving the grouping, not the fallback.
-		writeTestFile(t, filepath.Join(dir, "demo2", "bitaxes", "aabbccddeeff", "latest.json"),
+		writeTestFile(t, filepath.Join(dir, "data", "boards", "demo2", "bitaxes", "aabbccddeeff", "latest.json"),
 			`{"ts":"2026-07-15T09:07:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","feederIntervalSeconds":120}`)
-		writeTestFile(t, filepath.Join(dir, "demo2", "bitaxes", "aabbccddeeff", "2026-07-15.jsonl"),
+		writeTestFile(t, filepath.Join(dir, "data", "boards", "demo2", "bitaxes", "aabbccddeeff", "2026-07-15.jsonl"),
 			`{"ts":"2026-07-15T09:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","alerts":[{"type":"tempHigh","value":65,"threshold":62}]}`+"\n"+
 				`{"ts":"2026-07-15T09:07:00Z","ip":"10.0.0.1","hostname":"bitaxe-office","alerts":[{"type":"tempHigh","value":66,"threshold":62}]}`+"\n")
 

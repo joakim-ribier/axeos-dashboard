@@ -338,5 +338,7 @@ Override dashboard-api/feeder's local data dir (default from config's `storage.d
 BITAXE_DATA_ROOT=/path/to/data ./resources/build/server/bin/dashboard-api -config dashboard.yml
 ```
 
-remote-dashboard-api has no env var override — its data dir is `storage.boardsDir`
-in `remote-dashboard.yml` (defaults to `{dataDir}/data/boards` when empty).
+remote-dashboard-api has no override at all — its data dir is always
+`{storage.dataDir}/data/boards` in `remote-dashboard.yml`, the same layout
+hashboard itself writes to. It must run on the same machine as hashboard-api
+(or share its data dir) regardless.

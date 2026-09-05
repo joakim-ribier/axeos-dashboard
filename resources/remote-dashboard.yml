@@ -3,8 +3,10 @@ global:
 server:
   port: "8081"
 storage:
-  dataDir: resources                         # root dir: logs written here
-  boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty) -- for local dev, point this at your sibling hashboard checkout's resources/data/boards
+  dataDir: resources                         # root dir: logs written here, and where {dataDir}/data/boards resolves --
+                                              # must be hashboard's own data root (see hashboard's storage.BoardBitaxesDir);
+                                              # for local dev against a sibling hashboard checkout, point this at
+                                              # that checkout's own resources dir (e.g. ../hashboard/resources)
 hashboardURL: ""                             # base URL of the hashboard instance backing this board -- not configured by default, set your own (e.g. https://your-hashboard-domain.example in prod, http://localhost:8090 for local dev)
 # Pool dashboard links and per-model firmware repo URLs (used to build the
 # "view release" link on the update badge) come from the same built-in

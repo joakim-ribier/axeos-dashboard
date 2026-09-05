@@ -46,10 +46,10 @@ func publicAccessChecker(t *testing.T, boardID string) *hashboardaccess.Checker 
 
 func TestNewRouter_listMiners(t *testing.T) {
 	dir := t.TempDir()
-	writeFixture(t, filepath.Join(dir, "demo", "bitaxes", "10.0.0.1", "latest.json"),
+	writeFixture(t, filepath.Join(dir, "data", "boards", "demo", "bitaxes", "10.0.0.1", "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-1","payload":{"hashRate":500000}}`)
 
-	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 	router := NewRouter(cfg, testVersionChecker(), publicAccessChecker(t, "demo"))
 
 	w := httptest.NewRecorder()
@@ -73,13 +73,13 @@ func TestNewRouter_stats(t *testing.T) {
 	today := time.Now().UTC().Format("2006-01-02")
 	// Directory is named by MAC; latest.json's embedded ip is what the ip
 	// URL param actually resolves against.
-	minerDir := filepath.Join(dir, "demo", "bitaxes", "aabbccddeeff")
+	minerDir := filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff")
 	writeFixture(t, filepath.Join(minerDir, "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`)
 	writeFixture(t, filepath.Join(minerDir, today+".jsonl"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
-	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 	router := NewRouter(cfg, testVersionChecker(), publicAccessChecker(t, "demo"))
 
 	w := httptest.NewRecorder()

@@ -259,12 +259,7 @@ func TestStorageConfig_ResolveBoardsDir(t *testing.T) {
 		want string
 	}{
 		{
-			name: "explicit boardsDir wins",
-			s:    StorageConfig{DataDir: "/var/data", BoardsDir: "/custom/boards"},
-			want: "/custom/boards",
-		},
-		{
-			name: "falls back to dataDir/data/boards",
+			name: "dataDir/data/boards",
 			s:    StorageConfig{DataDir: "/var/data"},
 			want: "/var/data/data/boards",
 		},

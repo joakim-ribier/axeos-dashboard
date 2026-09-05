@@ -273,8 +273,7 @@ type HealthCheckConfig struct {
 }
 
 type StorageConfig struct {
-	DataDir   string `yaml:"dataDir"`
-	BoardsDir string `yaml:"boardsDir"` // explicit boards path for remote-dashboard-api; defaults to {dataDir}/data/boards
+	DataDir string `yaml:"dataDir"`
 }
 
 // BitaxesDir returns the directory that holds per-miner data folders.
@@ -282,12 +281,14 @@ func (s StorageConfig) BitaxesDir() string {
 	return filepath.Join(s.DataDir, "data", "bitaxes")
 }
 
-// ResolveBoardsDir returns the boards root directory.
-// Uses boardsDir from config if set; falls back to {dataDir}/data/boards.
+// ResolveBoardsDir returns the boards root directory: {dataDir}/data/boards,
+// the same layout hashboard itself writes to (see hashboard's
+// storage.BoardBitaxesDir). remote-dashboard-api must run on the same
+// machine as hashboard-api (or share its data dir) regardless -- for local
+// dev against a sibling hashboard checkout, point dataDir itself at that
+// checkout's own resources dir (e.g. ../hashboard/resources), not just
+// this repo's own resources/.
 func (s StorageConfig) ResolveBoardsDir() string {
-	if s.BoardsDir != "" {
-		return s.BoardsDir
-	}
 	return filepath.Join(s.DataDir, "data", "boards")
 }
 

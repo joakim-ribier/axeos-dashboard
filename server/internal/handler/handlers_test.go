@@ -294,10 +294,10 @@ func TestAliveFromTimestamp(t *testing.T) {
 
 func TestListRemoteMiners(t *testing.T) {
 	dir := t.TempDir()
-	writeTestFile(t, filepath.Join(dir, "demo", "bitaxes", "10.0.0.1", "latest.json"),
+	writeTestFile(t, filepath.Join(dir, "data", "boards", "demo", "bitaxes", "10.0.0.1", "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","hostname":"bitaxe-1","payload":{"hashRate":500000}}`)
 
-	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 
 	t.Run("board found", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -395,13 +395,13 @@ func TestRemoteStats(t *testing.T) {
 	today := time.Now().UTC().Format("2006-01-02")
 	// The directory is named by MAC (the storage key); latest.json's
 	// embedded ip is what RemoteStats' resolveMacByIP actually matches on.
-	minerDir := filepath.Join(dir, "demo", "bitaxes", "aabbccddeeff")
+	minerDir := filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff")
 	writeTestFile(t, filepath.Join(minerDir, "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`)
 	writeTestFile(t, filepath.Join(minerDir, today+".jsonl"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
-	cfg := config.Config{Storage: config.StorageConfig{BoardsDir: dir}}
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 
 	t.Run("success", func(t *testing.T) {
 		w := httptest.NewRecorder()

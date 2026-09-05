@@ -263,7 +263,7 @@ bitaxes:
 
 Override dashboard-api/remote-dashboard-api port: `server.port` in the config YAML (default `8080`/`8081`) — no env var for this.
 Override dashboard-api's data dir: `BITAXE_DATA_ROOT` env var (default from config's `storage.dataDir`).
-Override remote-dashboard-api's data dir: `storage.boardsDir` in `remote-dashboard.yml` (no env var; defaults to `{dataDir}/data/boards`).
+remote-dashboard-api's data dir has no override of its own -- always `{storage.dataDir}/data/boards`; point `dataDir` itself at hashboard's data root (same machine, or a sibling checkout in local dev).
 
 ### Patterns & Constraints
 
