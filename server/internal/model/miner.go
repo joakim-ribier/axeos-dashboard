@@ -5,10 +5,11 @@ package model
 type MinerInfo struct {
 	Timestamp string `json:"timestamp"`
 
-	MacAddr     string `json:"macAddr"`     // Mac address
-	IP          string `json:"ip"`          // Miner IP address (derived from the folder name)
-	Hostname    string `json:"hostname"`    // Human-readable name from config
-	DeviceModel string `json:"deviceModel"` // Computed device model (e.g. "NerdQAxe++", "Bitaxe 602")
+	MacAddr     string `json:"macAddr"`         // Mac address
+	IP          string `json:"ip"`              // Miner IP address (derived from the folder name)
+	Hostname    string `json:"hostname"`        // Human-readable name from config
+	Alias       string `json:"alias,omitempty"` // Operator-set override for Hostname (see config.Bitaxe.DisplayName) -- empty when not set, UI falls back to Hostname
+	DeviceModel string `json:"deviceModel"`     // Computed device model (e.g. "NerdQAxe++", "Bitaxe 602")
 
 	SharesAccepted int64 `json:"sharesAccepted"`
 	SharesRejected int64 `json:"sharesRejected"`
@@ -57,11 +58,18 @@ type MinerInfo struct {
 	// firmware update) -- the current state as of Timestamp, not a live value.
 	Alerts []Alert `json:"alerts,omitempty"`
 
-	// Pool urls
+	// Pool urls -- Stratum(Port|Fallback...) is what the device itself is
+	// currently connected with, straight off its own /api/system/info
+	// (see handler.PayloadStructure) -- not to be confused with the
+	// *configured* pool (config.Bitaxe.Url/Port/...), which the UI reads
+	// separately from GET /api/config/miners and compares against these to
+	// flag drift (see ui/src/utils/poolDrift.ts).
 	StratumURL                  string `json:"stratumURL"`                    // Hostname of the primary Stratum pool
+	StratumPort                 int    `json:"stratumPort"`                   // Port of the primary Stratum pool
 	StratumUser                 string `json:"stratumUser"`                   // Username (typically miner ID) for the primary pool
 	StratumDashboardURL         string `json:"stratumDashboardURL,omitempty"` // Web dashboard URL for the primary pool
 	FallbackStratumURL          string `json:"fallbackStratumURL"`
+	FallbackStratumPort         int    `json:"fallbackStratumPort"`
 	FallbackStratumUser         string `json:"fallbackStratumUser"`
 	FallbackStratumDashboardURL string `json:"fallbackStratumDashboardURL,omitempty"` // Web dashboard URL for the fallback pool
 	IsUsingFallbackStratum      int64  `json:"isUsingFallbackStratum"`

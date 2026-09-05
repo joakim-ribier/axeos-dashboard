@@ -118,6 +118,16 @@ type Bitaxe struct {
 	Ip       string `yaml:"ip" json:"ip"`
 	Hostname string `yaml:"hostname" json:"hostname"`
 
+	// Alias is an optional operator-set override for the display name shown
+	// in the UI wherever Hostname would otherwise be shown (see
+	// DisplayName). Unlike Hostname -- which a network discovery re-probe
+	// (see internal/discovery, and the "select an already-configured
+	// device" refresh flow in the Settings UI) silently overwrites with
+	// whatever the device itself reports -- Alias is never touched by
+	// discovery, so it's the one place a custom, human-chosen name survives
+	// a refresh.
+	Alias string `yaml:"alias,omitempty" json:"alias,omitempty"`
+
 	// Mac is the device's MAC address (colons/hyphens optional, normalized
 	// by StorageKey) -- the storage-directory key, stable across IP/
 	// location changes unlike Ip. Populated either by hand or by the network
@@ -254,6 +264,15 @@ func NormalizeMac(mac string) string {
 // that as "this device isn't set up for storage yet", not fall back to Ip.
 func (b Bitaxe) StorageKey() string {
 	return NormalizeMac(b.Mac)
+}
+
+// DisplayName returns Alias if the operator has set one, otherwise
+// Hostname -- the effective label the UI shows for this miner.
+func (b Bitaxe) DisplayName() string {
+	if b.Alias != "" {
+		return b.Alias
+	}
+	return b.Hostname
 }
 
 type GlobalConfig struct {

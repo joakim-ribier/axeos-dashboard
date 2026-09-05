@@ -218,6 +218,10 @@
       "description": "Automatically detect your AxeOS miners on the network, or add them manually by IP."
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
+    "issues": {
+      "poolDrift": "{{count}} miner(s): saved pool config doesn't match what the miner reports",
+      "pushFailed": "Push to hashboard is failing — see Remote below"
+    },
     "configured": {
       "title": "Configured miners",
       "description": "{{count}} miner(s) configured",
@@ -237,9 +241,36 @@
       "disableAllConfirm": "Disable all",
       "disableAllSuccess": "{{count}} miner(s) disabled.",
       "lastUpdated": "Last modified: {{date}}",
+      "alias": {
+        "title": "Display name",
+        "label": "Alias",
+        "save": "Save",
+        "saving": "Saving…"
+      },
+      "pool": {
+        "title": "Pool",
+        "primary": "Primary",
+        "fallback": "Fallback",
+        "urlLabel": "URL",
+        "portLabel": "Port",
+        "userLabel": "User",
+        "urlPlaceholder": "stratum.pool.com",
+        "userPlaceholder": "wallet.worker",
+        "invalidPort": "Port must be between 1 and 65535",
+        "urlRequired": "URL is required",
+        "save": "Save",
+        "saving": "Saving…",
+        "reset": "Reset",
+        "swap": "Swap primary and fallback",
+        "swapTooltip": "Swap primary and fallback",
+        "driftWarning": "This doesn't match what the miner currently reports:",
+        "driftItem": "{{field}}: saved \"{{configured}}\" ≠ miner \"{{live}}\"",
+        "driftBadgeTooltip": "Pool config doesn't match the miner: {{fields}}"
+      },
       "schedule": {
         "title": "Scheduler",
         "description": "Automatically switch this miner's pool or restart it on a cron-based schedule.",
+        "readableLabel": "Description",
         "empty": "No schedule configured.",
         "action": "Action",
         "switch_primary": "Switch to primary",
@@ -252,6 +283,7 @@
         "duplicateCron": "This cron expression is already scheduled for this miner",
         "nextRuns": "Next: {{dates}}",
         "countTooltip": "{{count}} schedule(s) configured",
+        "scheduledLabel": "Scheduled",
         "add": "Add",
         "adding": "Adding…",
         "removing": "Removing…"

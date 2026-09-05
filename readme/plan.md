@@ -74,6 +74,15 @@ every commit.
   settings also carry `firmwareCacheCheckedAt`, so the "Process settings"
   table doubles as an at-a-glance "is the source Pi's feeder still alive"
   signal on a remote board, not just blank rows.
+- ✅ **Per-miner display alias**: optional `alias` in `miners.yml`
+  overrides the hostname shown everywhere in the UI, without ever being
+  overwritten by a network re-scan the way hostname itself would be —
+  pushed through to remote-dashboard-api too.
+- ✅ **Per-miner pool config editor + config/live drift detection**: edit a
+  miner's primary/fallback pool (URL/port/user) straight from its row on
+  `/settings`, with a warning (banner, row badge, and page-top summary)
+  whenever the saved config disagrees with what the miner is actually
+  reporting.
 
 ## To do
 

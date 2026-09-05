@@ -242,6 +242,15 @@ func TestSyntheticBitaxe(t *testing.T) {
 		}
 	})
 
+	t.Run("Alias is carried through from the pushed sample", func(t *testing.T) {
+		raw := latestFileStructure{Hostname: "bitaxe-1", Alias: "Garage rig"}
+		got := syntheticBitaxe(raw, "aabbccddeeff")
+
+		if got.Alias != "Garage rig" {
+			t.Errorf("Alias = %q, want %q", got.Alias, "Garage rig")
+		}
+	})
+
 	t.Run("Ip stays empty for older data with no embedded ip -- never falls back to the (MAC) directory name", func(t *testing.T) {
 		raw := latestFileStructure{Hostname: "bitaxe-1"}
 		got := syntheticBitaxe(raw, "aabbccddeeff")

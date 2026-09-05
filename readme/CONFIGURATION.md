@@ -153,15 +153,31 @@ generates and updates it for you:
   whatever changed on the device side, e.g. a new IP or a pool switched
   from the miner's own web UI)
 - Each miner can be **enabled/disabled** from the same page
-- Click a configured miner's row to expand its **scheduler**: add or
-  remove cron-based jobs — switch to primary, switch to fallback, or
-  restart (e.g. "switch to fallback every Friday at 23:59:59") — without
-  hand-editing `schedule`. The cron expression is a raw 6-field string,
-  seconds included (`sec min hour dayOfMonth month dayOfWeek`) — the
-  editor shows a live human-readable translation and the next few run
-  times as you type, and rejects anything that doesn't parse before it's
-  saved. A schedule change takes effect on dashboard-api immediately, no
-  restart needed, same as the rest of this file.
+- Click a configured miner's row to expand three editors:
+  - **Alias**: an optional display-name override (`alias`) — shown
+    everywhere the hostname otherwise would be (dashboard cards,
+    notifications, this same table). Leave it empty to keep showing the
+    hostname. Unlike `hostname`, an alias is never touched by a re-scan —
+    it's the one field a network refresh can't silently overwrite.
+  - **Pool**: edit the primary/fallback pool (URL/port/user) directly,
+    including a one-click swap between the two — this is exactly what the
+    scheduler and the dashboard's manual pool-switch buttons send to the
+    device the next time either runs; saving here never talks to the
+    device itself. If what's saved here doesn't match what the miner is
+    actually reporting on its last poll (e.g. a pool changed by hand on
+    the device's own web UI), a warning banner lists the mismatched
+    fields, and a compact badge on the row flags it without having to
+    expand anything.
+  - **Scheduler**: add or remove cron-based jobs — switch to primary,
+    switch to fallback, or restart (e.g. "switch to fallback every Friday
+    at 23:59:59") — without hand-editing `schedule`. The cron expression
+    is a raw 6-field string, seconds included (`sec min hour dayOfMonth
+    month dayOfWeek`) — the editor shows a live human-readable
+    translation and the next few run times as you type, and rejects
+    anything that doesn't parse before it's saved.
+
+  Every edit in any of the three takes effect on dashboard-api
+  immediately, no restart needed, same as the rest of this file.
 - The file is created automatically on first save — nothing needs to exist
   beforehand — and every save backs up whatever was there right before to
   a single `miners.yml.bak` next to it (overwritten on each save, so it's
@@ -179,6 +195,7 @@ bitaxes:
     mac: "aa:bb:cc:dd:ee:ff"
     enabled: true
     hostname: "bitaxe-1"
+    alias: ""                        # optional display-name override, editable from Settings
     model: "bitaxe"
     url:  "stratum.braiins.com"
     port: 3333

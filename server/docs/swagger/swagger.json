@@ -728,6 +728,10 @@
         "config.Bitaxe": {
             "type": "object",
             "properties": {
+                "alias": {
+                    "description": "Alias is an optional operator-set override for the display name shown\nin the UI wherever Hostname would otherwise be shown (see\nDisplayName). Unlike Hostname -- which a network discovery re-probe\n(see internal/discovery, and the \"select an already-configured\ndevice\" refresh flow in the Settings UI) silently overwrites with\nwhatever the device itself reports -- Alias is never touched by\ndiscovery, so it's the one place a custom, human-chosen name survives\na refresh.",
+                    "type": "string"
+                },
                 "enabled": {
                     "type": "boolean"
                 },
@@ -1095,6 +1099,10 @@
                         "$ref": "#/definitions/model.Alert"
                     }
                 },
+                "alias": {
+                    "description": "Operator-set override for Hostname (see config.Bitaxe.DisplayName) -- empty when not set, UI falls back to Hostname",
+                    "type": "string"
+                },
                 "alive": {
                     "description": "Health check",
                     "type": "boolean"
@@ -1128,6 +1136,9 @@
                 "fallbackStratumDashboardURL": {
                     "description": "Web dashboard URL for the fallback pool",
                     "type": "string"
+                },
+                "fallbackStratumPort": {
+                    "type": "integer"
                 },
                 "fallbackStratumURL": {
                     "type": "string"
@@ -1188,8 +1199,12 @@
                     "description": "Web dashboard URL for the primary pool",
                     "type": "string"
                 },
+                "stratumPort": {
+                    "description": "Port of the primary Stratum pool",
+                    "type": "integer"
+                },
                 "stratumURL": {
-                    "description": "Pool urls",
+                    "description": "Pool urls -- Stratum(Port|Fallback...) is what the device itself is\ncurrently connected with, straight off its own /api/system/info\n(see handler.PayloadStructure) -- not to be confused with the\n*configured* pool (config.Bitaxe.Url/Port/...), which the UI reads\nseparately from GET /api/config/miners and compares against these to\nflag drift (see ui/src/utils/poolDrift.ts).",
                     "type": "string"
                 },
                 "stratumUser": {

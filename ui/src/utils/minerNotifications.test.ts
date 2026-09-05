@@ -67,6 +67,11 @@ describe("currentAlertState", () => {
     expect(state["aabbccddeeff"].label).toBe("10.0.0.65");
   });
 
+  it("prefers the alias over the hostname as the label", () => {
+    const state = currentAlertState([miner({ alias: "Garage rig" })]);
+    expect(state["aabbccddeeff"].label).toBe("Garage rig");
+  });
+
   it("takes tempHigh/fanHigh/firmwareUpdate from Miner.alerts", () => {
     const state = currentAlertState([
       miner({

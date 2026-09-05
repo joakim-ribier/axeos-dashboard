@@ -16,6 +16,10 @@ export const minerSchema = z.object({
   ip: z.string(),
   macAddr: z.string(),
   hostname: z.string().optional(),
+  // Operator-set override for hostname (see minerConfigSchema.alias) --
+  // empty when not set, use utils/minerDisplay.displayName() to get the
+  // effective label rather than reading hostname directly.
+  alias: z.string().optional(),
   deviceModel: z.string().optional(),
   alive: z.boolean().optional(),
   aliveCheckedAt: z.string().optional(),
@@ -50,9 +54,11 @@ export const minerSchema = z.object({
   fanspeed: z.number(),
 
   stratumURL: z.string().optional(),
+  stratumPort: z.number().optional(),
   stratumUser: z.string().optional(),
   stratumDashboardURL: z.string().optional(),
   fallbackStratumURL: z.string().optional(),
+  fallbackStratumPort: z.number().optional(),
   fallbackStratumUser: z.string().optional(),
   fallbackStratumDashboardURL: z.string().optional(),
   isUsingFallbackStratum: z.number().int().min(0).max(1).optional(),

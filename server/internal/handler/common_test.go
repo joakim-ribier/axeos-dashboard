@@ -240,6 +240,25 @@ func TestToMinerInfo(t *testing.T) {
 		})
 	}
 
+	t.Run("carries the miner's alias through", func(t *testing.T) {
+		aliased := config.Bitaxe{Ip: "10.0.0.1", Hostname: "bitaxe-1", Alias: "Garage rig", Model: "bitaxe"}
+		got := toMinerInfo(latestFileStructure{}, aliased, "", "", dashboards)
+		if got.Alias != "Garage rig" {
+			t.Errorf("Alias = %q, want %q", got.Alias, "Garage rig")
+		}
+	})
+
+	t.Run("carries the device's live stratum ports through", func(t *testing.T) {
+		raw := latestFileStructure{
+			Payload: PayloadStructure{StratumPort: 3333, FallbackStratumPort: 4444},
+		}
+		got := toMinerInfo(raw, miner, "", "", dashboards)
+		if got.StratumPort != 3333 || got.FallbackStratumPort != 4444 {
+			t.Errorf("StratumPort/FallbackStratumPort = %d/%d, want 3333/4444",
+				got.StratumPort, got.FallbackStratumPort)
+		}
+	})
+
 	t.Run("resolves stratum dashboard url", func(t *testing.T) {
 		raw := latestFileStructure{
 			Payload: PayloadStructure{StratumURL: "pool.example", StratumUser: "acct.worker"},

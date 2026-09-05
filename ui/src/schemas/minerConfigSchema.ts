@@ -17,6 +17,10 @@ export type CronSchedule = z.infer<typeof cronScheduleSchema>;
 export const minerConfigSchema = z.object({
   ip: z.string(),
   hostname: z.string(),
+  // Optional operator-set override for the display name shown wherever
+  // hostname otherwise would be -- unlike hostname, never overwritten by a
+  // network discovery refresh (see config.Bitaxe.Alias server-side).
+  alias: z.string().optional(),
   mac: z.string(),
   model: z.string(),
   enabled: z.boolean(),

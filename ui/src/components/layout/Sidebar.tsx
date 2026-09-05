@@ -433,7 +433,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
               <Tooltip title={t("sidebar.versionUpToDate")} arrow>
                 <Chip
                   icon={
-                    <CheckCircleOutlineIcon sx={{ fontSize: "16px !important" }} />
+                    <CheckCircleOutlineIcon
+                      sx={{ fontSize: "16px !important" }}
+                    />
                   }
                   label={t("sidebar.versionUpToDate")}
                   size="small"

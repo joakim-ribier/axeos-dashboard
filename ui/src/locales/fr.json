@@ -218,6 +218,10 @@
       "description": "Détecte automatiquement tes mineurs AxeOS sur le réseau, ou ajoute-les manuellement par IP."
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
+    "issues": {
+      "poolDrift": "{{count}} mineur(s) : la config pool enregistrée ne correspond pas à ce que le mineur reporte",
+      "pushFailed": "Le push vers hashboard échoue — voir Remote plus bas"
+    },
     "configured": {
       "title": "Mineurs configurés",
       "description": "{{count}} mineur(s) configuré(s)",
@@ -237,9 +241,36 @@
       "disableAllConfirm": "Tout désactiver",
       "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
       "lastUpdated": "Dernière modification : {{date}}",
+      "alias": {
+        "title": "Nom affiché",
+        "label": "Alias",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…"
+      },
+      "pool": {
+        "title": "Pool",
+        "primary": "Primaire",
+        "fallback": "Secours",
+        "urlLabel": "URL",
+        "portLabel": "Port",
+        "userLabel": "Utilisateur",
+        "urlPlaceholder": "stratum.pool.com",
+        "userPlaceholder": "wallet.worker",
+        "invalidPort": "Le port doit être compris entre 1 et 65535",
+        "urlRequired": "L'URL est requise",
+        "save": "Enregistrer",
+        "saving": "Enregistrement…",
+        "reset": "Réinitialiser",
+        "swap": "Inverser primaire et secours",
+        "swapTooltip": "Inverser primaire et secours",
+        "driftWarning": "Ne correspond pas à ce que le mineur reporte actuellement :",
+        "driftItem": "{{field}} : enregistré « {{configured}} » ≠ mineur « {{live}} »",
+        "driftBadgeTooltip": "Config pool différente du mineur : {{fields}}"
+      },
       "schedule": {
         "title": "Planificateur",
         "description": "Bascule automatiquement le pool de ce mineur, ou le redémarre, selon un planning cron.",
+        "readableLabel": "Description",
         "empty": "Aucun planning configuré.",
         "action": "Action",
         "switch_primary": "Basculer vers le principal",
@@ -252,6 +283,7 @@
         "duplicateCron": "Cette expression cron est déjà planifiée pour ce mineur",
         "nextRuns": "Prochaines : {{dates}}",
         "countTooltip": "{{count}} planning(s) configuré(s)",
+        "scheduledLabel": "Planifié",
         "add": "Ajouter",
         "adding": "Ajout…",
         "removing": "Suppression…"

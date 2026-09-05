@@ -64,7 +64,7 @@ func ListAlerts(cfg config.Config) http.HandlerFunc {
 			if key == "" {
 				continue
 			}
-			entries = append(entries, alertsForMiner(root, key, miner.Ip, miner.Hostname, limit)...)
+			entries = append(entries, alertsForMiner(root, key, miner.Ip, miner.DisplayName(), limit)...)
 		}
 
 		writeAlertEntries(w, entries)
@@ -111,7 +111,9 @@ func ListRemoteAlerts(cfg config.Config) http.HandlerFunc {
 // append-only, so the most recent alert-bearing lines are simply the tail
 // of the filtered slice -- no need to sort first. ip/hostname are used as a
 // fallback label when the stored line itself doesn't carry them (local mode
-// -- the per-line file has neither, so the caller passes the config's).
+// -- the per-line file has neither, so the caller passes the config's;
+// fallbackHostname is the miner's effective display name, i.e.
+// config.Bitaxe.DisplayName(), alias-or-hostname).
 func alertsForMiner(root, key, fallbackIP, fallbackHostname string, limit int) []AlertEntry {
 	today := time.Now().UTC().Format("2006-01-02")
 	path := filepath.Join(root, key, today+".jsonl")
@@ -310,7 +312,7 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 			if key == "" {
 				continue
 			}
-			entries = append(entries, allAlertsForMiner(root, key, miner.Ip, miner.Hostname, date)...)
+			entries = append(entries, allAlertsForMiner(root, key, miner.Ip, miner.DisplayName(), date)...)
 		}
 
 		writeAlertHistory(w, r, entries, episodeGapThreshold(cfg))

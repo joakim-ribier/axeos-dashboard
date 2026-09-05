@@ -39,6 +39,7 @@ type latestFileStructure struct {
 	Timestamp       string           `json:"ts"`
 	IP              string           `json:"ip,omitempty"`
 	Hostname        string           `json:"hostname,omitempty"`
+	Alias           string           `json:"alias,omitempty"`
 	Model           string           `json:"model,omitempty"`
 	Payload         PayloadStructure `json:"payload"`
 	ElectricityRate float64          `json:"electricityRatePerKwh,omitempty"`
@@ -70,10 +71,15 @@ type PayloadStructure struct {
 	Temp     float64 `json:"temp"`
 	FanSpeed float64 `json:"fanspeed"`
 
-	// Pool urls
+	// Pool urls -- StratumPort/FallbackStratumPort mirror the field names
+	// discovery.deviceProbeResponse already decodes from this same
+	// endpoint (the device echoes its pool config under the identical
+	// keys it accepts on a PATCH, see config.BitaxeServerSettings).
 	StratumURL          string `json:"stratumURL"`
+	StratumPort         int    `json:"stratumPort"`
 	StratumUser         string `json:"stratumUser"`
 	FallbackStratumURL  string `json:"fallbackStratumURL"`
+	FallbackStratumPort int    `json:"fallbackStratumPort"`
 	FallbackStratumUser string `json:"fallbackStratumUser"`
 
 	//-- Specific to miner model --//
@@ -188,6 +194,7 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 		IP:          miner.Ip,
 		MacAddr:     raw.Payload.MacAddr,
 		Hostname:    miner.Hostname,
+		Alias:       miner.Alias,
 		DeviceModel: raw.Payload.getDeviceModel(miner),
 
 		SharesAccepted: raw.Payload.SharesAccepted,
@@ -213,9 +220,11 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 
 		IsUsingFallbackStratum:      raw.Payload.getIsUsingFallbackStratum(miner),
 		StratumURL:                  raw.Payload.StratumURL,
+		StratumPort:                 raw.Payload.StratumPort,
 		StratumUser:                 raw.Payload.StratumUser,
 		StratumDashboardURL:         poolDashboardURL(raw.Payload.StratumURL, raw.Payload.StratumUser, dashboards),
 		FallbackStratumURL:          raw.Payload.FallbackStratumURL,
+		FallbackStratumPort:         raw.Payload.FallbackStratumPort,
 		FallbackStratumUser:         raw.Payload.FallbackStratumUser,
 		FallbackStratumDashboardURL: poolDashboardURL(raw.Payload.FallbackStratumURL, raw.Payload.FallbackStratumUser, dashboards),
 

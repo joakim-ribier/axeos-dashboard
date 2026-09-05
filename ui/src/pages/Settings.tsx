@@ -9,7 +9,6 @@ import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RouterIcon from "@mui/icons-material/Router";
 import SaveIcon from "@mui/icons-material/Save";
-import ScheduleIcon from "@mui/icons-material/Schedule";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
@@ -28,7 +27,6 @@ import {
   Skeleton,
   Snackbar,
   Stack,
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -38,20 +36,30 @@ import {
   Typography,
 } from "@mui/material";
 
+import { AlertList } from "@/components/ui/AlertList";
+import { AliasEditor } from "@/components/ui/AliasEditor";
 import { AppSettingsSection } from "@/components/ui/AppSettingsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PoolEditor } from "@/components/ui/PoolEditor";
 import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
+import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDiscovery } from "@/hooks/useDiscovery";
-import { useUiFeatures } from "@/hooks/useMiners";
+import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
+import { type Miner } from "@/schemas/minerSchema";
 import { formatTimestamp } from "@/utils/format";
+import { displayName } from "@/utils/minerDisplay";
+import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
 
 /* ── Configured miners table ────────────────────────────────────── */
 const ConfiguredMinersTable = ({
   miners,
+  liveMinersByMac,
   lastUpdated,
   togglingMac,
   onToggleEnabled,
@@ -60,6 +68,7 @@ const ConfiguredMinersTable = ({
   readOnly,
 }: {
   miners: MinerConfig[];
+  liveMinersByMac: Map<string, Miner>;
   lastUpdated: string | undefined;
   togglingMac: string | null;
   onToggleEnabled: (miner: MinerConfig) => void;
@@ -120,97 +129,104 @@ const ConfiguredMinersTable = ({
           </Button>
         </Writable>
       </Box>
-      <Box sx={{ overflowX: "auto" }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 40 }} />
-              <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
-              <TableCell>{t("settingsPage.configured.ip")}</TableCell>
-              <TableCell>{t("settingsPage.configured.mac")}</TableCell>
-              <TableCell>{t("settingsPage.configured.model")}</TableCell>
+      <DataTable>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ width: 40 }} />
+            <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
+            <TableCell>{t("settingsPage.configured.ip")}</TableCell>
+            <TableCell>{t("settingsPage.configured.mac")}</TableCell>
+            <TableCell>{t("settingsPage.configured.model")}</TableCell>
+            <TableCell>{t("settingsPage.configured.status")}</TableCell>
+            <Writable readOnly={readOnly}>
               <TableCell align="right">
-                {t("settingsPage.configured.status")}
+                {t("settingsPage.configured.actions")}
               </TableCell>
-              <Writable readOnly={readOnly}>
-                <TableCell align="right">
-                  {t("settingsPage.configured.actions")}
-                </TableCell>
-              </Writable>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {miners.map((m) => {
-              const isToggling = togglingMac === normalizeMac(m.mac);
-              const key = normalizeMac(m.mac);
-              const isExpanded = expandedMac === key;
-              const toggleExpanded = () =>
-                setExpandedMac((current) => (current === key ? null : key));
-              return (
-                <Fragment key={m.mac}>
-                  <TableRow
-                    hover
-                    onClick={toggleExpanded}
-                    sx={{ cursor: "pointer" }}
-                  >
-                    <TableCell>
-                      <IconButton size="small">
-                        <KeyboardArrowDownIcon
-                          fontSize="small"
-                          sx={{
-                            transition: "transform 0.15s ease",
-                            transform: isExpanded ? "rotate(180deg)" : "none",
-                          }}
-                        />
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <Box
+            </Writable>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {miners.map((m) => {
+            const isToggling = togglingMac === normalizeMac(m.mac);
+            const key = normalizeMac(m.mac);
+            const isExpanded = expandedMac === key;
+            const poolDrift = poolMismatches(m, liveMinersByMac.get(key));
+            const toggleExpanded = () =>
+              setExpandedMac((current) => (current === key ? null : key));
+            return (
+              <Fragment key={m.mac}>
+                <TableRow
+                  hover
+                  onClick={toggleExpanded}
+                  sx={{ cursor: "pointer" }}
+                >
+                  <TableCell>
+                    <IconButton size="small">
+                      <KeyboardArrowDownIcon
+                        fontSize="small"
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.75,
+                          transition: "transform 0.15s ease",
+                          transform: isExpanded ? "rotate(180deg)" : "none",
+                        }}
+                      />
+                    </IconButton>
+                  </TableCell>
+                  <TableCell>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.75,
+                      }}
+                    >
+                      <Typography
+                        component="span"
+                        sx={{
+                          color:
+                            poolDrift.length > 0 ? "warning.main" : "inherit",
+                          fontWeight: poolDrift.length > 0 ? 700 : 400,
                         }}
                       >
-                        {m.hostname || "—"}
-                        {(m.schedule?.length ?? 0) > 0 && (
-                          <Tooltip
-                            title={t(
-                              "settingsPage.configured.schedule.countTooltip",
-                              {
-                                count: m.schedule?.length ?? 0,
-                              },
-                            )}
-                          >
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              icon={<ScheduleIcon fontSize="small" />}
-                              label={m.schedule?.length}
-                              sx={{
-                                height: 20,
-                                "& .MuiChip-icon": { fontSize: 14 },
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {m.ip}
-                    </TableCell>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {m.mac}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={m.model}
-                        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
+                        {displayName(m) || "—"}
+                      </Typography>
+                      {poolDrift.length > 0 && (
+                        <Tooltip
+                          title={t(
+                            "settingsPage.configured.pool.driftBadgeTooltip",
+                            {
+                              fields: poolDrift
+                                .map((mm) => poolFieldLabel(t, mm.field))
+                                .join(", "),
+                            },
+                          )}
+                        >
+                          <Box
+                            sx={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              bgcolor: "warning.main",
+                            }}
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: "monospace" }}>{m.ip}</TableCell>
+                  <TableCell sx={{ fontFamily: "monospace" }}>
+                    {m.mac}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={m.model}
+                      sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.75}>
                       <Chip
                         size="small"
                         label={
@@ -222,59 +238,93 @@ const ConfiguredMinersTable = ({
                         variant={m.enabled ? "filled" : "outlined"}
                         sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                       />
-                    </TableCell>
-                    <Writable readOnly={readOnly}>
-                      <TableCell align="right">
-                        <Button
-                          size="small"
-                          color={m.enabled ? "warning" : "success"}
-                          disabled={isToggling}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleEnabled(m);
-                          }}
-                          startIcon={
-                            isToggling ? (
-                              <CircularProgress size={14} color="inherit" />
-                            ) : m.enabled ? (
-                              <PauseIcon fontSize="small" />
-                            ) : (
-                              <PlayArrowIcon fontSize="small" />
-                            )
-                          }
+                      {(m.schedule?.length ?? 0) > 0 && (
+                        <Tooltip
+                          title={t(
+                            "settingsPage.configured.schedule.countTooltip",
+                            { count: m.schedule?.length ?? 0 },
+                          )}
                         >
-                          {m.enabled
-                            ? t("settingsPage.configured.disable")
-                            : t("settingsPage.configured.enable")}
-                        </Button>
-                      </TableCell>
-                    </Writable>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell
-                      colSpan={readOnly ? 6 : 7}
-                      sx={{
-                        py: 0,
-                        borderBottom: isExpanded ? undefined : "none",
-                      }}
-                    >
-                      <Collapse in={isExpanded} unmountOnExit>
-                        <Box sx={{ px: 2 }}>
-                          <ScheduleEditor
-                            miner={m}
-                            saveMiners={saveMiners}
-                            readOnly={readOnly}
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={t(
+                              "settingsPage.configured.schedule.scheduledLabel",
+                            )}
+                            sx={{
+                              height: 24,
+                              fontSize: "0.8rem",
+                              borderRadius: 1,
+                            }}
                           />
-                        </Box>
-                      </Collapse>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  </TableCell>
+                  <Writable readOnly={readOnly}>
+                    <TableCell align="right">
+                      <Button
+                        size="small"
+                        color={m.enabled ? "warning" : "success"}
+                        disabled={isToggling}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onToggleEnabled(m);
+                        }}
+                        startIcon={
+                          isToggling ? (
+                            <CircularProgress size={14} color="inherit" />
+                          ) : m.enabled ? (
+                            <PauseIcon fontSize="small" />
+                          ) : (
+                            <PlayArrowIcon fontSize="small" />
+                          )
+                        }
+                      >
+                        {m.enabled
+                          ? t("settingsPage.configured.disable")
+                          : t("settingsPage.configured.enable")}
+                      </Button>
                     </TableCell>
-                  </TableRow>
-                </Fragment>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </Box>
+                  </Writable>
+                </TableRow>
+                <TableRow>
+                  <TableCell
+                    colSpan={readOnly ? 6 : 7}
+                    sx={{
+                      py: 0,
+                      borderBottom: isExpanded ? undefined : "none",
+                    }}
+                  >
+                    <Collapse in={isExpanded} unmountOnExit>
+                      <Box sx={{ px: 2 }}>
+                        <AliasEditor
+                          miner={m}
+                          saveMiners={saveMiners}
+                          readOnly={readOnly}
+                        />
+                        <SectionDivider sx={{ my: 1.5 }} />
+                        <PoolEditor
+                          miner={m}
+                          liveMiner={liveMinersByMac.get(key)}
+                          saveMiners={saveMiners}
+                          readOnly={readOnly}
+                        />
+                        <SectionDivider sx={{ my: 1.5 }} />
+                        <ScheduleEditor
+                          miner={m}
+                          saveMiners={saveMiners}
+                          readOnly={readOnly}
+                        />
+                      </Box>
+                    </Collapse>
+                  </TableCell>
+                </TableRow>
+              </Fragment>
+            );
+          })}
+        </TableBody>
+      </DataTable>
     </Paper>
   );
 };
@@ -282,14 +332,20 @@ const ConfiguredMinersTable = ({
 /* ── Discovered device card ─────────────────────────────────────── */
 const DiscoveredDeviceCard = ({
   device,
+  existingAlias,
   selected,
   onToggleSelect,
 }: {
   device: MinerConfig;
+  /** The alias already configured for this MAC, if this device matches an
+   * existing miners.yml entry (a re-scan/refresh, not a first discovery) --
+   * see displayName(). undefined for a genuinely new device. */
+  existingAlias?: string;
   selected: boolean;
   onToggleSelect: () => void;
 }) => {
   const { t } = useTranslation();
+  const name = displayName({ hostname: device.hostname, alias: existingAlias });
 
   return (
     <Paper
@@ -319,8 +375,13 @@ const DiscoveredDeviceCard = ({
         />
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle1" fontWeight={700} noWrap>
-            {device.hostname || t("settingsPage.discovery.unknownHostname")}
+            {name || t("settingsPage.discovery.unknownHostname")}
           </Typography>
+          {existingAlias && device.hostname && (
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {device.hostname}
+            </Typography>
+          )}
           <Stack direction="row" spacing={1} sx={{ mt: 0.25 }}>
             <Typography
               variant="caption"
@@ -426,6 +487,14 @@ export const Settings = () => {
     isSaving,
     saveError,
   } = useMinersConfig();
+  // Live dashboard data, matched by mac against the managed config below --
+  // lets PoolEditor flag when the saved pool config drifts from what the
+  // device is actually reporting right now (see poolMismatches).
+  const { data: liveMiners } = useMiners();
+  // For the top-of-page issues summary only -- same query AppSettingsSection
+  // itself makes, so this doesn't cost a second request once both are on
+  // screen (shared React Query cache, see useAppSettings' own queryKey).
+  const { data: appSettings } = useAppSettings();
   const {
     results,
     isSearching,
@@ -446,7 +515,22 @@ export const Settings = () => {
   const configuredByMac = new Map(
     (configuredMiners ?? []).map((m) => [normalizeMac(m.mac), m]),
   );
+  const liveMinersByMac = new Map(
+    (liveMiners ?? []).map((m) => [normalizeMac(m.macAddr), m]),
+  );
   const enabledMiners = (configuredMiners ?? []).filter((m) => m.enabled);
+
+  // Top-of-page summary so a config problem is visible without scrolling
+  // down into the miners table or the App settings section below.
+  const poolDriftCount = (configuredMiners ?? []).filter(
+    (m) =>
+      poolMismatches(m, liveMinersByMac.get(normalizeMac(m.mac))).length > 0,
+  ).length;
+  const pushFailed = Boolean(
+    appSettings?.remote.pushURL &&
+    (appSettings.readOnly.remotePushMinersConfig.lastError ||
+      appSettings.readOnly.remotePushSettingsConfig.lastError),
+  );
 
   const handleToggleEnabled = async (miner: MinerConfig) => {
     const key = normalizeMac(miner.mac);
@@ -521,10 +605,12 @@ export const Settings = () => {
   // Re-selecting an already-configured device is how the operator forces a
   // refresh of its ip/hostname/model/pool from what the device reports
   // right now (e.g. after an IP change, or to recover from a bad manual
-  // edit) -- but a fresh probe never knows about enabled/schedule
-  // (advanced, hand-edited-only field), so both are carried over from the
-  // existing entry rather than clobbered with the probe's own defaults
-  // (enabled: true, no schedule).
+  // edit) -- but a fresh probe never knows about enabled/schedule/alias
+  // (advanced, hand-edited-only fields), so all three are carried over from
+  // the existing entry rather than clobbered with the probe's own defaults
+  // (enabled: true, no schedule, no alias). alias in particular is the
+  // whole point of the field: a discovery refresh must never silently wipe
+  // out a custom display name.
   const devicesToSave = selectedDevices.map((d) => {
     const existing = configuredByMac.get(normalizeMac(d.mac));
     if (!existing) return d;
@@ -532,6 +618,7 @@ export const Settings = () => {
       ...d,
       enabled: existing.enabled,
       schedule: existing.schedule,
+      alias: existing.alias,
     };
   });
 
@@ -558,6 +645,16 @@ export const Settings = () => {
         gradientProps={{ height: 3, radius: 2, colors: ["#00b4ff", "#0066cc"] }}
       />
 
+      <AlertList
+        severity="warning"
+        items={[
+          ...(poolDriftCount > 0
+            ? [t("settingsPage.issues.poolDrift", { count: poolDriftCount })]
+            : []),
+          ...(pushFailed ? [t("settingsPage.issues.pushFailed")] : []),
+        ]}
+      />
+
       {readOnly && (
         <Alert severity="info">{t("settingsPage.readOnlyBanner")}</Alert>
       )}
@@ -569,6 +666,7 @@ export const Settings = () => {
         configuredMiners.length > 0 && (
           <ConfiguredMinersTable
             miners={configuredMiners}
+            liveMinersByMac={liveMinersByMac}
             lastUpdated={lastUpdated}
             togglingMac={togglingMac}
             onToggleEnabled={(m) => void handleToggleEnabled(m)}
@@ -582,216 +680,222 @@ export const Settings = () => {
       <AppSettingsSection readOnly={readOnly} />
 
       <Writable readOnly={readOnly}>
-        <Paper
-          variant="outlined"
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            alignItems: { xs: "stretch", sm: "center" },
-            justifyContent: "space-between",
-            gap: 2,
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {t("settingsPage.scan.title")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t("settingsPage.scan.description")}
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            disabled={isSearching}
-            onClick={handleScan}
-            startIcon={
-              isSearching ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <TravelExploreIcon />
-              )
-            }
-            sx={{ flexShrink: 0 }}
-          >
-            {isSearching
-              ? t("settingsPage.scan.searching")
-              : t("settingsPage.scan.action")}
-          </Button>
-        </Paper>
-      </Writable>
-
-      <Writable readOnly={readOnly}>
         <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {t("settingsPage.manual.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t("settingsPage.manual.description")}
-          </Typography>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="192.168.1.42"
-              value={manualIp}
-              onChange={(e) => setManualIp(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleProbeIp();
-              }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <RouterIcon
-                      fontSize="small"
-                      sx={{ color: "text.secondary", mr: 1 }}
-                    />
-                  ),
-                },
-              }}
-            />
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", sm: "row" },
+              alignItems: { xs: "stretch", sm: "center" },
+              justifyContent: "space-between",
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700}>
+                {t("settingsPage.scan.title")}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {t("settingsPage.scan.description")}
+              </Typography>
+            </Box>
             <Button
-              variant="outlined"
-              disabled={isSearching || !manualIp.trim()}
-              onClick={handleProbeIp}
+              variant="contained"
+              disabled={isSearching}
+              onClick={handleScan}
               startIcon={
                 isSearching ? (
                   <CircularProgress size={16} color="inherit" />
                 ) : (
-                  <SearchIcon />
+                  <TravelExploreIcon />
                 )
               }
               sx={{ flexShrink: 0 }}
             >
-              {t("settingsPage.manual.action")}
+              {isSearching
+                ? t("settingsPage.scan.searching")
+                : t("settingsPage.scan.action")}
             </Button>
-          </Stack>
-        </Paper>
-      </Writable>
+          </Box>
 
-      <Writable readOnly={readOnly}>
-        {hasSearched && !isSearching && (
+          <SectionDivider sx={{ my: 2 }} />
+
           <Box>
-            {error ? (
-              <Alert
-                severity="warning"
-                action={
-                  <Button
-                    color="inherit"
-                    size="small"
-                    onClick={() => void retryWithLongerTimeout()}
-                  >
-                    {t("settingsPage.discovery.retryLonger")}
-                  </Button>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {t("settingsPage.manual.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {t("settingsPage.manual.description")}
+            </Typography>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="192.168.1.42"
+                value={manualIp}
+                onChange={(e) => setManualIp(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleProbeIp();
+                }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <RouterIcon
+                        fontSize="small"
+                        sx={{ color: "text.secondary", mr: 1 }}
+                      />
+                    ),
+                  },
+                }}
+              />
+              <Button
+                variant="outlined"
+                disabled={isSearching || !manualIp.trim()}
+                onClick={handleProbeIp}
+                startIcon={
+                  isSearching ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SearchIcon />
+                  )
                 }
+                sx={{ flexShrink: 0 }}
               >
-                {error}
-              </Alert>
-            ) : results.length === 0 ? (
-              <NoResultsState onRetry={() => void retryWithLongerTimeout()} />
-            ) : (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                {selectableMacs.length > 0 && (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      flexWrap: "wrap",
-                      gap: 1,
-                    }}
+                {t("settingsPage.manual.action")}
+              </Button>
+            </Stack>
+          </Box>
+
+          {hasSearched && !isSearching && (
+            <>
+              <SectionDivider sx={{ my: 2 }} />
+
+              <Box>
+                {error ? (
+                  <Alert
+                    severity="warning"
+                    action={
+                      <Button
+                        color="inherit"
+                        size="small"
+                        onClick={() => void retryWithLongerTimeout()}
+                      >
+                        {t("settingsPage.discovery.retryLonger")}
+                      </Button>
+                    }
                   >
-                    <Typography variant="body2" color="text.secondary">
-                      {t("settingsPage.discovery.resultsCount", {
-                        count: results.length,
-                      })}
-                    </Typography>
-                    <Button
-                      size="small"
-                      onClick={toggleSelectAll}
-                      startIcon={
-                        allSelected ? (
-                          <DeselectIcon fontSize="small" />
-                        ) : (
-                          <SelectAllIcon fontSize="small" />
-                        )
-                      }
+                    {error}
+                  </Alert>
+                ) : results.length === 0 ? (
+                  <NoResultsState
+                    onRetry={() => void retryWithLongerTimeout()}
+                  />
+                ) : (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+                  >
+                    {selectableMacs.length > 0 && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          flexWrap: "wrap",
+                          gap: 1,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          {t("settingsPage.discovery.resultsCount", {
+                            count: results.length,
+                          })}
+                        </Typography>
+                        <Button
+                          size="small"
+                          onClick={toggleSelectAll}
+                          startIcon={
+                            allSelected ? (
+                              <DeselectIcon fontSize="small" />
+                            ) : (
+                              <SelectAllIcon fontSize="small" />
+                            )
+                          }
+                        >
+                          {allSelected
+                            ? t("settingsPage.discovery.deselectAll")
+                            : t("settingsPage.discovery.selectAll")}
+                        </Button>
+                      </Box>
+                    )}
+
+                    {selectedDevices.length > 0 && (
+                      <Paper
+                        variant="outlined"
+                        sx={{
+                          p: 2,
+                          borderRadius: 3,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 2,
+                          borderColor: "primary.main",
+                        }}
+                      >
+                        <Typography variant="body2">
+                          {t("settingsPage.discovery.selectedCount", {
+                            count: selectedDevices.length,
+                          })}
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          disabled={isSaving}
+                          onClick={() => void handleSaveSelected()}
+                          startIcon={
+                            isSaving ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <SaveIcon fontSize="small" />
+                            )
+                          }
+                        >
+                          {isSaving
+                            ? t("settingsPage.discovery.saving")
+                            : t("settingsPage.discovery.saveSelected")}
+                        </Button>
+                      </Paper>
+                    )}
+
+                    {saveError && <Alert severity="error">{saveError}</Alert>}
+
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                          xs: "repeat(1, 1fr)",
+                          md: "repeat(2, 1fr)",
+                          lg: "repeat(3, 1fr)",
+                        },
+                        gap: 2,
+                      }}
                     >
-                      {allSelected
-                        ? t("settingsPage.discovery.deselectAll")
-                        : t("settingsPage.discovery.selectAll")}
-                    </Button>
+                      {results.map((device) => {
+                        const key = normalizeMac(device.mac);
+                        return (
+                          <DiscoveredDeviceCard
+                            key={device.mac || device.ip}
+                            device={device}
+                            existingAlias={configuredByMac.get(key)?.alias}
+                            selected={selectedMacs.has(key)}
+                            onToggleSelect={() => toggleSelected(device.mac)}
+                          />
+                        );
+                      })}
+                    </Box>
                   </Box>
                 )}
-
-                {selectedDevices.length > 0 && (
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      borderRadius: 3,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 2,
-                      borderColor: "primary.main",
-                    }}
-                  >
-                    <Typography variant="body2">
-                      {t("settingsPage.discovery.selectedCount", {
-                        count: selectedDevices.length,
-                      })}
-                    </Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      disabled={isSaving}
-                      onClick={() => void handleSaveSelected()}
-                      startIcon={
-                        isSaving ? (
-                          <CircularProgress size={16} color="inherit" />
-                        ) : (
-                          <SaveIcon fontSize="small" />
-                        )
-                      }
-                    >
-                      {isSaving
-                        ? t("settingsPage.discovery.saving")
-                        : t("settingsPage.discovery.saveSelected")}
-                    </Button>
-                  </Paper>
-                )}
-
-                {saveError && <Alert severity="error">{saveError}</Alert>}
-
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "repeat(1, 1fr)",
-                      md: "repeat(2, 1fr)",
-                      lg: "repeat(3, 1fr)",
-                    },
-                    gap: 2,
-                  }}
-                >
-                  {results.map((device) => {
-                    const key = normalizeMac(device.mac);
-                    return (
-                      <DiscoveredDeviceCard
-                        key={device.mac || device.ip}
-                        device={device}
-                        selected={selectedMacs.has(key)}
-                        onToggleSelect={() => toggleSelected(device.mac)}
-                      />
-                    );
-                  })}
-                </Box>
               </Box>
-            )}
-          </Box>
-        )}
+            </>
+          )}
+        </Paper>
       </Writable>
 
       <ConfirmDialog

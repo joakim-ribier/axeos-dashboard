@@ -4,6 +4,7 @@ import { Miner } from "@/schemas/minerSchema";
 // The same fields actually surfaced to the user in MinerCard.tsx.
 const SEARCHABLE_FIELDS: (keyof Miner)[] = [
   "hostname",
+  "alias",
   "ip",
   "deviceModel",
   "stratumURL",

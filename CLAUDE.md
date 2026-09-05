@@ -118,7 +118,7 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
 | `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots); `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
-| `internal/model/` | `MinerInfo` (23 fields) / `MinersResponse` JSON types |
+| `internal/model/` | `MinerInfo` (40 fields) / `MinersResponse` JSON types |
 | `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions; `config.go` also serves `/api/config/miners` and `/api/config/settings` (read/write the two managed YAML files) |
 
 #### API Endpoints
@@ -141,7 +141,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 #### MinerInfo Fields
 
-23 fields including: timestamp, IP, MAC, hostname, model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), firmware version, response time, fallback flag.
+40 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals, firmware version, response time, fallback flag, alerts, electricity rate.
 
 ### React Frontend (`ui/`)
 
@@ -240,13 +240,15 @@ remote:
 ```yaml
 # miners.yml -- gitignored; treated as managed data, generated/updated by
 # the /settings page (network discovery + add-by-IP, and -- per miner,
-# click its row to expand -- the scheduler editor) -- not meant to be
-# hand-edited (a Settings save can overwrite it).
+# click its row to expand -- the alias/pool/scheduler editors) -- not
+# meant to be hand-edited (a Settings save can overwrite it).
 bitaxes:
   - ip: 192.168.1.65           # reserve/fix this via your router's DHCP so it never changes
     mac: aa:bb:cc:dd:ee:ff     # the device's real MAC, as-is -- separators optional, normalized automatically
     enabled: true
     hostname: my-miner
+    alias: ""                  # optional display-name override -- shown everywhere hostname otherwise
+                                # would be; unlike hostname, never overwritten by a discovery refresh
     model: bitaxe              # or: nerdaxe
     url: stratum.braiins.com
     port: 3333

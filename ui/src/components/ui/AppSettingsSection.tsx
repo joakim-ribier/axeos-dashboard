@@ -22,7 +22,6 @@ import {
   Skeleton,
   Snackbar,
   Stack,
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -31,6 +30,9 @@ import {
   Typography,
 } from "@mui/material";
 
+import { AlertList } from "@/components/ui/AlertList";
+import { DataTable } from "@/components/ui/DataTable";
+import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners } from "@/hooks/useMiners";
@@ -316,13 +318,7 @@ export const AppSettingsSection = ({
           )}
         </Box>
 
-        <Box
-          sx={{
-            height: "1px",
-            background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
-          }}
-        />
+        <SectionDivider />
 
         {/* Pool dashboards */}
         <Box>
@@ -339,140 +335,135 @@ export const AppSettingsSection = ({
             {t("settingsPage.appSettings.pools.description")}
           </Typography>
 
-          <Box sx={{ overflowX: "auto", mb: 2 }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    {t("settingsPage.appSettings.pools.hostLabel")}
+          <DataTable sx={{ mb: 2 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  {t("settingsPage.appSettings.pools.hostLabel")}
+                </TableCell>
+                <TableCell>
+                  {t("settingsPage.appSettings.pools.urlLabel")}
+                </TableCell>
+                <Writable readOnly={readOnly}>
+                  <TableCell align="right" sx={{ width: 56 }} />
+                </Writable>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data &&
+                Object.keys(data.defaults.pools.dashboards).length === 0 &&
+                poolDashboards.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={readOnly ? 2 : 3}>
+                      <Typography variant="caption" color="text.disabled">
+                        {t("settingsPage.appSettings.pools.empty")}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              {data &&
+                Object.entries(data.defaults.pools.dashboards).map(
+                  ([host, url]) => (
+                    <TableRow hover key={`builtin-${host}`}>
+                      <TableCell sx={{ fontFamily: "monospace" }}>
+                        {host}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontFamily: "monospace",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {url}
+                      </TableCell>
+                      <Writable readOnly={readOnly}>
+                        <TableCell />
+                      </Writable>
+                    </TableRow>
+                  ),
+                )}
+              {poolDashboards.map((row) => (
+                <TableRow hover key={`custom-${row.host}`}>
+                  <TableCell sx={{ fontFamily: "monospace" }}>
+                    {row.host}
                   </TableCell>
-                  <TableCell>
-                    {t("settingsPage.appSettings.pools.urlLabel")}
+                  <TableCell
+                    sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}
+                  >
+                    {row.url}
                   </TableCell>
                   <Writable readOnly={readOnly}>
-                    <TableCell align="right" sx={{ width: 56 }} />
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        disabled={isSaving}
+                        onClick={() => void handleRemovePoolDashboard(row.host)}
+                        aria-label={t("settingsPage.appSettings.pools.remove")}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
                   </Writable>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {data &&
-                  Object.keys(data.defaults.pools.dashboards).length === 0 &&
-                  poolDashboards.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={readOnly ? 2 : 3}>
-                        <Typography variant="caption" color="text.disabled">
-                          {t("settingsPage.appSettings.pools.empty")}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                {data &&
-                  Object.entries(data.defaults.pools.dashboards).map(
-                    ([host, url]) => (
-                      <TableRow hover key={`builtin-${host}`}>
-                        <TableCell sx={{ fontFamily: "monospace" }}>
-                          {host}
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            fontFamily: "monospace",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {url}
-                        </TableCell>
-                        <Writable readOnly={readOnly}>
-                          <TableCell />
-                        </Writable>
-                      </TableRow>
-                    ),
-                  )}
-                {poolDashboards.map((row) => (
-                  <TableRow hover key={`custom-${row.host}`}>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {row.host}
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}
-                    >
-                      {row.url}
-                    </TableCell>
-                    <Writable readOnly={readOnly}>
-                      <TableCell align="right">
-                        <IconButton
-                          size="small"
-                          disabled={isSaving}
-                          onClick={() =>
-                            void handleRemovePoolDashboard(row.host)
-                          }
-                          aria-label={t(
-                            "settingsPage.appSettings.pools.remove",
-                          )}
-                        >
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </Writable>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
+              ))}
+            </TableBody>
+          </DataTable>
 
           <Writable readOnly={readOnly}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                size="small"
-                label={t("settingsPage.appSettings.pools.hostLabel")}
-                placeholder="stratum.braiins.com"
-                value={newPoolHost}
-                onChange={(e) => setNewPoolHost(e.target.value)}
-                slotProps={{ inputLabel: { shrink: true } }}
-                sx={{ minWidth: 220 }}
-              />
-              <TextField
-                size="small"
-                label={t("settingsPage.appSettings.pools.urlLabel")}
-                placeholder="https://pool.example.com/overview/{user}"
-                value={newPoolUrl}
-                onChange={(e) => setNewPoolUrl(e.target.value)}
-                error={
-                  newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
-                }
-                helperText={
-                  newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
-                    ? t("settingsPage.appSettings.pools.missingUserPlaceholder")
-                    : undefined
-                }
-                slotProps={{ inputLabel: { shrink: true } }}
-                fullWidth
-              />
-              <Button
-                variant="outlined"
-                size="small"
-                disabled={
-                  isSaving ||
-                  !newPoolHost.trim() ||
-                  !newPoolUrl.trim() ||
-                  !newPoolUrl.includes("{user}")
-                }
-                onClick={() => void handleAddPoolDashboard()}
-                sx={{ flexShrink: 0 }}
-              >
-                {t("settingsPage.appSettings.pools.add")}
-              </Button>
-            </Stack>
+            <Paper
+              variant="outlined"
+              sx={{ px: 0, py: 1.5, borderRadius: 2, border: "none" }}
+            >
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  size="small"
+                  label={t("settingsPage.appSettings.pools.hostLabel")}
+                  placeholder="stratum.braiins.com"
+                  value={newPoolHost}
+                  onChange={(e) => setNewPoolHost(e.target.value)}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  sx={{ minWidth: 220 }}
+                />
+                <TextField
+                  size="small"
+                  label={t("settingsPage.appSettings.pools.urlLabel")}
+                  placeholder="https://pool.example.com/overview/{user}"
+                  value={newPoolUrl}
+                  onChange={(e) => setNewPoolUrl(e.target.value)}
+                  error={
+                    newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
+                  }
+                  helperText={
+                    newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
+                      ? t(
+                          "settingsPage.appSettings.pools.missingUserPlaceholder",
+                        )
+                      : undefined
+                  }
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  fullWidth
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled={
+                    isSaving ||
+                    !newPoolHost.trim() ||
+                    !newPoolUrl.trim() ||
+                    !newPoolUrl.includes("{user}")
+                  }
+                  onClick={() => void handleAddPoolDashboard()}
+                  sx={{ flexShrink: 0 }}
+                >
+                  {t("settingsPage.appSettings.pools.add")}
+                </Button>
+              </Stack>
+            </Paper>
           </Writable>
         </Box>
 
         <Writable readOnly={readOnly}>
-          <Box
-            sx={{
-              height: "1px",
-              background: (theme) =>
-                `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
-            }}
-          />
+          <SectionDivider />
 
           {/* Remote -- never shown read-only: remote.pushURL/apiKey are
                 never pushed to a remote board in the first place (see
@@ -552,87 +543,99 @@ export const AppSettingsSection = ({
                 ? t("settingsPage.appSettings.saving")
                 : t("settingsPage.appSettings.save")}
             </Button>
-            {data?.remote.pushURL && (
-              <Stack spacing={1} sx={{ mt: 2 }}>
-                {(
+            {data?.remote.pushURL &&
+              (() => {
+                const endpoints = [
                   [
-                    [
-                      "minersConfig",
-                      data.readOnly.remotePushMinersConfig,
-                    ] as const,
-                    [
-                      "settingsConfig",
-                      data.readOnly.remotePushSettingsConfig,
-                    ] as const,
-                  ] as const
-                ).map(([endpoint, status]) => {
-                  const label = t(
-                    `settingsPage.appSettings.remote.pushStatus.endpoint.${endpoint}`,
-                  );
-                  if (status.lastError) {
-                    return (
-                      <Alert key={endpoint} severity="warning">
-                        <strong>{label}</strong> —{" "}
-                        {t("settingsPage.appSettings.remote.pushStatus.error", {
-                          date: status.lastAttemptAt
-                            ? formatTimestamp(status.lastAttemptAt)
-                            : "?",
-                          error: status.lastError,
-                        })}
-                      </Alert>
-                    );
-                  }
-                  if (status.lastSuccessAt) {
-                    return (
-                      <Typography
-                        key={endpoint}
-                        variant="caption"
-                        sx={{
-                          fontFamily: "monospace",
-                          color:
-                            now !== null &&
-                            isStale(
-                              now,
-                              status.lastSuccessAt,
-                              data.readOnly.feederInterval,
-                            )
-                              ? "warning.main"
-                              : "success.main",
-                        }}
-                      >
-                        <strong>{label}</strong> —{" "}
-                        {t(
-                          "settingsPage.appSettings.remote.pushStatus.lastSuccess",
-                          { date: formatTimestamp(status.lastSuccessAt) },
-                        )}
-                      </Typography>
-                    );
-                  }
-                  return (
-                    <Typography
-                      key={endpoint}
-                      variant="caption"
-                      color="text.disabled"
-                    >
-                      <strong>{label}</strong> —{" "}
-                      {t(
-                        "settingsPage.appSettings.remote.pushStatus.neverAttempted",
-                      )}
-                    </Typography>
-                  );
-                })}
-              </Stack>
-            )}
+                    "minersConfig",
+                    data.readOnly.remotePushMinersConfig,
+                  ] as const,
+                  [
+                    "settingsConfig",
+                    data.readOnly.remotePushSettingsConfig,
+                  ] as const,
+                ];
+                const failing = endpoints.filter(
+                  ([, status]) => status.lastError,
+                );
+                const okOrUnknown = endpoints.filter(
+                  ([, status]) => !status.lastError,
+                );
+
+                return (
+                  <Stack spacing={1} sx={{ mt: 2 }}>
+                    <AlertList
+                      severity="warning"
+                      items={failing.map(([endpoint, status]) => {
+                        const label = t(
+                          `settingsPage.appSettings.remote.pushStatus.endpoint.${endpoint}`,
+                        );
+                        return (
+                          <span key={endpoint}>
+                            <strong>{label}</strong> —{" "}
+                            {t(
+                              "settingsPage.appSettings.remote.pushStatus.error",
+                              {
+                                date: status.lastAttemptAt
+                                  ? formatTimestamp(status.lastAttemptAt)
+                                  : "?",
+                                error: status.lastError,
+                              },
+                            )}
+                          </span>
+                        );
+                      })}
+                    />
+                    {okOrUnknown.map(([endpoint, status]) => {
+                      const label = t(
+                        `settingsPage.appSettings.remote.pushStatus.endpoint.${endpoint}`,
+                      );
+                      if (status.lastSuccessAt) {
+                        return (
+                          <Typography
+                            key={endpoint}
+                            variant="caption"
+                            sx={{
+                              fontFamily: "monospace",
+                              color:
+                                now !== null &&
+                                isStale(
+                                  now,
+                                  status.lastSuccessAt,
+                                  data.readOnly.feederInterval,
+                                )
+                                  ? "warning.main"
+                                  : "success.main",
+                            }}
+                          >
+                            <strong>{label}</strong> —{" "}
+                            {t(
+                              "settingsPage.appSettings.remote.pushStatus.lastSuccess",
+                              { date: formatTimestamp(status.lastSuccessAt) },
+                            )}
+                          </Typography>
+                        );
+                      }
+                      return (
+                        <Typography
+                          key={endpoint}
+                          variant="caption"
+                          color="text.disabled"
+                        >
+                          <strong>{label}</strong> —{" "}
+                          {t(
+                            "settingsPage.appSettings.remote.pushStatus.neverAttempted",
+                          )}
+                        </Typography>
+                      );
+                    })}
+                  </Stack>
+                );
+              })()}
           </Box>
         </Writable>
 
-        <Box
-          sx={{
-            height: "1px",
-            background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
-          }}
-        />
+        <SectionDivider />
 
         {/* Firmware repos -- built-in, read-only: no override from this UI */}
         <Box>
@@ -642,58 +645,50 @@ export const AppSettingsSection = ({
               {t("settingsPage.appSettings.firmware.title")}
             </Typography>
           </Box>
-          <Box sx={{ overflowX: "auto" }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 120 }}>
-                    {t("settingsPage.appSettings.firmware.modelLabel")}
-                  </TableCell>
-                  <TableCell>
-                    {t("settingsPage.appSettings.firmware.urlLabel")}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data &&
-                  Object.entries(data.defaults.firmware.repos).map(
-                    ([model, url]) => (
-                      <TableRow hover key={model}>
-                        <TableCell>
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            label={model}
-                            sx={{
-                              height: 24,
-                              fontSize: "0.8rem",
-                              borderRadius: 1,
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell
+          <DataTable>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ width: 120 }}>
+                  {t("settingsPage.appSettings.firmware.modelLabel")}
+                </TableCell>
+                <TableCell>
+                  {t("settingsPage.appSettings.firmware.urlLabel")}
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data &&
+                Object.entries(data.defaults.firmware.repos).map(
+                  ([model, url]) => (
+                    <TableRow hover key={model}>
+                      <TableCell>
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={model}
                           sx={{
-                            fontFamily: "monospace",
-                            overflowWrap: "anywhere",
+                            height: 24,
+                            fontSize: "0.8rem",
+                            borderRadius: 1,
                           }}
-                        >
-                          {url}
-                        </TableCell>
-                      </TableRow>
-                    ),
-                  )}
-              </TableBody>
-            </Table>
-          </Box>
+                        />
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontFamily: "monospace",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {url}
+                      </TableCell>
+                    </TableRow>
+                  ),
+                )}
+            </TableBody>
+          </DataTable>
         </Box>
 
-        <Box
-          sx={{
-            height: "1px",
-            background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
-          }}
-        />
+        <SectionDivider />
 
         {/* Read-only, process-launch settings */}
         <Box>
@@ -706,71 +701,64 @@ export const AppSettingsSection = ({
               {t("settingsPage.appSettings.readOnly.title")}
             </Typography>
           </Box>
-          <Box sx={{ overflowX: "auto" }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    {t("settingsPage.appSettings.readOnly.settingLabel")}
-                  </TableCell>
-                  <TableCell>
-                    {t("settingsPage.appSettings.readOnly.valueLabel")}
-                  </TableCell>
-                  <TableCell>
-                    {t("settingsPage.appSettings.readOnly.lastRunLabel")}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                <TableRow hover>
-                  <TableCell>
-                    {t("settingsPage.appSettings.readOnly.feederIntervalLabel")}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>
-                    {data?.readOnly.feederInterval}
-                  </TableCell>
-                  <TableCell>
-                    {renderLastRun(
-                      latestFeederAt,
-                      data?.readOnly.feederInterval,
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow hover>
-                  <TableCell>
-                    {t(
-                      "settingsPage.appSettings.readOnly.healthCheckIntervalLabel",
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>
-                    {data?.readOnly.healthCheckInterval}
-                  </TableCell>
-                  <TableCell>
-                    {renderLastRun(
-                      latestHealthCheckAt,
-                      data?.readOnly.healthCheckInterval,
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow hover>
-                  <TableCell>
-                    {t(
-                      "settingsPage.appSettings.readOnly.firmwareCacheTTLLabel",
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>
-                    {data?.readOnly.firmwareCacheTTL}
-                  </TableCell>
-                  <TableCell>
-                    {renderLastRun(
-                      data?.readOnly.firmwareCacheCheckedAt,
-                      data?.readOnly.firmwareCacheTTL,
-                    )}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </Box>
+          <DataTable>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  {t("settingsPage.appSettings.readOnly.settingLabel")}
+                </TableCell>
+                <TableCell>
+                  {t("settingsPage.appSettings.readOnly.valueLabel")}
+                </TableCell>
+                <TableCell>
+                  {t("settingsPage.appSettings.readOnly.lastRunLabel")}
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow hover>
+                <TableCell>
+                  {t("settingsPage.appSettings.readOnly.feederIntervalLabel")}
+                </TableCell>
+                <TableCell sx={{ fontFamily: "monospace" }}>
+                  {data?.readOnly.feederInterval}
+                </TableCell>
+                <TableCell>
+                  {renderLastRun(latestFeederAt, data?.readOnly.feederInterval)}
+                </TableCell>
+              </TableRow>
+              <TableRow hover>
+                <TableCell>
+                  {t(
+                    "settingsPage.appSettings.readOnly.healthCheckIntervalLabel",
+                  )}
+                </TableCell>
+                <TableCell sx={{ fontFamily: "monospace" }}>
+                  {data?.readOnly.healthCheckInterval}
+                </TableCell>
+                <TableCell>
+                  {renderLastRun(
+                    latestHealthCheckAt,
+                    data?.readOnly.healthCheckInterval,
+                  )}
+                </TableCell>
+              </TableRow>
+              <TableRow hover>
+                <TableCell>
+                  {t("settingsPage.appSettings.readOnly.firmwareCacheTTLLabel")}
+                </TableCell>
+                <TableCell sx={{ fontFamily: "monospace" }}>
+                  {data?.readOnly.firmwareCacheTTL}
+                </TableCell>
+                <TableCell>
+                  {renderLastRun(
+                    data?.readOnly.firmwareCacheCheckedAt,
+                    data?.readOnly.firmwareCacheTTL,
+                  )}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </DataTable>
         </Box>
       </Stack>
 

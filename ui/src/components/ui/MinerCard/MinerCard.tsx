@@ -36,6 +36,7 @@ import { useUiFeatures } from "@/hooks/useMiners";
 import { useMinerStats } from "@/hooks/useMinerStats";
 import { MinerInfo } from "@/types/miner";
 import { formatDuration, formatMetric, formatTimestamp } from "@/utils/format";
+import { displayName } from "@/utils/minerDisplay";
 
 import { MinerActionBar } from "./components/MinerActionBar";
 import { MinerTabPanel } from "./components/MinerTabPanel";
@@ -71,6 +72,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     uptimeSeconds,
     ip = "—",
     hostname,
+    alias,
     deviceModel,
     alive,
     aliveCheckedAt,
@@ -99,6 +101,8 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     fallbackStratumDashboardURL,
     isUsingFallbackStratum = 0,
   } = minerInfo || {};
+
+  const name = displayName({ hostname, alias });
 
   const isFallback = isUsingFallbackStratum === 1;
   const poolURL = isFallback ? fallbackStratumURL : stratumURL;
@@ -310,15 +314,15 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
               </Tooltip>
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              {/* Row 1: hostname */}
-              {hostname ? (
+              {/* Row 1: name (alias, else hostname) */}
+              {name ? (
                 <Typography
                   variant="subtitle1"
                   fontWeight={700}
                   sx={{ lineHeight: 1.2 }}
                   noWrap
                 >
-                  {hostname}
+                  {name}
                 </Typography>
               ) : ip !== "—" ? (
                 <Link
@@ -381,7 +385,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                 sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
               />
             )}
-            {hostname && ip !== "—" && (
+            {name && ip !== "—" && (
               <Link
                 href={`http://${ip}`}
                 target="_blank"

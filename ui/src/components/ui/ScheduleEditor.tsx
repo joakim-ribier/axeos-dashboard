@@ -12,11 +12,17 @@ import {
   CircularProgress,
   IconButton,
   MenuItem,
+  Paper,
   Stack,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   TextField,
   Typography,
 } from "@mui/material";
 
+import { DataTable } from "@/components/ui/DataTable";
 import { Writable } from "@/components/ui/Writable";
 import {
   type CronSchedule,
@@ -124,155 +130,178 @@ export const ScheduleEditor = ({
           {t("settingsPage.configured.schedule.empty")}
         </Typography>
       ) : (
-        <Stack spacing={1}>
-          {schedule.map((entry, index) => (
-            <Box
-              key={`${entry.cron}-${entry.action}-${index}`}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                flexWrap: "wrap",
-              }}
-            >
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: "monospace" }}
-                color="text.secondary"
-              >
-                {entry.cron}
-              </Typography>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={t(`settingsPage.configured.schedule.${entry.action}`)}
-              />
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ flexGrow: 1 }}
-              >
-                {describeCron(entry.cron, i18n.language) ?? entry.cron}
-              </Typography>
+        <DataTable>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                {t("settingsPage.configured.schedule.action")}
+              </TableCell>
+              <TableCell>
+                {t("settingsPage.configured.schedule.readableLabel")}
+              </TableCell>
+              <TableCell>
+                {t("settingsPage.configured.schedule.cronLabel")}
+              </TableCell>
               <Writable readOnly={readOnly}>
-                <IconButton
-                  size="small"
-                  disabled={removingIndex === index}
-                  onClick={() => void handleRemove(index)}
-                  aria-label={t("settingsPage.configured.schedule.removing")}
-                >
-                  {removingIndex === index ? (
-                    <CircularProgress size={16} />
-                  ) : (
-                    <DeleteOutlineIcon fontSize="small" />
-                  )}
-                </IconButton>
+                <TableCell align="right" sx={{ width: 40 }} />
               </Writable>
-            </Box>
-          ))}
-        </Stack>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {schedule.map((entry, index) => (
+              <TableRow hover key={`${entry.cron}-${entry.action}-${index}`}>
+                <TableCell>
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={t(
+                      `settingsPage.configured.schedule.${entry.action}`,
+                    )}
+                    sx={{
+                      height: 24,
+                      fontSize: "0.8rem",
+                      borderRadius: 1,
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  {describeCron(entry.cron, i18n.language) ?? entry.cron}
+                </TableCell>
+                <TableCell sx={{ fontFamily: "monospace" }}>
+                  {entry.cron}
+                </TableCell>
+                <Writable readOnly={readOnly}>
+                  <TableCell align="right">
+                    <IconButton
+                      size="small"
+                      disabled={removingIndex === index}
+                      onClick={() => void handleRemove(index)}
+                      aria-label={t(
+                        "settingsPage.configured.schedule.removing",
+                      )}
+                    >
+                      {removingIndex === index ? (
+                        <CircularProgress size={16} />
+                      ) : (
+                        <DeleteOutlineIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </TableCell>
+                </Writable>
+              </TableRow>
+            ))}
+          </TableBody>
+        </DataTable>
       )}
 
       <Writable readOnly={readOnly}>
-        {error && (
-          <Alert severity="error" onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-      </Writable>
-
-      <Writable readOnly={readOnly}>
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          alignItems="flex-start"
+        <Paper
+          variant="outlined"
+          sx={{ px: 0, py: 1.5, borderRadius: 2, border: "none" }}
         >
-          <TextField
-            size="small"
-            label={t("settingsPage.configured.schedule.cronLabel")}
-            placeholder={t("settingsPage.configured.schedule.cronPlaceholder")}
-            helperText={
-              cronIsInvalid
-                ? t("settingsPage.configured.schedule.invalidCron")
-                : cronIsDuplicate
-                  ? t("settingsPage.configured.schedule.duplicateCron")
-                  : t("settingsPage.configured.schedule.cronHelp")
-            }
-            error={cronIsInvalid || cronIsDuplicate}
-            value={cron}
-            onChange={(e) => setCron(e.target.value)}
-            sx={{ fontFamily: "monospace", minWidth: 240 }}
-            slotProps={{
-              htmlInput: { sx: { fontFamily: "monospace" } },
-              inputLabel: { shrink: true },
-            }}
-          />
-          <TextField
-            size="small"
-            select
-            label={t("settingsPage.configured.schedule.action")}
-            value={action}
-            onChange={(e) =>
-              setAction(e.target.value as CronSchedule["action"])
-            }
-            sx={{ minWidth: 170 }}
-          >
-            <MenuItem value="switch_primary">
-              {t("settingsPage.configured.schedule.switch_primary")}
-            </MenuItem>
-            <MenuItem value="switch_fallback">
-              {t("settingsPage.configured.schedule.switch_fallback")}
-            </MenuItem>
-            <MenuItem value="restart">
-              {t("settingsPage.configured.schedule.restart")}
-            </MenuItem>
-          </TextField>
-          <Button
-            variant="outlined"
-            size="small"
-            disabled={
-              !trimmedCron || cronIsInvalid || cronIsDuplicate || isAdding
-            }
-            onClick={() => void handleAdd()}
-            startIcon={
-              isAdding ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <AddIcon fontSize="small" />
-              )
-            }
-            sx={{ flexShrink: 0, height: 40 }}
-          >
-            {isAdding
-              ? t("settingsPage.configured.schedule.adding")
-              : t("settingsPage.configured.schedule.add")}
-          </Button>
-        </Stack>
-
-        {trimmedCron && !cronIsInvalid && (
-          <Box sx={{ pl: 0.5 }}>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              component="div"
+          {error && (
+            <Alert
+              severity="error"
+              onClose={() => setError(null)}
+              sx={{ mb: 1.5 }}
             >
-              {description}
-            </Typography>
-            {upcoming && upcoming.length > 0 && (
+              {error}
+            </Alert>
+          )}
+          <Stack direction="row" spacing={1} alignItems="flex-start">
+            <TextField
+              size="small"
+              label={t("settingsPage.configured.schedule.cronLabel")}
+              placeholder={t(
+                "settingsPage.configured.schedule.cronPlaceholder",
+              )}
+              helperText={
+                cronIsInvalid
+                  ? t("settingsPage.configured.schedule.invalidCron")
+                  : cronIsDuplicate
+                    ? t("settingsPage.configured.schedule.duplicateCron")
+                    : t("settingsPage.configured.schedule.cronHelp")
+              }
+              error={cronIsInvalid || cronIsDuplicate}
+              value={cron}
+              onChange={(e) => setCron(e.target.value)}
+              sx={{
+                fontFamily: "monospace",
+                minWidth: { xs: 120, sm: 240 },
+                flexGrow: 1,
+              }}
+              slotProps={{
+                htmlInput: { sx: { fontFamily: "monospace" } },
+                inputLabel: { shrink: true },
+              }}
+            />
+            <TextField
+              size="small"
+              select
+              label={t("settingsPage.configured.schedule.action")}
+              value={action}
+              onChange={(e) =>
+                setAction(e.target.value as CronSchedule["action"])
+              }
+              sx={{ minWidth: { xs: 96, sm: 170 } }}
+            >
+              <MenuItem value="switch_primary">
+                {t("settingsPage.configured.schedule.switch_primary")}
+              </MenuItem>
+              <MenuItem value="switch_fallback">
+                {t("settingsPage.configured.schedule.switch_fallback")}
+              </MenuItem>
+              <MenuItem value="restart">
+                {t("settingsPage.configured.schedule.restart")}
+              </MenuItem>
+            </TextField>
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={
+                !trimmedCron || cronIsInvalid || cronIsDuplicate || isAdding
+              }
+              onClick={() => void handleAdd()}
+              startIcon={
+                isAdding ? (
+                  <CircularProgress size={14} color="inherit" />
+                ) : (
+                  <AddIcon fontSize="small" />
+                )
+              }
+              sx={{ flexShrink: 0, height: 40 }}
+            >
+              {isAdding
+                ? t("settingsPage.configured.schedule.adding")
+                : t("settingsPage.configured.schedule.add")}
+            </Button>
+          </Stack>
+
+          {trimmedCron && !cronIsInvalid && (
+            <Box sx={{ pl: 0.5 }}>
               <Typography
                 variant="caption"
-                color="text.disabled"
+                color="text.secondary"
                 component="div"
               >
-                {t("settingsPage.configured.schedule.nextRuns", {
-                  dates: upcoming
-                    .map((d) => formatTimestamp(d.toISOString()))
-                    .join(" · "),
-                })}
+                {description}
               </Typography>
-            )}
-          </Box>
-        )}
+              {upcoming && upcoming.length > 0 && (
+                <Typography
+                  variant="caption"
+                  color="text.disabled"
+                  component="div"
+                >
+                  {t("settingsPage.configured.schedule.nextRuns", {
+                    dates: upcoming
+                      .map((d) => formatTimestamp(d.toISOString()))
+                      .join(" · "),
+                  })}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Paper>
       </Writable>
     </Box>
   );

@@ -241,6 +241,26 @@ func TestBitaxe_StorageKey(t *testing.T) {
 	}
 }
 
+func TestBitaxe_DisplayName(t *testing.T) {
+	tests := []struct {
+		name     string
+		hostname string
+		alias    string
+		want     string
+	}{
+		{"no alias falls back to hostname", "bitaxe-1", "", "bitaxe-1"},
+		{"alias overrides hostname", "bitaxe-1", "Garage rig", "Garage rig"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := Bitaxe{Hostname: tt.hostname, Alias: tt.alias}
+			if got := b.DisplayName(); got != tt.want {
+				t.Errorf("DisplayName() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestStorageConfig_BitaxesDir(t *testing.T) {
 	s := StorageConfig{DataDir: "/var/data"}
 

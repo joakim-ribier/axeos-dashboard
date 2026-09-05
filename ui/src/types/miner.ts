@@ -6,6 +6,7 @@ export interface MinerInfo {
   ip: string;
   macAddr: string;
   hostname?: string;
+  alias?: string;
   deviceModel?: string;
   alive?: boolean;
   aliveCheckedAt?: string;
@@ -39,9 +40,11 @@ export interface MinerInfo {
   bestDiff: number;
 
   stratumURL?: string;
+  stratumPort?: number;
   stratumUser?: string;
   stratumDashboardURL?: string;
   fallbackStratumURL?: string;
+  fallbackStratumPort?: number;
   fallbackStratumUser?: string;
   fallbackStratumDashboardURL?: string;
   isUsingFallbackStratum?: number; // 0 = main, 1 = fallback

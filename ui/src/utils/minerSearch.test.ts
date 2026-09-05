@@ -41,6 +41,12 @@ describe("matchesSearch", () => {
     expect(matchesSearch(baseMiner, "OFFICE")).toBe(true);
   });
 
+  it("matches on alias", () => {
+    expect(matchesSearch({ ...baseMiner, alias: "Garage rig" }, "garage")).toBe(
+      true,
+    );
+  });
+
   it("matches on ip", () => {
     expect(matchesSearch(baseMiner, "10.0.0.65")).toBe(true);
   });

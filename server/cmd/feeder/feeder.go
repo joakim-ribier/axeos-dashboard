@@ -204,7 +204,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
 			f.goPush(func() {
-				f.pushToRemote(now, key, addr, bitaxe.Hostname, string(bitaxe.Model), latestFW, payload, alerts)
+				f.pushToRemote(now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -294,6 +294,7 @@ type pushSample struct {
 	// never needs to know this is derived from a MAC address at all.
 	StorageKey      string          `json:"storageKey"`
 	Hostname        string          `json:"hostname"`
+	Alias           string          `json:"alias,omitempty"`
 	Model           string          `json:"model"`
 	ElectricityRate float64         `json:"electricityRatePerKwh,omitempty"`
 	LatestFirmware  string          `json:"latestFirmware,omitempty"`
@@ -311,12 +312,13 @@ type pushSample struct {
 	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
 }
 
-func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, model, latestFirmware string, payload []byte, alerts []model.Alert) {
+func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, alias, model, latestFirmware string, payload []byte, alerts []model.Alert) {
 	sample := pushSample{
 		Timestamp:             now.UTC().Truncate(time.Second),
 		IP:                    ip,
 		StorageKey:            storageKey,
 		Hostname:              hostname,
+		Alias:                 alias,
 		Model:                 model,
 		ElectricityRate:       f.config.Electricity.RatePerKwh,
 		LatestFirmware:        latestFirmware,

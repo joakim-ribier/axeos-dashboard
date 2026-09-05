@@ -117,8 +117,10 @@ version old enough to predate this field.
 
 **Header**
 
-- Hostname (or IP as clickable link → opens device web UI)
-- Device model chip + IP link (when hostname is set)
+- Display name (the miner's `alias` if one is set in `miners.yml`,
+  otherwise its hostname — see [Configuration](CONFIGURATION.md)), or IP
+  as a clickable link when neither is set → opens device web UI
+- Device model chip + IP link (when a display name is shown)
 - Last poll timestamp
 - Health dot: green (alive) · red (unreachable) · grey (first check pending) · orange (config error — see below)
 
@@ -171,13 +173,22 @@ page, read-only, at `/{boardId}/settings` — see
 [Remote mode](#remote-mode-boardid) below.
 
 - **Configured miners** — every miner currently in `miners.yml`, including
-  disabled ones, with enable/disable and a **disable all** button. Clicking
-  a row expands it in place to reveal that miner's **scheduler**
-  (below) without navigating away.
-- **Automatic detection** — scans the local network (or a given CIDR) for
-  AxeOS devices and lists what it finds, ready to select and save.
-- **Add by IP** — probes one address directly, for a device the scan can't
-  reach (different subnet, firewall).
+  disabled ones, with enable/disable and a **disable all** button. A row
+  whose saved pool config doesn't match what the miner is actually
+  reporting shows its name in orange with a small dot next to it (hover
+  for which fields differ); a "Scheduled" chip appears once it has at
+  least one cron job. Clicking a row expands it in place to reveal that
+  miner's **Alias**, **Pool**, and **Scheduler** editors (below) without
+  navigating away. A summary banner at the top of the page lists, across
+  every miner, how many have a pool-config mismatch and whether the push
+  to hashboard is currently failing — so either problem is visible without
+  scrolling down to find it.
+- **Automatic detection** and **Add by IP** — scans the local network (or
+  a given CIDR), or probes one address directly for a device the scan
+  can't reach (different subnet, firewall); results appear right below,
+  in the same section, ready to select and save. A device that matches an
+  already-configured MAC shows its configured alias as the primary name
+  (with the device's own hostname underneath), rather than the hostname.
 - **App settings** — electricity rate, custom pool dashboard links, and
   remote (hashboard) push credentials, editable in `settings.yml` without
   hand-editing `dashboard.yml` or restarting either binary. Each of these
@@ -197,8 +208,23 @@ page, read-only, at `/{boardId}/settings` — see
   with an at-a-glance, color-coded last-run indicator so a stuck feeder or
   health-check loop is visible without digging through logs.
 
-**Scheduler** — per miner, add or remove cron-based automatic jobs: switch
-to primary, switch to fallback, or restart (e.g. "switch to fallback every
+**Alias** — an optional per-miner display-name override (`alias` in
+`miners.yml`). Shown everywhere the hostname otherwise would be (this
+table, the dashboard cards, notifications); leave it empty to keep
+showing the hostname. Unlike the hostname, an alias is never touched by a
+network re-scan, so it's the one place a custom name survives that
+refresh.
+
+**Pool** — edit the primary/fallback pool (URL, port, user) directly,
+with a one-click button to swap the two. This is exactly what the
+scheduler and the dashboard's manual pool-switch buttons send to the
+device the next time either runs — saving here never talks to the device
+itself. If the saved config doesn't match what the miner is actually
+reporting on its last poll, a warning banner lists precisely which fields
+differ (saved value vs. what the miner reports).
+
+**Scheduler** — add or remove cron-based automatic jobs: switch to
+primary, switch to fallback, or restart (e.g. "switch to fallback every
 Friday at 23:59:59, back to primary every Sunday"):
 
 - The cron expression is a raw 6-field string, **seconds included**
@@ -209,8 +235,8 @@ Friday at 23:59:59, back to primary every Sunday"):
 - A schedule that duplicates one already configured for that miner (same
   expression, regardless of spacing/case or action) is rejected too — both
   would otherwise fire at the exact same moment.
-- A small badge next to a miner's name shows how many schedules it has
-  without needing to expand the row.
+- Existing entries are listed in a table (readable description, action,
+  raw cron expression) above the add form.
 - Every add/remove saves immediately, the same way the rest of this page
   does — and the running `dashboard-api` picks up the change and
   reschedules its cron jobs on its own within one `healthCheck.interval`

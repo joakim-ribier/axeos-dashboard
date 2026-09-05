@@ -204,6 +204,7 @@ func syntheticBitaxe(raw latestFileStructure, dirName string) config.Bitaxe {
 		Ip:       raw.IP,
 		Mac:      dirName,
 		Hostname: raw.Hostname,
+		Alias:    raw.Alias,
 		Model:    config.Model(raw.Model),
 		Enabled:  true,
 	}

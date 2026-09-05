@@ -20,6 +20,17 @@ definitions:
     type: object
   config.Bitaxe:
     properties:
+      alias:
+        description: |-
+          Alias is an optional operator-set override for the display name shown
+          in the UI wherever Hostname would otherwise be shown (see
+          DisplayName). Unlike Hostname -- which a network discovery re-probe
+          (see internal/discovery, and the "select an already-configured
+          device" refresh flow in the Settings UI) silently overwrites with
+          whatever the device itself reports -- Alias is never touched by
+          discovery, so it's the one place a custom, human-chosen name survives
+          a refresh.
+        type: string
       enabled:
         type: boolean
       fallbackPort:
@@ -300,6 +311,10 @@ definitions:
         items:
           $ref: '#/definitions/model.Alert'
         type: array
+      alias:
+        description: Operator-set override for Hostname (see config.Bitaxe.DisplayName)
+          -- empty when not set, UI falls back to Hostname
+        type: string
       alive:
         description: Health check
         type: boolean
@@ -329,6 +344,8 @@ definitions:
       fallbackStratumDashboardURL:
         description: Web dashboard URL for the fallback pool
         type: string
+      fallbackStratumPort:
+        type: integer
       fallbackStratumURL:
         type: string
       fallbackStratumUser:
@@ -372,8 +389,17 @@ definitions:
       stratumDashboardURL:
         description: Web dashboard URL for the primary pool
         type: string
+      stratumPort:
+        description: Port of the primary Stratum pool
+        type: integer
       stratumURL:
-        description: Pool urls
+        description: |-
+          Pool urls -- Stratum(Port|Fallback...) is what the device itself is
+          currently connected with, straight off its own /api/system/info
+          (see handler.PayloadStructure) -- not to be confused with the
+          *configured* pool (config.Bitaxe.Url/Port/...), which the UI reads
+          separately from GET /api/config/miners and compares against these to
+          flag drift (see ui/src/utils/poolDrift.ts).
         type: string
       stratumUser:
         description: Username (typically miner ID) for the primary pool

@@ -5,6 +5,7 @@ import {
   type AlertEpisode,
   type Miner,
 } from "@/schemas/minerSchema";
+import { displayName } from "@/utils/minerDisplay";
 
 export type NotificationType =
   | "tempHigh"
@@ -123,7 +124,7 @@ export const currentAlertState = (miners: Miner[]): AlertState => {
     }
 
     state[mac] = {
-      label: miner.hostname || miner.ip || mac,
+      label: displayName(miner) || miner.ip || mac,
       alerts,
     };
   }

@@ -28,6 +28,7 @@ import { useMode } from "@/contexts/ModeContext";
 import { useAlertsHistory } from "@/hooks/useAlertsHistory";
 import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
 import { formatTimestamp } from "@/utils/format";
+import { displayName } from "@/utils/minerDisplay";
 import {
   ALERT_TYPE_COLOR,
   ALERT_TYPES,
@@ -311,7 +312,7 @@ export const Alerts = () => {
       (miners ?? [])
         .map((m) => ({
           ip: m.ip,
-          label: m.hostname ? `${m.hostname} (${m.ip})` : m.ip,
+          label: displayName(m) ? `${displayName(m)} (${m.ip})` : m.ip,
         }))
         .sort((a, b) => a.label.localeCompare(b.label)),
     [miners],
