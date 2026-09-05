@@ -22,6 +22,7 @@ import {
   Chip,
   CircularProgress,
   Collapse,
+  FormControlLabel,
   IconButton,
   Paper,
   Skeleton,
@@ -55,6 +56,12 @@ import { type Miner } from "@/schemas/minerSchema";
 import { formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
 import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
+
+// Prefilled by the quick-fill button next to the CIDR field -- the default
+// subnet on the vast majority of home routers, useful when this server's
+// own network interfaces don't reflect the real LAN (e.g. a containerized
+// deployment -- see LocalCIDR() server-side).
+const COMMON_HOME_CIDR = "192.168.1.0/24";
 
 /* ── Configured miners table ────────────────────────────────────── */
 const ConfiguredMinersTable = ({
@@ -506,6 +513,8 @@ export const Settings = () => {
   } = useDiscovery();
 
   const [manualIp, setManualIp] = useState("");
+  const [customCidr, setCustomCidr] = useState("");
+  const [isolatedNetwork, setIsolatedNetwork] = useState(false);
   const [selectedMacs, setSelectedMacs] = useState<Set<string>>(new Set());
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [togglingMac, setTogglingMac] = useState<string | null>(null);
@@ -572,7 +581,12 @@ export const Settings = () => {
 
   const handleScan = () => {
     setSelectedMacs(new Set());
-    void scanNetwork();
+    void scanNetwork(customCidr.trim() || undefined);
+  };
+
+  const handleIsolatedNetworkToggle = (checked: boolean) => {
+    setIsolatedNetwork(checked);
+    setCustomCidr(checked ? COMMON_HOME_CIDR : "");
   };
 
   const toggleSelected = (mac: string) => {
@@ -698,24 +712,73 @@ export const Settings = () => {
                 {t("settingsPage.scan.description")}
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              disabled={isSearching}
-              onClick={handleScan}
-              startIcon={
-                isSearching ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <TravelExploreIcon />
-                )
-              }
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
               sx={{ flexShrink: 0 }}
             >
-              {isSearching
-                ? t("settingsPage.scan.searching")
-                : t("settingsPage.scan.action")}
-            </Button>
+              <FormControlLabel
+                sx={{ mr: 0 }}
+                control={
+                  <Checkbox
+                    size="small"
+                    checked={isolatedNetwork}
+                    onChange={(e) =>
+                      handleIsolatedNetworkToggle(e.target.checked)
+                    }
+                  />
+                }
+                label={
+                  <Typography variant="body2" color="text.secondary">
+                    {t("settingsPage.scan.isolatedLabel")}
+                  </Typography>
+                }
+              />
+              <Button
+                variant="contained"
+                disabled={isSearching}
+                onClick={handleScan}
+                startIcon={
+                  isSearching ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <TravelExploreIcon />
+                  )
+                }
+                sx={{ flexShrink: 0 }}
+              >
+                {isSearching
+                  ? t("settingsPage.scan.searching")
+                  : t("settingsPage.scan.action")}
+              </Button>
+            </Stack>
           </Box>
+
+          {customCidr && (
+            <TextField
+              size="small"
+              fullWidth
+              placeholder={t("settingsPage.scan.cidrPlaceholder")}
+              helperText={t("settingsPage.scan.cidrHelp")}
+              value={customCidr}
+              onChange={(e) => setCustomCidr(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleScan();
+              }}
+              sx={{ mt: 2 }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <TravelExploreIcon
+                      fontSize="small"
+                      sx={{ color: "text.secondary", mr: 1 }}
+                    />
+                  ),
+                },
+              }}
+            />
+          )}
 
           <SectionDivider sx={{ my: 2 }} />
 

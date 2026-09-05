@@ -7,6 +7,12 @@
 
 Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-compatible Bitcoin ASIC miners — designed to run on a Raspberry Pi or any machine on your local network.
 
+**Easy to use** — one line, everything else configured from the UI:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
+```
+
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
 **Supported models (tested firmware):** Bitaxe Gamma (up to `v2.15.1`) · NerdQAxe++ (up to `V1.0.37.3-LTS`)
@@ -35,7 +41,7 @@ See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every s
 | [readme/CONFIGURATION.md](readme/CONFIGURATION.md) | `dashboard.yml` / `settings.yml` / `miners.yml` — every field, full examples |
 | [readme/FEATURES.md](readme/FEATURES.md) | Every dashboard screen: top bar, filters, alerts, miner card, remote mode, persistent totals, firmware detection |
 | [readme/TESTING.md](readme/TESTING.md) | Running the Go/UI test suites, what CI runs |
-| [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Step-by-step Raspberry Pi setup: nginx reverse proxy, systemd, building from source |
+| [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Docker install/update, building the images yourself |
 | [readme/plan.md](readme/plan.md) | Running development plan — ideas, in-progress features, known bugs to fix |
 
 ---
@@ -58,19 +64,15 @@ React UI → display + control (restart / pool switch / WiFi)
 
 ## Prerequisites
 
-The recommended Raspberry Pi setup (`make latest-up` — see
-[readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)) fetches prebuilt binaries and a
-prebuilt UI, so no Go or Node toolchain is needed at all on the Pi.
+The recommended setup ([Docker](#deployment), below) needs nothing but
+Docker itself installed — no Go, Node, or nginx on the machine at all.
 
-Go and Node are only needed if you build from source instead, or for local development:
+Go and Node are only needed for local development, or to build the images
+yourself instead of pulling the prebuilt ones:
 
 ```bash
 apt install -y golang nodejs npm
 ```
-
-nginx isn't needed to run axeos-dashboard itself — it's only used for the
-optional reverse-proxy step in [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md),
-which lets you drop the `:8080` from the URL.
 
 ---
 
@@ -97,25 +99,23 @@ documented in [readme/CONFIGURATION.md](readme/CONFIGURATION.md).
 
 ## Deployment
 
-Recommended for a Raspberry Pi: fetch the prebuilt `linux/arm64` release
-(CI-built on every push to `main`) instead of building locally — no Go
-toolchain needed on the Pi.
+One line, on any machine with Docker installed (Linux, Windows, macOS, a
+NAS, a Raspberry Pi...) — no clone, no Go/Node toolchain, no manual nginx
+or systemd setup:
 
 ```bash
-git clone https://github.com/joakim-ribier/axeos-dashboard.git
-cd axeos-dashboard
-make latest-up
+curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
 ```
 
-This starts dashboard-api + feeder in a background screen session, reachable
-at `http://<pi-ip>:8080` — open `/settings` there to scan the LAN for
-miners (or add them by IP) and start collecting data, no config file to
-hand-write first.
+That's it — 2 prebuilt multi-arch images (CI-built on every push to
+`main`) get pulled and started; it prints which port it landed on. Open
+that in a browser, then use **Settings** to scan the LAN for miners (or
+add them by IP) — no config file to hand-write first. Re-run the same
+command later to update.
 
 **→ See [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)** for the full
-step-by-step: nginx as a reverse proxy (so you can drop the `:8080` and just
-open `http://<pi-ip>/`), systemd (survive reboots), and building from source
-instead of using the prebuilt release.
+details: a fixed port instead of the random default, testing a PR's images,
+and building the images yourself instead of pulling the prebuilt ones.
 
 ---
 

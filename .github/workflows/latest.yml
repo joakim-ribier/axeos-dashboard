@@ -76,6 +76,55 @@ jobs:
           path: dist/*
           retention-days: 1
 
+  # Builds + pushes the "services" (feeder + dashboard-api) and "dashboard"
+  # (UI + reverse-proxy) images to GHCR, tagged "latest" -- same rolling-release
+  # model as the binaries above, just as Docker images instead. Builds
+  # straight from source (each Dockerfile compiles Go/npm itself), so this
+  # doesn't depend on the `build` job's artifacts.
+  docker:
+    needs: guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.guard.outputs.sha }}
+
+      - name: resolve short sha
+        id: resolve
+        run: echo "sha=$(echo ${{ needs.guard.outputs.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: build + push services image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/services.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            GIT_SHA=${{ steps.resolve.outputs.sha }}
+          tags: ghcr.io/${{ github.repository }}/axeos-services:latest
+
+      - name: build + push dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/dashboard.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}/axeos-dashboard:latest
+
   release:
     needs: [guard, build]
     runs-on: ubuntu-latest

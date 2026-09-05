@@ -1,0 +1,31 @@
+services:
+  services:
+    container_name: axeos-services
+    build:
+      context: .
+      dockerfile: docker/services.Dockerfile
+    image: ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:${IMAGE_TAG:-latest}
+    volumes:
+      - ./config:/config
+      # Host-side folder is named "storage", not "data" -- the app itself
+      # always creates a "data/bitaxes" subfolder under whatever dataDir
+      # it's given (see docker/dashboard.yml.example), so mounting a
+      # host folder also named "data" here would nest as data/data/bitaxes.
+      - ./storage:/data
+    restart: unless-stopped
+
+  dashboard:
+    container_name: axeos-dashboard
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    image: ghcr.io/joakim-ribier/axeos-dashboard/axeos-dashboard:${IMAGE_TAG:-latest}
+    ports:
+      # Random free host port by default (0) -- so nobody hits a conflict
+      # just running `docker compose up`. A real deployment wants a fixed,
+      # memorable port instead: set HTTP_PORT=80 in a .env file next to
+      # this one (see readme/DEPLOYMENT.md).
+      - "${HTTP_PORT:-0}:80"
+    depends_on:
+      - services
+    restart: unless-stopped

@@ -344,7 +344,10 @@
       "title": "Détection automatique",
       "description": "Scanne le réseau local à la recherche de mineurs AxeOS (bitaxe, nerdaxe).",
       "action": "Lancer la détection",
-      "searching": "Recherche en cours…"
+      "searching": "Recherche en cours…",
+      "isolatedLabel": "Environnement cloisonné",
+      "cidrPlaceholder": "192.168.1.0/24",
+      "cidrHelp": "Modifie si le réseau de tes mineurs n'est pas en 192.168.1.x."
     },
     "manual": {
       "title": "Ajouter par IP",
