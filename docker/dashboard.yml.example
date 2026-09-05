@@ -1,0 +1,23 @@
+global:
+  env: prod
+server:
+  port: "8080"
+storage:
+  dataDir: /data
+feeder:
+  interval: 2m
+healthCheck:
+  interval: 1m
+endpoints:
+  timeout: 5s
+  info: api/system/info
+  system: api/system
+  restart: api/system/restart
+firmware:
+  cacheTTL: 24h
+ui:
+  page:
+    settings: enabled
+  action:
+    minerRestart: enabled
+    minerPoolSwitch: enabled

@@ -344,7 +344,10 @@
       "title": "Automatic detection",
       "description": "Scans the local network for AxeOS miners (bitaxe, nerdaxe).",
       "action": "Start detection",
-      "searching": "Searching…"
+      "searching": "Searching…",
+      "isolatedLabel": "Isolated environment",
+      "cidrPlaceholder": "192.168.1.0/24",
+      "cidrHelp": "Edit if your miners' network isn't 192.168.1.x."
     },
     "manual": {
       "title": "Add by IP",

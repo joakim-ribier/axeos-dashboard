@@ -1,0 +1,9 @@
+.git
+.claude
+ui/node_modules
+ui/dist
+server/resources/build
+resources/data
+resources/build
+config
+data

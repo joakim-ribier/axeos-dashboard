@@ -39,5 +39,8 @@ resources/miners.yml
 resources/miners.yml.bak
 resources/settings.yml
 resources/settings.yml.bak
+# Docker local-testing bind mounts (docker-compose.yml's ./config, ./data)
+/config/
+/data/
 *.log
 server/feeder

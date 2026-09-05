@@ -60,7 +60,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build
 
 # ==============================================================================
 # Main Commands
@@ -91,6 +91,14 @@ build:
 	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
 
 	@echo ">>> Success! Binaries available in $(SERVER_BUILD_DIR)/"
+
+# Build the "app" Docker image with the same version stamping as `build`
+# (GIT_SHA + GIT_DIRTY) baked in via --build-arg, instead of the
+# Dockerfile's own "dev" placeholder -- so a locally built image reports
+# which commit it came from, same as a locally built binary does.
+docker-build:
+	@echo ">>> Building Docker images (GIT_SHA=$(GIT_SHA)$(GIT_DIRTY))..."
+	docker compose build --build-arg GIT_SHA=$(GIT_SHA)$(GIT_DIRTY)
 
 # Run linter on all Go packages
 lintAll:
@@ -170,6 +178,7 @@ help:
 	@echo "  make lintAll                   - Run linter on all packages"
 	@echo "  make swagger                   - Regenerate the OpenAPI spec (server/docs/swagger/)"
 	@echo "  make clean                     - Remove generated binaries"
+	@echo "  make docker-build               - Build the Docker images locally with the real git SHA baked in (docker compose build)"
 	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
 	@echo "  make run-feeder                - Start feeder with resources/dashboard.yml"
 	@echo "  make rebuild-totals           - Reconstruct totals.json from JSONL history (dry-run by default; DRY_RUN= to write, MINER= to target one miner)"
