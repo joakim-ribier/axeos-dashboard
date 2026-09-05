@@ -21,7 +21,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - Electricity cost estimate (daily/monthly) from your configured €/kWh rate
 - Clickable pool dashboard links (Braiins, Atlas, …), auto-resolved from the stratum user
 - Live reachability check, plus a config-mismatch warning if a device doesn't match its configured MAC
-- Optional remote view via [hashboard.live](https://hashboard.live) — check your miners from anywhere, no VPN
+- Optional remote view via [hashboard.live](https://hashboard.live) — check your miners from anywhere, no VPN, including a read-only view of your configured miners and app settings
 - EN / FR localization
 
 See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every screen.

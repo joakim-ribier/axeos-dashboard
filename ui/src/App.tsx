@@ -99,6 +99,16 @@ export const App: React.FC = () => {
                           }
                         />
                         <Route
+                          path="/:boardId/settings"
+                          element={
+                            <ModeProvider mode="remote">
+                              <RequireSettingsEnabled>
+                                <Settings />
+                              </RequireSettingsEnabled>
+                            </ModeProvider>
+                          }
+                        />
+                        <Route
                           path="/:boardId"
                           element={
                             <ModeProvider mode="remote">

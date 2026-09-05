@@ -93,12 +93,29 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		f.config.Bitaxes = bitaxes
 	}
 
+	// settingsSnapshot is the raw AppSettingsFile as loaded this cycle (only
+	// settings.yml's own overrides, not the defaults-merged view ApplyTo
+	// computes into f.config) -- kept aside so pushSettingsConfigToRemote
+	// below can push the exact same shape GET /api/config/settings already
+	// returns locally, rather than the merged Pools.Dashboards/Firmware.Repos.
+	settingsSnapshot := f.config.AppSettingsSnapshot()
 	if f.appSettingsStore != nil {
 		settings, err := f.appSettingsStore.Reload()
 		if err != nil {
 			f.logger.Error("failed to reload app settings", "error", err)
 		}
+		settingsSnapshot = settings
 		settings.ApplyTo(&f.config)
+	}
+
+	if f.config.Remote.Enabled() {
+		// Pushed every cycle, not only on change -- keeps the remote copy an
+		// exact mirror of what this feeder is actually running with right
+		// now, rather than trusting a mtime-based diff to never miss an edit.
+		go f.pushMinersConfigToRemote(f.config.Bitaxes)
+		// Settings themselves are pushed further down, once the firmware
+		// cache below has had a chance to refresh this cycle -- otherwise
+		// firmwareCacheCheckedAt would always be one cycle stale.
 	}
 
 	if err := os.MkdirAll(f.config.Storage.BitaxesDir(), 0o755); err != nil {
@@ -149,7 +166,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
 		if err := store.Append(now, key, payload, alerts); err != nil {
 			f.logger.Error("storage error", "ip", addr, "mac", key, "error", err)
-		} else if f.config.Remote.PushURL != "" && f.config.Remote.APIKey != "" {
+		} else if f.config.Remote.Enabled() {
 			// Push the already-computed storage key, not the raw mac --
 			// hashboard just uses it verbatim as its own directory name, no
 			// need for it to know anything about MAC address formatting at
@@ -171,6 +188,13 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 	for model := range models {
 		firmware.CheckAndCache(model, f.config.Firmware.Repos, f.config.Firmware.CacheTTL, f.config.Storage.BitaxesDir(), f.logger)
+	}
+
+	if f.config.Remote.Enabled() {
+		// Reloaded rather than reusing fwCache from above -- CheckAndCache
+		// may have just updated it on disk this cycle.
+		checkedAt := firmware.LatestCheck(firmware.LoadCache(f.config.Storage.BitaxesDir()))
+		go f.pushSettingsConfigToRemote(settingsSnapshot, checkedAt)
 	}
 }
 
@@ -291,6 +315,60 @@ func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
 		return
 	}
 	f.postToRemote(f.config.Remote.PushURL+"/totals", body, "totals "+storageKey)
+}
+
+// configMinersPush is the body sent to hashboard's miners-config endpoint --
+// the full managed miners list, enabled and disabled alike (matching what
+// GET /api/config/miners returns locally), so a remote Settings page can
+// render the same table.
+type configMinersPush struct {
+	Bitaxes []config.Bitaxe `json:"bitaxes"`
+}
+
+func (f *Feeder) pushMinersConfigToRemote(bitaxes []config.Bitaxe) {
+	body, err := json.Marshal(configMinersPush{Bitaxes: bitaxes})
+	if err != nil {
+		f.logger.Error("push: miners config marshal error", "error", err)
+		return
+	}
+	f.postToRemote(f.config.Remote.PushURL+"/config/miners", body, "config/miners")
+}
+
+// configSettingsPush mirrors AppSettingsFile minus Remote -- the push
+// credentials themselves must never round-trip back out through a
+// read-only remote view, so they're deliberately left out here rather than
+// sent and relied upon to be filtered out downstream.
+type configSettingsPush struct {
+	Electricity config.ElectricityConfig   `json:"electricity"`
+	Pools       config.PoolsConfig         `json:"pools"`
+	Firmware    config.AppSettingsFirmware `json:"firmware"`
+	// FirmwareCacheCheckedAt is this feeder's own firmware.LatestCheck --
+	// the one process-launch "read-only" value dashboard-api's GET
+	// /api/config/settings has that a remote board otherwise has no way
+	// to see at all (unlike feederInterval/healthCheckInterval, which a
+	// remote board can approximate from the miner data it already gets --
+	// see RemoteAppSettings, internal/handler/remote_config.go). Lets a
+	// remote board tell at a glance whether the source Pi's feeder is
+	// still actually alive, not just quietly stalled.
+	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
+}
+
+func (f *Feeder) pushSettingsConfigToRemote(settings config.AppSettingsFile, firmwareCacheCheckedAt time.Time) {
+	push := configSettingsPush{
+		Electricity: settings.Electricity,
+		Pools:       settings.Pools,
+		Firmware:    settings.Firmware,
+	}
+	if !firmwareCacheCheckedAt.IsZero() {
+		push.FirmwareCacheCheckedAt = firmwareCacheCheckedAt.UTC().Format(time.RFC3339)
+	}
+
+	body, err := json.Marshal(push)
+	if err != nil {
+		f.logger.Error("push: settings config marshal error", "error", err)
+		return
+	}
+	f.postToRemote(f.config.Remote.PushURL+"/config/settings", body, "config/settings")
 }
 
 // postToRemote sends body as an authenticated JSON POST to hashboard.

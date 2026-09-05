@@ -347,24 +347,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         />
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)
-            -- e.g. remote-dashboard-api, which advertises nothing for a
-            page whose route also 404s, see RequireSettingsEnabled. Miner
-            config is otherwise a local-server concept (its own
-            miners.yml): a remote board has no config of its own to edit,
-            so on an instance where Settings *is* enabled the entry stays
-            visible (so it isn't a surprise once back on the local
-            dashboard) but greyed out and inert while viewing one. */}
+            -- the route itself also 404s in that case, see
+            RequireSettingsEnabled. On a remote board, ui.page.settings is
+            normally "readonly" (see remote-dashboard.yml): the entry links
+            to /{boardId}/settings, which renders the same page with every
+            write affordance disabled rather than a separate "unavailable"
+            state. */}
         {ui.page.settings !== "hidden" && (
           <NavItem
-            to="/settings"
-            selected={location.pathname === "/settings"}
+            to={boardId ? `/${boardId}/settings` : "/settings"}
+            selected={
+              location.pathname ===
+              (boardId ? `/${boardId}/settings` : "/settings")
+            }
             icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
-            disabled={!!boardId}
-            disabledHint={
-              boardId ? t("nav.settingsUnavailableRemote") : undefined
-            }
           />
         )}
       </List>

@@ -452,6 +452,76 @@
                 }
             }
         },
+        "/api/{boardId}/config/miners": {
+            "get": {
+                "description": "Returns the managed miners list last pushed to hashboard for this board.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List a remote board's configured miners (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no miners config ever pushed for this board",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/config/settings": {
+            "get": {
+                "description": "Returns the app settings last pushed to hashboard for this board, with remote push credentials always redacted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "Get a remote board's app settings (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no settings ever pushed for this board",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/{boardId}/miners": {
             "get": {
                 "description": "Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.",

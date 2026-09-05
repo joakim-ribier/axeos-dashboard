@@ -4,7 +4,7 @@ server:
   port: "8081"
 storage:
   dataDir: resources                         # root dir: logs written here
-  boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty)
+  boardsDir: ""                              # explicit path to hashboard boards dir (defaults to {dataDir}/data/boards when empty) -- for local dev, point this at your sibling hashboard checkout's resources/data/boards
 hashboardURL: ""                             # base URL of the hashboard instance backing this board -- not configured by default, set your own (e.g. https://your-hashboard-domain.example in prod, http://localhost:8090 for local dev)
 # Pool dashboard links and per-model firmware repo URLs (used to build the
 # "view release" link on the update badge) come from the same built-in
@@ -12,12 +12,14 @@ hashboardURL: ""                             # base URL of the hashboard instanc
 # No cacheTTL setting needed here: this binary never checks GitHub itself,
 # it just reads latestFirmware from the pushed sample.
 ui:
-  # Settings is a local-miner-config concept (network discovery, editing
-  # miners.yml) with nothing remote-relevant yet -- hidden until it grows
-  # sections a remote visitor can actually use (scheduler, user
-  # config -- see readme/plan.md), at which point this becomes "readonly".
+  # Settings now has content a remote visitor can actually use: the feeder
+  # pushes the managed miners list and app settings (minus remote push
+  # credentials, never sent) alongside its regular data push, and
+  # remote-dashboard-api serves them back read-only via
+  # GET /api/{boardId}/config/* -- readonly renders the page with every
+  # write affordance (Save, Add/remove, discovery, enable/disable) disabled.
   page:
-    settings: hidden
+    settings: readonly
   # remote-dashboard-api is read-only by design (no restart/pool-switch
   # endpoints exist here at all) -- hidden so the dashboard doesn't show
   # buttons that would just 404.

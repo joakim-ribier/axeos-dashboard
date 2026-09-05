@@ -57,6 +57,23 @@ every commit.
   (derived from already-loaded miner data, color-coded stale/fresh) so a
   stuck feeder or health-check loop is visible without digging through
   logs.
+- ✅ **Remote-usable Settings page**: the feeder now also pushes the
+  managed miners list and app settings (electricity, custom pool
+  dashboards, firmware repos -- `remote.pushURL`/`apiKey` themselves are
+  never sent) every poll cycle, alongside its existing data push;
+  `remote-dashboard-api` gains matching `GET /api/{boardId}/config/miners`
+  and `.../config/settings` routes reading that pushed data (hashboard
+  stores it verbatim via new `POST /api/push/config/miners`/`config/settings`
+  handlers), so the exact same React `/settings` components render for a
+  remote board. `remote-dashboard.yml` flips `ui.page.settings` from
+  `hidden` to `readonly`: unlike per-miner restart/pool-switch buttons
+  elsewhere (disabled-but-visible), readonly here removes every write
+  affordance entirely rather than showing it inert -- no Save buttons, no
+  pool-add form, no scheduler add/remove controls (just the currently
+  configured cron entries), no network scan or add-by-IP. The pushed
+  settings also carry `firmwareCacheCheckedAt`, so the "Process settings"
+  table doubles as an at-a-glance "is the source Pi's feeder still alive"
+  signal on a remote board, not just blank rows.
 
 ## To do
 
@@ -84,31 +101,6 @@ every commit.
 
 ### Settings
 
-- **Remote-usable content on the Settings page**: the config-driven
-  visibility mechanism exists (see Done), and app settings are now
-  editable from `/settings` (see Done), but `/settings` still has nothing
-  a remote viewer could use yet — everything there today (discovery, the
-  managed miners config including the scheduler, and the new app
-  settings section) writes to the local dashboard-api's own managed files,
-  which doesn't apply to a remote board; today, if reached anyway (nothing
-  currently blocks on `readonly`, only on `hidden` -- see
-  `RequireSettingsEnabled`), each section fails differently against
-  `remote-dashboard-api`'s missing `/api/config/*` routes: the miners
-  table + scheduler silently vanish (their hook's `error` is never
-  read), the app settings form renders fully but blank (same gap), and
-  only the discovery/scan section surfaces a (generic) error. Direction
-  agreed: the feeder pushes the miners/settings config (not just live
-  stats) to the remote board alongside its existing data push --
-  `remote.apiKey`/`pushURL` themselves excluded from what's pushed/exposed,
-  since leaking that back out over a read-only remote view would be a real
-  secret exposure -- and `remote-dashboard-api` grows the same
-  `GET /api/config/*` routes reading from that pushed data, so the exact
-  same React components render either side with no remote-specific
-  branching. `readonly` then becomes a real third state (today identical
-  to `enabled` in the actual code): page renders, every write affordance
-  (Save buttons, Add/remove, discovery, enable/disable, restart/switch
-  pool) disabled, not hidden. At that point `remote-dashboard.yml` flips
-  `ui.page.settings` from `hidden` to `readonly`.
 - **Assisted cron builder in the scheduler editor**: `ScheduleEditor`
   today only accepts a raw 6-field cron string (seconds included), typed
   by hand -- easy to get subtly wrong (e.g. `* */5 * * * *`, which fires
@@ -127,4 +119,7 @@ None open right now.
 - Scan/probe is always manually triggered, never run in the background.
 - YAML writes only ever target the managed miners file, never
   `dashboard.yml`.
-- No `/api/config/*` route on `remote-dashboard-api`.
+- `remote-dashboard-api`'s `/api/{boardId}/config/*` routes are read-only --
+  they never accept a write, regardless of `ui.page.settings`.
+- `remote.pushURL`/`apiKey` are never included in what the feeder pushes
+  to hashboard, under any circumstance.

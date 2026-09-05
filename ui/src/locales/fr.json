@@ -108,7 +108,6 @@
     "home": "Accueil",
     "alerts": "Alertes",
     "settings": "Configuration",
-    "settingsUnavailableRemote": "Indisponible en consultant un board distant — reviens d'abord sur ton propre tableau de bord.",
     "autoRefresh": "Actualisation auto"
   },
   "sidebar": {
@@ -210,6 +209,7 @@
       "title": "Configuration des mineurs",
       "description": "Détecte automatiquement tes mineurs AxeOS sur le réseau, ou ajoute-les manuellement par IP."
     },
+    "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
     "configured": {
       "title": "Mineurs configurés",
       "description": "{{count}} mineur(s) configuré(s)",
@@ -251,7 +251,6 @@
     },
     "appSettings": {
       "title": "Réglages de l'application",
-      "description": "Réglages opérationnels que tu peux vouloir changer sans redéployer.",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saveSuccess": "Réglages enregistrés.",
@@ -278,13 +277,11 @@
       },
       "firmware": {
         "title": "Repos firmware",
-        "hint": "Intégré, non modifiable ici.",
         "modelLabel": "Modèle",
         "urlLabel": "URL du repo"
       },
       "readOnly": {
-        "title": "Réglages process (lecture seule)",
-        "hint": "Redémarre l'application pour changer ça.",
+        "title": "Réglages process",
         "settingLabel": "Réglage",
         "valueLabel": "Valeur",
         "lastRunLabel": "Dernière itération",

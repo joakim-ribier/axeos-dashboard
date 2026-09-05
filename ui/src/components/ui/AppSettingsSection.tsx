@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import MemoryIcon from "@mui/icons-material/Memory";
+import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import SaveIcon from "@mui/icons-material/Save";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -29,6 +31,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { Writable } from "@/components/ui/Writable";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners } from "@/hooks/useMiners";
 import { type AppSettingsInput } from "@/schemas/appSettingsSchema";
@@ -62,7 +65,11 @@ const latestTimestamp = (values: (string | undefined)[]): string | undefined =>
     return latest;
   }, undefined);
 
-export const AppSettingsSection = () => {
+export const AppSettingsSection = ({
+  readOnly = false,
+}: {
+  readOnly?: boolean;
+}) => {
   const { t } = useTranslation();
   const { data, isLoading, saveSettings, isSaving, saveError } =
     useAppSettings();
@@ -236,9 +243,6 @@ export const AppSettingsSection = () => {
         <Typography variant="subtitle1" fontWeight={700}>
           {t("settingsPage.appSettings.title")}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t("settingsPage.appSettings.description")}
-        </Typography>
         {data?.lastUpdated && (
           <Typography
             variant="caption"
@@ -267,49 +271,56 @@ export const AppSettingsSection = () => {
               {t("settingsPage.appSettings.electricity.title")}
             </Typography>
           </Box>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            alignItems={{ xs: "stretch", sm: "center" }}
-          >
-            <TextField
-              size="small"
-              type="number"
-              label={t("settingsPage.appSettings.electricity.rateLabel")}
-              value={electricityRate}
-              onChange={(e) => setElectricityRate(e.target.value)}
-              slotProps={{
-                htmlInput: { step: "0.0001", min: 0 },
-                inputLabel: { shrink: true },
-              }}
-              sx={{ minWidth: 220 }}
-            />
-            <Button
-              variant="contained"
-              size="small"
-              disabled={isSaving}
-              onClick={() => void handleSaveElectricity()}
-              startIcon={
-                isSaving ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <SaveIcon fontSize="small" />
-                )
-              }
-              sx={{ flexShrink: 0 }}
+          {readOnly ? (
+            <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
+              {t("settingsPage.appSettings.electricity.rateLabel")}:{" "}
+              {electricityRate}
+            </Typography>
+          ) : (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              alignItems={{ xs: "stretch", sm: "center" }}
             >
-              {isSaving
-                ? t("settingsPage.appSettings.saving")
-                : t("settingsPage.appSettings.save")}
-            </Button>
-          </Stack>
+              <TextField
+                size="small"
+                type="number"
+                label={t("settingsPage.appSettings.electricity.rateLabel")}
+                value={electricityRate}
+                onChange={(e) => setElectricityRate(e.target.value)}
+                slotProps={{
+                  htmlInput: { step: "0.0001", min: 0 },
+                  inputLabel: { shrink: true },
+                }}
+                sx={{ minWidth: 220 }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                disabled={isSaving}
+                onClick={() => void handleSaveElectricity()}
+                startIcon={
+                  isSaving ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    <SaveIcon fontSize="small" />
+                  )
+                }
+                sx={{ flexShrink: 0 }}
+              >
+                {isSaving
+                  ? t("settingsPage.appSettings.saving")
+                  : t("settingsPage.appSettings.save")}
+              </Button>
+            </Stack>
+          )}
         </Box>
 
         <Box
           sx={{
             height: "1px",
             background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.primary.main} 15%, ${theme.palette.primary.main} 85%, transparent)`,
+              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
           }}
         />
 
@@ -338,7 +349,9 @@ export const AppSettingsSection = () => {
                   <TableCell>
                     {t("settingsPage.appSettings.pools.urlLabel")}
                   </TableCell>
-                  <TableCell align="right" sx={{ width: 56 }} />
+                  <Writable readOnly={readOnly}>
+                    <TableCell align="right" sx={{ width: 56 }} />
+                  </Writable>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -346,7 +359,7 @@ export const AppSettingsSection = () => {
                   Object.keys(data.defaults.pools.dashboards).length === 0 &&
                   poolDashboards.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3}>
+                      <TableCell colSpan={readOnly ? 2 : 3}>
                         <Typography variant="caption" color="text.disabled">
                           {t("settingsPage.appSettings.pools.empty")}
                         </Typography>
@@ -368,7 +381,9 @@ export const AppSettingsSection = () => {
                         >
                           {url}
                         </TableCell>
-                        <TableCell />
+                        <Writable readOnly={readOnly}>
+                          <TableCell />
+                        </Writable>
                       </TableRow>
                     ),
                   )}
@@ -382,167 +397,180 @@ export const AppSettingsSection = () => {
                     >
                       {row.url}
                     </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        size="small"
-                        disabled={isSaving}
-                        onClick={() => void handleRemovePoolDashboard(row.host)}
-                        aria-label={t("settingsPage.appSettings.pools.remove")}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+                    <Writable readOnly={readOnly}>
+                      <TableCell align="right">
+                        <IconButton
+                          size="small"
+                          disabled={isSaving}
+                          onClick={() =>
+                            void handleRemovePoolDashboard(row.host)
+                          }
+                          aria-label={t(
+                            "settingsPage.appSettings.pools.remove",
+                          )}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </Writable>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </Box>
 
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              size="small"
-              label={t("settingsPage.appSettings.pools.hostLabel")}
-              placeholder="stratum.braiins.com"
-              value={newPoolHost}
-              onChange={(e) => setNewPoolHost(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-              sx={{ minWidth: 220 }}
-            />
-            <TextField
-              size="small"
-              label={t("settingsPage.appSettings.pools.urlLabel")}
-              placeholder="https://pool.example.com/overview/{user}"
-              value={newPoolUrl}
-              onChange={(e) => setNewPoolUrl(e.target.value)}
-              error={newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")}
-              helperText={
-                newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
-                  ? t("settingsPage.appSettings.pools.missingUserPlaceholder")
-                  : undefined
-              }
-              slotProps={{ inputLabel: { shrink: true } }}
-              fullWidth
-            />
-            <Button
-              variant="outlined"
-              size="small"
-              disabled={
-                isSaving ||
-                !newPoolHost.trim() ||
-                !newPoolUrl.trim() ||
-                !newPoolUrl.includes("{user}")
-              }
-              onClick={() => void handleAddPoolDashboard()}
-              sx={{ flexShrink: 0 }}
+          <Writable readOnly={readOnly}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                size="small"
+                label={t("settingsPage.appSettings.pools.hostLabel")}
+                placeholder="stratum.braiins.com"
+                value={newPoolHost}
+                onChange={(e) => setNewPoolHost(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                sx={{ minWidth: 220 }}
+              />
+              <TextField
+                size="small"
+                label={t("settingsPage.appSettings.pools.urlLabel")}
+                placeholder="https://pool.example.com/overview/{user}"
+                value={newPoolUrl}
+                onChange={(e) => setNewPoolUrl(e.target.value)}
+                error={
+                  newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
+                }
+                helperText={
+                  newPoolUrl.trim() !== "" && !newPoolUrl.includes("{user}")
+                    ? t("settingsPage.appSettings.pools.missingUserPlaceholder")
+                    : undefined
+                }
+                slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={
+                  isSaving ||
+                  !newPoolHost.trim() ||
+                  !newPoolUrl.trim() ||
+                  !newPoolUrl.includes("{user}")
+                }
+                onClick={() => void handleAddPoolDashboard()}
+                sx={{ flexShrink: 0 }}
+              >
+                {t("settingsPage.appSettings.pools.add")}
+              </Button>
+            </Stack>
+          </Writable>
+        </Box>
+
+        <Writable readOnly={readOnly}>
+          <Box
+            sx={{
+              height: "1px",
+              background: (theme) =>
+                `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
+            }}
+          />
+
+          {/* Remote -- never shown read-only: remote.pushURL/apiKey are
+                never pushed to a remote board in the first place (see
+                cmd/feeder.configSettingsPush), so there'd be nothing real to
+                show here anyway. */}
+          <Box>
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}
             >
-              {t("settingsPage.appSettings.pools.add")}
+              <CloudUploadIcon
+                fontSize="small"
+                sx={{ color: "text.secondary" }}
+              />
+              <Typography variant="subtitle2" fontWeight={700}>
+                {t("settingsPage.appSettings.remote.title")}
+              </Typography>
+            </Box>
+            <Stack spacing={2}>
+              <TextField
+                size="small"
+                label={t("settingsPage.appSettings.remote.pushUrlLabel")}
+                placeholder="https://hashboard.live/api/push"
+                value={pushURL}
+                onChange={(e) => setPushURL(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
+              />
+              <TextField
+                size="small"
+                type={showApiKey ? "text" : "password"}
+                label={t("settingsPage.appSettings.remote.apiKeyLabel")}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                slotProps={{
+                  inputLabel: { shrink: true },
+                  input: {
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          edge="end"
+                          onClick={() => setShowApiKey((v) => !v)}
+                          aria-label={t(
+                            showApiKey
+                              ? "settingsPage.appSettings.remote.hideApiKey"
+                              : "settingsPage.appSettings.remote.showApiKey",
+                          )}
+                        >
+                          {showApiKey ? (
+                            <VisibilityOffIcon fontSize="small" />
+                          ) : (
+                            <VisibilityIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                fullWidth
+              />
+            </Stack>
+            <Button
+              variant="contained"
+              size="small"
+              disabled={isSaving}
+              onClick={() => void handleSaveRemote()}
+              startIcon={
+                isSaving ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <SaveIcon fontSize="small" />
+                )
+              }
+              sx={{ mt: 2 }}
+            >
+              {isSaving
+                ? t("settingsPage.appSettings.saving")
+                : t("settingsPage.appSettings.save")}
             </Button>
-          </Stack>
-        </Box>
-
-        <Box
-          sx={{
-            height: "1px",
-            background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.primary.main} 15%, ${theme.palette.primary.main} 85%, transparent)`,
-          }}
-        />
-
-        {/* Remote */}
-        <Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
-            <CloudUploadIcon
-              fontSize="small"
-              sx={{ color: "text.secondary" }}
-            />
-            <Typography variant="subtitle2" fontWeight={700}>
-              {t("settingsPage.appSettings.remote.title")}
-            </Typography>
           </Box>
-          <Stack spacing={2}>
-            <TextField
-              size="small"
-              label={t("settingsPage.appSettings.remote.pushUrlLabel")}
-              placeholder="https://hashboard.live/api/push"
-              value={pushURL}
-              onChange={(e) => setPushURL(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-              fullWidth
-            />
-            <TextField
-              size="small"
-              type={showApiKey ? "text" : "password"}
-              label={t("settingsPage.appSettings.remote.apiKeyLabel")}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              slotProps={{
-                inputLabel: { shrink: true },
-                input: {
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        edge="end"
-                        onClick={() => setShowApiKey((v) => !v)}
-                        aria-label={t(
-                          showApiKey
-                            ? "settingsPage.appSettings.remote.hideApiKey"
-                            : "settingsPage.appSettings.remote.showApiKey",
-                        )}
-                      >
-                        {showApiKey ? (
-                          <VisibilityOffIcon fontSize="small" />
-                        ) : (
-                          <VisibilityIcon fontSize="small" />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                },
-              }}
-              fullWidth
-            />
-          </Stack>
-          <Button
-            variant="contained"
-            size="small"
-            disabled={isSaving}
-            onClick={() => void handleSaveRemote()}
-            startIcon={
-              isSaving ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : (
-                <SaveIcon fontSize="small" />
-              )
-            }
-            sx={{ mt: 2 }}
-          >
-            {isSaving
-              ? t("settingsPage.appSettings.saving")
-              : t("settingsPage.appSettings.save")}
-          </Button>
-        </Box>
+        </Writable>
 
         <Box
           sx={{
             height: "1px",
             background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.primary.main} 15%, ${theme.palette.primary.main} 85%, transparent)`,
+              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
           }}
         />
 
         {/* Firmware repos -- built-in, read-only: no override from this UI */}
         <Box>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-            {t("settingsPage.appSettings.firmware.title")}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mb: 2, display: "block" }}
-          >
-            {t("settingsPage.appSettings.firmware.hint")}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+            <MemoryIcon fontSize="small" sx={{ color: "text.secondary" }} />
+            <Typography variant="subtitle2" fontWeight={700}>
+              {t("settingsPage.appSettings.firmware.title")}
+            </Typography>
+          </Box>
           <Box sx={{ overflowX: "auto" }}>
             <Table size="small">
               <TableHead>
@@ -592,22 +620,21 @@ export const AppSettingsSection = () => {
           sx={{
             height: "1px",
             background: (theme) =>
-              `linear-gradient(to right, transparent, ${theme.palette.primary.main} 15%, ${theme.palette.primary.main} 85%, transparent)`,
+              `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
           }}
         />
 
         {/* Read-only, process-launch settings */}
         <Box>
-          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-            {t("settingsPage.appSettings.readOnly.title")}
-          </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ mb: 2, display: "block" }}
-          >
-            {t("settingsPage.appSettings.readOnly.hint")}
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1.5 }}>
+            <MonitorHeartIcon
+              fontSize="small"
+              sx={{ color: "text.secondary" }}
+            />
+            <Typography variant="subtitle2" fontWeight={700}>
+              {t("settingsPage.appSettings.readOnly.title")}
+            </Typography>
+          </Box>
           <Box sx={{ overflowX: "auto" }}>
             <Table size="small">
               <TableHead>

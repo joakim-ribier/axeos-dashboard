@@ -14,17 +14,18 @@ endpoints:
   info: api/system/info       # Get system information
   system: api/system          # Update system settings
   restart: api/system/restart # Restart the miner
-electricity:
-  ratePerKwh: 0.1915 # €/kWh — example rate, adjust to your local tariff
 firmware:
   cacheTTL: 24h
   # repos: pool dashboard links and per-model firmware repo URLs are no
   # longer read from here -- built-in defaults live in
   # server/internal/config/defaults.go, editable per-deployment (add a
   # custom pool, override a repo URL) from /settings instead.
-remote:
-  pushURL: "" # push URL from your hashboard dashboard (e.g. https://hashboard.live/api/push)
-  apiKey: ""  # API key from your hashboard dashboard
+# electricity / remote (hashboard push credentials) are no longer set here
+# either -- both are fully managed via the gitignored settings.yml, edited
+# from the /settings page's "App settings" section. A key set here would
+# only ever be used as a one-time seed before settings.yml exists, and
+# never again once it does -- confusing enough (and risky enough, for
+# remote.apiKey specifically, in a file git tracks) to just leave unset.
 # ui controls which pages/actions the frontend shows -- every value below
 # is already the default (nothing here restricts anything), spelled out as
 # documentation. Each accepts enabled | readonly | hidden -- see

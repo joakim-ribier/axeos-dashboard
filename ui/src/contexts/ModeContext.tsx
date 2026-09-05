@@ -7,6 +7,10 @@ interface ApiPaths {
   miners: string;
   stats: (ip: string) => string;
   alertsHistory: string;
+  config: {
+    miners: string;
+    settings: string;
+  };
 }
 
 interface ModeContextValue {
@@ -37,11 +41,19 @@ export const ModeProvider = ({ mode, children }: ModeProviderProps) => {
           miners: `/api/${boardId}/miners`,
           stats: (ip: string) => `/api/${boardId}/${ip}/stats`,
           alertsHistory: `/api/${boardId}/miners/alerts/history`,
+          config: {
+            miners: `/api/${boardId}/config/miners`,
+            settings: `/api/${boardId}/config/settings`,
+          },
         }
       : {
           miners: "/api/miners",
           stats: (ip: string) => `/api/miners/${ip}/stats`,
           alertsHistory: "/api/miners/alerts/history",
+          config: {
+            miners: "/api/config/miners",
+            settings: "/api/config/settings",
+          },
         };
 
   return (

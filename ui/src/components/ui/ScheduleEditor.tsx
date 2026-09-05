@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { Writable } from "@/components/ui/Writable";
 import {
   type CronSchedule,
   type MinerConfig,
@@ -32,6 +33,7 @@ import { formatTimestamp } from "@/utils/format";
 interface ScheduleEditorProps {
   miner: MinerConfig;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
+  readOnly?: boolean;
 }
 
 /** Per-miner scheduler editor: shows the currently saved schedule entries
@@ -39,7 +41,11 @@ interface ScheduleEditorProps {
  * restart) and a small form to add another one. Every add/remove persists
  * immediately via saveMiners (POST /api/config/miners upserts by MAC),
  * same pattern as the enable/disable toggle in ConfiguredMinersTable. */
-export const ScheduleEditor = ({ miner, saveMiners }: ScheduleEditorProps) => {
+export const ScheduleEditor = ({
+  miner,
+  saveMiners,
+  readOnly = false,
+}: ScheduleEditorProps) => {
   const { t, i18n } = useTranslation();
   const schedule = miner.schedule ?? [];
 
@@ -107,9 +113,11 @@ export const ScheduleEditor = ({ miner, saveMiners }: ScheduleEditorProps) => {
           {t("settingsPage.configured.schedule.title")}
         </Typography>
       </Box>
-      <Typography variant="body2" color="text.secondary">
-        {t("settingsPage.configured.schedule.description")}
-      </Typography>
+      <Writable readOnly={readOnly}>
+        <Typography variant="body2" color="text.secondary">
+          {t("settingsPage.configured.schedule.description")}
+        </Typography>
+      </Writable>
 
       {schedule.length === 0 ? (
         <Typography variant="caption" color="text.disabled">
@@ -146,110 +154,126 @@ export const ScheduleEditor = ({ miner, saveMiners }: ScheduleEditorProps) => {
               >
                 {describeCron(entry.cron, i18n.language) ?? entry.cron}
               </Typography>
-              <IconButton
-                size="small"
-                disabled={removingIndex === index}
-                onClick={() => void handleRemove(index)}
-                aria-label={t("settingsPage.configured.schedule.removing")}
-              >
-                {removingIndex === index ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  <DeleteOutlineIcon fontSize="small" />
-                )}
-              </IconButton>
+              <Writable readOnly={readOnly}>
+                <IconButton
+                  size="small"
+                  disabled={removingIndex === index}
+                  onClick={() => void handleRemove(index)}
+                  aria-label={t("settingsPage.configured.schedule.removing")}
+                >
+                  {removingIndex === index ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <DeleteOutlineIcon fontSize="small" />
+                  )}
+                </IconButton>
+              </Writable>
             </Box>
           ))}
         </Stack>
       )}
 
-      {error && (
-        <Alert severity="error" onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+      <Writable readOnly={readOnly}>
+        {error && (
+          <Alert severity="error" onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+      </Writable>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems="flex-start"
-      >
-        <TextField
-          size="small"
-          label={t("settingsPage.configured.schedule.cronLabel")}
-          placeholder={t("settingsPage.configured.schedule.cronPlaceholder")}
-          helperText={
-            cronIsInvalid
-              ? t("settingsPage.configured.schedule.invalidCron")
-              : cronIsDuplicate
-                ? t("settingsPage.configured.schedule.duplicateCron")
-                : t("settingsPage.configured.schedule.cronHelp")
-          }
-          error={cronIsInvalid || cronIsDuplicate}
-          value={cron}
-          onChange={(e) => setCron(e.target.value)}
-          sx={{ fontFamily: "monospace", minWidth: 240 }}
-          slotProps={{
-            htmlInput: { sx: { fontFamily: "monospace" } },
-            inputLabel: { shrink: true },
-          }}
-        />
-        <TextField
-          size="small"
-          select
-          label={t("settingsPage.configured.schedule.action")}
-          value={action}
-          onChange={(e) => setAction(e.target.value as CronSchedule["action"])}
-          sx={{ minWidth: 170 }}
+      <Writable readOnly={readOnly}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems="flex-start"
         >
-          <MenuItem value="switch_primary">
-            {t("settingsPage.configured.schedule.switch_primary")}
-          </MenuItem>
-          <MenuItem value="switch_fallback">
-            {t("settingsPage.configured.schedule.switch_fallback")}
-          </MenuItem>
-          <MenuItem value="restart">
-            {t("settingsPage.configured.schedule.restart")}
-          </MenuItem>
-        </TextField>
-        <Button
-          variant="outlined"
-          size="small"
-          disabled={
-            !trimmedCron || cronIsInvalid || cronIsDuplicate || isAdding
-          }
-          onClick={() => void handleAdd()}
-          startIcon={
-            isAdding ? (
-              <CircularProgress size={14} color="inherit" />
-            ) : (
-              <AddIcon fontSize="small" />
-            )
-          }
-          sx={{ flexShrink: 0, height: 40 }}
-        >
-          {isAdding
-            ? t("settingsPage.configured.schedule.adding")
-            : t("settingsPage.configured.schedule.add")}
-        </Button>
-      </Stack>
+          <TextField
+            size="small"
+            label={t("settingsPage.configured.schedule.cronLabel")}
+            placeholder={t("settingsPage.configured.schedule.cronPlaceholder")}
+            helperText={
+              cronIsInvalid
+                ? t("settingsPage.configured.schedule.invalidCron")
+                : cronIsDuplicate
+                  ? t("settingsPage.configured.schedule.duplicateCron")
+                  : t("settingsPage.configured.schedule.cronHelp")
+            }
+            error={cronIsInvalid || cronIsDuplicate}
+            value={cron}
+            onChange={(e) => setCron(e.target.value)}
+            sx={{ fontFamily: "monospace", minWidth: 240 }}
+            slotProps={{
+              htmlInput: { sx: { fontFamily: "monospace" } },
+              inputLabel: { shrink: true },
+            }}
+          />
+          <TextField
+            size="small"
+            select
+            label={t("settingsPage.configured.schedule.action")}
+            value={action}
+            onChange={(e) =>
+              setAction(e.target.value as CronSchedule["action"])
+            }
+            sx={{ minWidth: 170 }}
+          >
+            <MenuItem value="switch_primary">
+              {t("settingsPage.configured.schedule.switch_primary")}
+            </MenuItem>
+            <MenuItem value="switch_fallback">
+              {t("settingsPage.configured.schedule.switch_fallback")}
+            </MenuItem>
+            <MenuItem value="restart">
+              {t("settingsPage.configured.schedule.restart")}
+            </MenuItem>
+          </TextField>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={
+              !trimmedCron || cronIsInvalid || cronIsDuplicate || isAdding
+            }
+            onClick={() => void handleAdd()}
+            startIcon={
+              isAdding ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <AddIcon fontSize="small" />
+              )
+            }
+            sx={{ flexShrink: 0, height: 40 }}
+          >
+            {isAdding
+              ? t("settingsPage.configured.schedule.adding")
+              : t("settingsPage.configured.schedule.add")}
+          </Button>
+        </Stack>
 
-      {trimmedCron && !cronIsInvalid && (
-        <Box sx={{ pl: 0.5 }}>
-          <Typography variant="caption" color="text.secondary" component="div">
-            {description}
-          </Typography>
-          {upcoming && upcoming.length > 0 && (
-            <Typography variant="caption" color="text.disabled" component="div">
-              {t("settingsPage.configured.schedule.nextRuns", {
-                dates: upcoming
-                  .map((d) => formatTimestamp(d.toISOString()))
-                  .join(" · "),
-              })}
+        {trimmedCron && !cronIsInvalid && (
+          <Box sx={{ pl: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              component="div"
+            >
+              {description}
             </Typography>
-          )}
-        </Box>
-      )}
+            {upcoming && upcoming.length > 0 && (
+              <Typography
+                variant="caption"
+                color="text.disabled"
+                component="div"
+              >
+                {t("settingsPage.configured.schedule.nextRuns", {
+                  dates: upcoming
+                    .map((d) => formatTimestamp(d.toISOString()))
+                    .join(" · "),
+                })}
+              </Typography>
+            )}
+          </Box>
+        )}
+      </Writable>
     </Box>
   );
 };

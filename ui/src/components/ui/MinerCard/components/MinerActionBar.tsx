@@ -103,56 +103,62 @@ export const MinerActionBar = ({
     ? t("miner.actions.switchPool.toMain")
     : t("miner.actions.switchPool.toFallback");
 
-  if (switchPoolVisibility === "hidden" && restartVisibility === "hidden")
-    return null;
-
   const disabledHint = t("miner.actions.disabledHint");
+  const bothHidden =
+    switchPoolVisibility === "hidden" && restartVisibility === "hidden";
 
   return (
     <Box>
       <Box
         sx={{
           height: "1px",
-          my: 1.5,
+          mt: 1.5,
+          // No bottom margin when the button row below is absent (bothHidden)
+          // -- the parent's own flex gap already spaces this divider from
+          // whatever comes next, so a bottom margin here on top of that gap
+          // would double up into an oversized empty band.
+          mb: bothHidden ? 0 : 1.5,
           background: (theme) =>
             `linear-gradient(to right, transparent, ${theme.palette.divider} 20%, ${theme.palette.divider} 80%, transparent)`,
         }}
       />
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 0.75,
-        }}
-      >
-        {switchPoolVisibility !== "hidden" && (
-          <ActionChip
-            icon={<SyncAltIcon sx={{ fontSize: 16 }} />}
-            label={switchLabel}
-            color="#29b6f6"
-            hoverBg="rgba(41,182,246,0.1)"
-            onClick={onSwitchPool}
-            disabled={isExecuting || switchPoolVisibility === "readonly"}
-            disabledHint={
-              switchPoolVisibility === "readonly" ? disabledHint : undefined
-            }
-          />
-        )}
-        {restartVisibility !== "hidden" && (
-          <ActionChip
-            icon={<RestartAltOutlined sx={{ fontSize: 16 }} />}
-            label={t("miner.actions.restart.label")}
-            color="#ffa726"
-            hoverBg="rgba(255,167,38,0.1)"
-            onClick={onRestart}
-            disabled={isExecuting || restartVisibility === "readonly"}
-            disabledHint={
-              restartVisibility === "readonly" ? disabledHint : undefined
-            }
-          />
-        )}
-      </Box>
+      {!bothHidden && (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 0.75,
+          }}
+        >
+          {switchPoolVisibility !== "hidden" && (
+            <ActionChip
+              icon={<SyncAltIcon sx={{ fontSize: 16 }} />}
+              label={switchLabel}
+              color="#29b6f6"
+              hoverBg="rgba(41,182,246,0.1)"
+              onClick={onSwitchPool}
+              disabled={isExecuting || switchPoolVisibility === "readonly"}
+              disabledHint={
+                switchPoolVisibility === "readonly" ? disabledHint : undefined
+              }
+            />
+          )}
+          {restartVisibility !== "hidden" && (
+            <ActionChip
+              icon={<RestartAltOutlined sx={{ fontSize: 16 }} />}
+              label={t("miner.actions.restart.label")}
+              color="#ffa726"
+              hoverBg="rgba(255,167,38,0.1)"
+              onClick={onRestart}
+              disabled={isExecuting || restartVisibility === "readonly"}
+              disabledHint={
+                restartVisibility === "readonly" ? disabledHint : undefined
+              }
+            />
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

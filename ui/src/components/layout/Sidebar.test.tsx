@@ -146,27 +146,18 @@ describe("Sidebar", () => {
       expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
     });
 
-    it("keeps the Settings nav item visible but disabled and inert on a remote board", () => {
+    it("links the Settings nav item to the board's own settings route, enabled, on a remote board", () => {
       renderSidebar("/demo");
 
       const settingsLinks = screen
         .getAllByText("nav.settings")
         .map((el) => el.closest("a"));
 
-      expect(settingsLinks[0]).toHaveAttribute("aria-disabled", "true");
-      expect(settingsLinks[0]).toHaveAttribute("tabindex", "-1");
-      // MUI's own disabled styling sets pointer-events: none, on top of the
-      // onClick that swallows any event that does slip through -- belt and
-      // suspenders, but both are asserted since either one alone getting
-      // silently regressed would make the link clickable again.
-      expect(settingsLinks[0]).toHaveStyle({ pointerEvents: "none" });
-
-      const clickEvent = new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-      });
-      settingsLinks[0]?.dispatchEvent(clickEvent);
-      expect(clickEvent.defaultPrevented).toBe(true);
+      // The page itself renders read-only (ui.page.settings: readonly) --
+      // the nav link is no longer force-disabled here, see
+      // RequireSettingsEnabled/Settings.tsx's own readOnly gating.
+      expect(settingsLinks[0]).toHaveAttribute("href", "/demo/settings");
+      expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
     });
 
     it("hides the Settings nav item entirely when ui.page.settings is hidden", () => {

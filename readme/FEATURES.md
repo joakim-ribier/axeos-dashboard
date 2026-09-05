@@ -151,8 +151,10 @@ mismatch check in [Configuration](CONFIGURATION.md).
 
 ### Settings (`/settings`)
 
-Local mode only — manages the managed `miners.yml` and `settings.yml`
-files (see [Configuration](CONFIGURATION.md)). Four sections:
+Local mode manages the managed `miners.yml` and `settings.yml` files (see
+[Configuration](CONFIGURATION.md)). Four sections. Remote mode gets the same
+page, read-only, at `/{boardId}/settings` — see
+[Remote mode](#remote-mode-boardid) below.
 
 - **Configured miners** — every miner currently in `miners.yml`, including
   disabled ones, with enable/disable and a **disable all** button. Clicking
@@ -200,6 +202,18 @@ Friday at 23:59:59, back to primary every Sunday"):
   email field to request access (handled by hashboard.live, the cloud
   service axeos-dashboard pushes data to for remote viewing)
 - **Unknown or empty board** — a "page not found" message
+- **Settings, read-only (`/{boardId}/settings`)** — alongside its usual data
+  push, the feeder also pushes the managed miners list and app settings
+  (electricity, custom pool dashboards, firmware repos — `remote.pushURL`/
+  `apiKey` themselves are never sent) every poll cycle, and
+  remote-dashboard-api serves them back so a remote viewer sees the exact
+  same page as local mode, just with every write affordance removed rather
+  than merely disabled: no Save buttons, no add/remove pool form, no
+  network scan or add-by-IP, and the per-miner scheduler shows only the
+  currently configured cron entries, not the editor to change them. The
+  "Process settings" table's firmware-cache "last check" timestamp is
+  pushed too — a quick way to tell whether the source Pi's feeder is still
+  actually alive, not just quietly stalled.
 
 ---
 

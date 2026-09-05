@@ -353,18 +353,6 @@ type appSettingsReadOnly struct {
 	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
 }
 
-// latestFirmwareCheck returns the most recent ModelCache.CheckedAt across
-// every model in cache, or the zero time if cache has no entries yet.
-func latestFirmwareCheck(cache firmware.Cache) time.Time {
-	var latest time.Time
-	for _, mc := range cache.Models {
-		if mc.CheckedAt.After(latest) {
-			latest = mc.CheckedAt
-		}
-	}
-	return latest
-}
-
 // GetAppSettings returns the current settings.yml overrides plus the
 // built-in defaults and the read-only process-launch settings (see
 // appSettingsResponse). Read-only: no file is touched here, current is
@@ -478,7 +466,7 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 		FirmwareCacheTTL:    cfg.Firmware.CacheTTL.String(),
 	}
 	fwCache := firmware.LoadCache(getDataRoot(cfg.Storage))
-	if checkedAt := latestFirmwareCheck(fwCache); !checkedAt.IsZero() {
+	if checkedAt := firmware.LatestCheck(fwCache); !checkedAt.IsZero() {
 		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
 	}
 	resp := appSettingsResponse{

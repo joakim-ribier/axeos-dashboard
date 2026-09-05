@@ -345,6 +345,14 @@ type RemoteConfig struct {
 	APIKey  string `yaml:"apiKey" json:"apiKey"`
 }
 
+// Enabled reports whether the feeder has enough to push to hashboard --
+// both PushURL and APIKey configured. The single source of truth for this
+// check, so every call site (the feeder's per-miner push, its config push)
+// stays in sync rather than repeating the same two-field comparison.
+func (r RemoteConfig) Enabled() bool {
+	return r.PushURL != "" && r.APIKey != ""
+}
+
 // AppSettingsFile is the shape of the managed settings.yml file --
 // the operational subset of dashboard.yml's config that's editable from
 // the /settings page (see readme/CONFIGURATION.md). Everything else
@@ -432,9 +440,10 @@ func (v UIVisibility) Normalized() UIVisibility {
 // UIConfig restricts which pages/actions this instance's frontend shows,
 // dashboard-api and remote-dashboard-api alike. Read by GET /api/info (see
 // internal/handler/info.go) and applied client-side; not itself an
-// authorization boundary on its own -- e.g. remote-dashboard-api never
-// exposes the /api/config/* endpoints the Settings page calls regardless
-// of what Page.Settings is set to.
+// authorization boundary on its own -- e.g. remote-dashboard-api's own
+// GET /api/{boardId}/config/* endpoints (see internal/handler/remote_config.go)
+// are always read-only regardless of what Page.Settings is set to, they're
+// never the write endpoints /settings' Save actions call.
 type UIConfig struct {
 	Page   UIPageConfig   `yaml:"page"`
 	Action UIActionConfig `yaml:"action"`

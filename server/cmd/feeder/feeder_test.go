@@ -28,6 +28,20 @@ func serverAddr(server *httptest.Server) string {
 	return strings.TrimPrefix(server.URL, "http://")
 }
 
+// isNonSamplePushPath reports whether path is one of the pushes runOnce
+// fires alongside the per-miner sample push (totals, managed miners config,
+// managed settings config) -- shared by every test remoteServer handler
+// below that only cares about the sample push, so those concurrent pushes
+// don't race it onto the same assertion channel.
+func isNonSamplePushPath(path string) bool {
+	switch path {
+	case "/totals", "/config/miners", "/config/settings":
+		return true
+	default:
+		return false
+	}
+}
+
 func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 	dir := t.TempDir()
 
@@ -56,10 +70,12 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
 		w.WriteHeader(http.StatusOK)
-		// runOnce also pushes totals (POST .../totals) concurrently with the
-		// sample push -- only the sample push is under test here, so ignore
-		// the totals request rather than racing both onto the same channel.
-		if r.URL.Path == "/totals" {
+		// runOnce also pushes totals (POST .../totals) and the managed
+		// miners/settings config (POST .../config/miners, .../config/settings)
+		// concurrently with the sample push -- only the sample push is under
+		// test here, so ignore those requests rather than racing them all
+		// onto the same channel.
+		if isNonSamplePushPath(r.URL.Path) {
 			return
 		}
 		pushCh <- pushedRequest{auth: r.Header.Get("Authorization"), body: decoded}
@@ -159,8 +175,12 @@ func TestFeeder_runOnce_pushesTheSameNormalizedStorageKeyUsedLocally(t *testing.
 		body, _ := io.ReadAll(r.Body)
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
-		pushCh <- pushedRequest{body: decoded}
 		w.WriteHeader(http.StatusOK)
+		// See isNonSamplePushPath -- only the sample push is under test here.
+		if isNonSamplePushPath(r.URL.Path) {
+			return
+		}
+		pushCh <- pushedRequest{body: decoded}
 	}))
 	defer remoteServer.Close()
 
@@ -215,8 +235,15 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		body, _ := io.ReadAll(r.Body)
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
-		pushCh <- pushedRequest{body: decoded}
 		w.WriteHeader(http.StatusOK)
+		// The miners/settings config pushes fire every cycle regardless of
+		// any single miner's poll outcome -- see isNonSamplePushPath. Only
+		// the per-miner sample push is under test here (it must NOT fire
+		// for a mismatched device).
+		if isNonSamplePushPath(r.URL.Path) {
+			return
+		}
+		pushCh <- pushedRequest{body: decoded}
 	}))
 	defer remoteServer.Close()
 

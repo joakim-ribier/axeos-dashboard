@@ -31,6 +31,8 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChec
 		r.Get("/miners/alerts", handler.ListRemoteAlerts(cfg))
 		r.Get("/miners/alerts/history", handler.ListRemoteAlertsHistory(cfg))
 		r.Get("/{ip}/stats", handler.RemoteStats(cfg))
+		r.Get("/config/miners", handler.RemoteMinersConfig(cfg))
+		r.Get("/config/settings", handler.RemoteAppSettings(cfg))
 	})
 
 	return r

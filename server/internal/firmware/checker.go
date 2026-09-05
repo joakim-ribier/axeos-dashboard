@@ -58,6 +58,21 @@ func LoadCache(dataDir string) Cache {
 	return loadFromDisk(dataDir)
 }
 
+// LatestCheck returns the most recent ModelCache.CheckedAt across every
+// model in cache, or the zero time if cache has no entries yet. Shared by
+// dashboard-api's own GET /api/config/settings (see handler.writeAppSettingsResponse)
+// and the feeder's remote push (see cmd/feeder.pushSettingsConfigToRemote) --
+// both need the same "when did we last actually check GitHub" value.
+func LatestCheck(cache Cache) time.Time {
+	var latest time.Time
+	for _, mc := range cache.Models {
+		if mc.CheckedAt.After(latest) {
+			latest = mc.CheckedAt
+		}
+	}
+	return latest
+}
+
 func fetchLatest(model string, repos map[string]string) (string, error) {
 	url, ok := repos[model]
 	if !ok {

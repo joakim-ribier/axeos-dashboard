@@ -42,7 +42,9 @@ import { AppSettingsSection } from "@/components/ui/AppSettingsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
+import { Writable } from "@/components/ui/Writable";
 import { useDiscovery } from "@/hooks/useDiscovery";
+import { useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import { formatTimestamp } from "@/utils/format";
@@ -55,6 +57,7 @@ const ConfiguredMinersTable = ({
   onToggleEnabled,
   onDisableAllClick,
   saveMiners,
+  readOnly,
 }: {
   miners: MinerConfig[];
   lastUpdated: string | undefined;
@@ -62,6 +65,7 @@ const ConfiguredMinersTable = ({
   onToggleEnabled: (miner: MinerConfig) => void;
   onDisableAllClick: () => void;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
+  readOnly: boolean;
 }) => {
   const { t } = useTranslation();
   const enabledCount = miners.filter((m) => m.enabled).length;
@@ -102,17 +106,19 @@ const ConfiguredMinersTable = ({
             </Typography>
           )}
         </Box>
-        <Button
-          size="small"
-          color="error"
-          variant="outlined"
-          disabled={enabledCount === 0}
-          onClick={onDisableAllClick}
-          startIcon={<PauseIcon fontSize="small" />}
-          sx={{ flexShrink: 0 }}
-        >
-          {t("settingsPage.configured.disableAll")}
-        </Button>
+        <Writable readOnly={readOnly}>
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            disabled={enabledCount === 0}
+            onClick={onDisableAllClick}
+            startIcon={<PauseIcon fontSize="small" />}
+            sx={{ flexShrink: 0 }}
+          >
+            {t("settingsPage.configured.disableAll")}
+          </Button>
+        </Writable>
       </Box>
       <Box sx={{ overflowX: "auto" }}>
         <Table size="small">
@@ -126,9 +132,11 @@ const ConfiguredMinersTable = ({
               <TableCell align="right">
                 {t("settingsPage.configured.status")}
               </TableCell>
-              <TableCell align="right">
-                {t("settingsPage.configured.actions")}
-              </TableCell>
+              <Writable readOnly={readOnly}>
+                <TableCell align="right">
+                  {t("settingsPage.configured.actions")}
+                </TableCell>
+              </Writable>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -215,34 +223,36 @@ const ConfiguredMinersTable = ({
                         sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                       />
                     </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        color={m.enabled ? "warning" : "success"}
-                        disabled={isToggling}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleEnabled(m);
-                        }}
-                        startIcon={
-                          isToggling ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : m.enabled ? (
-                            <PauseIcon fontSize="small" />
-                          ) : (
-                            <PlayArrowIcon fontSize="small" />
-                          )
-                        }
-                      >
-                        {m.enabled
-                          ? t("settingsPage.configured.disable")
-                          : t("settingsPage.configured.enable")}
-                      </Button>
-                    </TableCell>
+                    <Writable readOnly={readOnly}>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          color={m.enabled ? "warning" : "success"}
+                          disabled={isToggling}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleEnabled(m);
+                          }}
+                          startIcon={
+                            isToggling ? (
+                              <CircularProgress size={14} color="inherit" />
+                            ) : m.enabled ? (
+                              <PauseIcon fontSize="small" />
+                            ) : (
+                              <PlayArrowIcon fontSize="small" />
+                            )
+                          }
+                        >
+                          {m.enabled
+                            ? t("settingsPage.configured.disable")
+                            : t("settingsPage.configured.enable")}
+                        </Button>
+                      </TableCell>
+                    </Writable>
                   </TableRow>
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={readOnly ? 6 : 7}
                       sx={{
                         py: 0,
                         borderBottom: isExpanded ? undefined : "none",
@@ -250,7 +260,11 @@ const ConfiguredMinersTable = ({
                     >
                       <Collapse in={isExpanded} unmountOnExit>
                         <Box sx={{ px: 2 }}>
-                          <ScheduleEditor miner={m} saveMiners={saveMiners} />
+                          <ScheduleEditor
+                            miner={m}
+                            saveMiners={saveMiners}
+                            readOnly={readOnly}
+                          />
                         </Box>
                       </Collapse>
                     </TableCell>
@@ -402,6 +416,8 @@ const NoResultsState = ({ onRetry }: { onRetry: () => void }) => {
 /* ── Settings page ───────────────────────────────────────────────── */
 export const Settings = () => {
   const { t } = useTranslation();
+  const { ui } = useUiFeatures();
+  const readOnly = ui.page.settings === "readonly";
   const {
     data: configuredMiners,
     lastUpdated,
@@ -542,6 +558,10 @@ export const Settings = () => {
         gradientProps={{ height: 3, radius: 2, colors: ["#00b4ff", "#0066cc"] }}
       />
 
+      {readOnly && (
+        <Alert severity="info">{t("settingsPage.readOnlyBanner")}</Alert>
+      )}
+
       {configuredLoading ? (
         <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
       ) : (
@@ -554,218 +574,225 @@ export const Settings = () => {
             onToggleEnabled={(m) => void handleToggleEnabled(m)}
             onDisableAllClick={() => setDisableAllOpen(true)}
             saveMiners={saveMiners}
+            readOnly={readOnly}
           />
         )
       )}
 
-      <AppSettingsSection />
+      <AppSettingsSection readOnly={readOnly} />
 
-      <Paper
-        variant="outlined"
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          display: "flex",
-          flexDirection: { xs: "column", sm: "row" },
-          alignItems: { xs: "stretch", sm: "center" },
-          justifyContent: "space-between",
-          gap: 2,
-        }}
-      >
-        <Box>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {t("settingsPage.scan.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("settingsPage.scan.description")}
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          disabled={isSearching}
-          onClick={handleScan}
-          startIcon={
-            isSearching ? (
-              <CircularProgress size={16} color="inherit" />
-            ) : (
-              <TravelExploreIcon />
-            )
-          }
-          sx={{ flexShrink: 0 }}
+      <Writable readOnly={readOnly}>
+        <Paper
+          variant="outlined"
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            display: "flex",
+            flexDirection: { xs: "column", sm: "row" },
+            alignItems: { xs: "stretch", sm: "center" },
+            justifyContent: "space-between",
+            gap: 2,
+          }}
         >
-          {isSearching
-            ? t("settingsPage.scan.searching")
-            : t("settingsPage.scan.action")}
-        </Button>
-      </Paper>
-
-      <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-        <Typography variant="subtitle1" fontWeight={700}>
-          {t("settingsPage.manual.title")}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t("settingsPage.manual.description")}
-        </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
-          <TextField
-            size="small"
-            fullWidth
-            placeholder="192.168.1.42"
-            value={manualIp}
-            onChange={(e) => setManualIp(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleProbeIp();
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <RouterIcon
-                    fontSize="small"
-                    sx={{ color: "text.secondary", mr: 1 }}
-                  />
-                ),
-              },
-            }}
-          />
+          <Box>
+            <Typography variant="subtitle1" fontWeight={700}>
+              {t("settingsPage.scan.title")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t("settingsPage.scan.description")}
+            </Typography>
+          </Box>
           <Button
-            variant="outlined"
-            disabled={isSearching || !manualIp.trim()}
-            onClick={handleProbeIp}
+            variant="contained"
+            disabled={isSearching}
+            onClick={handleScan}
             startIcon={
               isSearching ? (
                 <CircularProgress size={16} color="inherit" />
               ) : (
-                <SearchIcon />
+                <TravelExploreIcon />
               )
             }
             sx={{ flexShrink: 0 }}
           >
-            {t("settingsPage.manual.action")}
+            {isSearching
+              ? t("settingsPage.scan.searching")
+              : t("settingsPage.scan.action")}
           </Button>
-        </Stack>
-      </Paper>
+        </Paper>
+      </Writable>
 
-      {hasSearched && !isSearching && (
-        <Box>
-          {error ? (
-            <Alert
-              severity="warning"
-              action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  onClick={() => void retryWithLongerTimeout()}
-                >
-                  {t("settingsPage.discovery.retryLonger")}
-                </Button>
+      <Writable readOnly={readOnly}>
+        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
+          <Typography variant="subtitle1" fontWeight={700}>
+            {t("settingsPage.manual.title")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t("settingsPage.manual.description")}
+          </Typography>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="192.168.1.42"
+              value={manualIp}
+              onChange={(e) => setManualIp(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleProbeIp();
+              }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <RouterIcon
+                      fontSize="small"
+                      sx={{ color: "text.secondary", mr: 1 }}
+                    />
+                  ),
+                },
+              }}
+            />
+            <Button
+              variant="outlined"
+              disabled={isSearching || !manualIp.trim()}
+              onClick={handleProbeIp}
+              startIcon={
+                isSearching ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  <SearchIcon />
+                )
               }
+              sx={{ flexShrink: 0 }}
             >
-              {error}
-            </Alert>
-          ) : results.length === 0 ? (
-            <NoResultsState onRetry={() => void retryWithLongerTimeout()} />
-          ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {selectableMacs.length > 0 && (
+              {t("settingsPage.manual.action")}
+            </Button>
+          </Stack>
+        </Paper>
+      </Writable>
+
+      <Writable readOnly={readOnly}>
+        {hasSearched && !isSearching && (
+          <Box>
+            {error ? (
+              <Alert
+                severity="warning"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => void retryWithLongerTimeout()}
+                  >
+                    {t("settingsPage.discovery.retryLonger")}
+                  </Button>
+                }
+              >
+                {error}
+              </Alert>
+            ) : results.length === 0 ? (
+              <NoResultsState onRetry={() => void retryWithLongerTimeout()} />
+            ) : (
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {selectableMacs.length > 0 && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 1,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      {t("settingsPage.discovery.resultsCount", {
+                        count: results.length,
+                      })}
+                    </Typography>
+                    <Button
+                      size="small"
+                      onClick={toggleSelectAll}
+                      startIcon={
+                        allSelected ? (
+                          <DeselectIcon fontSize="small" />
+                        ) : (
+                          <SelectAllIcon fontSize="small" />
+                        )
+                      }
+                    >
+                      {allSelected
+                        ? t("settingsPage.discovery.deselectAll")
+                        : t("settingsPage.discovery.selectAll")}
+                    </Button>
+                  </Box>
+                )}
+
+                {selectedDevices.length > 0 && (
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 2,
+                      borderColor: "primary.main",
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {t("settingsPage.discovery.selectedCount", {
+                        count: selectedDevices.length,
+                      })}
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      disabled={isSaving}
+                      onClick={() => void handleSaveSelected()}
+                      startIcon={
+                        isSaving ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : (
+                          <SaveIcon fontSize="small" />
+                        )
+                      }
+                    >
+                      {isSaving
+                        ? t("settingsPage.discovery.saving")
+                        : t("settingsPage.discovery.saveSelected")}
+                    </Button>
+                  </Paper>
+                )}
+
+                {saveError && <Alert severity="error">{saveError}</Alert>}
+
                 <Box
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    {t("settingsPage.discovery.resultsCount", {
-                      count: results.length,
-                    })}
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={toggleSelectAll}
-                    startIcon={
-                      allSelected ? (
-                        <DeselectIcon fontSize="small" />
-                      ) : (
-                        <SelectAllIcon fontSize="small" />
-                      )
-                    }
-                  >
-                    {allSelected
-                      ? t("settingsPage.discovery.deselectAll")
-                      : t("settingsPage.discovery.selectAll")}
-                  </Button>
-                </Box>
-              )}
-
-              {selectedDevices.length > 0 && (
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    borderRadius: 3,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "repeat(1, 1fr)",
+                      md: "repeat(2, 1fr)",
+                      lg: "repeat(3, 1fr)",
+                    },
                     gap: 2,
-                    borderColor: "primary.main",
                   }}
                 >
-                  <Typography variant="body2">
-                    {t("settingsPage.discovery.selectedCount", {
-                      count: selectedDevices.length,
-                    })}
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    disabled={isSaving}
-                    onClick={() => void handleSaveSelected()}
-                    startIcon={
-                      isSaving ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <SaveIcon fontSize="small" />
-                      )
-                    }
-                  >
-                    {isSaving
-                      ? t("settingsPage.discovery.saving")
-                      : t("settingsPage.discovery.saveSelected")}
-                  </Button>
-                </Paper>
-              )}
-
-              {saveError && <Alert severity="error">{saveError}</Alert>}
-
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "repeat(1, 1fr)",
-                    md: "repeat(2, 1fr)",
-                    lg: "repeat(3, 1fr)",
-                  },
-                  gap: 2,
-                }}
-              >
-                {results.map((device) => {
-                  const key = normalizeMac(device.mac);
-                  return (
-                    <DiscoveredDeviceCard
-                      key={device.mac || device.ip}
-                      device={device}
-                      selected={selectedMacs.has(key)}
-                      onToggleSelect={() => toggleSelected(device.mac)}
-                    />
-                  );
-                })}
+                  {results.map((device) => {
+                    const key = normalizeMac(device.mac);
+                    return (
+                      <DiscoveredDeviceCard
+                        key={device.mac || device.ip}
+                        device={device}
+                        selected={selectedMacs.has(key)}
+                        onToggleSelect={() => toggleSelected(device.mac)}
+                      />
+                    );
+                  })}
+                </Box>
               </Box>
-            </Box>
-          )}
-        </Box>
-      )}
+            )}
+          </Box>
+        )}
+      </Writable>
 
       <ConfirmDialog
         open={disableAllOpen}

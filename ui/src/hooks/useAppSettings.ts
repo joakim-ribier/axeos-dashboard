@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
+import { useMode } from "@/contexts/ModeContext";
 import {
   type AppSettings,
   type AppSettingsInput,
@@ -10,15 +11,16 @@ import {
 } from "@/schemas/appSettingsSchema";
 import { extractErrorMessage } from "@/utils/apiError";
 
-const fetchAppSettings = async (): Promise<AppSettings> => {
-  const { data } = await axios.get("/api/config/settings");
+const fetchAppSettings = async (url: string): Promise<AppSettings> => {
+  const { data } = await axios.get(url);
   return appSettingsSchema.parse(data);
 };
 
 const postAppSettings = async (
+  url: string,
   settings: AppSettingsInput,
 ): Promise<AppSettings> => {
-  const { data } = await axios.post("/api/config/settings", settings);
+  const { data } = await axios.post(url, settings);
   return appSettingsSchema.parse(data);
 };
 
@@ -48,9 +50,10 @@ export interface UseAppSettingsReturn {
  * TTL) shown for visibility only -- never part of what saveSettings sends.
  */
 export const useAppSettings = (): UseAppSettingsReturn => {
+  const { apiPaths } = useMode();
   const query = useQuery<AppSettings, Error>({
-    queryKey: ["config", "settings"],
-    queryFn: fetchAppSettings,
+    queryKey: ["config", "settings", apiPaths.config.settings],
+    queryFn: () => fetchAppSettings(apiPaths.config.settings),
     // Always refetched on mount, same reasoning as useMinersConfig: this
     // page needs to see a save made just moments ago, not a stale snapshot.
     staleTime: 0,
@@ -66,7 +69,7 @@ export const useAppSettings = (): UseAppSettingsReturn => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const result = await postAppSettings(settings);
+      const result = await postAppSettings(apiPaths.config.settings, settings);
       await query.refetch();
       return result;
     } catch (err: unknown) {

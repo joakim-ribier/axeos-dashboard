@@ -108,7 +108,6 @@
     "home": "Home",
     "alerts": "Alerts",
     "settings": "Settings",
-    "settingsUnavailableRemote": "Not available while viewing a remote board — go back to your own dashboard first.",
     "autoRefresh": "Auto-refresh"
   },
   "sidebar": {
@@ -210,6 +209,7 @@
       "title": "Miner setup",
       "description": "Automatically detect your AxeOS miners on the network, or add them manually by IP."
     },
+    "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
     "configured": {
       "title": "Configured miners",
       "description": "{{count}} miner(s) configured",
@@ -251,7 +251,6 @@
     },
     "appSettings": {
       "title": "App settings",
-      "description": "Operational settings you might change without redeploying.",
       "save": "Save",
       "saving": "Saving…",
       "saveSuccess": "App settings saved.",
@@ -278,13 +277,11 @@
       },
       "firmware": {
         "title": "Firmware repos",
-        "hint": "Built-in, not editable from here.",
         "modelLabel": "Model",
         "urlLabel": "Repository URL"
       },
       "readOnly": {
-        "title": "Process settings (read-only)",
-        "hint": "Restart the app to change these.",
+        "title": "Process settings",
         "settingLabel": "Setting",
         "valueLabel": "Value",
         "lastRunLabel": "Last run",

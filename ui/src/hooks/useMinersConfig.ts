@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
+import { useMode } from "@/contexts/ModeContext";
 import {
   bitaxesResponseSchema,
   type MinerConfig,
@@ -14,15 +15,16 @@ interface MinersConfigResult {
   lastUpdated?: string;
 }
 
-const fetchMinersConfig = async (): Promise<MinersConfigResult> => {
-  const { data } = await axios.get("/api/config/miners");
+const fetchMinersConfig = async (url: string): Promise<MinersConfigResult> => {
+  const { data } = await axios.get(url);
   return bitaxesResponseSchema.parse(data);
 };
 
 const postMinersConfig = async (
+  url: string,
   miners: MinerConfig[],
 ): Promise<MinersConfigResult> => {
-  const { data } = await axios.post("/api/config/miners", { bitaxes: miners });
+  const { data } = await axios.post(url, { bitaxes: miners });
   return bitaxesResponseSchema.parse(data);
 };
 
@@ -55,10 +57,11 @@ export interface UseMinersConfigReturn {
  * redirect when it's empty (see RequireMinersConfigured).
  */
 export const useMinersConfig = (): UseMinersConfigReturn => {
+  const { apiPaths } = useMode();
   const queryClient = useQueryClient();
   const query = useQuery<MinersConfigResult, Error>({
-    queryKey: ["config", "miners"],
-    queryFn: fetchMinersConfig,
+    queryKey: ["config", "miners", apiPaths.config.miners],
+    queryFn: () => fetchMinersConfig(apiPaths.config.miners),
     // Always refetched on mount rather than cached indefinitely (unlike
     // useMiners' staleTime: Infinity) -- this drives both the onboarding
     // redirect and the discovery page's "already configured" diff, both of
@@ -74,7 +77,7 @@ export const useMinersConfig = (): UseMinersConfigReturn => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const result = await postMinersConfig(miners);
+      const result = await postMinersConfig(apiPaths.config.miners, miners);
       await query.refetch();
       // The dashboard (useMiners, GET /api/miners) has its own long-lived
       // cache (staleTime: Infinity, see useMiners.ts) -- without this it

@@ -6,18 +6,12 @@ import { useUiFeatures } from "@/hooks/useMiners";
 import { OopsPage } from "./OopsPage";
 
 /**
- * Gates the /settings route behind ui.page.settings (see config.UIConfig)
- * instead of the frontend hardcoding "this is a local-only page" -- an
- * operator flips it to "hidden" in dashboard.yml/remote-dashboard.yml to
- * pull it out of a deployment entirely.
- *
- * This matters even though there's no /:boardId/settings route: the same
- * built SPA can be served by dashboard-api or remote-dashboard-api, and
- * React Router doesn't know which one -- visiting /settings directly
- * against a remote-dashboard-api deployment would otherwise still render
- * this page (its API calls would just 404, since remote-dashboard-api
- * never exposes /api/config/*, but the page itself would still show).
- * Renders as a plain 404: from the outside "hidden" should be
+ * Gates /settings and /:boardId/settings behind ui.page.settings (see
+ * config.UIConfig) instead of the frontend hardcoding what each mode shows
+ * -- an operator flips it to "hidden" in dashboard.yml/remote-dashboard.yml
+ * to pull the page out of a deployment entirely, or "readonly" to show it
+ * without any write action (remote-dashboard.yml's default). Renders as a
+ * plain 404 when hidden: from the outside "hidden" should be
  * indistinguishable from "this route doesn't exist".
  *
  * Waits for the flag to actually resolve (spinner, like
