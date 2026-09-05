@@ -7,6 +7,7 @@
     },
     "loading": "Loading...",
     "filter": {
+      "toggle": "Filters",
       "all": "All",
       "miners": "miners",
       "noResults": "No miners match your search.",
@@ -16,6 +17,13 @@
       "poolLabel": "Pool",
       "deviceLabel": "Device",
       "alertsLabel": "Alerts"
+    },
+    "sort": {
+      "oldest": "Oldest",
+      "sharesAccepted": "Most shares",
+      "fan": "Fastest fan",
+      "temp": "Hottest",
+      "pool": "Pool (A-Z)"
     },
     "stats": {
       "lastUpdate": "Last update:",

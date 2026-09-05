@@ -1,25 +1,43 @@
 // src/pages/Home.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import AirIcon from "@mui/icons-material/Air";
+import CheckIcon from "@mui/icons-material/Check";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import DoneAllIcon from "@mui/icons-material/DoneAll";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import SearchIcon from "@mui/icons-material/Search";
+import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
+import SwapVertIcon from "@mui/icons-material/SwapVert";
+import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
+import ThermostatIcon from "@mui/icons-material/Thermostat";
+import UpdateIcon from "@mui/icons-material/Update";
 import {
   Box,
+  Button,
   Chip,
   Collapse,
   Grid,
   IconButton,
   InputBase,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
   Popover,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Theme, useTheme } from "@mui/material/styles";
+import { Theme } from "@mui/material/styles";
 
 import { useMode } from "@/contexts/ModeContext";
 import { useSearch } from "@/contexts/SearchContext";
+import {
+  type MinerSortKey,
+  sortMiners,
+  useMinerSort,
+} from "@/hooks/useMinerSort";
 import {
   matchesQuickFilters,
   NO_QUICK_FILTERS,
@@ -46,118 +64,6 @@ const getPoolLabel = (url: string): string => {
   } catch {
     return url;
   }
-};
-
-/* ── Pool filter card ────────────────────────────────────────── */
-interface PoolCardProps {
-  label: string;
-  count: number;
-  hashRate?: number;
-  isActive: boolean;
-  tooltip?: string;
-  onClick: () => void;
-}
-
-const PoolCard = ({
-  label,
-  count,
-  hashRate,
-  isActive,
-  tooltip,
-  onClick,
-}: PoolCardProps) => {
-  const { t } = useTranslation();
-  const theme = useTheme();
-  const primary = theme.palette.primary.main;
-
-  const card = (
-    <Box
-      onClick={onClick}
-      sx={{
-        cursor: "pointer",
-        px: 2,
-        py: 1.5,
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: isActive ? primary : "divider",
-        backgroundColor: isActive ? `${primary}14` : "background.paper",
-        boxShadow: isActive ? `0 0 16px ${primary}28` : "none",
-        transition: "all 0.2s ease",
-        minWidth: { xs: 120, sm: 140 },
-        maxWidth: { xs: 160, sm: 200 },
-        flexShrink: 0,
-        overflow: "hidden",
-        userSelect: "none",
-        "&:hover": {
-          borderColor: primary,
-          backgroundColor: `${primary}0a`,
-        },
-      }}
-    >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 1,
-          mb: 0.5,
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{
-            textTransform: "uppercase",
-            letterSpacing: "0.07em",
-            fontWeight: 700,
-            color: isActive ? primary : "text.secondary",
-            lineHeight: 1,
-            flex: 1,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {label}
-        </Typography>
-        {isActive && (
-          <Box
-            sx={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              backgroundColor: primary,
-              boxShadow: `0 0 6px ${primary}`,
-              flexShrink: 0,
-              mt: 0.25,
-            }}
-          />
-        )}
-      </Box>
-      <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-        {count}
-        <Typography
-          component="span"
-          variant="caption"
-          color="text.secondary"
-          sx={{ ml: 0.5 }}
-        >
-          {t("dashboard.filter.miners")}
-        </Typography>
-      </Typography>
-      {hashRate !== undefined && (
-        <Typography variant="caption" color="text.secondary">
-          {hashRate.toFixed(2)} TH/s
-        </Typography>
-      )}
-    </Box>
-  );
-
-  return tooltip ? (
-    <Tooltip title={tooltip} arrow>
-      {card}
-    </Tooltip>
-  ) : (
-    card
-  );
 };
 
 /* ── Search ──────────────────────────────────────────────────── */
@@ -240,6 +146,178 @@ const SearchField = () => {
   );
 };
 
+/* ── Sort ────────────────────────────────────────────────────── */
+const SORT_OPTIONS: { key: MinerSortKey; icon: React.ReactNode }[] = [
+  { key: "oldest", icon: <UpdateIcon fontSize="small" /> },
+  { key: "sharesAccepted", icon: <DoneAllIcon fontSize="small" /> },
+  { key: "fan", icon: <AirIcon fontSize="small" /> },
+  { key: "temp", icon: <ThermostatIcon fontSize="small" /> },
+  { key: "pool", icon: <SortByAlphaIcon fontSize="small" /> },
+];
+
+const SortMenuButton = ({
+  sort,
+  onChange,
+}: {
+  sort: MinerSortKey;
+  onChange: (sort: MinerSortKey) => void;
+}) => {
+  const { t } = useTranslation();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  return (
+    <>
+      <Button
+        size="small"
+        variant="outlined"
+        color="inherit"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        startIcon={<SwapVertIcon fontSize="small" />}
+        sx={{
+          borderColor: "divider",
+          color: "text.secondary",
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+          "&:hover": { borderColor: "primary.main", color: "primary.main" },
+        }}
+      >
+        {t(`dashboard.sort.${sort}`)}
+      </Button>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
+        {SORT_OPTIONS.map((option) => (
+          <MenuItem
+            key={option.key}
+            selected={option.key === sort}
+            onClick={() => {
+              onChange(option.key);
+              setAnchorEl(null);
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 32 }}>{option.icon}</ListItemIcon>
+            <ListItemText>{t(`dashboard.sort.${option.key}`)}</ListItemText>
+            {option.key === sort && (
+              <CheckIcon
+                fontSize="small"
+                sx={{ color: "primary.main", ml: 2 }}
+              />
+            )}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+};
+
+/* ── Pool select ─────────────────────────────────────────────── */
+interface PoolOption {
+  url: string;
+  label: string;
+  count: number;
+  hashRate: number;
+}
+
+const PoolSelectButton = ({
+  options,
+  totalCount,
+  totalHashRate,
+  selected,
+  onChange,
+}: {
+  options: PoolOption[];
+  totalCount: number;
+  totalHashRate: number;
+  selected: string | null;
+  onChange: (url: string | null) => void;
+}) => {
+  const { t } = useTranslation();
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const currentLabel =
+    selected === null
+      ? t("dashboard.filter.all")
+      : (options.find((o) => o.url === selected)?.label ?? selected);
+
+  const summary = (count: number, hashRate: number) =>
+    `${count} ${t("dashboard.filter.miners")} · ${hashRate.toFixed(2)} TH/s`;
+
+  return (
+    <>
+      <Button
+        size="small"
+        variant="outlined"
+        color="inherit"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        startIcon={<SystemUpdateAltIcon fontSize="small" />}
+        sx={{
+          borderColor: "divider",
+          color: "text.secondary",
+          flexShrink: 0,
+          whiteSpace: "nowrap",
+          maxWidth: 220,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          "&:hover": { borderColor: "primary.main", color: "primary.main" },
+        }}
+      >
+        {currentLabel}
+      </Button>
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
+        <MenuItem
+          selected={selected === null}
+          onClick={() => {
+            onChange(null);
+            setAnchorEl(null);
+          }}
+        >
+          <ListItemText
+            primary={t("dashboard.filter.all")}
+            secondary={summary(totalCount, totalHashRate)}
+          />
+          {selected === null && (
+            <CheckIcon
+              fontSize="small"
+              sx={{ color: "primary.main", ml: 2, flexShrink: 0 }}
+            />
+          )}
+        </MenuItem>
+        {options.map((option) => (
+          <MenuItem
+            key={option.url}
+            selected={option.url === selected}
+            onClick={() => {
+              onChange(option.url);
+              setAnchorEl(null);
+            }}
+          >
+            <ListItemText
+              primary={option.label}
+              secondary={summary(option.count, option.hashRate)}
+            />
+            {option.url === selected && (
+              <CheckIcon
+                fontSize="small"
+                sx={{ color: "primary.main", ml: 2, flexShrink: 0 }}
+              />
+            )}
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+};
+
 /* ── Home ────────────────────────────────────────────────────── */
 export const Home = () => {
   const { t } = useTranslation();
@@ -247,6 +325,7 @@ export const Home = () => {
   const { hashboardUrl } = useAppInfo();
   const { boardId } = useMode();
   const { query } = useSearch();
+  const { sort, setSort } = useMinerSort();
 
   const [selectedPool, setSelectedPool] = useState<string | null>(null);
   const [selectedDeviceModel, setSelectedDeviceModel] = useState<string | null>(
@@ -315,10 +394,11 @@ export const Home = () => {
   );
 
   const filteredData = useMemo(() => {
-    return data?.filter(
+    const filtered = data?.filter(
       (m) => matchesQuickFilters(m, quickFilters) && matchesSearch(m, query),
     );
-  }, [data, quickFilters, query]);
+    return filtered && sortMiners(filtered, sort);
+  }, [data, quickFilters, query, sort]);
 
   useEffect(() => {
     if (poolEntries.length === 1) setSelectedPool(poolEntries[0][0]);
@@ -360,158 +440,154 @@ export const Home = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {/* The Collapse panel uses its own inner "mt" for spacing instead of
-          the header-group's `gap` -- a Collapse still occupies a gap slot
-          on both sides even at 0 height, so relying on `gap` here would
-          leave a stray double-gap when the panel is closed. A margin on
-          the *inner* content only ever shows once the panel is actually
-          open, since Collapse clips overflow while collapsed. */}
-      <Box sx={{ display: "flex", flexDirection: "column" }}>
-        <PageHeader
-          title={t("dashboard.header.title")}
-          description={t("dashboard.header.description")}
-          icon={<DashboardIcon fontSize="large" />}
-          gradientProps={{
-            height: 3,
-            radius: 2,
-            colors: ["#00b4ff", "#0066cc"],
-          }}
-          actions={[
-            <IconButton
-              key="filters"
-              size="small"
-              onClick={toggleFilters}
-              aria-label="filters"
-            >
-              <FilterAltIcon fontSize="small" />
-            </IconButton>,
-          ]}
-          forceShowActions
-        />
-
-        <Collapse in={filtersOpen}>
-          <Box
-            sx={{
-              mt: 4,
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid",
-              borderColor: "divider",
-              bgcolor: "background.paper",
-              display: "flex",
-              flexDirection: "column",
-              gap: 2,
-            }}
-          >
-            <SearchField />
-
-            {deviceModelEntries.length >= 1 && (
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t("dashboard.filter.deviceLabel")}
-                </Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                  {deviceModelEntries.length > 1 && (
-                    <Chip
-                      size="small"
-                      label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
-                      color={
-                        selectedDeviceModel === null ? "primary" : "default"
-                      }
-                      variant={
-                        selectedDeviceModel === null ? "filled" : "outlined"
-                      }
-                      onClick={() => setSelectedDeviceModel(null)}
-                    />
-                  )}
-                  {deviceModelEntries.map(([model, count]) => (
-                    <Chip
-                      key={model}
-                      size="small"
-                      label={`${model} (${count})`}
-                      color={
-                        selectedDeviceModel === model ? "primary" : "default"
-                      }
-                      variant={
-                        selectedDeviceModel === model ? "filled" : "outlined"
-                      }
-                      onClick={() =>
-                        setSelectedDeviceModel(
-                          model === selectedDeviceModel ? null : model,
-                        )
-                      }
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-              <Typography variant="caption" color="text.secondary">
-                {t("dashboard.filter.alertsLabel")}
-              </Typography>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                <Chip
-                  size="small"
-                  label={`${t("dashboard.filter.highTemp", { value: TEMP_THRESHOLD })} (${alertCounts.temp})`}
-                  color={alertTemp ? "error" : "default"}
-                  variant={alertTemp ? "filled" : "outlined"}
-                  onClick={() => setAlertTemp((v) => !v)}
-                />
-                <Chip
-                  size="small"
-                  label={`${t("dashboard.filter.highFan", { value: FAN_THRESHOLD })} (${alertCounts.fan})`}
-                  color={alertFan ? "error" : "default"}
-                  variant={alertFan ? "filled" : "outlined"}
-                  onClick={() => setAlertFan((v) => !v)}
-                />
-                <Chip
-                  size="small"
-                  label={`${t("dashboard.filter.offline")} (${alertCounts.offline})`}
-                  color={alertOffline ? "error" : "default"}
-                  variant={alertOffline ? "filled" : "outlined"}
-                  onClick={() => setAlertOffline((v) => !v)}
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Collapse>
-      </Box>
+      <PageHeader
+        title={t("dashboard.header.title")}
+        description={t("dashboard.header.description")}
+        icon={<DashboardIcon fontSize="large" />}
+        gradientProps={{
+          height: 3,
+          radius: 2,
+          colors: ["#00b4ff", "#0066cc"],
+        }}
+      />
 
       <GlobalStats data={data} isLoading={isLoading} />
 
-      {!isLoading && poolEntries.length >= 1 && (
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1.5,
-            overflowX: "auto",
-            pb: 0.5,
-            WebkitOverflowScrolling: "touch",
-            scrollbarWidth: "none",
-            "&::-webkit-scrollbar": { display: "none" },
-          }}
-        >
-          {poolEntries.length > 1 && (
-            <PoolCard
-              label={t("dashboard.filter.all")}
-              count={data?.length ?? 0}
-              hashRate={totalHashRate}
-              isActive={selectedPool === null}
-              onClick={() => setSelectedPool(null)}
-            />
-          )}
-          {poolEntries.map(([url, stats]) => (
-            <PoolCard
-              key={url}
-              label={stats.label}
-              count={stats.count}
-              hashRate={stats.hashRate}
-              isActive={selectedPool === url}
-              tooltip={url}
-              onClick={() => setSelectedPool(url === selectedPool ? null : url)}
-            />
-          ))}
+      {!isLoading && (
+        // The Collapse panel below uses its own inner "mt" for spacing
+        // instead of this group's `gap` -- a Collapse still occupies a gap
+        // slot on both sides even at 0 height, so relying on `gap` here
+        // would leave a stray double-gap when the panel is closed. A margin
+        // on the *inner* content only ever shows once the panel is actually
+        // open, since Collapse clips overflow while collapsed.
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
+            {poolEntries.length > 1 && (
+              <PoolSelectButton
+                options={poolEntries.map(([url, stats]) => ({
+                  url,
+                  ...stats,
+                }))}
+                totalCount={data?.length ?? 0}
+                totalHashRate={totalHashRate}
+                selected={selectedPool}
+                onChange={setSelectedPool}
+              />
+            )}
+            <SortMenuButton sort={sort} onChange={setSort} />
+            <Tooltip title={t("dashboard.filter.toggle")}>
+              <IconButton
+                size="small"
+                onClick={toggleFilters}
+                aria-label="filters"
+                sx={{
+                  border: "1px solid",
+                  borderColor: filtersOpen ? "primary.main" : "divider",
+                  color: filtersOpen ? "primary.main" : "text.secondary",
+                  borderRadius: 1,
+                }}
+              >
+                <FilterAltIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          <Collapse in={filtersOpen}>
+            <Box
+              sx={{
+                mt: 2,
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
+              <SearchField />
+
+              {deviceModelEntries.length >= 1 && (
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {t("dashboard.filter.deviceLabel")}
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                    {deviceModelEntries.length > 1 && (
+                      <Chip
+                        size="small"
+                        label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
+                        color={
+                          selectedDeviceModel === null ? "primary" : "default"
+                        }
+                        variant={
+                          selectedDeviceModel === null ? "filled" : "outlined"
+                        }
+                        onClick={() => setSelectedDeviceModel(null)}
+                      />
+                    )}
+                    {deviceModelEntries.map(([model, count]) => (
+                      <Chip
+                        key={model}
+                        size="small"
+                        label={`${model} (${count})`}
+                        color={
+                          selectedDeviceModel === model ? "primary" : "default"
+                        }
+                        variant={
+                          selectedDeviceModel === model ? "filled" : "outlined"
+                        }
+                        onClick={() =>
+                          setSelectedDeviceModel(
+                            model === selectedDeviceModel ? null : model,
+                          )
+                        }
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("dashboard.filter.alertsLabel")}
+                </Typography>
+                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                  <Chip
+                    size="small"
+                    label={`${t("dashboard.filter.highTemp", { value: TEMP_THRESHOLD })} (${alertCounts.temp})`}
+                    color={alertTemp ? "error" : "default"}
+                    variant={alertTemp ? "filled" : "outlined"}
+                    onClick={() => setAlertTemp((v) => !v)}
+                  />
+                  <Chip
+                    size="small"
+                    label={`${t("dashboard.filter.highFan", { value: FAN_THRESHOLD })} (${alertCounts.fan})`}
+                    color={alertFan ? "error" : "default"}
+                    variant={alertFan ? "filled" : "outlined"}
+                    onClick={() => setAlertFan((v) => !v)}
+                  />
+                  <Chip
+                    size="small"
+                    label={`${t("dashboard.filter.offline")} (${alertCounts.offline})`}
+                    color={alertOffline ? "error" : "default"}
+                    variant={alertOffline ? "filled" : "outlined"}
+                    onClick={() => setAlertOffline((v) => !v)}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          </Collapse>
         </Box>
       )}
 

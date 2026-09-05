@@ -5,7 +5,7 @@ doc details what the dashboard actually does, screen by screen.
 
 - [Dashboard Features](#dashboard-features)
   - [Top bar & sidebar](#top-bar--sidebar)
-  - [Search & filters](#search--filters)
+  - [Search, filters & sort](#search-filters--sort)
   - [Alerts](#alerts)
   - [Global stats bar](#global-stats-bar)
   - [Miner card](#miner-card)
@@ -26,15 +26,29 @@ doc details what the dashboard actually does, screen by screen.
 - **App version** — this dashboard-api/remote-dashboard-api build's git SHA, plus "Up to date" or a clickable "Update available" chip linking to the GitHub release (checked server-side once a day — about the dashboard app itself, not miner firmware)
 - **Remote mode only** — a board ID chip with a public/private badge, and a link to manage the board from your hashboard account
 
-### Search & filters
+### Search, filters & sort
 
-Toggle the filters panel from the funnel icon in the page header.
+A row below the stats bar carries the miner grid's live view controls --
+pool, sort order, and the filters toggle -- all client-side, no extra API
+calls:
 
-- Plain text matches hostname, IP, model, pool, stratum user, firmware version
-- Comparisons: `temp>60`, `fan<=50`, `power>15`, `hashrate<0.3`, `uptime>3600` (seconds)
-- Keyword `offline` (negate with `!offline` / `-offline`)
-- Negate any term with `-` / `!`; combine multiple terms with a space — all must match
-- Quick-filter chips for pool, device model, and alerts (high temp / high fan / offline), each showing a live count
+- **Pool** -- a dropdown listing every pool currently in use (only shown
+  once more than one is active), each entry showing its miner count and
+  combined hashrate
+- **Sort** -- five orders, remembered across visits (`localStorage`):
+  oldest first by total uptime (the default), most accepted shares,
+  hottest fan, highest temp, or pool name (A-Z)
+- **Filters** (funnel icon) -- toggles a panel with:
+  - Free-text/comparison search:
+    - Plain text matches hostname, IP, model, pool, stratum user, firmware version
+    - Comparisons: `temp>60`, `fan<=50`, `power>15`, `hashrate<0.3`, `uptime>3600` (seconds)
+    - Keyword `offline` (negate with `!offline` / `-offline`)
+    - Negate any term with `-` / `!`; combine multiple terms with a space — all must match
+  - Quick-filter chips for device model and alerts (high temp / high fan / offline), each showing a live count
+
+On narrow screens the row wraps rather than collapsing to icons -- pool
+and sort keep their full label everywhere; only the filters toggle is
+icon-only.
 
 ### Alerts
 

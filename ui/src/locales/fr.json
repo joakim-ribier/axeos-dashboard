@@ -7,6 +7,7 @@
     },
     "loading": "Chargement...",
     "filter": {
+      "toggle": "Filtres",
       "all": "Tous",
       "miners": "mineurs",
       "noResults": "Aucun mineur ne correspond à votre recherche.",
@@ -16,6 +17,13 @@
       "poolLabel": "Pool",
       "deviceLabel": "Modèle",
       "alertsLabel": "Alertes"
+    },
+    "sort": {
+      "oldest": "Plus ancien",
+      "sharesAccepted": "Plus de parts",
+      "fan": "Ventilateur max",
+      "temp": "Plus chaud",
+      "pool": "Pool (A-Z)"
     },
     "stats": {
       "lastUpdate": "Dernière mise à jour :",
