@@ -17,6 +17,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,16 +56,24 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}/dashboard:${{ steps.resolve.outputs.tag }}
 
-      - name: print the command to test it
+      - name: comment the command to test it on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Images pushed, tagged '${{ steps.resolve.outputs.tag }}'."
-          echo ""
-          echo "Test it with:"
-          echo "  curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=${{ steps.resolve.outputs.tag }} bash"
+          tag="${{ steps.resolve.outputs.tag }}"
+          cmd="curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=$tag bash"
+          echo "$cmd"
           {
-            echo "### Test this PR's Docker images"
+            echo "### 🐳 Test this PR's Docker images (tag \`$tag\`)"
             echo ""
             echo '```bash'
-            echo "curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=${{ steps.resolve.outputs.tag }} bash"
+            echo "$cmd"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### 🐳 Test this PR's Docker images (tag \`$tag\`)"
+            echo ""
+            echo '```bash'
+            echo "$cmd"
+            echo '```'
+          } | gh pr comment ${{ github.event.pull_request.number }} --body-file -
