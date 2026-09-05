@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/storage"
 )
 
@@ -27,6 +29,36 @@ type Feeder struct {
 	config           config.Config
 	minersStore      *config.MinersStore
 	appSettingsStore *config.AppSettingsStore
+
+	// pushStatusMu guards remotepush.Save -- every push type (sample,
+	// totals, miners config, settings config) fires concurrently via its
+	// own goroutine (see runOnce) and would otherwise race writing the
+	// same status file.
+	pushStatusMu sync.Mutex
+
+	// pushWG tracks every in-flight push goroutine (see goPush) -- runOnce
+	// itself never waits on it (a hashboard hiccup must never block local
+	// polling, see postToRemote), but tests do via WaitForPushes, so a
+	// push's async remotepush.Save can't still be writing into a temp dir
+	// t.TempDir() has already torn down by the time the test returns.
+	pushWG sync.WaitGroup
+}
+
+// goPush runs fn in a new goroutine, tracked by pushWG so tests can wait
+// for every push this runOnce cycle spawned (see WaitForPushes) without
+// runOnce itself ever blocking on network I/O to hashboard.
+func (f *Feeder) goPush(fn func()) {
+	f.pushWG.Add(1)
+	go func() {
+		defer f.pushWG.Done()
+		fn()
+	}()
+}
+
+// WaitForPushes blocks until every push goroutine spawned so far has
+// finished. Test-only: production never calls this (see goPush).
+func (f *Feeder) WaitForPushes() {
+	f.pushWG.Wait()
 }
 
 func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
@@ -112,7 +144,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		// Pushed every cycle, not only on change -- keeps the remote copy an
 		// exact mirror of what this feeder is actually running with right
 		// now, rather than trusting a mtime-based diff to never miss an edit.
-		go f.pushMinersConfigToRemote(f.config.Bitaxes)
+		f.goPush(func() { f.pushMinersConfigToRemote(f.config.Bitaxes) })
 		// Settings themselves are pushed further down, once the firmware
 		// cache below has had a chance to refresh this cycle -- otherwise
 		// firmwareCacheCheckedAt would always be one cycle stale.
@@ -171,14 +203,16 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// hashboard just uses it verbatim as its own directory name, no
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
-			go f.pushToRemote(now, key, addr, bitaxe.Hostname, string(bitaxe.Model), latestFW, payload, alerts)
+			f.goPush(func() {
+				f.pushToRemote(now, key, addr, bitaxe.Hostname, string(bitaxe.Model), latestFW, payload, alerts)
+			})
 
 			// totals.json was just (re)written by store.Append above -- push
 			// it separately from the per-poll sample so hashboard can store
 			// it verbatim, with zero computation of its own (see
 			// internal/storage.Totals for who owns the delta/reset logic).
 			totals := storage.ReadTotals(storage.TotalsPath(f.config.Storage.BitaxesDir(), key))
-			go f.pushTotalsToRemote(key, totals)
+			f.goPush(func() { f.pushTotalsToRemote(key, totals) })
 		}
 	}
 
@@ -194,7 +228,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		// Reloaded rather than reusing fwCache from above -- CheckAndCache
 		// may have just updated it on disk this cycle.
 		checkedAt := firmware.LatestCheck(firmware.LoadCache(f.config.Storage.BitaxesDir()))
-		go f.pushSettingsConfigToRemote(settingsSnapshot, checkedAt)
+		f.goPush(func() { f.pushSettingsConfigToRemote(settingsSnapshot, checkedAt) })
 	}
 }
 
@@ -379,6 +413,7 @@ func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		f.logger.Error("push: request error", "context", logCtx, "error", err)
+		f.recordPushStatus(err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -388,11 +423,39 @@ func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		f.logger.Error("push: send error", "context", logCtx, "error", err)
+		f.recordPushStatus(err)
 		return
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		f.logger.Error("push: unexpected status", "context", logCtx, "status", resp.Status)
+		f.recordPushStatus(fmt.Errorf("unexpected status %s", resp.Status))
+		return
+	}
+
+	f.recordPushStatus(nil)
+}
+
+// recordPushStatus persists the outcome of a push attempt (any of the four
+// push types, all funneled through postToRemote) to
+// remotepush.Status -- see that package for why this needs to be a file,
+// not just an in-memory field, and internal/handler.GetAppSettings for the
+// read side the Settings page's "Remote" section surfaces this through.
+func (f *Feeder) recordPushStatus(pushErr error) {
+	f.pushStatusMu.Lock()
+	defer f.pushStatusMu.Unlock()
+
+	dataDir := f.config.Storage.BitaxesDir()
+	status := remotepush.Load(dataDir)
+	status.LastAttemptAt = time.Now().UTC()
+	if pushErr != nil {
+		status.LastError = pushErr.Error()
+	} else {
+		status.LastError = ""
+		status.LastSuccessAt = status.LastAttemptAt
+	}
+	if err := remotepush.Save(dataDir, status); err != nil {
+		f.logger.Error("push: failed to persist push status", "error", err)
 	}
 }

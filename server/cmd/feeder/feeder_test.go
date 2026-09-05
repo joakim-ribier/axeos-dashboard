@@ -97,7 +97,13 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		Remote: config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
 	}
 
-	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+	feeder := NewFeeder(testLogger(), cfg)
+	feeder.runOnce(context.Background())
+	// Waits for every push this cycle spawned (not just the sample push
+	// asserted on below) -- otherwise a still-running push's async
+	// remotepush.Save could still be writing into this test's t.TempDir()
+	// after the test itself returns and the dir gets torn down.
+	feeder.WaitForPushes()
 
 	// Storage is keyed by the configured MAC, not the IP.
 	latestPath := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", "latest.json")
@@ -198,7 +204,9 @@ func TestFeeder_runOnce_pushesTheSameNormalizedStorageKeyUsedLocally(t *testing.
 		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
 	}
 
-	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+	feeder := NewFeeder(testLogger(), cfg)
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes() // see the identical comment in the test above
 
 	macDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
 	if _, err := os.Stat(filepath.Join(macDir, "latest.json")); err != nil {
@@ -258,7 +266,9 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
 	}
 
-	NewFeeder(logger, cfg).runOnce(context.Background())
+	feeder := NewFeeder(logger, cfg)
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes() // see the identical comment further up this file
 
 	minerDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff")
 

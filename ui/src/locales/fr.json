@@ -273,7 +273,12 @@
         "pushUrlLabel": "URL de push",
         "apiKeyLabel": "Clé API",
         "showApiKey": "Afficher la clé API",
-        "hideApiKey": "Masquer la clé API"
+        "hideApiKey": "Masquer la clé API",
+        "pushStatus": {
+          "error": "Le dernier push vers hashboard a échoué ({{date}}) : {{error}}",
+          "lastSuccess": "Dernier push réussi vers hashboard : {{date}}",
+          "neverAttempted": "Aucun push tenté pour l'instant."
+        }
       },
       "firmware": {
         "title": "Repos firmware",

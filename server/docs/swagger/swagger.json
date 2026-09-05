@@ -969,6 +969,16 @@
                 },
                 "healthCheckInterval": {
                     "type": "string"
+                },
+                "remotePushLastAttemptAt": {
+                    "description": "RemotePushLastAttemptAt/LastSuccessAt/LastError mirror\nremotepush.Status (RFC3339, UTC) -- the feeder's own record of its\nlast attempt to push to hashboard, read back from disk since the\nfeeder is a separate OS process. All omitted together when remote\npush has never been attempted (no status file yet).",
+                    "type": "string"
+                },
+                "remotePushLastError": {
+                    "type": "string"
+                },
+                "remotePushLastSuccessAt": {
+                    "type": "string"
                 }
             }
         },

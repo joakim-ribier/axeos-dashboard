@@ -14,6 +14,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/discovery"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 )
 
 // bitaxesResponse wraps a list of miner entries the same way the managed
@@ -351,6 +352,14 @@ type appSettingsReadOnly struct {
 	// triggered a check). Lets the UI show "was this actually run" rather
 	// than just the configured TTL.
 	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
+	// RemotePushLastAttemptAt/LastSuccessAt/LastError mirror
+	// remotepush.Status (RFC3339, UTC) -- the feeder's own record of its
+	// last attempt to push to hashboard, read back from disk since the
+	// feeder is a separate OS process. All omitted together when remote
+	// push has never been attempted (no status file yet).
+	RemotePushLastAttemptAt string `json:"remotePushLastAttemptAt,omitempty"`
+	RemotePushLastSuccessAt string `json:"remotePushLastSuccessAt,omitempty"`
+	RemotePushLastError     string `json:"remotePushLastError,omitempty"`
 }
 
 // GetAppSettings returns the current settings.yml overrides plus the
@@ -469,6 +478,14 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 	if checkedAt := firmware.LatestCheck(fwCache); !checkedAt.IsZero() {
 		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
 	}
+	pushStatus := remotepush.Load(getDataRoot(cfg.Storage))
+	if !pushStatus.LastAttemptAt.IsZero() {
+		readOnly.RemotePushLastAttemptAt = pushStatus.LastAttemptAt.UTC().Format(time.RFC3339)
+	}
+	if !pushStatus.LastSuccessAt.IsZero() {
+		readOnly.RemotePushLastSuccessAt = pushStatus.LastSuccessAt.UTC().Format(time.RFC3339)
+	}
+	readOnly.RemotePushLastError = pushStatus.LastError
 	resp := appSettingsResponse{
 		AppSettingsFile: settings,
 		Defaults:        defaultAppSettings(),

@@ -490,6 +490,51 @@ export const AppSettingsSection = ({
                 {t("settingsPage.appSettings.remote.title")}
               </Typography>
             </Box>
+            {data?.remote.pushURL && (
+              <Stack spacing={1} sx={{ mb: 2 }}>
+                {data.readOnly.remotePushLastError ? (
+                  <Alert severity="warning">
+                    {t("settingsPage.appSettings.remote.pushStatus.error", {
+                      date: data.readOnly.remotePushLastAttemptAt
+                        ? formatTimestamp(data.readOnly.remotePushLastAttemptAt)
+                        : "?",
+                      error: data.readOnly.remotePushLastError,
+                    })}
+                  </Alert>
+                ) : data.readOnly.remotePushLastSuccessAt ? (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        now !== null &&
+                        isStale(
+                          now,
+                          data.readOnly.remotePushLastSuccessAt,
+                          data.readOnly.feederInterval,
+                        )
+                          ? "warning.main"
+                          : "success.main",
+                    }}
+                  >
+                    {t(
+                      "settingsPage.appSettings.remote.pushStatus.lastSuccess",
+                      {
+                        date: formatTimestamp(
+                          data.readOnly.remotePushLastSuccessAt,
+                        ),
+                      },
+                    )}
+                  </Typography>
+                ) : (
+                  <Typography variant="caption" color="text.disabled">
+                    {t(
+                      "settingsPage.appSettings.remote.pushStatus.neverAttempted",
+                    )}
+                  </Typography>
+                )}
+              </Stack>
+            )}
             <Stack spacing={2}>
               <TextField
                 size="small"

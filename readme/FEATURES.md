@@ -171,11 +171,17 @@ page, read-only, at `/{boardId}/settings` — see
   remote, instant save on adding or removing a pool) rather than one
   global Save. Well-known pool dashboards and firmware repo URLs are
   built into the binary, shown read-only next to the editable custom-pool
-  list; firmware repos aren't overridable from this UI at all. A last
-  section shows process-launch settings that genuinely need a restart to
-  change (`feeder.interval`, `healthCheck.interval`, `firmware.cacheTTL`),
-  each with an at-a-glance, color-coded last-run indicator so a stuck
-  feeder or health-check loop is visible without digging through logs.
+  list; firmware repos aren't overridable from this UI at all. Once a
+  push URL is set, the Remote section also shows whether pushing to
+  hashboard is actually working: a warning banner with the error message
+  if the last attempt failed (e.g. hashboard unreachable), otherwise a
+  color-coded "last successful push" timestamp -- the feeder records this
+  to disk on every attempt (it's a separate OS process from dashboard-api,
+  so this can't just be kept in memory). A last section shows
+  process-launch settings that genuinely need a restart to change
+  (`feeder.interval`, `healthCheck.interval`, `firmware.cacheTTL`), each
+  with an at-a-glance, color-coded last-run indicator so a stuck feeder or
+  health-check loop is visible without digging through logs.
 
 **Scheduler** — per miner, add or remove cron-based automatic jobs: switch
 to primary, switch to fallback, or restart (e.g. "switch to fallback every

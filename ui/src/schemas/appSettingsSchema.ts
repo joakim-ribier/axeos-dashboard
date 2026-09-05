@@ -37,6 +37,12 @@ export const appSettingsReadOnlySchema = z.object({
   // Most recent firmware-repo check across every model, RFC3339 -- absent
   // if none has ever run yet (fresh install).
   firmwareCacheCheckedAt: z.string().optional(),
+  // The feeder's own record of its last attempt to push to hashboard
+  // (see server/internal/remotepush) -- all three absent together if
+  // remote push has never been attempted.
+  remotePushLastAttemptAt: z.string().optional(),
+  remotePushLastSuccessAt: z.string().optional(),
+  remotePushLastError: z.string().optional(),
 });
 
 // The built-in registry (server/internal/config/defaults.go) shown
