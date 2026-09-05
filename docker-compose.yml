@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: docker/services.Dockerfile
-    image: ghcr.io/joakim-ribier/axeos-dashboard/services:latest
+    image: ghcr.io/joakim-ribier/axeos-dashboard/services:${IMAGE_TAG:-latest}
     volumes:
       - ./config:/config
       - ./data:/data
@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: docker/dashboard.Dockerfile
-    image: ghcr.io/joakim-ribier/axeos-dashboard/dashboard:latest
+    image: ghcr.io/joakim-ribier/axeos-dashboard/dashboard:${IMAGE_TAG:-latest}
     ports:
       # Random free host port by default (0) -- so nobody hits a conflict
       # just running `docker compose up`. A real deployment wants a fixed,

@@ -6,6 +6,11 @@
 # Safe to re-run: it never overwrites an existing config/dashboard.yml, and
 # re-running it later is how you update (docker compose pull grabs the
 # newer "latest" image).
+#
+# Pass IMAGE_TAG to pin a specific build instead of "latest" -- e.g. to
+# test a PR's images (tagged sha-<short-sha>, built when the
+# "test-integration" label is added to it):
+#   curl -fsSL .../docker-install.sh | IMAGE_TAG=sha-3e09149 bash
 set -e
 
 mkdir -p axeos-dashboard && cd axeos-dashboard
@@ -15,6 +20,10 @@ if [ ! -f config/dashboard.yml ]; then
 fi
 if [ ! -f .env ]; then
   echo "HTTP_PORT=80" > .env
+fi
+if [ -n "${IMAGE_TAG:-}" ]; then
+  sed -i.bak "/^IMAGE_TAG=/d" .env && rm -f .env.bak
+  echo "IMAGE_TAG=$IMAGE_TAG" >> .env
 fi
 docker compose pull
 docker compose up -d
