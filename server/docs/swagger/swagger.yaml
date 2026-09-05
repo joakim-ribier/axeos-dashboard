@@ -196,18 +196,21 @@ definitions:
         type: string
       healthCheckInterval:
         type: string
-      remotePushLastAttemptAt:
+      remotePushMinersConfig:
+        allOf:
+        - $ref: '#/definitions/handler.remotePushEndpointStatus'
         description: |-
-          RemotePushLastAttemptAt/LastSuccessAt/LastError mirror
-          remotepush.Status (RFC3339, UTC) -- the feeder's own record of its
-          last attempt to push to hashboard, read back from disk since the
-          feeder is a separate OS process. All omitted together when remote
-          push has never been attempted (no status file yet).
-        type: string
-      remotePushLastError:
-        type: string
-      remotePushLastSuccessAt:
-        type: string
+          RemotePushMinersConfig/RemotePushSettingsConfig mirror
+          remotepush.Status's two independently-tracked config push attempts
+          (RFC3339, UTC) -- the feeder's own record of its last attempt to
+          push each config endpoint to hashboard, read back from disk since
+          the feeder is a separate OS process. Kept separate rather than
+          merged into one field so the Settings page can show both endpoints'
+          health at once: one succeeding must never hide the other currently
+          failing (see remotepush.Status). Each is its zero value when that
+          endpoint has never been attempted (no status file yet).
+      remotePushSettingsConfig:
+        $ref: '#/definitions/handler.remotePushEndpointStatus'
     type: object
   handler.appSettingsResponse:
     properties:
@@ -233,6 +236,15 @@ definitions:
           $ref: '#/definitions/config.Bitaxe'
         type: array
       lastUpdated:
+        type: string
+    type: object
+  handler.remotePushEndpointStatus:
+    properties:
+      lastAttemptAt:
+        type: string
+      lastError:
+        type: string
+      lastSuccessAt:
         type: string
     type: object
   model.Alert:

@@ -352,14 +352,35 @@ type appSettingsReadOnly struct {
 	// triggered a check). Lets the UI show "was this actually run" rather
 	// than just the configured TTL.
 	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
-	// RemotePushLastAttemptAt/LastSuccessAt/LastError mirror
-	// remotepush.Status (RFC3339, UTC) -- the feeder's own record of its
-	// last attempt to push to hashboard, read back from disk since the
-	// feeder is a separate OS process. All omitted together when remote
-	// push has never been attempted (no status file yet).
-	RemotePushLastAttemptAt string `json:"remotePushLastAttemptAt,omitempty"`
-	RemotePushLastSuccessAt string `json:"remotePushLastSuccessAt,omitempty"`
-	RemotePushLastError     string `json:"remotePushLastError,omitempty"`
+	// RemotePushMinersConfig/RemotePushSettingsConfig mirror
+	// remotepush.Status's two independently-tracked config push attempts
+	// (RFC3339, UTC) -- the feeder's own record of its last attempt to
+	// push each config endpoint to hashboard, read back from disk since
+	// the feeder is a separate OS process. Kept separate rather than
+	// merged into one field so the Settings page can show both endpoints'
+	// health at once: one succeeding must never hide the other currently
+	// failing (see remotepush.Status). Each is its zero value when that
+	// endpoint has never been attempted (no status file yet).
+	RemotePushMinersConfig   remotePushEndpointStatus `json:"remotePushMinersConfig"`
+	RemotePushSettingsConfig remotePushEndpointStatus `json:"remotePushSettingsConfig"`
+}
+
+type remotePushEndpointStatus struct {
+	LastAttemptAt string `json:"lastAttemptAt,omitempty"`
+	LastSuccessAt string `json:"lastSuccessAt,omitempty"`
+	LastError     string `json:"lastError,omitempty"`
+}
+
+func toRemotePushEndpointStatus(a remotepush.Attempt) remotePushEndpointStatus {
+	var s remotePushEndpointStatus
+	if !a.LastAttemptAt.IsZero() {
+		s.LastAttemptAt = a.LastAttemptAt.UTC().Format(time.RFC3339)
+	}
+	if !a.LastSuccessAt.IsZero() {
+		s.LastSuccessAt = a.LastSuccessAt.UTC().Format(time.RFC3339)
+	}
+	s.LastError = a.LastError
+	return s
 }
 
 // GetAppSettings returns the current settings.yml overrides plus the
@@ -479,13 +500,8 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
 	}
 	pushStatus := remotepush.Load(getDataRoot(cfg.Storage))
-	if !pushStatus.LastAttemptAt.IsZero() {
-		readOnly.RemotePushLastAttemptAt = pushStatus.LastAttemptAt.UTC().Format(time.RFC3339)
-	}
-	if !pushStatus.LastSuccessAt.IsZero() {
-		readOnly.RemotePushLastSuccessAt = pushStatus.LastSuccessAt.UTC().Format(time.RFC3339)
-	}
-	readOnly.RemotePushLastError = pushStatus.LastError
+	readOnly.RemotePushMinersConfig = toRemotePushEndpointStatus(pushStatus.MinersConfig)
+	readOnly.RemotePushSettingsConfig = toRemotePushEndpointStatus(pushStatus.SettingsConfig)
 	resp := appSettingsResponse{
 		AppSettingsFile: settings,
 		Defaults:        defaultAppSettings(),

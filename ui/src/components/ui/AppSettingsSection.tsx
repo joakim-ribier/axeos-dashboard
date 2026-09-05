@@ -490,51 +490,6 @@ export const AppSettingsSection = ({
                 {t("settingsPage.appSettings.remote.title")}
               </Typography>
             </Box>
-            {data?.remote.pushURL && (
-              <Stack spacing={1} sx={{ mb: 2 }}>
-                {data.readOnly.remotePushLastError ? (
-                  <Alert severity="warning">
-                    {t("settingsPage.appSettings.remote.pushStatus.error", {
-                      date: data.readOnly.remotePushLastAttemptAt
-                        ? formatTimestamp(data.readOnly.remotePushLastAttemptAt)
-                        : "?",
-                      error: data.readOnly.remotePushLastError,
-                    })}
-                  </Alert>
-                ) : data.readOnly.remotePushLastSuccessAt ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontFamily: "monospace",
-                      color:
-                        now !== null &&
-                        isStale(
-                          now,
-                          data.readOnly.remotePushLastSuccessAt,
-                          data.readOnly.feederInterval,
-                        )
-                          ? "warning.main"
-                          : "success.main",
-                    }}
-                  >
-                    {t(
-                      "settingsPage.appSettings.remote.pushStatus.lastSuccess",
-                      {
-                        date: formatTimestamp(
-                          data.readOnly.remotePushLastSuccessAt,
-                        ),
-                      },
-                    )}
-                  </Typography>
-                ) : (
-                  <Typography variant="caption" color="text.disabled">
-                    {t(
-                      "settingsPage.appSettings.remote.pushStatus.neverAttempted",
-                    )}
-                  </Typography>
-                )}
-              </Stack>
-            )}
             <Stack spacing={2}>
               <TextField
                 size="small"
@@ -597,6 +552,77 @@ export const AppSettingsSection = ({
                 ? t("settingsPage.appSettings.saving")
                 : t("settingsPage.appSettings.save")}
             </Button>
+            {data?.remote.pushURL && (
+              <Stack spacing={1} sx={{ mt: 2 }}>
+                {(
+                  [
+                    [
+                      "minersConfig",
+                      data.readOnly.remotePushMinersConfig,
+                    ] as const,
+                    [
+                      "settingsConfig",
+                      data.readOnly.remotePushSettingsConfig,
+                    ] as const,
+                  ] as const
+                ).map(([endpoint, status]) => {
+                  const label = t(
+                    `settingsPage.appSettings.remote.pushStatus.endpoint.${endpoint}`,
+                  );
+                  if (status.lastError) {
+                    return (
+                      <Alert key={endpoint} severity="warning">
+                        <strong>{label}</strong> —{" "}
+                        {t("settingsPage.appSettings.remote.pushStatus.error", {
+                          date: status.lastAttemptAt
+                            ? formatTimestamp(status.lastAttemptAt)
+                            : "?",
+                          error: status.lastError,
+                        })}
+                      </Alert>
+                    );
+                  }
+                  if (status.lastSuccessAt) {
+                    return (
+                      <Typography
+                        key={endpoint}
+                        variant="caption"
+                        sx={{
+                          fontFamily: "monospace",
+                          color:
+                            now !== null &&
+                            isStale(
+                              now,
+                              status.lastSuccessAt,
+                              data.readOnly.feederInterval,
+                            )
+                              ? "warning.main"
+                              : "success.main",
+                        }}
+                      >
+                        <strong>{label}</strong> —{" "}
+                        {t(
+                          "settingsPage.appSettings.remote.pushStatus.lastSuccess",
+                          { date: formatTimestamp(status.lastSuccessAt) },
+                        )}
+                      </Typography>
+                    );
+                  }
+                  return (
+                    <Typography
+                      key={endpoint}
+                      variant="caption"
+                      color="text.disabled"
+                    >
+                      <strong>{label}</strong> —{" "}
+                      {t(
+                        "settingsPage.appSettings.remote.pushStatus.neverAttempted",
+                      )}
+                    </Typography>
+                  );
+                })}
+              </Stack>
+            )}
           </Box>
         </Writable>
 

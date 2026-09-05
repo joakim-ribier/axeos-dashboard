@@ -285,7 +285,11 @@
         "pushStatus": {
           "error": "Last push to hashboard failed ({{date}}): {{error}}",
           "lastSuccess": "Last successful push to hashboard: {{date}}",
-          "neverAttempted": "No push attempted yet."
+          "neverAttempted": "No push attempted yet.",
+          "endpoint": {
+            "minersConfig": "Miners list",
+            "settingsConfig": "Settings"
+          }
         }
       },
       "firmware": {

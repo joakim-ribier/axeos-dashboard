@@ -330,7 +330,7 @@ func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, model, la
 		f.logger.Error("push: marshal error", "ip", ip, "error", err)
 		return
 	}
-	f.postToRemote(f.config.Remote.PushURL, body, "sample "+ip)
+	_ = f.postToRemote("", body, "sample "+ip)
 }
 
 // pushTotals is the body sent to hashboard's totals endpoint -- the storage
@@ -348,7 +348,7 @@ func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
 		f.logger.Error("push: totals marshal error", "mac", storageKey, "error", err)
 		return
 	}
-	f.postToRemote(f.config.Remote.PushURL+"/totals", body, "totals "+storageKey)
+	_ = f.postToRemote("/totals", body, "totals "+storageKey)
 }
 
 // configMinersPush is the body sent to hashboard's miners-config endpoint --
@@ -365,7 +365,7 @@ func (f *Feeder) pushMinersConfigToRemote(bitaxes []config.Bitaxe) {
 		f.logger.Error("push: miners config marshal error", "error", err)
 		return
 	}
-	f.postToRemote(f.config.Remote.PushURL+"/config/miners", body, "config/miners")
+	f.recordPushStatus(remotepush.KindMinersConfig, f.postToRemote("/config/miners", body, "config/miners"))
 }
 
 // configSettingsPush mirrors AppSettingsFile minus Remote -- the push
@@ -402,19 +402,27 @@ func (f *Feeder) pushSettingsConfigToRemote(settings config.AppSettingsFile, fir
 		f.logger.Error("push: settings config marshal error", "error", err)
 		return
 	}
-	f.postToRemote(f.config.Remote.PushURL+"/config/settings", body, "config/settings")
+	f.recordPushStatus(remotepush.KindSettingsConfig, f.postToRemote("/config/settings", body, "config/settings"))
 }
 
-// postToRemote sends body as an authenticated JSON POST to hashboard.
-// Shared by pushToRemote and pushTotalsToRemote -- same auth, same timeout,
-// same fire-and-forget error handling (logged, never fatal: a hashboard
-// hiccup must never affect local polling).
-func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
+// postToRemote sends body as an authenticated JSON POST to hashboard and
+// returns the resulting error, if any (nil on 2xx). Shared by all four push
+// types -- same auth, same timeout, same fire-and-forget error handling
+// (logged, never fatal: a hashboard hiccup must never affect local
+// polling) -- but it does NOT itself call recordPushStatus: only the two
+// config pushes do that (see their call sites), so a same-cycle successful
+// sample/totals push can no longer race the status file and paper over a
+// failing config push (that's the bug the Settings page's "Remote" section
+// exists to surface -- see remotepush.Status).
+// path is relative to f.config.Remote.PushURL -- only that path suffix is
+// ever logged/persisted (never the full URL), so a hashboard.live URL
+// doesn't get repeated in full on every single log line and error message.
+func (f *Feeder) postToRemote(path string, body []byte, logCtx string) error {
+	url := f.config.Remote.PushURL + path
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		f.logger.Error("push: request error", "context", logCtx, "error", err)
-		f.recordPushStatus(err)
-		return
+		f.logger.Error("push: request error", "context", logCtx, "path", path, "error", err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", f.config.Remote.APIKey))
@@ -422,39 +430,50 @@ func (f *Feeder) postToRemote(url string, body []byte, logCtx string) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		f.logger.Error("push: send error", "context", logCtx, "error", err)
-		f.recordPushStatus(err)
-		return
+		f.logger.Error("push: send error", "context", logCtx, "path", path, "error", err)
+		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		f.logger.Error("push: unexpected status", "context", logCtx, "status", resp.Status)
-		f.recordPushStatus(fmt.Errorf("unexpected status %s", resp.Status))
-		return
+		f.logger.Error("push: unexpected status", "context", logCtx, "path", path, "status", resp.Status)
+		return fmt.Errorf("unexpected status %s (%s)", resp.Status, path)
 	}
 
-	f.recordPushStatus(nil)
+	return nil
 }
 
-// recordPushStatus persists the outcome of a push attempt (any of the four
-// push types, all funneled through postToRemote) to
-// remotepush.Status -- see that package for why this needs to be a file,
-// not just an in-memory field, and internal/handler.GetAppSettings for the
-// read side the Settings page's "Remote" section surfaces this through.
-func (f *Feeder) recordPushStatus(pushErr error) {
+// recordPushStatus persists the outcome of one config push (miners or
+// settings, per kind) to remotepush.Status -- see that package for why
+// this needs to be a file, not just an in-memory field, and
+// internal/handler.GetAppSettings for the read side the Settings page's
+// "Remote" section surfaces this through. Deliberately not called for the
+// sample/totals pushes: those are a separate, older, always-on concern
+// (live miner data), and mixing their status in would let a successful
+// sample push mask a genuinely failing config push (see postToRemote).
+// kind is tracked separately per config endpoint, not merged into one
+// shared field, so a successful miners-config push can't overwrite a
+// still-failing settings-config push's status or vice versa -- they run
+// as independent goroutines at different points in the cycle (see
+// runOnce) and would otherwise race the same field. The Settings page's
+// "Remote" section shows both endpoints' status side by side.
+func (f *Feeder) recordPushStatus(kind remotepush.Kind, pushErr error) {
 	f.pushStatusMu.Lock()
 	defer f.pushStatusMu.Unlock()
 
 	dataDir := f.config.Storage.BitaxesDir()
 	status := remotepush.Load(dataDir)
-	status.LastAttemptAt = time.Now().UTC()
+
+	attempt := status.Attempt(kind)
+	attempt.LastAttemptAt = time.Now().UTC()
 	if pushErr != nil {
-		status.LastError = pushErr.Error()
+		attempt.LastError = pushErr.Error()
 	} else {
-		status.LastError = ""
-		status.LastSuccessAt = status.LastAttemptAt
+		attempt.LastError = ""
+		attempt.LastSuccessAt = attempt.LastAttemptAt
 	}
+	status.SetAttempt(kind, attempt)
+
 	if err := remotepush.Save(dataDir, status); err != nil {
 		f.logger.Error("push: failed to persist push status", "error", err)
 	}
