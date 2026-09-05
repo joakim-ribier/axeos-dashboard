@@ -431,20 +431,15 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
             {versionStatus === "upToDate" && (
               <Tooltip title={t("sidebar.versionUpToDate")} arrow>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                    color: "text.disabled",
-                    opacity: 0.6,
-                  }}
-                >
-                  <CheckCircleOutlineIcon sx={{ fontSize: 12 }} />
-                  <Typography variant="caption" sx={{ fontSize: "0.65rem" }}>
-                    {t("sidebar.versionUpToDate")}
-                  </Typography>
-                </Box>
+                <Chip
+                  icon={
+                    <CheckCircleOutlineIcon sx={{ fontSize: "16px !important" }} />
+                  }
+                  label={t("sidebar.versionUpToDate")}
+                  size="small"
+                  color="success"
+                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                />
               </Tooltip>
             )}
             {versionStatus === "updateAvailable" && releaseUrl && (
