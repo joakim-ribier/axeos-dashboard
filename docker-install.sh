@@ -14,9 +14,9 @@
 set -e
 
 mkdir -p axeos-dashboard && cd axeos-dashboard
-curl -O https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-compose.yml
+curl -fO https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-compose.yml
 if [ ! -f config/dashboard.yml ]; then
-  curl --create-dirs -o config/dashboard.yml https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker/dashboard.yml.example
+  curl -f --create-dirs -o config/dashboard.yml https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker/dashboard.yml.example
 fi
 if [ ! -f .env ]; then
   echo "HTTP_PORT=80" > .env
