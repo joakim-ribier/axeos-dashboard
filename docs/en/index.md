@@ -3,6 +3,7 @@ title: Home
 layout: home
 permalink: /en/
 nav_exclude: true
+lang: en
 ---
 
 # axeos-dashboard
