@@ -118,6 +118,24 @@ every commit.
   presets like "every N minutes/hours" or "at a specific time on selected
   weekdays" that generate the cron string for you -- would remove that
   failure mode while still allowing the raw expression for advanced cases.
+- **Direct link to hashboard.live/me in the remote settings**: the
+  "Remote" section of `/settings` should link straight to
+  `hashboard.live/me` instead of only exposing the push URL/API key
+  fields.
+- **Onboarding banner on first connection with no miners configured**: on
+  `/settings`, when there's no miner in the managed config yet, show an
+  orange banner pointing the user to the "auto detection" section
+  further down the page to add one. The "Configured miners" section can
+  stay in place, just empty, rather than being hidden.
+
+### Documentation
+
+- **User manual**: write a user manual, possibly as the GitHub repo's
+  wiki section.
+
+### Release
+
+- **Cut a 1.0**: first stable tagged release.
 
 ## Known bugs
 
