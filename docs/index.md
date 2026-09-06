@@ -13,3 +13,5 @@ Raspberry Pi ou toute machine de votre réseau local.
 Aucune authentification requise — usage réseau local uniquement.
 
 [Commencer avec l'installation](installation){: .btn .btn-primary }
+
+![Aperçu du dashboard axeos-dashboard]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})

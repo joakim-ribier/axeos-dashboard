@@ -12,3 +12,5 @@ Local dashboard and controller for Bitcoin ASIC miners compatible with
 Raspberry Pi or any machine on your local network.
 
 No authentication required — internal LAN use only.
+
+![axeos-dashboard preview]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})
