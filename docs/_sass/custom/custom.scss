@@ -1,13 +1,35 @@
+// Dashboard brand color (see ui/src/App.tsx theme -- primary #00b4ff)
+$brand-color: #00b4ff;
+
 .lang-switch {
-  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid $brand-color;
+  border-radius: 999px;
   white-space: nowrap;
 
-  a {
-    font-weight: 600;
+  .lang-switch-current {
+    color: $brand-color;
+    font-weight: 700;
+  }
+
+  .lang-switch-sep {
+    opacity: 0.35;
+  }
+
+  .lang-switch-link {
+    color: $body-text-color;
+
+    &:hover {
+      color: $brand-color;
+    }
   }
 
   .lang-switch-disabled {
-    color: $grey-dk-000;
+    opacity: 0.35;
     cursor: default;
   }
 }

@@ -1,11 +1,13 @@
 {% if page.path contains "en/" %}
   {% assign mirror_path = page.path | remove_first: "en/" %}
   {% assign lang_home_path = "index.md" %}
-  {% assign switch_label = "🇫🇷 Français" %}
+  {% assign current_label = "🇬🇧 EN" %}
+  {% assign other_label = "🇫🇷 FR" %}
 {% else %}
   {% assign mirror_path = "en/" | append: page.path %}
   {% assign lang_home_path = "en/index.md" %}
-  {% assign switch_label = "🇬🇧 English" %}
+  {% assign current_label = "🇫🇷 FR" %}
+  {% assign other_label = "🇬🇧 EN" %}
 {% endif %}
 
 {% assign mirror_page = site.pages | where: "path", mirror_path | first %}
@@ -14,9 +16,11 @@
 {% endunless %}
 
 <div class="lang-switch">
+  <span class="lang-switch-current">{{ current_label }}</span>
+  <span class="lang-switch-sep">/</span>
   {% if mirror_page %}
-    <a href="{{ mirror_page.url | relative_url }}">{{ switch_label }}</a>
+    <a href="{{ mirror_page.url | relative_url }}" class="lang-switch-link">{{ other_label }}</a>
   {% else %}
-    <span class="lang-switch-disabled">{{ switch_label }} — à venir</span>
+    <span class="lang-switch-disabled" title="Traduction à venir">{{ other_label }}</span>
   {% endif %}
 </div>
