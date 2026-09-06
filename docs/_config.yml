@@ -1,0 +1,13 @@
+title: axeos-dashboard
+description: Documentation de axeos-dashboard
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+
+search_enabled: true
+color_scheme: dark
+
+aux_links:
+  "axeos-dashboard sur GitHub":
+    - "https://github.com/joakim-ribier/axeos-dashboard"
