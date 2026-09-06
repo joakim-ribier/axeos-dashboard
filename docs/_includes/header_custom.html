@@ -1,0 +1,22 @@
+{% if page.path contains "en/" %}
+  {% assign mirror_path = page.path | remove_first: "en/" %}
+  {% assign lang_home_path = "index.md" %}
+  {% assign switch_label = "🇫🇷 Français" %}
+{% else %}
+  {% assign mirror_path = "en/" | append: page.path %}
+  {% assign lang_home_path = "en/index.md" %}
+  {% assign switch_label = "🇬🇧 English" %}
+{% endif %}
+
+{% assign mirror_page = site.pages | where: "path", mirror_path | first %}
+{% unless mirror_page %}
+  {% assign mirror_page = site.pages | where: "path", lang_home_path | first %}
+{% endunless %}
+
+<div class="lang-switch">
+  {% if mirror_page %}
+    <a href="{{ mirror_page.url | relative_url }}">{{ switch_label }}</a>
+  {% else %}
+    <span class="lang-switch-disabled">{{ switch_label }} — à venir</span>
+  {% endif %}
+</div>

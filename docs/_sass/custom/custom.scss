@@ -1,0 +1,13 @@
+.lang-switch {
+  font-size: 0.8rem;
+  white-space: nowrap;
+
+  a {
+    font-weight: 600;
+  }
+
+  .lang-switch-disabled {
+    color: $grey-dk-000;
+    cursor: default;
+  }
+}
