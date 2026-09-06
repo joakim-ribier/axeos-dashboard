@@ -40,6 +40,11 @@ body {
   background-color: $dashboard-bg;
 }
 
+#main-content {
+  font-family: $dashboard-font;
+  color: $dashboard-text-primary;
+}
+
 // The theme boxes the sidebar title into a fixed-height header (3.75rem)
 // sized for a short plain-text title -- our longer brand mark needs to be
 // allowed to wrap onto two lines and the header to grow, otherwise it
