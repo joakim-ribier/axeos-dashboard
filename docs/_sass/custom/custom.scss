@@ -105,7 +105,7 @@ body {
   color: $dashboard-brand;
 }
 
-.main-content a {
+.main-content a:not(.btn) {
   color: $dashboard-brand;
 
   &:hover {
