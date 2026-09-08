@@ -8,6 +8,16 @@ plugins:
 search_enabled: true
 color_scheme: dark
 
+# Every page gets the theme's normal docs layout unless it overrides this
+# itself (the Home pages do, with `layout: home`) -- without this, a page
+# with no `layout:` in its front matter renders with no theme chrome at
+# all (no CSS, no sidebar), as installation.md did.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
 callouts:
   note:
     color: yellow

@@ -1,0 +1,44 @@
+{%- comment -%}
+  Renders one top-level nav <li> (with its optional anchor subnav) for a
+  single page. Factored out of site_nav.html so it can be called both for
+  ungrouped pages and for pages nested inside a "group" wrapper.
+  Usage: {% include components/nav_item.html node=some_page %}
+
+  Only the first level (a page's own subnav) starts pre-expanded (active
+  class), so the whole top level is open by default instead of only the
+  current page's own item (the theme's own built-in behaviour). A second
+  level nested under one of those items (e.g. Docker's own subnav) starts
+  collapsed and is toggled by hand, via the arrow or the label click
+  handled in head_custom.html.
+{%- endcomment -%}
+<li class="nav-list-item{% if include.node.subnav %} active{% endif %}">
+  {%- if include.node.subnav -%}
+    <button class="nav-list-expander btn-reset" aria-label="{{ include.node.title }} submenu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+    </button>
+  {%- endif -%}
+  <a href="{{ include.node.url | relative_url }}" class="nav-list-link">{{ include.node.title }}</a>
+  {%- if include.node.subnav -%}
+    <ul class="nav-list">
+      {%- for item in include.node.subnav -%}
+        <li class="nav-list-item">
+          {%- if item.subnav -%}
+            <button class="nav-list-expander btn-reset" aria-label="{{ item.title }} submenu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
+            </button>
+          {%- endif -%}
+          <a href="{{ include.node.url | relative_url }}#{{ item.anchor }}" class="nav-list-link">{{ item.title }}</a>
+          {%- if item.subnav -%}
+            <ul class="nav-list">
+              {%- for sub in item.subnav -%}
+                <li class="nav-list-item">
+                  <a href="{{ include.node.url | relative_url }}#{{ sub.anchor }}" class="nav-list-link">{{ sub.title }}</a>
+                </li>
+              {%- endfor -%}
+            </ul>
+          {%- endif -%}
+        </li>
+      {%- endfor -%}
+    </ul>
+  {%- endif -%}
+</li>

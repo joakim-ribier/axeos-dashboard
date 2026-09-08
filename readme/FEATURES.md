@@ -117,9 +117,10 @@ version old enough to predate this field.
 
 **Header**
 
-- Display name (the miner's `alias` if one is set in `miners.yml`,
-  otherwise its hostname — see [Configuration](CONFIGURATION.md)), or IP
-  as a clickable link when neither is set → opens device web UI
+- Display name (the miner's `alias` if one is set, otherwise its
+  hostname — see the
+  [Configuration page](https://joakim-ribier.github.io/axeos-dashboard/configuration.html#mineurs-configures)),
+  or IP as a clickable link when neither is set → opens device web UI
 - Device model chip + IP link (when a display name is shown)
 - Last poll timestamp
 - Health dot: green (alive) · red (unreachable) · grey (first check pending) · orange (config error — see below)
@@ -162,13 +163,13 @@ lifetime totals (uptime + shares accepted) that survive device reboots — see
 **Config-mismatch banner** — if a miner's configured `mac:` doesn't match what
 the device itself reports (wrong device at that IP, or a config typo), an
 amber banner appears under the card's header with the error and a
-copy-to-clipboard button, and the health dot turns orange. See the `mac:`
-mismatch check in [Configuration](CONFIGURATION.md).
+copy-to-clipboard button, and the health dot turns orange.
 
 ### Settings (`/settings`)
 
-Local mode manages the managed `miners.yml` and `settings.yml` files (see
-[Configuration](CONFIGURATION.md)). Four sections. Remote mode gets the same
+Local mode manages the managed `miners.yml` and `settings.yml` files —
+see the [Configuration page](https://joakim-ribier.github.io/axeos-dashboard/configuration.html)
+of the user documentation. Four sections. Remote mode gets the same
 page, read-only, at `/{boardId}/settings` — see
 [Remote mode](#remote-mode-boardid) below.
 

@@ -42,5 +42,10 @@ resources/settings.yml.bak
 # Docker local-testing bind mounts (docker-compose.yml's ./config, ./data)
 /config/
 /storage/
+# docker-build-dev.sh's own bind mounts + .env (see docker/docker-compose.dev.yml)
+/axeos-dashboard/
 *.log
 server/feeder
+
+# Jekyll build output (docs/ GitHub Pages site)
+docs/_site/

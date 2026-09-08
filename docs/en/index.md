@@ -4,6 +4,9 @@ layout: home
 permalink: /en/
 nav_exclude: true
 lang: en
+subnav:
+  - title: Supported models
+    anchor: supported-models
 ---
 
 # axeos-dashboard
@@ -29,13 +32,15 @@ No authentication required — internal LAN use only.
 
 ## Key features
 
-### Dashboard
+### Home
 
 - Overview of all your miners: hashrate, temperature, fans, shares,
   uptime...
 - Lifetime totals (uptime + accepted shares)
 - Primary and fallback pool view, one click away
 - Switch pool and restart on demand
+- New firmware version detection
+- New dashboard version detection
 
 ### Settings
 
@@ -47,3 +52,13 @@ No authentication required — internal LAN use only.
 ### Alerts
 
 - Dedicated alerts page (temperature, fan, offline, config, firmware...)
+
+---
+
+## Supported models
+{: #supported-models }
+
+Tested firmware, up to these versions:
+
+- **Bitaxe Gamma** — [v2.15.1](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.1){:target="_blank" rel="noopener noreferrer"}
+- **NerdQAxe++** — [V1.0.37.3-LTS](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.0.37.3-LTS){:target="_blank" rel="noopener noreferrer"}

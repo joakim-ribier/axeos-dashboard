@@ -1,6 +1,7 @@
 // src/components/layout/TopBar.tsx
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 import MenuIcon from "@mui/icons-material/Menu";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SyncIcon from "@mui/icons-material/Sync";
@@ -30,6 +31,28 @@ import {
 interface TopBarProps {
   onMenuClick: () => void;
 }
+
+const DOCS_URL = "https://joakim-ribier.github.io/axeos-dashboard/";
+
+const DocsLink: React.FC = () => {
+  const { t } = useTranslation();
+  const label = t("topBar.docs");
+
+  return (
+    <Tooltip title={label}>
+      <IconButton
+        component="a"
+        href={DOCS_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        sx={{ color: "text.secondary" }}
+        aria-label={label}
+      >
+        <MenuBookIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+};
 
 // Passive status indicator, not a control -- the actual on/off toggle lives
 // in the Sidebar. Placed next to the bell since it explains whether the
@@ -240,6 +263,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
       </IconButton>
 
       <Box sx={{ flexGrow: 1 }} />
+
+      <DocsLink />
 
       <AutoRefreshIndicator />
 

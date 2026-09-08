@@ -4,8 +4,11 @@
 [![Latest Release](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/latest.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](server/go.mod)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-00b4ff)](https://joakim-ribier.github.io/axeos-dashboard/)
 
 Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-compatible Bitcoin ASIC miners — designed to run on a Raspberry Pi or any machine on your local network.
+
+Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
 **Easy to use** — one line, everything else configured from the UI:
 
@@ -13,24 +16,10 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
 ```
 
-Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
-
-**Supported models (tested firmware):** Bitaxe Gamma (up to `v2.15.1`) · NerdQAxe++ (up to `V1.0.37.3-LTS`)
-
-**Key features:**
-- Real-time hashrate, temperature, fan speed, shares and uptime per miner
-- Persistent lifetime totals (uptime + shares accepted) per miner that survive device reboots, shown alongside the live session values
-- Server-computed alerts (temp/fan thresholds, offline, config mismatch, firmware update) — a live notification bell plus a paginated, filterable, day-scoped alert history page (grouped into episodes, not one row per poll)
-- Pool switching (primary ↔ fallback), manual or on a cron-based schedule
-- Firmware update detection against GitHub releases, per device model
-- Today's history chart — last hour or full day, hourly averages
-- Electricity cost estimate (daily/monthly) from your configured €/kWh rate
-- Clickable pool dashboard links (Braiins, Atlas, …), auto-resolved from the stratum user
-- Live reachability check, plus a config-mismatch warning if a device doesn't match its configured MAC
-- Optional remote view via [hashboard.live](https://hashboard.live) — check your miners from anywhere, no VPN, including a read-only view of your configured miners and app settings
-- EN / FR localization
-
-See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every screen.
+See the [user documentation](https://joakim-ribier.github.io/axeos-dashboard/)
+for supported models, tested firmware versions and the full feature
+list, or [`readme/FEATURES.md`](readme/FEATURES.md)
+for the breakdown of every screen.
 
 ---
 
@@ -38,7 +27,7 @@ See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every s
 
 | Doc | Covers |
 |-----|--------|
-| [readme/CONFIGURATION.md](readme/CONFIGURATION.md) | `dashboard.yml` / `settings.yml` / `miners.yml` — every field, full examples |
+| [User documentation](https://joakim-ribier.github.io/axeos-dashboard/) | Installation, configuration and features, EN/FR |
 | [readme/FEATURES.md](readme/FEATURES.md) | Every dashboard screen: top bar, filters, alerts, miner card, remote mode, persistent totals, firmware detection |
 | [readme/TESTING.md](readme/TESTING.md) | Running the Go/UI test suites, what CI runs |
 | [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Docker install/update, building the images yourself |
@@ -46,26 +35,13 @@ See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every s
 
 ---
 
-## Architecture
-
-```
-Bitaxe devices (HTTP)
-    ↓  poll every 2m  (GET /api/system/info)
-feeder → writes  {dataDir}/{mac}/YYYY-MM-DD.jsonl  (append)
-                 {dataDir}/{mac}/latest.json        (overwrite)
-         pushes to hashboard.live if remote.apiKey is set
-    ↓  reads latest.json
-miner-api → REST API at /api/miners/*
-    ↓  axios + TanStack Query
-React UI → display + control (restart / pool switch / WiFi)
-```
-
----
-
 ## Prerequisites
 
-The recommended setup ([Docker](#deployment), below) needs nothing but
-Docker itself installed — no Go, Node, or nginx on the machine at all.
+The recommended setup (Docker, below) needs nothing but Docker itself
+installed — no Go, Node, or nginx on the machine at all. See the
+[Architecture page](https://joakim-ribier.github.io/axeos-dashboard/#architecture)
+in the user documentation for how the feeder, dashboard API and UI fit
+together.
 
 Go and Node are only needed for local development, or to build the images
 yourself instead of pulling the prebuilt ones:
@@ -85,37 +61,21 @@ make run-dashboard-api CONFIG=resources/dashboard.yml
 make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
-To view remote miners pushed to https://hashboard.live:
-
-```bash
-make run-remote-dashboard-api  # read-only API on :8081, reads resources/remote-dashboard.yml
-make run-remote-dashboard-ui   # Vite dev server → :8081; open /{boardId} in browser
-```
-
-Config format (`dashboard.yml` / `settings.yml` / `miners.yml`) is
-documented in [readme/CONFIGURATION.md](readme/CONFIGURATION.md).
+`dashboard.yml` field reference is in the
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/installation.html#parametrage)
+of the user documentation.
 
 ---
 
 ## Deployment
 
-One line, on any machine with Docker installed (Linux, Windows, macOS, a
-NAS, a Raspberry Pi...) — no clone, no Go/Node toolchain, no manual nginx
-or systemd setup:
+Full walkthrough (Docker install, fixed port, updating) is in the
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/installation.html)
+of the user documentation.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
-```
-
-That's it — 2 prebuilt multi-arch images (CI-built on every push to
-`main`) get pulled and started; it prints which port it landed on. Open
-that in a browser, then use **Settings** to scan the LAN for miners (or
-add them by IP) — no config file to hand-write first. Re-run the same
-command later to update.
-
-**→ See [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)** for the full
-details: a fixed port instead of the random default, testing a PR's images,
-and building the images yourself instead of pulling the prebuilt ones.
+**→ See [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)** for advanced,
+dev-only topics: testing a PR's images, and building the images yourself
+instead of pulling the prebuilt ones.
 
 ---
 

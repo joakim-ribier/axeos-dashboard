@@ -30,7 +30,7 @@ func main() {
 
 	var logFile string
 	if cfg.Global.Env != "dev" {
-		logFile = filepath.Join(cfg.Storage.DataDir, "remote-dashboard.log")
+		logFile = filepath.Join(cfg.Storage.DataDir, "logs", "remote-dashboard.log")
 	}
 	logger := newLogger("remote-dashboard", logFile)
 
@@ -62,6 +62,9 @@ func newLogger(appName, logFile string) *slog.Logger {
 	var w io.Writer = os.Stdout
 	var h slog.Handler
 	if logFile != "" {
+		if err := os.MkdirAll(filepath.Dir(logFile), 0o755); err != nil {
+			log.Fatalf("cannot create log dir: %v", err)
+		}
 		f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			log.Fatalf("cannot open log file: %v", err)

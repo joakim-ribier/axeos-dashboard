@@ -175,8 +175,7 @@ see PR #3), no flag needed, nothing to keep in sync between the two
 binaries. `dashboard.yml` holds process-launch settings (read once
 at startup, no hot-reload -- shown read-only on `/settings`); electricity
 rate and remote push credentials live in `settings.yml` instead,
-editable from `/settings` without a restart -- see
-`readme/CONFIGURATION.md` for the full field list. A `bitaxes:` block
+editable from `/settings` without a restart. A `bitaxes:` block
 written directly in `dashboard.yml` is **not** read. `-miners <path>`
 still exists on the command line but is deprecated and ignored (logs a
 warning) -- kept only so an older Makefile/script/systemd unit that still

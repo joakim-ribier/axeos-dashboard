@@ -201,7 +201,8 @@
   },
   "topBar": {
     "autoRefreshOn": "Auto-refresh is on",
-    "autoRefreshOff": "Auto-refresh is off"
+    "autoRefreshOff": "Auto-refresh is off",
+    "docs": "Documentation"
   },
   "language": "Language",
   "boardLocked": {

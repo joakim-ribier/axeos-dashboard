@@ -1,0 +1,31 @@
+<script>
+/* Just the Docs auto-expands whichever nav item matches the current page
+   on load (its own built-in mechanism, via a generated #jtd-nav-activation
+   style block) -- that's what lets clicking a parent item's label
+   navigate AND land with its submenu open. But it means clicking that
+   same label again while already on that page just reloads the page,
+   which re-applies the same forced-open style -- so it never visually
+   collapses. Fix: only intercept the click (toggle instead of navigating)
+   when the link points at the page you're already on; otherwise let it
+   navigate normally so the built-in mechanism does its job on arrival.
+   Comparing pathname only (ignoring any #hash) also covers a second-level
+   item whose own href is just an anchor on the current page (e.g. Docker's
+   subnav under Installation) -- those are always "already on that page".
+   NOTE: this file is rendered onto a single line, so double-slash line
+   comments would swallow the rest of the script -- block comments only. */
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".nav-list-item > .nav-list-expander").forEach(function (btn) {
+    var link = btn.nextElementSibling;
+    if (link && link.classList.contains("nav-list-link")) {
+      link.addEventListener("click", function (e) {
+        var target = new URL(link.href, window.location.href);
+        var samePage = target.pathname === window.location.pathname;
+        if (samePage) {
+          e.preventDefault();
+          btn.ariaExpanded = btn.parentNode.classList.toggle("active");
+        }
+      });
+    }
+  });
+});
+</script>

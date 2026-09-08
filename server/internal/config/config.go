@@ -375,7 +375,7 @@ func (r RemoteConfig) Enabled() bool {
 
 // AppSettingsFile is the shape of the managed settings.yml file --
 // the operational subset of dashboard.yml's config that's editable from
-// the /settings page (see readme/CONFIGURATION.md). Everything else
+// the /settings page. Everything else
 // (feeder.interval, healthCheck.interval, firmware.cacheTTL, server.port,
 // storage.dataDir, ...) stays hand-edited-only in dashboard.yml: it's
 // either process-launch config (no hot-reload exists for it) or a

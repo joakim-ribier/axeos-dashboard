@@ -1,11 +1,30 @@
 {%- comment -%}
-  Override of the theme's own components/site_nav.html: the top-level page
-  list is filtered to the current page's language (French pages at the
-  site root have no `lang`, English pages under en/ set `lang: en`) before
-  rendering, so navigating through the sidebar keeps you in the same
-  language instead of always landing back on the French pages. Pages are
-  still rendered with all=true so English pages' own `nav_exclude: true`
-  (which keeps them out of the French nav) doesn't also hide them here.
+  Override of the theme's own components/site_nav.html. Changes from the
+  stock version:
+
+  1. The top-level page list is filtered to the current page's language
+     (French pages at the site root have no `lang`, English pages under
+     en/ set `lang: en`), so navigating through the sidebar keeps you in
+     the same language instead of always landing back on the French
+     pages.
+
+  2. The nav is hand-rendered here (rather than delegating to
+     components/nav/pages.html) so a page can define a `subnav:` front
+     matter list to get a real expandable sidebar submenu whose items are
+     anchors on that same single page, instead of Just the Docs' normal
+     parent/child pages (each a separate URL). Example:
+
+       subnav:
+         - title: Some section
+           anchor: some-section
+
+  3. A page can also set `group: Some Label` to be visually clustered
+     under a shared, non-clickable category label with other pages
+     sharing the same group -- e.g. Configuration and Dashboard both set
+     `group: Pages`. The group is always expanded (no toggle of its own).
+
+  This intentionally drops support for real nested child pages,
+  collections and external nav links -- none of which this site uses.
 {%- endcomment -%}
 
 {%- if page.lang == "en" -%}
@@ -14,60 +33,30 @@
   {%- assign nav_pages = site.html_pages | where_exp: "item", "item.lang != 'en'" -%}
 {%- endif -%}
 
+{%- assign nav_pages = nav_pages | where_exp: "item", "item.title != nil" | sort: "nav_order" -%}
+{%- assign rendered_groups = "" | split: "," -%}
+
 <nav aria-label="Main" id="site-nav" class="site-nav">
-  {% assign pages_top_size = nav_pages
-        | where_exp:"item", "item.title != nil"
-        | where_exp:"item", "item.parent == nil"
-        | size %}
-  {% if pages_top_size > 0 %}
-    {% include components/nav/pages.html pages=nav_pages all=true %}
-  {% endif %}
-  {%- if site.nav_external_links -%}
-    <ul class="nav-list">
-      {%- for node in site.nav_external_links -%}
-        <li class="nav-list-item external">
-          <a href="{{ node.url | absolute_url }}" class="nav-list-link external"
-            {% if node.opens_in_new_tab or node.opens_in_new_tab == nil and site.nav_external_links_new_tab %}
-              target="_blank" rel="noopener noreferrer"
-            {% endif %}
-          >
-            {{ node.title }}
-            {% unless node.hide_icon %}<svg viewBox="0 0 24 24" aria-labelledby="svg-external-link-title"><use xlink:href="#svg-external-link"></use></svg>{% endunless %}
-          </a>
-        </li>
-      {%- endfor -%}
-    </ul>
-  {%- endif -%}
-  {% if site.just_the_docs.collections %}
-    {% assign collections_size = site.just_the_docs.collections | size %}
-    {% for collection_entry in site.just_the_docs.collections %}
-      {% assign collection_key = collection_entry[0] %}
-      {% assign collection_value = collection_entry[1] %}
-      {% assign collection = site[collection_key] %}
-      {% if collection_value.nav_exclude != true %}
-        {% if collections_size > 1 or pages_top_size > 0 %}
-          {% if collection_value.nav_fold == true %}
-            <ul class="nav-list nav-category-list">
-              <li class="nav-list-item">
-                {%- if collection.size > 0 -%}
-                <button class="nav-list-expander btn-reset" aria-label="{{ collection_value.name }} collection" aria-expanded="false">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
-                </button>
-                {%- endif -%}
-                <div class="nav-category">{{ collection_value.name }}</div>
-                {% include components/nav/pages.html pages=collection all=include.all %}
-              </li>
+  <ul class="nav-list">
+    {%- for node in nav_pages -%}
+      {%- if node.group -%}
+        {%- unless rendered_groups contains node.group -%}
+          {%- assign rendered_groups = rendered_groups | push: node.group -%}
+          {%- assign group_members = nav_pages | where: "group", node.group -%}
+          <li class="nav-list-item active">
+            <div class="nav-category">{{ node.group }}</div>
+            <ul class="nav-list">
+              {%- for member in group_members -%}
+                {%- include components/nav_item.html node=member -%}
+              {%- endfor -%}
             </ul>
-          {% else %}
-            <div class="nav-category">{{ collection_value.name }}</div>
-            {% include components/nav/pages.html pages=collection all=include.all %}
-          {% endif %}
-        {% else %}
-          {% include components/nav/pages.html pages=collection all=include.all %}
-        {% endif %}
-      {% endif %}
-    {% endfor %}
-  {% endif %}
+          </li>
+        {%- endunless -%}
+      {%- else -%}
+        {%- include components/nav_item.html node=node -%}
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
 </nav>
 
 {% if site.nav_error_report %}
