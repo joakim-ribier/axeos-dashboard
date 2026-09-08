@@ -1,5 +1,3 @@
-@use "sass:color";
-
 // Just the Docs never sets cursor: pointer explicitly on the nav
 // (relying on the browser's own auto-cursor-as-pointer heuristic for
 // <a> tags, which is inconsistent for a display:block link styled like a
@@ -415,14 +413,14 @@ body {
   &:hover,
   &.zeroclipboard-is-hover {
     color: #fff;
-    background-color: color.adjust($dashboard-brand, $lightness: -8%);
+    background-color: darken($dashboard-brand, 8%);
     background-image: none;
   }
 
   &:active,
   &.selected,
   &.zeroclipboard-is-active {
-    background-color: color.adjust($dashboard-brand, $lightness: -12%);
+    background-color: darken($dashboard-brand, 12%);
     background-image: none;
   }
 }
