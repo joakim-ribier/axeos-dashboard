@@ -10,8 +10,8 @@ const __dirname = path.dirname(__filename);
 // https://vitejs.dev/config/
 // API_PORT only matters for the dev server's /api proxy target -- a
 // production build (`vite build`) is just static files, served by nginx
-// with its own real reverse proxy (see DEPLOYMENT.md), so it has no use
-// for it and shouldn't require it either.
+// with its own real reverse proxy (see docker/nginx.conf), so it has no
+// use for it and shouldn't require it either.
 export default defineConfig(({ command }) => {
   const apiPort = process.env.API_PORT;
   if (command === "serve" && !apiPort) {

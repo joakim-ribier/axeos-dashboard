@@ -23,8 +23,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
 [Commencer avec l'installation](installation){: .btn .btn-primary }
 
 {: .note }
-> **Surveillance à distance** — Exportez vos données vers le cloud pour
-> surveiller vos mineurs depuis n'importe où dans le monde, sans VPN, via
+> 💡 **Astuce** — Exportez vos données vers le cloud pour surveiller vos
+> mineurs depuis n'importe où dans le monde, sans VPN, via
 > [hashboard.live](https://hashboard.live).
 
 ![Aperçu du dashboard axeos-dashboard]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})

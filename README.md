@@ -1,5 +1,7 @@
 # axeos-dashboard
 
+📖 **[Documentation](https://joakim-ribier.github.io/axeos-dashboard/)**
+
 [![Checks](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml)
 [![Latest Release](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/latest.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -17,21 +19,8 @@ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/
 ```
 
 See the [user documentation](https://joakim-ribier.github.io/axeos-dashboard/)
-for supported models, tested firmware versions and the full feature
-list, or [`readme/FEATURES.md`](readme/FEATURES.md)
-for the breakdown of every screen.
-
----
-
-## Documentation
-
-| Doc | Covers |
-|-----|--------|
-| [User documentation](https://joakim-ribier.github.io/axeos-dashboard/) | Installation, configuration and features, EN/FR |
-| [readme/FEATURES.md](readme/FEATURES.md) | Every dashboard screen: top bar, filters, alerts, miner card, remote mode, persistent totals, firmware detection |
-| [readme/TESTING.md](readme/TESTING.md) | Running the Go/UI test suites, what CI runs |
-| [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Docker install/update, building the images yourself |
-| [readme/plan.md](readme/plan.md) | Running development plan — ideas, in-progress features, known bugs to fix |
+for supported models, tested firmware versions and the full breakdown of
+every screen.
 
 ---
 
@@ -67,15 +56,61 @@ of the user documentation.
 
 ---
 
+## Testing
+
+```bash
+make test   # go test ./... -race -cover, run from server/
+```
+
+Tests live next to the code as `*_test.go` files, using only the standard
+library (`testing`, `net/http/httptest`) — no test framework dependency.
+Coverage focuses on pure logic (config, payload mapping, firmware cache) and
+HTTP handlers.
+
+```bash
+cd ui
+npm run test         # vitest run — single pass, what CI runs
+npm run test:watch   # vitest — watch mode for local development
+```
+
+Built with [Vitest](https://vitest.dev) and [React Testing Library](https://testing-library.com/react).
+
+**Continuous Integration** — every push to `main` and every pull request
+targeting `main` runs
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml):
+
+| Job | Steps |
+|-----|-------|
+| `go` | `go vet` → `golangci-lint` → `go test -race -cover` |
+| `ui` | `npm run typecheck` → `npm run lint` → `npm run test` |
+
+When `checks.yml` succeeds on `main`,
+[`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
+feeder/dashboard-api/remote-dashboard-api/rebuild-totals binaries for **both
+`linux/arm64` (Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI
+once, and publishes everything to a rolling `latest` GitHub Release.
+`make latest-fetch` auto-detects the local architecture (`uname -m`) and
+pulls the matching binaries — no need to specify it manually, override with
+`RELEASE_ARCH=` if detection ever guesses wrong.
+
+- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder
+- `make latest-remote-up` / `make latest-remote-down` — VPS: remote-dashboard-api only
+
+Neither needs a local Go or npm build — see the Makefile's
+`latest-fetch`/`latest-up`/`latest-remote-up` targets.
+
+---
+
 ## Deployment
 
-Full walkthrough (Docker install, fixed port, updating) is in the
+Full walkthrough (Docker install, fixed port, updating, pinning a specific
+image via `IMAGE_TAG` to test a PR's build) is in the
 [Installation page](https://joakim-ribier.github.io/axeos-dashboard/installation.html)
 of the user documentation.
 
-**→ See [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)** for advanced,
-dev-only topics: testing a PR's images, and building the images yourself
-instead of pulling the prebuilt ones.
+Building the images yourself from local source instead of pulling the
+prebuilt ones: see [`docker-build-dev.sh`](docker-build-dev.sh), documented
+on the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/dev.html).
 
 ---
 

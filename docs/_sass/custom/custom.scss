@@ -38,6 +38,37 @@ body {
   color: $dashboard-text-primary;
 }
 
+// "Expand all" / "Collapse all", above the nav tree -- a bulk shortcut
+// for the same per-section persistence handled in head_custom.html, once
+// there got to be enough sections that opening/closing them one by one
+// got tedious.
+.nav-toolbar {
+  display: flex;
+  gap: 1rem;
+  padding: 0 1rem;
+
+  @media (min-width: 50rem) {
+    padding: 0 2rem;
+  }
+}
+
+.nav-toolbar-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  font-family: $dashboard-font;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $dashboard-text-secondary;
+  cursor: pointer;
+
+  &:hover {
+    color: $dashboard-brand;
+  }
+}
+
 .side-bar,
 .site-nav,
 .site-footer {
@@ -239,6 +270,50 @@ body {
   }
 }
 
+// Plain HTML data table, styled like the app's own MUI <Table> (e.g.
+// Settings' configured-miners / process-settings tables): divider-only
+// row separators, no grid lines, bold uppercase header in the secondary
+// text color -- rather than kramdown's default markdown-table styling.
+// The theme's own bare "th, td" rule (in _sass, applied via .table-wrapper
+// table) sets background-color/border-left/min-width, and font-size with
+// !important -- all overridden explicitly below, since a plain ".data-table
+// th"/"td" selector only outweighs same-property declarations, not ones
+// still coming from that unrelated, more specific-looking but same-
+// specificity bare-element rule loaded earlier in the stylesheet.
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-family: $dashboard-font;
+
+  th,
+  td {
+    min-width: 0;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background-color: transparent;
+    border-left: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.9rem !important;
+  }
+
+  th {
+    color: $dashboard-text-secondary;
+    font-weight: 700;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  td {
+    color: $dashboard-text-primary;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
 // Compact text-mode TOC (dot-separated inline links) -- a lighter-weight
 // alternative to the card-grid TOC (.toc-grid) used at the very top of a
 // page, for jumping straight to one of a section's own headings below.
@@ -334,7 +409,35 @@ body {
   color: $dashboard-brand;
 }
 
-.nav-list-link.active,
+// The theme colors a nested/grouped nav link (Configuration, Alertes...)
+// grey by default via its own more-specific selector for "sub-navigation"
+// items, but never sets a default color at all for a TOP-LEVEL, UNGROUPED
+// link (Accueil, Installation) -- so an inactive one fell through to the
+// theme's generic `a { color: blue }` base rule instead, only Accueil
+// looking right because it happened to be the active (overridden-grey)
+// page at the time. This covers every link uniformly; :hover and .active
+// both have higher specificity and still win on top of it.
+.nav-list-link {
+  color: $dashboard-text-secondary;
+}
+
+// Deliberately not coloring .nav-list-link.active (the theme's own
+// "this is the current page" class, added client-side in
+// just-the-docs.js by exact pathname match) -- with this many nav items
+// now, a permanently-blue current-page link reads as one more accent
+// color competing with :hover instead of a helpful indicator. Every
+// item stays the same secondary-grey shade; only :hover picks out the
+// brand color.
+// The theme's own rule for this lives on the exact same 4-class chain
+// (.nav-list .nav-list-item .nav-list-link.active) -- a bare
+// ".nav-list-link.active" (2 classes) never actually outweighs it
+// regardless of source order, so the override below has to match that
+// chain to win on specificity.
+.nav-list .nav-list-item .nav-list-link.active {
+  color: $dashboard-text-secondary;
+  background-image: none;
+}
+
 .nav-list-link:hover {
   color: $dashboard-brand;
 }

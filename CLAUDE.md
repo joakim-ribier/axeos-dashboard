@@ -269,7 +269,7 @@ remote-dashboard-api's data dir has no override of its own -- always `{storage.d
 ### Patterns & Constraints
 
 - **No auth** — internal LAN only; no API keys, no CORS restrictions
-- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see [readme/TESTING.md](readme/TESTING.md))
+- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see the README's Testing section)
 - **No WebSocket** — polling-based; feeder writes files, API reads files
 - **Graceful shutdown** — both binaries handle SIGINT/SIGTERM
 - **Error handling** — minimal custom types; `fmt.Errorf()` wrapping + structured logging (stdlib only)

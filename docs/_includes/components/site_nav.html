@@ -36,6 +36,16 @@
 {%- assign nav_pages = nav_pages | where_exp: "item", "item.title != nil" | sort: "nav_order" -%}
 {%- assign rendered_groups = "" | split: "," -%}
 
+<div class="nav-toolbar">
+  {%- if page.lang == "en" -%}
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="expand">Expand all</button>
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="collapse">Collapse all</button>
+  {%- else -%}
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="expand">Tout déplier</button>
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="collapse">Tout fermer</button>
+  {%- endif -%}
+</div>
+
 <nav aria-label="Main" id="site-nav" class="site-nav">
   <ul class="nav-list">
     {%- for node in nav_pages -%}

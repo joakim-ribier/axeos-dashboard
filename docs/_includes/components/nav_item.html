@@ -10,6 +10,14 @@
   level nested under one of those items (e.g. Docker's own subnav) starts
   collapsed and is toggled by hand, via the arrow or the label click
   handled in head_custom.html.
+
+  Every link also carries a data-nav-key equal to its own href, for
+  head_custom.html's collapse-state persistence to key off instead of the
+  live href attribute -- the theme's own scrollNav() (just-the-docs.js)
+  strips href from whichever link matches the current page, so reading
+  getAttribute("href") there returns null and would silently corrupt that
+  item's stored state (and, since every stripped link reads back the same
+  null, merge it with any other currently-on-that-page item's state too).
 {%- endcomment -%}
 <li class="nav-list-item{% if include.node.subnav %} active{% endif %}">
   {%- if include.node.subnav -%}
@@ -17,7 +25,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
     </button>
   {%- endif -%}
-  <a href="{{ include.node.url | relative_url }}" class="nav-list-link">{{ include.node.title }}</a>
+  <a href="{{ include.node.url | relative_url }}" data-nav-key="{{ include.node.url | relative_url }}" class="nav-list-link">{{ include.node.title }}</a>
   {%- if include.node.subnav -%}
     <ul class="nav-list">
       {%- for item in include.node.subnav -%}
@@ -27,7 +35,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
             </button>
           {%- endif -%}
-          <a href="{{ include.node.url | relative_url }}#{{ item.anchor }}" class="nav-list-link">{{ item.title }}</a>
+          <a href="{{ include.node.url | relative_url }}#{{ item.anchor }}" data-nav-key="{{ include.node.url | relative_url }}#{{ item.anchor }}" class="nav-list-link">{{ item.title }}</a>
           {%- if item.subnav -%}
             <ul class="nav-list">
               {%- for sub in item.subnav -%}
