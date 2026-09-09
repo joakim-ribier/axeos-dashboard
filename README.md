@@ -1,5 +1,7 @@
 # axeos-dashboard
 
+📖 **[Documentation](https://joakim-ribier.github.io/axeos-dashboard/en/)** — supported models, tested firmware versions, full breakdown of every screen.
+
 [![Checks](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml)
 [![Latest Release](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/latest.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -7,65 +9,23 @@
 
 Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-compatible Bitcoin ASIC miners — designed to run on a Raspberry Pi or any machine on your local network.
 
+Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
+
 **Easy to use** — one line, everything else configured from the UI:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
 ```
 
-Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
-
-**Supported models (tested firmware):** Bitaxe Gamma (up to `v2.15.1`) · NerdQAxe++ (up to `V1.0.37.3-LTS`)
-
-**Key features:**
-- Real-time hashrate, temperature, fan speed, shares and uptime per miner
-- Persistent lifetime totals (uptime + shares accepted) per miner that survive device reboots, shown alongside the live session values
-- Server-computed alerts (temp/fan thresholds, offline, config mismatch, firmware update) — a live notification bell plus a paginated, filterable, day-scoped alert history page (grouped into episodes, not one row per poll)
-- Pool switching (primary ↔ fallback), manual or on a cron-based schedule
-- Firmware update detection against GitHub releases, per device model
-- Today's history chart — last hour or full day, hourly averages
-- Electricity cost estimate (daily/monthly) from your configured €/kWh rate
-- Clickable pool dashboard links (Braiins, Atlas, …), auto-resolved from the stratum user
-- Live reachability check, plus a config-mismatch warning if a device doesn't match its configured MAC
-- Optional remote view via [hashboard.live](https://hashboard.live) — check your miners from anywhere, no VPN, including a read-only view of your configured miners and app settings
-- EN / FR localization
-
-See [`readme/FEATURES.md`](readme/FEATURES.md) for the full breakdown of every screen.
-
----
-
-## Documentation
-
-| Doc | Covers |
-|-----|--------|
-| [readme/CONFIGURATION.md](readme/CONFIGURATION.md) | `dashboard.yml` / `settings.yml` / `miners.yml` — every field, full examples |
-| [readme/FEATURES.md](readme/FEATURES.md) | Every dashboard screen: top bar, filters, alerts, miner card, remote mode, persistent totals, firmware detection |
-| [readme/TESTING.md](readme/TESTING.md) | Running the Go/UI test suites, what CI runs |
-| [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md) | Docker install/update, building the images yourself |
-| [readme/plan.md](readme/plan.md) | Running development plan — ideas, in-progress features, known bugs to fix |
-
----
-
-## Architecture
-
-```
-Bitaxe devices (HTTP)
-    ↓  poll every 2m  (GET /api/system/info)
-feeder → writes  {dataDir}/{mac}/YYYY-MM-DD.jsonl  (append)
-                 {dataDir}/{mac}/latest.json        (overwrite)
-         pushes to hashboard.live if remote.apiKey is set
-    ↓  reads latest.json
-miner-api → REST API at /api/miners/*
-    ↓  axios + TanStack Query
-React UI → display + control (restart / pool switch / WiFi)
-```
-
 ---
 
 ## Prerequisites
 
-The recommended setup ([Docker](#deployment), below) needs nothing but
-Docker itself installed — no Go, Node, or nginx on the machine at all.
+The recommended setup (Docker, below) needs nothing but Docker itself
+installed — no Go, Node, or nginx on the machine at all. See the
+[Architecture page](https://joakim-ribier.github.io/axeos-dashboard/en/#architecture)
+in the user documentation for how the feeder, dashboard API and UI fit
+together.
 
 Go and Node are only needed for local development, or to build the images
 yourself instead of pulling the prebuilt ones:
@@ -85,37 +45,67 @@ make run-dashboard-api CONFIG=resources/dashboard.yml
 make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
-To view remote miners pushed to https://hashboard.live:
+`dashboard.yml` field reference is in the
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html#config-file)
+of the user documentation.
+
+---
+
+## Testing
 
 ```bash
-make run-remote-dashboard-api  # read-only API on :8081, reads resources/remote-dashboard.yml
-make run-remote-dashboard-ui   # Vite dev server → :8081; open /{boardId} in browser
+make test   # go test ./... -race -cover, run from server/
 ```
 
-Config format (`dashboard.yml` / `settings.yml` / `miners.yml`) is
-documented in [readme/CONFIGURATION.md](readme/CONFIGURATION.md).
+Tests live next to the code as `*_test.go` files, using only the standard
+library (`testing`, `net/http/httptest`) — no test framework dependency.
+Coverage focuses on pure logic (config, payload mapping, firmware cache) and
+HTTP handlers.
+
+```bash
+cd ui
+npm run test         # vitest run — single pass, what CI runs
+npm run test:watch   # vitest — watch mode for local development
+```
+
+Built with [Vitest](https://vitest.dev) and [React Testing Library](https://testing-library.com/react).
+
+**Continuous Integration** — every push to `main` and every pull request
+targeting `main` runs
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml):
+
+| Job | Steps |
+|-----|-------|
+| `go` | `go vet` → `golangci-lint` → `go test -race -cover` |
+| `ui` | `npm run typecheck` → `npm run lint` → `npm run test` |
+
+When `checks.yml` succeeds on `main`,
+[`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
+feeder/dashboard-api/remote-dashboard-api/rebuild-totals binaries for **both
+`linux/arm64` (Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI
+once, and publishes everything to a rolling `latest` GitHub Release.
+`make latest-fetch` auto-detects the local architecture (`uname -m`) and
+pulls the matching binaries — no need to specify it manually, override with
+`RELEASE_ARCH=` if detection ever guesses wrong.
+
+- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder
+- `make latest-remote-up` / `make latest-remote-down` — VPS: remote-dashboard-api only
+
+Neither needs a local Go or npm build — see the Makefile's
+`latest-fetch`/`latest-up`/`latest-remote-up` targets.
 
 ---
 
 ## Deployment
 
-One line, on any machine with Docker installed (Linux, Windows, macOS, a
-NAS, a Raspberry Pi...) — no clone, no Go/Node toolchain, no manual nginx
-or systemd setup:
+Full walkthrough (Docker install, fixed port, updating, pinning a specific
+image via `IMAGE_TAG` to test a PR's build) is in the
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html)
+of the user documentation.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
-```
-
-That's it — 2 prebuilt multi-arch images (CI-built on every push to
-`main`) get pulled and started; it prints which port it landed on. Open
-that in a browser, then use **Settings** to scan the LAN for miners (or
-add them by IP) — no config file to hand-write first. Re-run the same
-command later to update.
-
-**→ See [readme/DEPLOYMENT.md](readme/DEPLOYMENT.md)** for the full
-details: a fixed port instead of the random default, testing a PR's images,
-and building the images yourself instead of pulling the prebuilt ones.
+Building the images yourself from local source instead of pulling the
+prebuilt ones: see [`docker-build-dev.sh`](docker-build-dev.sh), documented
+on the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/en/dev.html).
 
 ---
 

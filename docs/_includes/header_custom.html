@@ -1,0 +1,25 @@
+{% if page.lang == "en" %}
+  {% assign mirror_path = page.path | remove_first: "en/" %}
+  {% assign lang_home_path = "index.md" %}
+  {% assign current_code = "🇬🇧 EN" %}
+  {% assign other_code = "🇫🇷 FR" %}
+{% else %}
+  {% assign mirror_path = "en/" | append: page.path %}
+  {% assign lang_home_path = "en/index.md" %}
+  {% assign current_code = "🇫🇷 FR" %}
+  {% assign other_code = "🇬🇧 EN" %}
+{% endif %}
+
+{% assign mirror_page = site.pages | where: "path", mirror_path | first %}
+{% unless mirror_page %}
+  {% assign mirror_page = site.pages | where: "path", lang_home_path | first %}
+{% endunless %}
+
+<div class="lang-switch">
+  <span class="lang-chip lang-chip-current">{{ current_code }}</span>
+  {% if mirror_page %}
+    <a href="{{ mirror_page.url | relative_url }}" class="lang-chip lang-chip-link">{{ other_code }}</a>
+  {% else %}
+    <span class="lang-chip lang-chip-disabled" title="Traduction à venir">{{ other_code }}</span>
+  {% endif %}
+</div>

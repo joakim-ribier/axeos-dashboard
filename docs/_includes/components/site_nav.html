@@ -1,0 +1,74 @@
+{%- comment -%}
+  Override of the theme's own components/site_nav.html. Changes from the
+  stock version:
+
+  1. The top-level page list is filtered to the current page's language
+     (French pages at the site root have no `lang`, English pages under
+     en/ set `lang: en`), so navigating through the sidebar keeps you in
+     the same language instead of always landing back on the French
+     pages.
+
+  2. The nav is hand-rendered here (rather than delegating to
+     components/nav/pages.html) so a page can define a `subnav:` front
+     matter list to get a real expandable sidebar submenu whose items are
+     anchors on that same single page, instead of Just the Docs' normal
+     parent/child pages (each a separate URL). Example:
+
+       subnav:
+         - title: Some section
+           anchor: some-section
+
+  3. A page can also set `group: Some Label` to be visually clustered
+     under a shared, non-clickable category label with other pages
+     sharing the same group -- e.g. Configuration and Dashboard both set
+     `group: Pages`. The group is always expanded (no toggle of its own).
+
+  This intentionally drops support for real nested child pages,
+  collections and external nav links -- none of which this site uses.
+{%- endcomment -%}
+
+{%- if page.lang == "en" -%}
+  {%- assign nav_pages = site.html_pages | where_exp: "item", "item.lang == 'en'" -%}
+{%- else -%}
+  {%- assign nav_pages = site.html_pages | where_exp: "item", "item.lang != 'en'" -%}
+{%- endif -%}
+
+{%- assign nav_pages = nav_pages | where_exp: "item", "item.title != nil" | sort: "nav_order" -%}
+{%- assign rendered_groups = "" | split: "," -%}
+
+<div class="nav-toolbar">
+  {%- if page.lang == "en" -%}
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="expand">Expand all</button>
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="collapse">Collapse all</button>
+  {%- else -%}
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="expand">Tout déplier</button>
+    <button type="button" class="nav-toolbar-btn" data-nav-toggle-all="collapse">Tout fermer</button>
+  {%- endif -%}
+</div>
+
+<nav aria-label="Main" id="site-nav" class="site-nav">
+  <ul class="nav-list">
+    {%- for node in nav_pages -%}
+      {%- if node.group -%}
+        {%- unless rendered_groups contains node.group -%}
+          {%- assign rendered_groups = rendered_groups | push: node.group -%}
+          {%- assign group_members = nav_pages | where: "group", node.group -%}
+          <li class="nav-list-item active">
+            <div class="nav-category">{{ node.group }}</div>
+            <ul class="nav-list">
+              {%- for member in group_members -%}
+                {%- include components/nav_item.html node=member -%}
+              {%- endfor -%}
+            </ul>
+          </li>
+        {%- endunless -%}
+      {%- else -%}
+        {%- include components/nav_item.html node=node -%}
+      {%- endif -%}
+    {%- endfor -%}
+  </ul>
+</nav>
+
+{% if site.nav_error_report %}
+{{ nav_error_report }}
+{%- endif %}

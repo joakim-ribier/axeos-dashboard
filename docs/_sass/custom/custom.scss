@@ -1,0 +1,529 @@
+// Just the Docs never sets cursor: pointer explicitly on the nav
+// (relying on the browser's own auto-cursor-as-pointer heuristic for
+// <a> tags, which is inconsistent for a display:block link styled like a
+// menu row rather than inline text) -- neither on the submenu expander
+// button (a <button> never gets a free hand cursor at all). Set both
+// explicitly rather than rely on that.
+.nav-list-expander,
+.nav-list-link {
+  cursor: pointer;
+}
+
+// Aligned with the dashboard app's own theme -- see ui/src/theme.ts
+// (palette) and ui/src/components/layout/Sidebar.tsx (brand title, chips).
+$dashboard-bg: #1e1e2a;
+$dashboard-sidebar-bg: #262637;
+$dashboard-text-primary: #e0e0e0;
+$dashboard-text-secondary: #b0b0b0;
+$dashboard-brand: #00b4ff;
+// MUI's default dark-mode warning color -- see the app's AlertList
+// (Alert variant="filled" severity="warning"), e.g. Settings' issue banner.
+$dashboard-warning: #ffa726;
+// The app never actually loads a Roboto webfont (no Google Fonts link, no
+// @fontsource package) -- MUI's default stack just falls through to the
+// system sans-serif, which is what this reproduces.
+$dashboard-font:
+  "Roboto",
+  "Helvetica",
+  "Arial",
+  sans-serif;
+$dashboard-mono:
+  "Courier New",
+  "Courier",
+  monospace;
+
+body {
+  font-family: $dashboard-font;
+  background-color: $dashboard-bg;
+  color: $dashboard-text-primary;
+}
+
+// "Expand all" / "Collapse all", above the nav tree -- a bulk shortcut
+// for the same per-section persistence handled in head_custom.html, once
+// there got to be enough sections that opening/closing them one by one
+// got tedious.
+.nav-toolbar {
+  display: flex;
+  gap: 1rem;
+  padding: 0 1rem;
+
+  @media (min-width: 50rem) {
+    padding: 0 2rem;
+  }
+}
+
+.nav-toolbar-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  font-family: $dashboard-font;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $dashboard-text-secondary;
+  cursor: pointer;
+
+  &:hover {
+    color: $dashboard-brand;
+  }
+}
+
+.side-bar,
+.site-nav,
+.site-footer {
+  background-color: $dashboard-sidebar-bg;
+}
+
+.side-bar {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.main-header,
+.main-content-wrap,
+#main-content {
+  background-color: $dashboard-bg;
+}
+
+#main-content {
+  font-family: $dashboard-font;
+  color: $dashboard-text-primary;
+}
+
+// Plain fenced code BLOCKS (```text, ```bash...) ship with the theme's
+// own near-black GitHub-dark background and a light grey border that was
+// never adapted for the dark scheme -- both stick out next to the softer
+// on-brand dark cards used everywhere else (terminal-card, hr, notes).
+// Scoped to div.highlighter-rouge specifically: kramdown reuses the same
+// "highlighter-rouge" class on inline `code` spans too, and a bare
+// ".highlighter-rouge" here would also repaint those -- including ones
+// inside an orange .note callout, fighting its own code-contrast fix
+// below with a much higher-specificity #main-content selector.
+#main-content {
+  .highlight,
+  pre.highlight,
+  div.highlighter-rouge {
+    background: $dashboard-sidebar-bg;
+  }
+
+  .highlight pre,
+  div.highlighter-rouge div.highlight {
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+  }
+}
+
+// Hand-drawn architecture diagram (replaces an earlier Mermaid version --
+// hand-rolled SVG gives full control over the look, matching the site's
+// own card style, instead of Mermaid's generic default layout).
+.arch-diagram {
+  margin: 1.5rem 0;
+  overflow-x: auto;
+
+  svg {
+    display: block;
+    width: 100%;
+    max-width: 820px;
+    height: auto;
+    margin: 0 auto;
+  }
+}
+
+// Section separator, matching the app's own SectionDivider component
+// (ui/src/components/ui/SectionDivider.tsx): a 1px line that fades out
+// at both ends, used between the page's H2 sections (Markdown `---`).
+#main-content hr {
+  height: 1px;
+  border: none;
+  margin: 2.5rem 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0.15) 80%,
+    transparent
+  );
+}
+
+// Top-of-page quick nav -- a grid of clickable cards (icon + title)
+// replacing a plain bullet-list TOC, styled like the app's own MuiCard
+// (borderRadius: 12, subtle border, lift-on-hover).
+.toc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.toc-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: $dashboard-sidebar-bg;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: $dashboard-brand;
+    text-decoration: none;
+  }
+}
+
+.toc-card-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.toc-card-title {
+  font-family: $dashboard-font;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: $dashboard-text-primary;
+}
+
+// "Terminal card" -- adapted from hashboard.live's own TerminalCard/
+// TerminalLine components (ui/src/components/TerminalCard.tsx): a
+// terminal-window look for copy-pasteable commands, with $ commands in
+// green and # comments muted, distinct from a plain fenced code block.
+.terminal-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 1.25rem 0;
+}
+
+.terminal-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 1.2rem 0.6rem;
+  background-color: $dashboard-sidebar-bg;
+}
+
+.terminal-card-icon {
+  font-family: $dashboard-mono;
+  font-weight: 700;
+  color: $dashboard-brand;
+}
+
+.terminal-card-title {
+  font-family: $dashboard-font;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: $dashboard-text-primary;
+}
+
+.terminal-card-body {
+  margin: 0;
+  padding: 1rem 1.2rem;
+  font-family: $dashboard-mono;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: #d4d4e0;
+  background-color: $dashboard-sidebar-bg;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+
+  .term-command {
+    color: #81c995;
+  }
+
+  .term-comment {
+    color: $dashboard-text-secondary;
+  }
+}
+
+// "Note" callout, styled like the app's own warning Alert banner
+// (variant="filled", severity="warning" -- e.g. Settings' AlertList): flat
+// orange fill, dark text, no title label, same 4px radius as everywhere
+// else in this theme.
+.main-content blockquote.note,
+.main-content p.note {
+  border: none;
+  box-shadow: none;
+  border-radius: 4px;
+  padding: 0.8rem 1rem;
+  background-color: $dashboard-warning;
+  color: rgba(0, 0, 0, 0.87);
+
+  &::before {
+    content: none;
+  }
+
+  a {
+    color: rgba(0, 0, 0, 0.87);
+    text-decoration: underline;
+  }
+
+  code {
+    background-color: rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 0, 0, 0.25);
+    color: rgba(0, 0, 0, 0.87);
+  }
+}
+
+// Plain HTML data table, styled like the app's own MUI <Table> (e.g.
+// Settings' configured-miners / process-settings tables): divider-only
+// row separators, no grid lines, bold uppercase header in the secondary
+// text color -- rather than kramdown's default markdown-table styling.
+// The theme's own bare "th, td" rule (in _sass, applied via .table-wrapper
+// table) sets background-color/border-left/min-width, and font-size with
+// !important -- all overridden explicitly below, since a plain ".data-table
+// th"/"td" selector only outweighs same-property declarations, not ones
+// still coming from that unrelated, more specific-looking but same-
+// specificity bare-element rule loaded earlier in the stylesheet.
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-family: $dashboard-font;
+
+  th,
+  td {
+    min-width: 0;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background-color: transparent;
+    border-left: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.9rem !important;
+  }
+
+  th {
+    color: $dashboard-text-secondary;
+    font-weight: 700;
+    font-size: 0.75rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  td {
+    color: $dashboard-text-primary;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+// Compact text-mode TOC (dot-separated inline links) -- a lighter-weight
+// alternative to the card-grid TOC (.toc-grid) used at the very top of a
+// page, for jumping straight to one of a section's own headings below.
+// Selector prefixed with .main-content to outweigh the general
+// ".main-content a:not(.btn)" brand-blue link rule (same specificity
+// otherwise, and that one is declared later in this file) -- these links
+// stay muted/unobtrusive instead of looking like regular body links.
+.main-content .text-toc a {
+  color: $dashboard-text-secondary;
+  text-decoration: none;
+
+  &:hover {
+    color: $dashboard-brand;
+    text-decoration: underline;
+  }
+}
+
+.text-toc {
+  margin: 1rem 0 1.5rem;
+  font-size: 0.85rem;
+  color: $dashboard-text-secondary;
+}
+
+.text-toc-sep {
+  margin: 0 0.5em;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+// Screenshots, styled like the app's own MuiCard (borderRadius: 12)
+#main-content img {
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+// The theme boxes the sidebar title into a fixed-height header (3.75rem)
+// sized for a short plain-text title -- our longer brand mark needs to be
+// allowed to wrap onto two lines and the header to grow, otherwise it
+// overflows past the header into the content below it.
+.site-header {
+  height: auto;
+  max-height: none;
+  min-height: 3.75rem;
+}
+
+.site-title {
+  height: auto;
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
+// Brand title in the sidebar, matching the app's own "AxeOS · D#hashboard"
+.brand-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  font-family: $dashboard-font;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.brand-axeos {
+  font-family: $dashboard-mono;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: $dashboard-text-primary;
+}
+
+.brand-dot {
+  font-weight: 800;
+  color: $dashboard-text-secondary;
+}
+
+.brand-app {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: $dashboard-text-primary;
+}
+
+.brand-hash-symbol {
+  font-family: $dashboard-mono;
+  color: $dashboard-brand;
+  opacity: 0.55;
+  font-weight: 700;
+}
+
+.brand-hash {
+  font-family: $dashboard-mono;
+  color: $dashboard-brand;
+}
+
+// The theme colors a nested/grouped nav link (Configuration, Alertes...)
+// grey by default via its own more-specific selector for "sub-navigation"
+// items, but never sets a default color at all for a TOP-LEVEL, UNGROUPED
+// link (Accueil, Installation) -- so an inactive one fell through to the
+// theme's generic `a { color: blue }` base rule instead, only Accueil
+// looking right because it happened to be the active (overridden-grey)
+// page at the time. This covers every link uniformly; :hover and .active
+// both have higher specificity and still win on top of it.
+.nav-list-link {
+  color: $dashboard-text-secondary;
+}
+
+// Deliberately not coloring .nav-list-link.active (the theme's own
+// "this is the current page" class, added client-side in
+// just-the-docs.js by exact pathname match) -- with this many nav items
+// now, a permanently-blue current-page link reads as one more accent
+// color competing with :hover instead of a helpful indicator. Every
+// item stays the same secondary-grey shade; only :hover picks out the
+// brand color.
+// The theme's own rule for this lives on the exact same 4-class chain
+// (.nav-list .nav-list-item .nav-list-link.active) -- a bare
+// ".nav-list-link.active" (2 classes) never actually outweighs it
+// regardless of source order, so the override below has to match that
+// chain to win on specificity.
+.nav-list .nav-list-item .nav-list-link.active {
+  color: $dashboard-text-secondary;
+  background-image: none;
+}
+
+.nav-list-link:hover {
+  color: $dashboard-brand;
+}
+
+.main-content a:not(.btn) {
+  color: $dashboard-brand;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Language switcher -- two small squared chips (borderRadius: 4px, like the
+// app's own MuiChip overrides), not a rounded pill.
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.lang-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: $dashboard-font;
+  white-space: nowrap;
+}
+
+.lang-chip-current {
+  background-color: rgba(0, 180, 255, 0.12);
+  color: $dashboard-brand;
+  font-weight: 700;
+}
+
+.lang-chip-link {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: $dashboard-text-secondary;
+
+  &:hover {
+    background-color: rgba(0, 180, 255, 0.12);
+    color: $dashboard-brand;
+    border-color: transparent;
+  }
+}
+
+.lang-chip-disabled {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: $dashboard-text-secondary;
+  opacity: 0.4;
+  cursor: default;
+}
+
+// Call-to-action links ({: .btn .btn-primary }), styled like the app's own
+// MUI contained Button (e.g. Settings' "Lancer la détection") -- flat fill,
+// uppercase label, no gradient.
+.btn {
+  font-family: $dashboard-font;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02857em;
+  border-radius: 4px;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: $dashboard-brand;
+  background-image: none;
+  box-shadow:
+    0 3px 1px -2px rgba(0, 0, 0, 0.2),
+    0 2px 2px 0 rgba(0, 0, 0, 0.14),
+    0 1px 5px 0 rgba(0, 0, 0, 0.12);
+
+  &:hover,
+  &.zeroclipboard-is-hover {
+    color: #fff;
+    background-color: darken($dashboard-brand, 8%);
+    background-image: none;
+  }
+
+  &:active,
+  &.selected,
+  &.zeroclipboard-is-active {
+    background-color: darken($dashboard-brand, 12%);
+    background-image: none;
+  }
+}

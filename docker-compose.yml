@@ -24,7 +24,7 @@ services:
       # Random free host port by default (0) -- so nobody hits a conflict
       # just running `docker compose up`. A real deployment wants a fixed,
       # memorable port instead: set HTTP_PORT=80 in a .env file next to
-      # this one (see readme/DEPLOYMENT.md).
+      # this one (see the Installation page of the user documentation).
       - "${HTTP_PORT:-0}:80"
     depends_on:
       - services

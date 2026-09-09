@@ -175,8 +175,7 @@ see PR #3), no flag needed, nothing to keep in sync between the two
 binaries. `dashboard.yml` holds process-launch settings (read once
 at startup, no hot-reload -- shown read-only on `/settings`); electricity
 rate and remote push credentials live in `settings.yml` instead,
-editable from `/settings` without a restart -- see
-`readme/CONFIGURATION.md` for the full field list. A `bitaxes:` block
+editable from `/settings` without a restart. A `bitaxes:` block
 written directly in `dashboard.yml` is **not** read. `-miners <path>`
 still exists on the command line but is deprecated and ignored (logs a
 warning) -- kept only so an older Makefile/script/systemd unit that still
@@ -270,7 +269,7 @@ remote-dashboard-api's data dir has no override of its own -- always `{storage.d
 ### Patterns & Constraints
 
 - **No auth** — internal LAN only; no API keys, no CORS restrictions
-- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see [readme/TESTING.md](readme/TESTING.md))
+- **Tests** — Go: stdlib `testing`/`httptest`; UI: Vitest + React Testing Library (see the README's Testing section)
 - **No WebSocket** — polling-based; feeder writes files, API reads files
 - **Graceful shutdown** — both binaries handle SIGINT/SIGTERM
 - **Error handling** — minimal custom types; `fmt.Errorf()` wrapping + structured logging (stdlib only)

@@ -1,0 +1,27 @@
+title: axeos-dashboard
+description: Documentation de axeos-dashboard
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+
+search_enabled: true
+color_scheme: dark
+
+# Every page gets the theme's normal docs layout unless it overrides this
+# itself (the Home pages do, with `layout: home`) -- without this, a page
+# with no `layout:` in its front matter renders with no theme chrome at
+# all (no CSS, no sidebar), as installation.md did.
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "default"
+
+callouts:
+  note:
+    color: yellow
+
+aux_links:
+  "axeos-dashboard sur GitHub":
+    - "https://github.com/joakim-ribier/axeos-dashboard"

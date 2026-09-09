@@ -1,0 +1,11 @@
+# Override loaded by docker-build-dev.sh alongside the root docker-compose.yml.
+# Redirects the "services" container's bind mounts into ./axeos-dashboard/
+# instead of the repo root, so a local dev build's config/storage don't
+# mix with the source tree (and can be gitignored as a single folder).
+# Build context is untouched (still resolved from docker-compose.yml's own
+# directory, the repo root), so this only changes where data lands on disk.
+services:
+  services:
+    volumes:
+      - ./axeos-dashboard/config:/config
+      - ./axeos-dashboard/storage:/data

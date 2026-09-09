@@ -1,0 +1,87 @@
+<script>
+/* Just the Docs auto-expands whichever nav item matches the current page
+   on load (its own built-in mechanism, via a generated #jtd-nav-activation
+   style block) -- that's what lets clicking a parent item's label
+   navigate AND land with its submenu open. But it means clicking that
+   same label again while already on that page just reloads the page,
+   which re-applies the same forced-open style -- so it never visually
+   collapses. Fix: only intercept the click (toggle instead of navigating)
+   when the link points at the page you're already on; otherwise let it
+   navigate normally so the built-in mechanism does its job on arrival.
+   Comparing pathname only (ignoring any #hash) also covers a second-level
+   item whose own href is just an anchor on the current page (e.g. Docker's
+   subnav under Installation) -- those are always "already on that page".
+
+   Every full page load re-renders the nav from scratch server-side (this
+   is a static site, not an SPA), so a section the reader manually
+   collapsed would otherwise spring back open on the very next click of
+   any other top-level link -- annoying now that there are enough
+   sections for that to happen constantly. Fix: remember each section's
+   open/closed state in localStorage, applied on load before anything
+   else touches it, and kept in sync via a MutationObserver on the
+   section's own "active" class -- that also covers the arrow button's
+   toggle, which is the theme's own built-in click handler, not this
+   script's, plus the "expand all" / "collapse all" buttons below.
+
+   Keyed by each link's own data-nav-key (set in nav_item.html), NOT its
+   href: the theme's own scrollNav() (just-the-docs.js) removes the href
+   attribute from whichever link matches the current page, so reading it
+   back here would return null for that one item on every page -- and
+   since EVERY page's current-page link hits that same null key, their
+   states would all collide into one shared entry instead of staying
+   independent.
+
+   NOTE: this file is rendered onto a single line, so double-slash line
+   comments would swallow the rest of the script -- block comments only. */
+document.addEventListener("DOMContentLoaded", function () {
+  var STORAGE_PREFIX = "axeos-docs-nav-open:";
+
+  var expanders = document.querySelectorAll(".nav-list-item > .nav-list-expander");
+
+  expanders.forEach(function (btn) {
+    var link = btn.nextElementSibling;
+    if (!link || !link.classList.contains("nav-list-link")) {
+      return;
+    }
+    var li = btn.parentNode;
+    var key = STORAGE_PREFIX + link.getAttribute("data-nav-key");
+
+    var stored = null;
+    try {
+      stored = localStorage.getItem(key);
+    } catch (e) {}
+    if (stored === "1") {
+      li.classList.add("active");
+      btn.ariaExpanded = "true";
+    } else if (stored === "0") {
+      li.classList.remove("active");
+      btn.ariaExpanded = "false";
+    }
+
+    new MutationObserver(function () {
+      try {
+        localStorage.setItem(key, li.classList.contains("active") ? "1" : "0");
+      } catch (e) {}
+    }).observe(li, { attributes: true, attributeFilter: ["class"] });
+
+    link.addEventListener("click", function (e) {
+      var target = new URL(link.href, window.location.href);
+      var samePage = target.pathname === window.location.pathname;
+      if (samePage) {
+        e.preventDefault();
+        btn.ariaExpanded = li.classList.toggle("active");
+      }
+    });
+  });
+
+  document.querySelectorAll("[data-nav-toggle-all]").forEach(function (toolbarBtn) {
+    toolbarBtn.addEventListener("click", function () {
+      var expand = toolbarBtn.getAttribute("data-nav-toggle-all") === "expand";
+      expanders.forEach(function (btn) {
+        btn.parentNode.classList.toggle("active", expand);
+        btn.ariaExpanded = String(expand);
+      });
+    });
+  });
+});
+</script>
