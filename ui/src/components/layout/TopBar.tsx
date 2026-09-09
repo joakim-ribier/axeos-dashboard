@@ -32,17 +32,19 @@ interface TopBarProps {
   onMenuClick: () => void;
 }
 
-const DOCS_URL = "https://joakim-ribier.github.io/axeos-dashboard/";
+const DOCS_URL_FR = "https://joakim-ribier.github.io/axeos-dashboard/";
+const DOCS_URL_EN = "https://joakim-ribier.github.io/axeos-dashboard/en/";
 
 const DocsLink: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const label = t("topBar.docs");
+  const docsUrl = i18n.language.startsWith("fr") ? DOCS_URL_FR : DOCS_URL_EN;
 
   return (
     <Tooltip title={label}>
       <IconButton
         component="a"
-        href={DOCS_URL}
+        href={docsUrl}
         target="_blank"
         rel="noopener noreferrer"
         sx={{ color: "text.secondary" }}

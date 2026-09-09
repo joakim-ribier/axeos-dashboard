@@ -1,12 +1,11 @@
 # axeos-dashboard
 
-📖 **[Documentation](https://joakim-ribier.github.io/axeos-dashboard/)**
+📖 **[Documentation](https://joakim-ribier.github.io/axeos-dashboard/en/)** — supported models, tested firmware versions, full breakdown of every screen.
 
 [![Checks](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/checks.yml)
 [![Latest Release](https://github.com/joakim-ribier/axeos-dashboard/actions/workflows/latest.yml/badge.svg)](https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)](server/go.mod)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-00b4ff)](https://joakim-ribier.github.io/axeos-dashboard/)
 
 Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-compatible Bitcoin ASIC miners — designed to run on a Raspberry Pi or any machine on your local network.
 
@@ -18,17 +17,13 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
 ```
 
-See the [user documentation](https://joakim-ribier.github.io/axeos-dashboard/)
-for supported models, tested firmware versions and the full breakdown of
-every screen.
-
 ---
 
 ## Prerequisites
 
 The recommended setup (Docker, below) needs nothing but Docker itself
 installed — no Go, Node, or nginx on the machine at all. See the
-[Architecture page](https://joakim-ribier.github.io/axeos-dashboard/#architecture)
+[Architecture page](https://joakim-ribier.github.io/axeos-dashboard/en/#architecture)
 in the user documentation for how the feeder, dashboard API and UI fit
 together.
 
@@ -51,7 +46,7 @@ make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
 `dashboard.yml` field reference is in the
-[Installation page](https://joakim-ribier.github.io/axeos-dashboard/installation.html#parametrage)
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html#config-file)
 of the user documentation.
 
 ---
@@ -105,12 +100,12 @@ Neither needs a local Go or npm build — see the Makefile's
 
 Full walkthrough (Docker install, fixed port, updating, pinning a specific
 image via `IMAGE_TAG` to test a PR's build) is in the
-[Installation page](https://joakim-ribier.github.io/axeos-dashboard/installation.html)
+[Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html)
 of the user documentation.
 
 Building the images yourself from local source instead of pulling the
 prebuilt ones: see [`docker-build-dev.sh`](docker-build-dev.sh), documented
-on the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/dev.html).
+on the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/en/dev.html).
 
 ---
 
