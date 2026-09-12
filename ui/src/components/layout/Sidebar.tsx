@@ -138,6 +138,7 @@ interface SidebarContentProps {
   hashboardUrl: string | null;
   isPublic: boolean;
   boardNotFound: boolean;
+  boardBlocked: boolean;
   onItemClick?: () => void;
 }
 
@@ -148,6 +149,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   hashboardUrl,
   isPublic,
   boardNotFound,
+  boardBlocked,
   onItemClick,
 }) => {
   const { t } = useTranslation();
@@ -178,7 +180,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
       <Box
         component={RouterLink}
         to={boardId ? `/${boardId}` : "/"}
-        title={t("nav.home")}
+        title={boardBlocked ? undefined : t("nav.home")}
+        onClick={boardBlocked ? (e) => e.preventDefault() : undefined}
+        tabIndex={boardBlocked ? -1 : undefined}
+        aria-disabled={boardBlocked || undefined}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -189,8 +194,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           py: 3,
           textDecoration: "none",
           userSelect: "none",
+          cursor: boardBlocked ? "default" : "pointer",
           transition: "opacity 0.15s ease",
-          "&:hover": { opacity: 0.75 },
+          "&:hover": boardBlocked ? undefined : { opacity: 0.75 },
         }}
       >
         <Typography
@@ -337,6 +343,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           icon={<DashboardIcon sx={{ fontSize: 18 }} />}
           label={t("nav.home")}
           onClick={onItemClick}
+          disabled={boardBlocked}
         />
         <NavItem
           to={boardId ? `/${boardId}/alerts` : "/alerts"}
@@ -346,6 +353,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
           label={t("nav.alerts")}
           onClick={onItemClick}
+          disabled={boardBlocked}
         />
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)
@@ -365,6 +373,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
+            disabled={boardBlocked}
           />
         )}
       </List>
@@ -484,6 +493,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
     hashboardUrl,
     isPublic,
     boardNotFound,
+    boardBlocked,
   } = useAppInfo();
   const { addNotifications } = useNotifications();
 
@@ -534,6 +544,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           hashboardUrl={hashboardUrl}
           isPublic={isPublic}
           boardNotFound={boardNotFound}
+          boardBlocked={boardBlocked}
           onItemClick={onClose}
         />
       </Drawer>
@@ -558,6 +569,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           hashboardUrl={hashboardUrl}
           isPublic={isPublic}
           boardNotFound={boardNotFound}
+          boardBlocked={boardBlocked}
         />
       </Drawer>
     </Box>

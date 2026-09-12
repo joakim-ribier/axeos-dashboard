@@ -180,10 +180,6 @@
     "helpCombine": "Combinez plusieurs termes avec un espace — tous doivent correspondre."
   },
   "oops": {
-    "boardNotFound": {
-      "title": "Page introuvable",
-      "message": "Cette page n'existe pas ou n'a pas encore de données."
-    },
     "notFound": {
       "title": "Page introuvable",
       "message": "Cette page n'existe pas."

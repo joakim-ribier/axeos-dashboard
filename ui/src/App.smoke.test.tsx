@@ -86,7 +86,7 @@ describe("App routing smoke test (remote board)", () => {
     });
     vi.mocked(axios.isAxiosError).mockReturnValue(true);
 
-    renderApp("/does-not-exist");
+    const { container } = renderApp("/does-not-exist");
 
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith(
@@ -103,6 +103,70 @@ describe("App routing smoke test (remote board)", () => {
       ).not.toBeInTheDocument(),
     );
     expect(screen.queryByLabelText("board is public")).not.toBeInTheDocument();
+
+    // Nor should the sidebar let you wander between pages of a board that
+    // doesn't exist -- every one of them would show the same error.
+    for (const href of [
+      "/does-not-exist",
+      "/does-not-exist/alerts",
+      "/does-not-exist/settings",
+    ]) {
+      const link = container.querySelector(`a[href="${href}"]`);
+      expect(link).toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("shows the exact same 'board not found' outcome on an unknown sub-path as on the board root -- what matters is that the board doesn't exist, not which sub-path was typed", async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info") return Promise.resolve({ data: {} });
+      const err = Object.assign(new Error("not found"), {
+        response: { status: 404, data: { error: "board not found" } },
+      });
+      return Promise.reject(err);
+    });
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+
+    const { container } = renderApp("/does-not-exist/some-random-subpath");
+
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        "/api/does-not-exist/miners",
+      ),
+    );
+    // Same title/message as the board-root 404 case above -- this asserts
+    // the exact rendered text, not just "some OopsPage showed up", so a
+    // future drift back to two different wordings would fail here.
+    await screen.findByText("Page not found");
+    await screen.findByText("This page does not exist.");
+
+    for (const href of [
+      "/does-not-exist",
+      "/does-not-exist/alerts",
+      "/does-not-exist/settings",
+    ]) {
+      const link = container.querySelector(`a[href="${href}"]`);
+      expect(link).toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("shows the same board-locked screen on an unknown sub-path as on a private board's root, instead of a generic 'not found'", async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info") return Promise.resolve({ data: {} });
+      const err = Object.assign(new Error("forbidden"), {
+        response: { status: 403, data: { error: "board is private" } },
+      });
+      return Promise.reject(err);
+    });
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+
+    renderApp("/test/some-random-subpath");
+
+    // Same request-access form as the board-root 403 case -- not the
+    // generic OopsPage, which would hide that the board does exist.
+    await screen.findByRole("button", { name: "Send access link" });
+    expect(
+      screen.queryByText("This page does not exist."),
+    ).not.toBeInTheDocument();
   });
 
   it("still renders the local dashboard at / (unaffected by the remote branch)", async () => {
@@ -111,5 +175,49 @@ describe("App routing smoke test (remote board)", () => {
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith("/api/config/miners"),
     );
+  });
+
+  it("also locks the sidebar for a private board (403), not just a missing one (404)", async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info") return Promise.resolve({ data: {} });
+      const err = Object.assign(new Error("forbidden"), {
+        response: { status: 403, data: { error: "board is private" } },
+      });
+      return Promise.reject(err);
+    });
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+
+    const { container } = renderApp("/test");
+
+    // BoardLockedPage renders on 403 -- its request-access form is the
+    // clearest sign the error actually propagated before checking the nav.
+    await screen.findByRole("button", { name: "Send access link" });
+
+    for (const href of ["/test", "/test/alerts", "/test/settings"]) {
+      const link = container.querySelector(`a[href="${href}"]`);
+      expect(link).toHaveAttribute("aria-disabled", "true");
+    }
+  });
+
+  it("keeps a valid board's own sidebar/chrome for an unknown sub-path under it, instead of dropping to local", async () => {
+    const { container } = renderApp("/demo/some-unknown-subpath");
+
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
+    );
+    // Board "demo" itself is reachable (the default mock returns 200) --
+    // only this one sub-path is bogus, so unlike the 404/403 cases above,
+    // the other real pages for this board must stay navigable. The Sidebar
+    // mounts twice (mobile + desktop drawers), so "demo" appears twice.
+    await waitFor(() =>
+      expect(screen.getAllByText("demo").length).toBeGreaterThan(0),
+    );
+    const homeLink = container.querySelector('a[href="/demo"]');
+    expect(homeLink).not.toHaveAttribute("aria-disabled");
+
+    // The board itself is fine -- it's specifically this sub-path that has
+    // no page behind it, so the generic "not found" is the correct (and
+    // only) outcome here, same as any other dead link in the app.
+    await screen.findByText("This page does not exist.");
   });
 });

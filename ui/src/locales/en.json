@@ -180,10 +180,6 @@
     "helpCombine": "Combine terms with a space — all must match."
   },
   "oops": {
-    "boardNotFound": {
-      "title": "Page not found",
-      "message": "This page does not exist or has no data yet."
-    },
     "notFound": {
       "title": "Page not found",
       "message": "This page does not exist."

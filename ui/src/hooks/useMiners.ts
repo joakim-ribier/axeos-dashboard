@@ -123,6 +123,13 @@ export interface AppInfo {
    * unknown board apart from a private one it just can't see into (403),
    * which still renders the normal board chrome. */
   boardNotFound: boolean;
+  /** True when this board is unreachable for any reason (404 not found, or
+   * 403 private/no access) -- every page under it (Home/Alerts/Settings)
+   * would show the same dead end, so the Sidebar disables navigating
+   * between them instead of offering links that just lead to more of the
+   * same error. Unlike boardNotFound, this stays true for a private board
+   * too, since its chrome (the lock icon) is still worth showing. */
+  boardBlocked: boolean;
 }
 
 export interface UseUiFeaturesReturn {
@@ -195,5 +202,9 @@ export const useAppInfo = (): AppInfo => {
       Boolean(boardId) &&
       minersQuery.error instanceof ApiError &&
       minersQuery.error.status === 404,
+    boardBlocked:
+      Boolean(boardId) &&
+      minersQuery.error instanceof ApiError &&
+      (minersQuery.error.status === 404 || minersQuery.error.status === 403),
   };
 };

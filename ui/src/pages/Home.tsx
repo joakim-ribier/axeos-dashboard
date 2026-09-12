@@ -433,8 +433,8 @@ export const Home = () => {
   if (error instanceof ApiError && error.status === 404) {
     return (
       <OopsPage
-        titleKey="oops.boardNotFound.title"
-        messageKey="oops.boardNotFound.message"
+        titleKey="oops.notFound.title"
+        messageKey="oops.notFound.message"
       />
     );
   }

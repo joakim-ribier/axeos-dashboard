@@ -2,8 +2,18 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import LockOutlineIcon from "@mui/icons-material/LockOutline";
-import { Alert, Box, Button, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Paper,
+  TextField,
+  Typography,
+  useTheme,
+} from "@mui/material";
 import axios from "axios";
+
+import { GradientBar } from "./PageHeader/GradientBar";
 
 interface BoardLockedPageProps {
   boardId: string;
@@ -18,6 +28,7 @@ export const BoardLockedPage = ({
   hashboardUrl,
 }: BoardLockedPageProps) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
@@ -46,60 +57,95 @@ export const BoardLockedPage = ({
     <Box
       sx={{
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
         justifyContent: "center",
+        alignItems: "center",
         minHeight: "60vh",
-        gap: 3,
-        textAlign: "center",
         px: 2,
       }}
     >
-      <LockOutlineIcon
-        sx={{ fontSize: 72, color: "warning.main", opacity: 0.8 }}
-      />
-      <Box>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          {t("boardLocked.title")}
-        </Typography>
-        <Typography
-          variant="body1"
-          color="text.secondary"
-          sx={{ maxWidth: 420 }}
-        >
-          {t("boardLocked.message")}
-        </Typography>
-      </Box>
-
-      {sent ? (
-        <Alert severity="success" sx={{ maxWidth: 420 }}>
-          {t("boardLocked.sent")}
-        </Alert>
-      ) : (
+      <Paper
+        variant="outlined"
+        sx={{
+          borderRadius: 3,
+          p: { xs: 4, sm: 6 },
+          maxWidth: 440,
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2.5,
+          textAlign: "center",
+        }}
+      >
         <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ display: "flex", gap: 1, width: "100%", maxWidth: 420 }}
+          sx={{
+            width: 88,
+            height: 88,
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "rgba(255,167,38,0.12)",
+          }}
         >
-          <TextField
-            type="email"
-            required
-            fullWidth
-            size="small"
-            label={t("boardLocked.emailLabel")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={submitting}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={submitting || !email.trim() || !hashboardUrl}
-          >
-            {submitting ? t("boardLocked.sending") : t("boardLocked.submit")}
-          </Button>
+          <LockOutlineIcon sx={{ fontSize: 44, color: "warning.main" }} />
         </Box>
-      )}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Typography variant="h5" fontWeight={700}>
+            {t("boardLocked.title")}
+          </Typography>
+          <Box sx={{ width: 48, my: 1.25 }}>
+            <GradientBar
+              height={4}
+              colors={[theme.palette.warning.main, theme.palette.warning.dark]}
+            />
+          </Box>
+          <Typography variant="body2" color="text.secondary">
+            {t("boardLocked.message")}
+          </Typography>
+        </Box>
+
+        {sent ? (
+          <Alert severity="success" sx={{ width: "100%" }}>
+            {t("boardLocked.sent")}
+          </Alert>
+        ) : (
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 1.5,
+              width: "100%",
+            }}
+          >
+            <TextField
+              type="email"
+              required
+              fullWidth
+              label={t("boardLocked.emailLabel")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={submitting}
+            />
+            <Button
+              type="submit"
+              variant="contained"
+              fullWidth
+              disabled={submitting || !email.trim() || !hashboardUrl}
+            >
+              {submitting ? t("boardLocked.sending") : t("boardLocked.submit")}
+            </Button>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 };
