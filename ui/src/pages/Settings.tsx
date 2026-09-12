@@ -86,6 +86,7 @@ const ConfiguredMinersTable = ({
   const { t } = useTranslation();
   const enabledCount = miners.filter((m) => m.enabled).length;
   const [expandedMac, setExpandedMac] = useState<string | null>(null);
+  const isEmpty = miners.length === 0;
 
   return (
     <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
@@ -93,7 +94,7 @@ const ConfiguredMinersTable = ({
         sx={{
           px: 3,
           pt: 2.5,
-          pb: 1.5,
+          pb: isEmpty ? 2.5 : 1.5,
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
@@ -122,216 +123,226 @@ const ConfiguredMinersTable = ({
             </Typography>
           )}
         </Box>
-        <Writable readOnly={readOnly}>
-          <Button
-            size="small"
-            color="error"
-            variant="outlined"
-            disabled={enabledCount === 0}
-            onClick={onDisableAllClick}
-            startIcon={<PauseIcon fontSize="small" />}
-            sx={{ flexShrink: 0 }}
-          >
-            {t("settingsPage.configured.disableAll")}
-          </Button>
-        </Writable>
+        {!isEmpty && (
+          <Writable readOnly={readOnly}>
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              disabled={enabledCount === 0}
+              onClick={onDisableAllClick}
+              startIcon={<PauseIcon fontSize="small" />}
+              sx={{ flexShrink: 0 }}
+            >
+              {t("settingsPage.configured.disableAll")}
+            </Button>
+          </Writable>
+        )}
       </Box>
-      <DataTable>
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ width: 40 }} />
-            <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
-            <TableCell>{t("settingsPage.configured.ip")}</TableCell>
-            <TableCell>{t("settingsPage.configured.mac")}</TableCell>
-            <TableCell>{t("settingsPage.configured.model")}</TableCell>
-            <TableCell>{t("settingsPage.configured.status")}</TableCell>
-            <Writable readOnly={readOnly}>
-              <TableCell align="right">
-                {t("settingsPage.configured.actions")}
-              </TableCell>
-            </Writable>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {miners.map((m) => {
-            const isToggling = togglingMac === normalizeMac(m.mac);
-            const key = normalizeMac(m.mac);
-            const isExpanded = expandedMac === key;
-            const poolDrift = poolMismatches(m, liveMinersByMac.get(key));
-            const toggleExpanded = () =>
-              setExpandedMac((current) => (current === key ? null : key));
-            return (
-              <Fragment key={m.mac}>
-                <TableRow
-                  hover
-                  onClick={toggleExpanded}
-                  sx={{ cursor: "pointer" }}
-                >
-                  <TableCell>
-                    <IconButton size="small">
-                      <KeyboardArrowDownIcon
-                        fontSize="small"
+      {!isEmpty && (
+        <DataTable>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 40 }} />
+              <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
+              <TableCell>{t("settingsPage.configured.ip")}</TableCell>
+              <TableCell>{t("settingsPage.configured.mac")}</TableCell>
+              <TableCell>{t("settingsPage.configured.model")}</TableCell>
+              <TableCell>{t("settingsPage.configured.status")}</TableCell>
+              <Writable readOnly={readOnly}>
+                <TableCell align="right">
+                  {t("settingsPage.configured.actions")}
+                </TableCell>
+              </Writable>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {miners.map((m) => {
+              const isToggling = togglingMac === normalizeMac(m.mac);
+              const key = normalizeMac(m.mac);
+              const isExpanded = expandedMac === key;
+              const poolDrift = poolMismatches(m, liveMinersByMac.get(key));
+              const toggleExpanded = () =>
+                setExpandedMac((current) => (current === key ? null : key));
+              return (
+                <Fragment key={m.mac}>
+                  <TableRow
+                    hover
+                    onClick={toggleExpanded}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    <TableCell>
+                      <IconButton size="small">
+                        <KeyboardArrowDownIcon
+                          fontSize="small"
+                          sx={{
+                            transition: "transform 0.15s ease",
+                            transform: isExpanded ? "rotate(180deg)" : "none",
+                          }}
+                        />
+                      </IconButton>
+                    </TableCell>
+                    <TableCell>
+                      <Box
                         sx={{
-                          transition: "transform 0.15s ease",
-                          transform: isExpanded ? "rotate(180deg)" : "none",
-                        }}
-                      />
-                    </IconButton>
-                  </TableCell>
-                  <TableCell>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.75,
-                      }}
-                    >
-                      <Typography
-                        component="span"
-                        sx={{
-                          color:
-                            poolDrift.length > 0 ? "warning.main" : "inherit",
-                          fontWeight: poolDrift.length > 0 ? 700 : 400,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.75,
                         }}
                       >
-                        {displayName(m) || "—"}
-                      </Typography>
-                      {poolDrift.length > 0 && (
-                        <Tooltip
-                          title={t(
-                            "settingsPage.configured.pool.driftBadgeTooltip",
-                            {
-                              fields: poolDrift
-                                .map((mm) => poolFieldLabel(t, mm.field))
-                                .join(", "),
-                            },
-                          )}
+                        <Typography
+                          component="span"
+                          sx={{
+                            color:
+                              poolDrift.length > 0 ? "warning.main" : "inherit",
+                            fontWeight: poolDrift.length > 0 ? 700 : 400,
+                          }}
                         >
-                          <Box
-                            sx={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: "50%",
-                              flexShrink: 0,
-                              bgcolor: "warning.main",
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>{m.ip}</TableCell>
-                  <TableCell sx={{ fontFamily: "monospace" }}>
-                    {m.mac}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      variant="outlined"
-                      label={m.model}
-                      sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" spacing={0.75}>
+                          {displayName(m) || "—"}
+                        </Typography>
+                        {poolDrift.length > 0 && (
+                          <Tooltip
+                            title={t(
+                              "settingsPage.configured.pool.driftBadgeTooltip",
+                              {
+                                fields: poolDrift
+                                  .map((mm) => poolFieldLabel(t, mm.field))
+                                  .join(", "),
+                              },
+                            )}
+                          >
+                            <Box
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                flexShrink: 0,
+                                bgcolor: "warning.main",
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "monospace" }}>
+                      {m.ip}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: "monospace" }}>
+                      {m.mac}
+                    </TableCell>
+                    <TableCell>
                       <Chip
                         size="small"
-                        label={
-                          m.enabled
-                            ? t("settingsPage.configured.enabled")
-                            : t("settingsPage.configured.disabled")
-                        }
-                        color={m.enabled ? "success" : "default"}
-                        variant={m.enabled ? "filled" : "outlined"}
+                        variant="outlined"
+                        label={m.model}
                         sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
                       />
-                      {(m.schedule?.length ?? 0) > 0 && (
-                        <Tooltip
-                          title={t(
-                            "settingsPage.configured.schedule.countTooltip",
-                            { count: m.schedule?.length ?? 0 },
-                          )}
-                        >
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            label={t(
-                              "settingsPage.configured.schedule.scheduledLabel",
-                            )}
-                            sx={{
-                              height: 24,
-                              fontSize: "0.8rem",
-                              borderRadius: 1,
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  </TableCell>
-                  <Writable readOnly={readOnly}>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        color={m.enabled ? "warning" : "success"}
-                        disabled={isToggling}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleEnabled(m);
-                        }}
-                        startIcon={
-                          isToggling ? (
-                            <CircularProgress size={14} color="inherit" />
-                          ) : m.enabled ? (
-                            <PauseIcon fontSize="small" />
-                          ) : (
-                            <PlayArrowIcon fontSize="small" />
-                          )
-                        }
-                      >
-                        {m.enabled
-                          ? t("settingsPage.configured.disable")
-                          : t("settingsPage.configured.enable")}
-                      </Button>
                     </TableCell>
-                  </Writable>
-                </TableRow>
-                <TableRow>
-                  <TableCell
-                    colSpan={readOnly ? 6 : 7}
-                    sx={{
-                      py: 0,
-                      borderBottom: isExpanded ? undefined : "none",
-                    }}
-                  >
-                    <Collapse in={isExpanded} unmountOnExit>
-                      <Box sx={{ px: 2 }}>
-                        <AliasEditor
-                          miner={m}
-                          saveMiners={saveMiners}
-                          readOnly={readOnly}
+                    <TableCell>
+                      <Stack direction="row" spacing={0.75}>
+                        <Chip
+                          size="small"
+                          label={
+                            m.enabled
+                              ? t("settingsPage.configured.enabled")
+                              : t("settingsPage.configured.disabled")
+                          }
+                          color={m.enabled ? "success" : "default"}
+                          variant={m.enabled ? "filled" : "outlined"}
+                          sx={{
+                            height: 24,
+                            fontSize: "0.8rem",
+                            borderRadius: 1,
+                          }}
                         />
-                        <SectionDivider sx={{ my: 1.5 }} />
-                        <PoolEditor
-                          miner={m}
-                          liveMiner={liveMinersByMac.get(key)}
-                          saveMiners={saveMiners}
-                          readOnly={readOnly}
-                        />
-                        <SectionDivider sx={{ my: 1.5 }} />
-                        <ScheduleEditor
-                          miner={m}
-                          saveMiners={saveMiners}
-                          readOnly={readOnly}
-                        />
-                      </Box>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </Fragment>
-            );
-          })}
-        </TableBody>
-      </DataTable>
+                        {(m.schedule?.length ?? 0) > 0 && (
+                          <Tooltip
+                            title={t(
+                              "settingsPage.configured.schedule.countTooltip",
+                              { count: m.schedule?.length ?? 0 },
+                            )}
+                          >
+                            <Chip
+                              size="small"
+                              variant="outlined"
+                              label={t(
+                                "settingsPage.configured.schedule.scheduledLabel",
+                              )}
+                              sx={{
+                                height: 24,
+                                fontSize: "0.8rem",
+                                borderRadius: 1,
+                              }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <Writable readOnly={readOnly}>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          color={m.enabled ? "warning" : "success"}
+                          disabled={isToggling}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleEnabled(m);
+                          }}
+                          startIcon={
+                            isToggling ? (
+                              <CircularProgress size={14} color="inherit" />
+                            ) : m.enabled ? (
+                              <PauseIcon fontSize="small" />
+                            ) : (
+                              <PlayArrowIcon fontSize="small" />
+                            )
+                          }
+                        >
+                          {m.enabled
+                            ? t("settingsPage.configured.disable")
+                            : t("settingsPage.configured.enable")}
+                        </Button>
+                      </TableCell>
+                    </Writable>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={readOnly ? 6 : 7}
+                      sx={{
+                        py: 0,
+                        borderBottom: isExpanded ? undefined : "none",
+                      }}
+                    >
+                      <Collapse in={isExpanded} unmountOnExit>
+                        <Box sx={{ px: 2 }}>
+                          <AliasEditor
+                            miner={m}
+                            saveMiners={saveMiners}
+                            readOnly={readOnly}
+                          />
+                          <SectionDivider sx={{ my: 1.5 }} />
+                          <PoolEditor
+                            miner={m}
+                            liveMiner={liveMinersByMac.get(key)}
+                            saveMiners={saveMiners}
+                            readOnly={readOnly}
+                          />
+                          <SectionDivider sx={{ my: 1.5 }} />
+                          <ScheduleEditor
+                            miner={m}
+                            saveMiners={saveMiners}
+                            readOnly={readOnly}
+                          />
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
+              );
+            })}
+          </TableBody>
+        </DataTable>
+      )}
     </Paper>
   );
 };
@@ -531,6 +542,8 @@ export const Settings = () => {
 
   // Top-of-page summary so a config problem is visible without scrolling
   // down into the miners table or the App settings section below.
+  const noMinersConfigured =
+    !configuredLoading && configuredMiners?.length === 0;
   const poolDriftCount = (configuredMiners ?? []).filter(
     (m) =>
       poolMismatches(m, liveMinersByMac.get(normalizeMac(m.mac))).length > 0,
@@ -662,6 +675,9 @@ export const Settings = () => {
       <AlertList
         severity="warning"
         items={[
+          ...(noMinersConfigured
+            ? [t("settingsPage.configured.emptyAlert")]
+            : []),
           ...(poolDriftCount > 0
             ? [t("settingsPage.issues.poolDrift", { count: poolDriftCount })]
             : []),
@@ -676,8 +692,7 @@ export const Settings = () => {
       {configuredLoading ? (
         <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
       ) : (
-        configuredMiners &&
-        configuredMiners.length > 0 && (
+        configuredMiners && (
           <ConfiguredMinersTable
             miners={configuredMiners}
             liveMinersByMac={liveMinersByMac}

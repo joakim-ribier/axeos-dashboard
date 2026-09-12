@@ -242,6 +242,7 @@
       "disableAllConfirm": "Disable all",
       "disableAllSuccess": "{{count}} miner(s) disabled.",
       "lastUpdated": "Last modified: {{date}}",
+      "emptyAlert": "No miners configured yet. Run an automatic scan below to add some.",
       "alias": {
         "title": "Display name",
         "label": "Alias",

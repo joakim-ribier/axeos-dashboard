@@ -242,6 +242,7 @@
       "disableAllConfirm": "Tout désactiver",
       "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
       "lastUpdated": "Dernière modification : {{date}}",
+      "emptyAlert": "Aucun mineur configuré pour le moment. Lance une détection automatique ci-dessous pour en ajouter.",
       "alias": {
         "title": "Nom affiché",
         "label": "Alias",
