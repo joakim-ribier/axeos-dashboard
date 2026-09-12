@@ -1,0 +1,1305 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.\nNo authentication — internal LAN use only.\n\nEndpoints tagged \"dashboard-api\" run on this binary (default :8080).\nEndpoints tagged \"remote-dashboard-api\" run on the separate remote-dashboard-api binary (default :8081),\na read-only API serving miners pushed to hashboard.live — see the project README.",
+        "title": "axeos-dashboard API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/config/discover": {
+            "get": {
+                "description": "Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24, defaults to the server's own local /24 subnet when both are omitted). ip takes priority if both are set.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Discover AxeOS devices on the network",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Probe exactly this one IP instead of scanning a range (e.g. a device on a different VLAN than the server). Takes priority over cidr.",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Network range to sweep, e.g. '192.168.1.0/24' (max /24 = 254 hosts). Omitted: auto-detects and scans the server's own local /24 subnet. Ignored if ip is set.",
+                        "name": "cidr",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Per-host probe timeout, e.g. '500ms' or '2s' (default 1s, capped at 3s). Raise it and retry if a scan/probe found nothing on a slow network.",
+                        "name": "timeout",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid/too-large cidr, or invalid/too-large timeout",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no AxeOS device found at the given ip",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/config/miners": {
+            "get": {
+                "description": "Returns every miner entry in the managed miners config, including disabled ones. Read-only -- see POST/DELETE for writing.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List configured miners",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Upserts one or more miner entries into the managed miners file, matched by MAC. New entries are always saved enabled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Add or update configured miners",
+                "parameters": [
+                    {
+                        "description": "Miner entries to add/update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "the full, updated list of configured miners",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body or entry",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "server not started with -miners -- nowhere safe to write",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "failed to write the miners file",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/config/settings": {
+            "get": {
+                "description": "Returns the settings.yml overrides, the built-in defaults for pool dashboards/firmware repos, and a read-only snapshot of process-launch settings (poll intervals, firmware cache TTL) shown for visibility only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Get app settings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Validates and persists the editable subset of app settings to settings.yml.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Save app settings",
+                "parameters": [
+                    {
+                        "description": "Settings to save",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/config.AppSettingsFile"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid settings",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "server has no resolvable config path -- nowhere safe to write",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "failed to write the app-settings file",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/info": {
+            "get": {
+                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api only) the hashboard base URL.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api",
+                    "remote-dashboard-api"
+                ],
+                "summary": "Server build/version info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.InfoResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners": {
+            "get": {
+                "description": "Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List all configured miners",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.MinersResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/alerts": {
+            "get": {
+                "description": "Returns each miner's N most recent alert-bearing entries (today's history only).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List the most recent miner alerts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "max entries to return per miner (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.AlertEntry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/alerts/history": {
+            "get": {
+                "description": "Returns every alert episode (consecutive same-type occurrences collapsed into one) on the given day across all miners, most recently active first, optionally filtered by ip/type.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List a single day's recorded miner alerts, grouped into episodes and paginated",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "the single day to scan (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number, 1-based (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "episodes per page (default 50, max 200)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this miner IP only",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this alert type only",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AlertHistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/pool/fallback/enable": {
+            "put": {
+                "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Switch stratum pool",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Miner IP or hostname — omit to apply to all configured miners",
+                        "name": "miner",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "502": {
+                        "description": "one or more miners didn't apply the change (unreachable, or rejected the request)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/pool/primary/enable": {
+            "put": {
+                "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Switch stratum pool",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Miner IP or hostname — omit to apply to all configured miners",
+                        "name": "miner",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "502": {
+                        "description": "one or more miners didn't apply the change (unreachable, or rejected the request)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/{hostnameOrIp}/restart": {
+            "post": {
+                "description": "Restarts the device via its AxeOs restart endpoint.",
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Restart a miner",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Miner IP or configured hostname",
+                        "name": "hostnameOrIp",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "404": {
+                        "description": "miner not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the miner is unreachable or rejected the restart request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/{hostnameOrIp}/stats": {
+            "get": {
+                "description": "Returns today's JSONL entries (one per poll cycle) for a single miner, used by the \"Today's History\" chart.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Get today's stats for one miner",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Miner IP or configured hostname",
+                        "name": "hostnameOrIp",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StatsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "miner not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/config/miners": {
+            "get": {
+                "description": "Returns the managed miners list last pushed to hashboard for this board.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List a remote board's configured miners (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.bitaxesResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no miners config ever pushed for this board",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/config/settings": {
+            "get": {
+                "description": "Returns the app settings last pushed to hashboard for this board, with remote push credentials always redacted.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "Get a remote board's app settings (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.appSettingsResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no settings ever pushed for this board",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/miners": {
+            "get": {
+                "description": "Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List miners pushed to a hashboard board (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.MinersResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "board not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/miners/alerts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List the most recent miner alerts for a hashboard board (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "max entries to return per miner (default 10)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.AlertEntry"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/miners/alerts/history": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "the single day to scan (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number, 1-based (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "episodes per page (default 50, max 200)",
+                        "name": "pageSize",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this miner IP only",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "filter to this alert type only",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AlertHistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/{ip}/stats": {
+            "get": {
+                "description": "Returns today's JSONL entries pushed to hashboard.live for a single miner in the board.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "Get today's stats for one remote miner (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Miner IP",
+                        "name": "ip",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StatsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "data file missing or unreadable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "config.AppSettingsFile": {
+            "type": "object",
+            "properties": {
+                "electricity": {
+                    "$ref": "#/definitions/config.ElectricityConfig"
+                },
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                },
+                "remote": {
+                    "$ref": "#/definitions/config.RemoteConfig"
+                }
+            }
+        },
+        "config.AppSettingsFirmware": {
+            "type": "object",
+            "properties": {
+                "repos": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "config.Bitaxe": {
+            "type": "object",
+            "properties": {
+                "alias": {
+                    "description": "Alias is an optional operator-set override for the display name shown\nin the UI wherever Hostname would otherwise be shown (see\nDisplayName). Unlike Hostname -- which a network discovery re-probe\n(see internal/discovery, and the \"select an already-configured\ndevice\" refresh flow in the Settings UI) silently overwrites with\nwhatever the device itself reports -- Alias is never touched by\ndiscovery, so it's the one place a custom, human-chosen name survives\na refresh.",
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "fallbackPort": {
+                    "type": "integer"
+                },
+                "fallbackUrl": {
+                    "type": "string"
+                },
+                "fallbackUser": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "mac": {
+                    "description": "Mac is the device's MAC address (colons/hyphens optional, normalized\nby StorageKey) -- the storage-directory key, stable across IP/\nlocation changes unlike Ip. Populated either by hand or by the network\ndiscovery flow (see internal/discovery), which reads it straight off\nthe device's own /api/system/info response.",
+                    "type": "string"
+                },
+                "model": {
+                    "$ref": "#/definitions/config.Model"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "schedule": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.CronSchedule"
+                    }
+                },
+                "url": {
+                    "type": "string"
+                },
+                "user": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.CronSchedule": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/config.ScheduleAction"
+                },
+                "cron": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.ElectricityConfig": {
+            "type": "object",
+            "properties": {
+                "ratePerKwh": {
+                    "description": "RatePerKwh is the electricity cost in euros per kilowatt-hour (e.g. 0.1915 for 19.15 cts/kWh).",
+                    "type": "number"
+                }
+            }
+        },
+        "config.Model": {
+            "type": "string",
+            "enum": [
+                "bitaxe",
+                "nerdaxe"
+            ],
+            "x-enum-varnames": [
+                "ModelBitaxe",
+                "ModelNerdaxe"
+            ]
+        },
+        "config.PoolsConfig": {
+            "type": "object",
+            "properties": {
+                "dashboards": {
+                    "description": "Dashboards maps a stratum pool hostname to its web dashboard URL\ntemplate. Use {user} as placeholder — replaced by the account part\nof the stratum user (before the first dot). Example:\n\"stratum.braiins.com\" -\u003e \"https://pool.braiins.com/mining/overview/{user}\"",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "config.RemoteConfig": {
+            "type": "object",
+            "properties": {
+                "apiKey": {
+                    "type": "string"
+                },
+                "pushURL": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.ScheduleAction": {
+            "type": "string",
+            "enum": [
+                "switch_primary",
+                "switch_fallback",
+                "restart"
+            ],
+            "x-enum-varnames": [
+                "ActionSwitchPrimary",
+                "ActionSwitchFallback",
+                "ActionRestart"
+            ]
+        },
+        "handler.AlertEntry": {
+            "type": "object",
+            "properties": {
+                "alerts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Alert"
+                    }
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "minerIp": {
+                    "type": "string"
+                },
+                "minerMac": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AlertEpisode": {
+            "type": "object",
+            "properties": {
+                "firstSeen": {
+                    "type": "string"
+                },
+                "hostname": {
+                    "type": "string"
+                },
+                "lastSeen": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "minerIp": {
+                    "type": "string"
+                },
+                "minerMac": {
+                    "type": "string"
+                },
+                "occurrences": {
+                    "type": "integer"
+                },
+                "peakValue": {
+                    "type": "number"
+                },
+                "threshold": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AlertHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "episodes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.AlertEpisode"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.StatsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.MinerInfo"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.appSettingsDefaults": {
+            "type": "object",
+            "properties": {
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                }
+            }
+        },
+        "handler.appSettingsReadOnly": {
+            "type": "object",
+            "properties": {
+                "feederInterval": {
+                    "type": "string"
+                },
+                "firmwareCacheCheckedAt": {
+                    "description": "FirmwareCacheCheckedAt is the most recent CheckedAt across every\nmodel in the firmware cache (RFC3339, UTC) -- omitted if the cache\nis empty (nothing checked yet, e.g. fresh install or no miner has\ntriggered a check). Lets the UI show \"was this actually run\" rather\nthan just the configured TTL.",
+                    "type": "string"
+                },
+                "firmwareCacheTTL": {
+                    "type": "string"
+                },
+                "healthCheckInterval": {
+                    "type": "string"
+                },
+                "remotePushMinersConfig": {
+                    "description": "RemotePushMinersConfig/RemotePushSettingsConfig mirror\nremotepush.Status's two independently-tracked config push attempts\n(RFC3339, UTC) -- the feeder's own record of its last attempt to\npush each config endpoint to hashboard, read back from disk since\nthe feeder is a separate OS process. Kept separate rather than\nmerged into one field so the Settings page can show both endpoints'\nhealth at once: one succeeding must never hide the other currently\nfailing (see remotepush.Status). Each is its zero value when that\nendpoint has never been attempted (no status file yet).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.remotePushEndpointStatus"
+                        }
+                    ]
+                },
+                "remotePushSettingsConfig": {
+                    "$ref": "#/definitions/handler.remotePushEndpointStatus"
+                }
+            }
+        },
+        "handler.appSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "defaults": {
+                    "$ref": "#/definitions/handler.appSettingsDefaults"
+                },
+                "electricity": {
+                    "$ref": "#/definitions/config.ElectricityConfig"
+                },
+                "firmware": {
+                    "$ref": "#/definitions/config.AppSettingsFirmware"
+                },
+                "lastUpdated": {
+                    "type": "string"
+                },
+                "pools": {
+                    "$ref": "#/definitions/config.PoolsConfig"
+                },
+                "readOnly": {
+                    "$ref": "#/definitions/handler.appSettingsReadOnly"
+                },
+                "remote": {
+                    "$ref": "#/definitions/config.RemoteConfig"
+                }
+            }
+        },
+        "handler.bitaxesResponse": {
+            "type": "object",
+            "properties": {
+                "bitaxes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.Bitaxe"
+                    }
+                },
+                "lastUpdated": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.remotePushEndpointStatus": {
+            "type": "object",
+            "properties": {
+                "lastAttemptAt": {
+                    "type": "string"
+                },
+                "lastError": {
+                    "type": "string"
+                },
+                "lastSuccessAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Alert": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "threshold": {
+                    "description": "the threshold in effect at calculation time, omitted otherwise",
+                    "type": "number"
+                },
+                "type": {
+                    "description": "\"tempHigh\", \"fanHigh\", \"offline\", \"macMismatch\", \"firmwareUpdate\"",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "the reading that triggered it (temp/fan), omitted otherwise",
+                    "type": "number"
+                }
+            }
+        },
+        "model.InfoResponse": {
+            "type": "object",
+            "properties": {
+                "appVersionReleaseURL": {
+                    "type": "string"
+                },
+                "appVersionStatus": {
+                    "description": "Whether this dashboard-api/remote-dashboard-api build itself is up to\ndate with GitHub's \"latest\" release (\"unknown\" | \"upToDate\" |\n\"updateAvailable\") — see internal/appversion. Checked server-side at\nmost once a day, so every client reads the same cached answer.",
+                    "type": "string"
+                },
+                "buildSHA": {
+                    "description": "Git commit this binary was built from",
+                    "type": "string"
+                },
+                "hashboardURL": {
+                    "description": "HashboardURL is the base URL of the hashboard instance backing this\nremote-dashboard-api (remote-dashboard-api only, config.HashboardURL)\n— lets the UI build a link to the board owner's hashboard account page.",
+                    "type": "string"
+                },
+                "ui": {
+                    "description": "UI mirrors config.UIConfig (each value normalized, so the frontend\nnever sees an empty string) -- the single React codebase shows\neverything unless a flag here says otherwise, instead of hardcoding\nwhat \"local\" vs \"remote\" means.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UIFeatures"
+                        }
+                    ]
+                }
+            }
+        },
+        "model.MinerInfo": {
+            "type": "object",
+            "properties": {
+                "alerts": {
+                    "description": "Alerts is whatever the feeder computed and persisted at the poll that\nproduced this snapshot (temp/fan out of range, offline, mac mismatch,\nfirmware update) -- the current state as of Timestamp, not a live value.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Alert"
+                    }
+                },
+                "alias": {
+                    "description": "Operator-set override for Hostname (see config.Bitaxe.DisplayName) -- empty when not set, UI falls back to Hostname",
+                    "type": "string"
+                },
+                "alive": {
+                    "description": "Health check",
+                    "type": "boolean"
+                },
+                "aliveCheckedAt": {
+                    "type": "string"
+                },
+                "bestDiff": {
+                    "description": "Highest difficulty value ever solved by the miner since start‑up",
+                    "type": "integer"
+                },
+                "blockFound": {
+                    "type": "integer"
+                },
+                "deviceModel": {
+                    "description": "Computed device model (e.g. \"NerdQAxe++\", \"Bitaxe 602\")",
+                    "type": "string"
+                },
+                "electricityRatePerKwh": {
+                    "description": "Electricity cost",
+                    "type": "number"
+                },
+                "energyJPerTh": {
+                    "description": "Energy consumption per terahash (Joules per TH)",
+                    "type": "number"
+                },
+                "error": {
+                    "description": "Error surfaces a serious inconsistency the UI should call out\ndistinctly from a normal offline/unreachable state -- currently just\na mismatch between the configured mac: and what the device itself\nreports (wrong device at this IP, or a config typo).",
+                    "type": "string"
+                },
+                "fallbackStratumDashboardURL": {
+                    "description": "Web dashboard URL for the fallback pool",
+                    "type": "string"
+                },
+                "fallbackStratumPort": {
+                    "type": "integer"
+                },
+                "fallbackStratumURL": {
+                    "type": "string"
+                },
+                "fallbackStratumUser": {
+                    "type": "string"
+                },
+                "fanspeed": {
+                    "description": "Fan speed (linked to the Temp field)",
+                    "type": "number"
+                },
+                "hashRateTHs": {
+                    "description": "Additional fields requested by the API",
+                    "type": "number"
+                },
+                "hostname": {
+                    "description": "Human-readable name from config",
+                    "type": "string"
+                },
+                "ip": {
+                    "description": "Miner IP address (derived from the folder name)",
+                    "type": "string"
+                },
+                "isUsingFallbackStratum": {
+                    "type": "integer"
+                },
+                "latestVersion": {
+                    "description": "Latest firmware version available on GitHub",
+                    "type": "string"
+                },
+                "macAddr": {
+                    "description": "Mac address",
+                    "type": "string"
+                },
+                "networkDifficulty": {
+                    "description": "Current network difficulty reported by the pool (unitless)",
+                    "type": "integer"
+                },
+                "power": {
+                    "description": "Watts (Joules per second)",
+                    "type": "number"
+                },
+                "releaseURL": {
+                    "description": "GitHub releases page for the latest firmware version",
+                    "type": "string"
+                },
+                "responseTime": {
+                    "description": "Ping/latency to the pool (ms).",
+                    "type": "number"
+                },
+                "sharesAccepted": {
+                    "type": "integer"
+                },
+                "sharesRejected": {
+                    "type": "integer"
+                },
+                "stratumDashboardURL": {
+                    "description": "Web dashboard URL for the primary pool",
+                    "type": "string"
+                },
+                "stratumPort": {
+                    "description": "Port of the primary Stratum pool",
+                    "type": "integer"
+                },
+                "stratumURL": {
+                    "description": "Pool urls -- Stratum(Port|Fallback...) is what the device itself is\ncurrently connected with, straight off its own /api/system/info\n(see handler.PayloadStructure) -- not to be confused with the\n*configured* pool (config.Bitaxe.Url/Port/...), which the UI reads\nseparately from GET /api/config/miners and compares against these to\nflag drift (see ui/src/utils/poolDrift.ts).",
+                    "type": "string"
+                },
+                "stratumUser": {
+                    "description": "Username (typically miner ID) for the primary pool",
+                    "type": "string"
+                },
+                "temp": {
+                    "description": "Primary temperature sensor reading (°C)",
+                    "type": "number"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "totalSharesAccepted": {
+                    "type": "integer"
+                },
+                "totalSharesRejected": {
+                    "type": "integer"
+                },
+                "totalUptimeSeconds": {
+                    "description": "Total* are persistent, reboot-surviving counters (see\ninternal/storage.Totals) -- unlike SharesAccepted/SharesRejected and\nUptimeSeconds above, which reset whenever the device itself reboots,\nthese keep accumulating for as long as the miner has been tracked.\nZero until the feeder has written at least one totals.json for this\nminer, or until the backfill tool has run.",
+                    "type": "integer"
+                },
+                "updateAvailable": {
+                    "description": "True when LatestVersion != Version",
+                    "type": "boolean"
+                },
+                "uptimeSeconds": {
+                    "description": "Miner uptime in seconds",
+                    "type": "integer"
+                },
+                "version": {
+                    "description": "Firmware version (e.g. \"v2.12.2\")",
+                    "type": "string"
+                },
+                "voltage": {
+                    "description": "Volts (millivolts)",
+                    "type": "number"
+                }
+            }
+        },
+        "model.MinersResponse": {
+            "type": "object",
+            "properties": {
+                "boardPublic": {
+                    "description": "BoardPublic reflects hashboard's Account.Public flag for this board\n(remote-dashboard-api only) — meaningless/always false for local\ndashboard-api, which has no such concept and whose UI never reads it.",
+                    "type": "boolean"
+                },
+                "configured": {
+                    "description": "Number of miners in config",
+                    "type": "integer"
+                },
+                "miners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.MinerInfo"
+                    }
+                },
+                "total": {
+                    "description": "Number of miners successfully loaded",
+                    "type": "integer"
+                }
+            }
+        },
+        "model.UIActionFeatures": {
+            "type": "object",
+            "properties": {
+                "minerPoolSwitch": {
+                    "type": "string"
+                },
+                "minerRestart": {
+                    "description": "MinerRestart/MinerPoolSwitch: \"enabled\" | \"readonly\" | \"hidden\" --\nsee config.UIActionConfig. \"readonly\" renders the button disabled\n(with a hint), \"hidden\" doesn't render it at all.",
+                    "type": "string"
+                }
+            }
+        },
+        "model.UIFeatures": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/model.UIActionFeatures"
+                },
+                "page": {
+                    "$ref": "#/definitions/model.UIPageFeatures"
+                }
+            }
+        },
+        "model.UIPageFeatures": {
+            "type": "object",
+            "properties": {
+                "settings": {
+                    "description": "Settings: \"enabled\" | \"readonly\" | \"hidden\" -- see config.UIPageConfig.",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

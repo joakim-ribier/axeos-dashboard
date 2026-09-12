@@ -112,11 +112,13 @@ test:
 	cd server && go test ./... -race -cover
 	@echo ">>> Tests complete."
 
-# Regenerate the OpenAPI spec from @-annotations in internal/handler and cmd/dashboard-api.
+# Regenerate the OpenAPI spec from @-annotations in internal/handler and cmd/dashboard-api,
+# and refresh the copy the docs site's Redoc page (docs/en/api.md, docs/api.md) reads from.
 swagger:
 	@echo ">>> Regenerating OpenAPI spec..."
 	cd server && go tool swag init -g cmd/dashboard-api/main.go -o docs/swagger --outputTypes json,yaml --parseInternal
-	@echo ">>> Done. See server/docs/swagger/swagger.yaml"
+	cp server/docs/swagger/swagger.json docs/assets/api/swagger.json
+	@echo ">>> Done. See server/docs/swagger/swagger.yaml and docs/assets/api/swagger.json"
 
 # Clean build artifacts
 clean:

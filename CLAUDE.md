@@ -42,11 +42,11 @@ cd ui && npm run typecheck   # tsc --noEmit
 cd ui && npm run format      # Prettier
 cd ui && npm run clean:code  # typecheck + lint:fix + format (run before commit)
 
-make swagger        # regenerate server/docs/swagger/ from handler annotations
-                     # (run after touching a handler's @Summary/@Router/etc comments)
+make swagger        # regenerate server/docs/swagger/ from handler annotations, and copy
+                     # the generated swagger.json into docs/assets/api/ (feeds the docs
+                     # site's Redoc page, docs/en/api.md) -- run after touching a handler's
+                     # @Summary/@Router/etc comments
 ```
-
-No tests exist yet.
 
 ## Architecture
 
@@ -123,14 +123,40 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 
 #### API Endpoints
 
+Full, always-current list: `make swagger` output, or the generated
+[API page](https://joakim-ribier.github.io/axeos-dashboard/en/api.html) --
+this table is a curated summary, not the source of truth.
+
+dashboard-api (`server/cmd/dashboard-api/router.go`):
+
 | Method | Path | Handler | Notes |
 |---|---|---|---|
-| `GET` | `/api/miners/` | `ListMiners()` | Returns all miners + latest snapshot |
+| `GET` | `/api/info` | `Info()` | Build/version info |
+| `GET` | `/api/miners` | `ListMiners()` | All miners + latest snapshot |
+| `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alerts across miners |
+| `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One day's alerts, grouped into episodes, paginated |
 | `GET` | `/api/miners/{hostnameOrIp}/stats` | `Stats()` | Today's JSONL entries for one miner |
 | `POST` | `/api/miners/{hostnameOrIp}/restart` | `Restart()` | Proxies restart to device |
 | `PUT` | `/api/miners/pool/{primary\|fallback}/enable` | `SwitchPool()` | Switches stratum pool |
+| `GET` | `/api/config/miners` | `ListMinersConfig()` | Read `miners.yml` |
+| `POST` | `/api/config/miners` | `SaveMinersConfig()` | Write `miners.yml` (Settings page) |
+| `GET` | `/api/config/settings` | `GetAppSettings()` | Read `settings.yml` (merged with defaults) |
+| `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
+| `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
 
 `MinerCtx` middleware resolves `hostnameOrIp` URL param → config entry, injects into request context.
+
+remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all read-only under `/api/{boardId}/`:
+
+| Method | Path | Handler | Notes |
+|---|---|---|---|
+| `GET` | `/api/info` | `Info()` | Build/version info |
+| `GET` | `/api/{boardId}/miners` | `ListRemoteMiners()` | Miners pushed to this board |
+| `GET` | `/api/{boardId}/miners/alerts` | `ListRemoteAlerts()` | Recent alerts for this board |
+| `GET` | `/api/{boardId}/miners/alerts/history` | `ListRemoteAlertsHistory()` | Paginated alert episodes for this board |
+| `GET` | `/api/{boardId}/{ip}/stats` | `RemoteStats()` | Today's stats for one remote miner |
+| `GET` | `/api/{boardId}/config/miners` | `RemoteMinersConfig()` | The board's `miners.yml`, read-only |
+| `GET` | `/api/{boardId}/config/settings` | `RemoteAppSettings()` | The board's `settings.yml`, read-only |
 
 Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 

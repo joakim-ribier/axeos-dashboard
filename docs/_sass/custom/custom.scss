@@ -16,6 +16,11 @@ $dashboard-sidebar-bg: #262637;
 $dashboard-text-primary: #e0e0e0;
 $dashboard-text-secondary: #b0b0b0;
 $dashboard-brand: #00b4ff;
+// hashboard.live's own TerminalCard component (ui/src/components/
+// TerminalCard.tsx: BODY_BG) intentionally uses a darker shade than the
+// header for its <pre> body -- this terminal-card mirrors that on purpose,
+// not $dashboard-sidebar-bg for both.
+$dashboard-terminal-body-bg: #0d1117;
 // MUI's default dark-mode warning color -- see the app's AlertList
 // (Alert variant="filled" severity="warning"), e.g. Settings' issue banner.
 $dashboard-warning: #ffa726;
@@ -193,7 +198,11 @@ body {
 // terminal-window look for copy-pasteable commands, with $ commands in
 // green and # comments muted, distinct from a plain fenced code block.
 .terminal-card {
-  border-radius: 12px;
+  // Matches the app's own small chips (e.g. MinerCard's model/version
+  // badges: sx={{ borderRadius: 1 }} on MUI's default shape.borderRadius
+  // of 4 -> 4px), not MuiCard's 12px -- a terminal window reads as a
+  // tighter, more "technical" surface than a big content card.
+  border-radius: 4px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   margin: 1.25rem 0;
@@ -220,14 +229,18 @@ body {
   color: $dashboard-text-primary;
 }
 
-.terminal-card-body {
+// Scoped under #main-content (an id, so it outranks the theme's own
+// ".main-content pre { margin-top: 0.5em; }") -- otherwise that rule wins
+// over the bare .terminal-card-body class below and reopens exactly the
+// gap this card is trying not to have between header and body.
+#main-content .terminal-card-body {
   margin: 0;
   padding: 1rem 1.2rem;
   font-family: $dashboard-mono;
   font-size: 0.75rem;
   line-height: 1.8;
   color: #d4d4e0;
-  background-color: $dashboard-sidebar-bg;
+  background-color: $dashboard-terminal-body-bg;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-all;

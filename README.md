@@ -11,11 +11,20 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
-**Easy to use** — one line, everything else configured from the UI:
+> [!TIP]
+> **Easy to use** — one line, everything else configured from the UI:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
+> ```
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
-```
+- [Prerequisites](#prerequisites)
+- [Quick Start (dev)](#quick-start-dev)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [API Reference](#api-reference)
+- [AxeOs Device API](#axeos-device-api)
+- [License](#license)
 
 ---
 
@@ -111,12 +120,9 @@ on the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/en/dev.html).
 
 ## API Reference
 
-Base URL: `http://localhost:8080`. Config is loaded once at startup — restart the binaries after any config change.
-
-Full OpenAPI spec (both dashboard-api and remote-dashboard-api):
-[`swagger.yaml`](server/docs/swagger/swagger.yaml) /
-[`swagger.json`](server/docs/swagger/swagger.json) — paste either into
-[editor.swagger.io](https://editor.swagger.io) for a browsable view.
+Browsable reference for both dashboard-api and remote-dashboard-api is in
+the [API page](https://joakim-ribier.github.io/axeos-dashboard/en/api.html)
+of the user documentation.
 
 ---
 
