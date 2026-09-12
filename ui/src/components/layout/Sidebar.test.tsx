@@ -1,6 +1,6 @@
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -160,33 +160,43 @@ describe("Sidebar", () => {
       expect(alertsLinks[0]).toHaveAttribute("href", "/alerts");
     });
 
-    it("links Home/Alerts to the board-scoped routes when on a remote board", () => {
+    it("links Home/Alerts to the board-scoped routes when on a remote board", async () => {
       renderSidebar("/demo", "remote");
 
-      const homeLinks = screen
-        .getAllByText("nav.home")
-        .map((el) => el.closest("a"));
+      // boardId only feeds nav links once ModeProvider's own /api/info fetch
+      // confirms isRemoteBackend -- until then they stay board-free (see
+      // Sidebar.tsx's own doc comment), so wait for the real, board-scoped
+      // hrefs.
+      await waitFor(() => {
+        const homeLinks = screen
+          .getAllByText("nav.home")
+          .map((el) => el.closest("a"));
+        expect(homeLinks[0]).toHaveAttribute("href", "/demo");
+      });
       const alertsLinks = screen
         .getAllByText("nav.alerts")
         .map((el) => el.closest("a"));
-
-      expect(homeLinks[0]).toHaveAttribute("href", "/demo");
       expect(alertsLinks[0]).toHaveAttribute("href", "/demo/alerts");
     });
 
-    it("marks Home as selected on the board root, and Alerts as selected on the alerts route", () => {
+    it("marks Home as selected on the board root, and Alerts as selected on the alerts route", async () => {
       const { container: homeContainer } = renderSidebar("/demo", "remote");
-      const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
-      expect(homeSelected.length).toBeGreaterThan(0);
-      expect(homeSelected[0]).toHaveTextContent("nav.home");
+      await waitFor(() => {
+        const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
+        expect(homeSelected.length).toBeGreaterThan(0);
+        expect(homeSelected[0]).toHaveTextContent("nav.home");
+      });
 
       const { container: alertsContainer } = renderSidebar(
         "/demo/alerts",
         "remote",
       );
-      const alertsSelected = alertsContainer.querySelectorAll(".Mui-selected");
-      expect(alertsSelected.length).toBeGreaterThan(0);
-      expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
+      await waitFor(() => {
+        const alertsSelected =
+          alertsContainer.querySelectorAll(".Mui-selected");
+        expect(alertsSelected.length).toBeGreaterThan(0);
+        expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
+      });
     });
 
     it("renders the Settings nav item, enabled, on the local board", () => {
@@ -200,17 +210,21 @@ describe("Sidebar", () => {
       expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
     });
 
-    it("links the Settings nav item to the board's own settings route, enabled, on a remote board", () => {
+    it("links the Settings nav item to the board's own settings route, enabled, on a remote board", async () => {
       renderSidebar("/demo", "remote");
-
-      const settingsLinks = screen
-        .getAllByText("nav.settings")
-        .map((el) => el.closest("a"));
 
       // The page itself renders read-only (ui.page.settings: readonly) --
       // the nav link is no longer force-disabled here, see
       // RequireSettingsEnabled/Settings.tsx's own readOnly gating.
-      expect(settingsLinks[0]).toHaveAttribute("href", "/demo/settings");
+      await waitFor(() => {
+        const settingsLinks = screen
+          .getAllByText("nav.settings")
+          .map((el) => el.closest("a"));
+        expect(settingsLinks[0]).toHaveAttribute("href", "/demo/settings");
+      });
+      const settingsLinks = screen
+        .getAllByText("nav.settings")
+        .map((el) => el.closest("a"));
       expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
     });
 
@@ -326,11 +340,13 @@ describe("Sidebar", () => {
       expect(logos[0].closest("a")).toHaveAttribute("href", "/");
     });
 
-    it("links to the board's home page in remote mode", () => {
+    it("links to the board's home page in remote mode", async () => {
       renderSidebar("/demo", "remote");
 
-      const logos = screen.getAllByText("AxeOS");
-      expect(logos[0].closest("a")).toHaveAttribute("href", "/demo");
+      await waitFor(() => {
+        const logos = screen.getAllByText("AxeOS");
+        expect(logos[0].closest("a")).toHaveAttribute("href", "/demo");
+      });
     });
   });
 

@@ -154,7 +154,13 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { boardId, isRemoteBackend } = useMode();
+  // isRemoteBackend-gated the same way as NotificationsContext: a
+  // board-shaped URL typo'd against plain dashboard-api (:boardId still
+  // matches route-wise, see App.tsx's local/remote route split) must never
+  // make nav links point at /{thatTypo}/... -- dashboard-api has no board
+  // concept at all, so every link below must stay board-free.
+  const { boardId: rawBoardId, isRemoteBackend } = useMode();
+  const boardId = isRemoteBackend ? rawBoardId : undefined;
   const { ui } = useUiFeatures();
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();

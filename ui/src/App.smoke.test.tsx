@@ -215,10 +215,16 @@ describe("App routing smoke test (remote board)", () => {
       screen.queryByRole("button", { name: "Send access link" }),
     ).not.toBeInTheDocument();
 
-    // And nav must stay usable -- there's no board to be blocked from.
-    for (const href of ["/foobar", "/foobar/alerts", "/foobar/settings"]) {
+    // And nav must stay usable -- there's no board to be blocked from, and
+    // the links must point at the plain local routes, NOT keep the
+    // "/foobar" typo as a prefix (dashboard-api has no board concept, so
+    // there's nothing to scope the nav under).
+    for (const href of ["/", "/alerts", "/settings"]) {
       const link = container.querySelector(`a[href="${href}"]`);
       expect(link).not.toHaveAttribute("aria-disabled");
+    }
+    for (const href of ["/foobar", "/foobar/alerts", "/foobar/settings"]) {
+      expect(container.querySelector(`a[href="${href}"]`)).toBeNull();
     }
 
     // No board chip either -- this isn't a board at all.
