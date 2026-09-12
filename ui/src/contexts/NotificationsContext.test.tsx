@@ -1,7 +1,8 @@
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { ModeProvider } from "@/contexts/ModeContext";
 import type { MinerNotification } from "@/utils/minerNotifications";
 
 import {
@@ -17,11 +18,26 @@ const makeNotification = (id: string): MinerNotification => ({
   detail: "on",
 });
 
+// ModeProvider derives boardId via useParams(), which only populates from
+// an actual matching <Route path=":boardId/*">, not just being inside a
+// MemoryRouter -- mirrors how App.tsx's AppLayout route nests it for real.
 function wrapperFor(initialEntry: string) {
+  const mode = initialEntry === "/" ? "local" : "remote";
+  const routePath = mode === "remote" ? "/:boardId/*" : "/*";
+
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <MemoryRouter initialEntries={[initialEntry]}>
-        <NotificationsProvider>{children}</NotificationsProvider>
+        <Routes>
+          <Route
+            path={routePath}
+            element={
+              <ModeProvider mode={mode}>
+                <NotificationsProvider>{children}</NotificationsProvider>
+              </ModeProvider>
+            }
+          />
+        </Routes>
       </MemoryRouter>
     );
   };

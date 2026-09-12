@@ -24,6 +24,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
@@ -31,7 +32,6 @@ import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
 } from "@/utils/appVersion";
-import { boardIdFromPathname } from "@/utils/boardId";
 import {
   createAppUpdateAvailableNotification,
   createAutoRefreshToggledNotification,
@@ -137,6 +137,7 @@ interface SidebarContentProps {
   releaseUrl: string | null;
   hashboardUrl: string | null;
   isPublic: boolean;
+  boardNotFound: boolean;
   onItemClick?: () => void;
 }
 
@@ -146,11 +147,12 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   releaseUrl,
   hashboardUrl,
   isPublic,
+  boardNotFound,
   onItemClick,
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  const boardId = boardIdFromPathname(location.pathname);
+  const { boardId } = useMode();
   const { ui } = useUiFeatures();
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();
@@ -243,7 +245,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         </Typography>
       </Box>
 
-      {boardId && (
+      {boardId && !boardNotFound && (
         <Box
           sx={{
             display: "flex",
@@ -475,8 +477,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
   // twice -- once for the mobile drawer, once for the desktop permanent
   // drawer) so the one-shot "update available" notification doesn't
   // double-fire across both instances.
-  const { buildSHA, versionStatus, releaseUrl, hashboardUrl, isPublic } =
-    useAppInfo();
+  const {
+    buildSHA,
+    versionStatus,
+    releaseUrl,
+    hashboardUrl,
+    isPublic,
+    boardNotFound,
+  } = useAppInfo();
   const { addNotifications } = useNotifications();
 
   // The actual GitHub check happens server-side (see internal/appversion),
@@ -525,6 +533,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           releaseUrl={releaseUrl}
           hashboardUrl={hashboardUrl}
           isPublic={isPublic}
+          boardNotFound={boardNotFound}
           onItemClick={onClose}
         />
       </Drawer>
@@ -548,6 +557,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           releaseUrl={releaseUrl}
           hashboardUrl={hashboardUrl}
           isPublic={isPublic}
+          boardNotFound={boardNotFound}
         />
       </Drawer>
     </Box>

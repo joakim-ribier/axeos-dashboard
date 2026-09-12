@@ -1,5 +1,4 @@
 // src/hooks/useMiners.ts
-import { useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -7,7 +6,6 @@ import { useMode } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
 import { DEFAULT_UI_FEATURES, UIFeatures } from "@/types/uiFeatures";
-import { boardIdFromPathname } from "@/utils/boardId";
 
 import { type Miner, minerSchema } from "../schemas/minerSchema";
 
@@ -120,6 +118,11 @@ export interface AppInfo {
   releaseUrl: string | null;
   hashboardUrl: string | null;
   isPublic: boolean;
+  /** True once the URL's board id is confirmed not to exist (the miners
+   * fetch above came back 404) -- lets the Sidebar tell a genuinely
+   * unknown board apart from a private one it just can't see into (403),
+   * which still renders the normal board chrome. */
+  boardNotFound: boolean;
 }
 
 export interface UseUiFeaturesReturn {
@@ -149,25 +152,22 @@ export const useUiFeatures = (): UseUiFeaturesReturn => {
 };
 
 /**
- * Build/version-status/hashboard-link lookup for the Sidebar, which renders
- * above the routing tree and therefore has no access to ModeProvider.
+ * Build/version-status/hashboard-link lookup for the Sidebar.
  *
  * Deliberately two separate queries:
  * - /api/info is never board-gated (it's server-instance metadata, not
  *   board data — see internal/handler/info.go), so it stays available even
  *   when the visitor has no access to a private board.
  * - the board's own public/private flag IS board data, so it still comes
- *   from the miners endpoint, deriving the path from the URL directly
- *   (same reasoning as before) and sharing its cache entry with
- *   useMiners() via the same query key — no duplicate network fetch. When
- *   that fetch fails (private board, no session), isPublic just falls back
- *   to false — acceptable since the locked-board page already makes the
- *   privacy state obvious.
+ *   from the miners endpoint (apiPaths.miners, from ModeContext), sharing
+ *   its cache entry with useMiners() via the same query key — no duplicate
+ *   network fetch. When that fetch fails (private board, no session),
+ *   isPublic just falls back to false — acceptable since the locked-board
+ *   page already makes the privacy state obvious.
  */
 export const useAppInfo = (): AppInfo => {
-  const location = useLocation();
-  const boardId = boardIdFromPathname(location.pathname);
-  const minersPath = boardId ? `/api/${boardId}/miners` : "/api/miners";
+  const { boardId, apiPaths } = useMode();
+  const minersPath = apiPaths.miners;
 
   const infoQuery = useQuery<InfoResult, Error>({
     queryKey: ["info"],
@@ -191,5 +191,9 @@ export const useAppInfo = (): AppInfo => {
     releaseUrl: infoQuery.data?.appVersionReleaseURL ?? null,
     hashboardUrl: infoQuery.data?.hashboardUrl ?? null,
     isPublic: minersQuery.data?.isPublic ?? false,
+    boardNotFound:
+      Boolean(boardId) &&
+      minersQuery.error instanceof ApiError &&
+      minersQuery.error.status === 404,
   };
 };

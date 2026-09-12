@@ -1,18 +1,15 @@
 // src/App.tsx
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
 import { Route, Routes } from "react-router-dom";
-import { Box, CssBaseline } from "@mui/material";
+import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { Sidebar } from "@/components/layout/Sidebar";
-import { TopBar } from "@/components/layout/TopBar";
+import { AppLayout } from "@/components/layout/AppLayout";
 import { OopsPage } from "@/components/ui/OopsPage";
 import { RequireMinersConfigured } from "@/components/ui/RequireMinersConfigured";
 import { RequireSettingsEnabled } from "@/components/ui/RequireSettingsEnabled";
-import { ModeProvider } from "@/contexts/ModeContext";
-import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import i18n from "@/i18n";
@@ -23,7 +20,6 @@ import { getTheme } from "@/theme";
 
 export const App: React.FC = () => {
   const theme = useMemo(() => getTheme("dark"), []);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const queryClient = new QueryClient();
 
@@ -34,103 +30,69 @@ export const App: React.FC = () => {
           <CssBaseline />
 
           <RefreshSettingsProvider>
-            <NotificationsProvider>
-              <SearchProvider>
-                <Box sx={{ display: "flex", minHeight: "100vh" }}>
-                  <Sidebar
-                    mobileOpen={mobileNavOpen}
-                    onClose={() => setMobileNavOpen(false)}
+            <SearchProvider>
+              <Routes>
+                {/* Local mode: this server's own configured miners. A
+                    genuinely unmatched path (e.g. an extra path segment)
+                    falls through to "*" below rather than here, since none
+                    of these children match it either -- see the AppLayout
+                    doc comment for why mode/boardId live one level up. */}
+                <Route element={<AppLayout mode="local" />}>
+                  <Route
+                    index
+                    element={
+                      <RequireMinersConfigured>
+                        <Home />
+                      </RequireMinersConfigured>
+                    }
                   />
+                  <Route
+                    path="alerts"
+                    element={
+                      <RequireMinersConfigured>
+                        <Alerts />
+                      </RequireMinersConfigured>
+                    }
+                  />
+                  <Route
+                    path="settings"
+                    element={
+                      <RequireSettingsEnabled>
+                        <Settings />
+                      </RequireSettingsEnabled>
+                    }
+                  />
+                  <Route
+                    path="*"
+                    element={
+                      <OopsPage
+                        titleKey="oops.notFound.title"
+                        messageKey="oops.notFound.message"
+                      />
+                    }
+                  />
+                </Route>
 
-                  <Box
-                    sx={{
-                      flexGrow: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      minWidth: 0,
-                    }}
-                  >
-                    <TopBar onMenuClick={() => setMobileNavOpen(true)} />
-
-                    <Box
-                      component="main"
-                      sx={{
-                        flexGrow: 1,
-                        p: 2,
-                      }}
-                    >
-                      <Routes>
-                        <Route
-                          path="/"
-                          element={
-                            <ModeProvider mode="local">
-                              <RequireMinersConfigured>
-                                <Home />
-                              </RequireMinersConfigured>
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="/alerts"
-                          element={
-                            <ModeProvider mode="local">
-                              <RequireMinersConfigured>
-                                <Alerts />
-                              </RequireMinersConfigured>
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="/settings"
-                          element={
-                            <ModeProvider mode="local">
-                              <RequireSettingsEnabled>
-                                <Settings />
-                              </RequireSettingsEnabled>
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="/:boardId/alerts"
-                          element={
-                            <ModeProvider mode="remote">
-                              <Alerts />
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="/:boardId/settings"
-                          element={
-                            <ModeProvider mode="remote">
-                              <RequireSettingsEnabled>
-                                <Settings />
-                              </RequireSettingsEnabled>
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="/:boardId"
-                          element={
-                            <ModeProvider mode="remote">
-                              <Home />
-                            </ModeProvider>
-                          }
-                        />
-                        <Route
-                          path="*"
-                          element={
-                            <OopsPage
-                              titleKey="oops.notFound.title"
-                              messageKey="oops.notFound.message"
-                            />
-                          }
-                        />
-                      </Routes>
-                    </Box>
-                  </Box>
-                </Box>
-              </SearchProvider>
-            </NotificationsProvider>
+                {/* Remote mode: a single unknown path segment always
+                    matches here rather than falling through to the local
+                    "*" above -- a dynamic segment outranks a splat in
+                    react-router's route ranking. Whether :boardId is a real
+                    board is a server question, not a routing one -- see
+                    useAppInfo's boardNotFound. */}
+                <Route path=":boardId" element={<AppLayout mode="remote" />}>
+                  <Route index element={<Home />} />
+                  <Route path="alerts" element={<Alerts />} />
+                  <Route
+                    path="settings"
+                    element={
+                      <RequireSettingsEnabled>
+                        <Settings />
+                      </RequireSettingsEnabled>
+                    }
+                  />
+                </Route>
+              </Routes>
+            </SearchProvider>
           </RefreshSettingsProvider>
         </ThemeProvider>
       </I18nextProvider>

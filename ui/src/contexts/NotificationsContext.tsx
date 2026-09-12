@@ -6,9 +6,8 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useLocation } from "react-router-dom";
 
-import { boardIdFromPathname } from "@/utils/boardId";
+import { useMode } from "@/contexts/ModeContext";
 import { MinerNotification } from "@/utils/minerNotifications";
 
 const STORAGE_KEY_PREFIX = "axeos.notifications.";
@@ -78,9 +77,7 @@ interface NotificationsProviderProps {
  * would mix every board's notification history into a single list, since
  * localStorage is shared across all paths on that origin.
  *
- * This provider is mounted once above the routing tree (see App.tsx), so it
- * derives boardId from the URL directly via useLocation() rather than
- * ModeContext, same reasoning as Sidebar/useBuildSHA. It reloads from
+ * Mounted inside AppLayout, below ModeProvider (see App.tsx). Reloads from
  * storage whenever boardId changes, in case client-side navigation between
  * boards is ever introduced (today every board is a distinct URL, so a
  * fresh mount already picks up the right key on its own).
@@ -88,8 +85,7 @@ interface NotificationsProviderProps {
 export const NotificationsProvider = ({
   children,
 }: NotificationsProviderProps) => {
-  const location = useLocation();
-  const boardId = boardIdFromPathname(location.pathname);
+  const { boardId } = useMode();
 
   const [notifications, setNotifications] = useState<MinerNotification[]>(() =>
     loadFromStorage(boardId),

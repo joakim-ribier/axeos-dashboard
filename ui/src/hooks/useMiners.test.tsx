@@ -1,24 +1,38 @@
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ModeProvider } from "@/contexts/ModeContext";
 
 import { useAppInfo } from "./useMiners";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
 
+// ModeProvider derives boardId via useParams(), which only populates from
+// an actual matching <Route path=":boardId/*">, not just being inside a
+// MemoryRouter -- mirrors how App.tsx's AppLayout route nests it for real.
 function makeWrapper(initialEntry: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const mode = initialEntry === "/" ? "local" : "remote";
+  const routePath = mode === "remote" ? "/:boardId/*" : "/*";
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[initialEntry]}>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route
+              path={routePath}
+              element={<ModeProvider mode={mode}>{children}</ModeProvider>}
+            />
+          </Routes>
+        </MemoryRouter>
       </QueryClientProvider>
     );
   }

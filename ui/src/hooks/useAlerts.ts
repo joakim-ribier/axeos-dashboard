@@ -1,13 +1,12 @@
 // src/hooks/useAlerts.ts
 import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import axios from "axios";
 
+import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { fetchMiners, type MinersResult } from "@/hooks/useMiners";
-import { boardIdFromPathname } from "@/utils/boardId";
 import { resolvedAlertsToNotifications } from "@/utils/minerNotifications";
 
 import {
@@ -35,16 +34,12 @@ export const fetchAlerts = async (url: string): Promise<AlertEntry[]> => {
  * minerNotifications.currentAlertState) -- it's only used here to find out
  * when a since-resolved alert was last seen, for useAlertResolutionEffect.
  *
- * Derives boardId from the URL directly rather than ModeContext -- this
- * hook is consumed by TopBar, which (like Sidebar) is mounted above the
- * routing tree and therefore above ModeProvider (see App.tsx).
+ * Consumed by TopBar, which sits inside ModeProvider same as every page
+ * (see AppLayout).
  */
 const useAlertsHistoryQuery = (): UseQueryResult<AlertEntry[], Error> => {
-  const location = useLocation();
-  const boardId = boardIdFromPathname(location.pathname);
-  const alertsPath = boardId
-    ? `/api/${boardId}/miners/alerts`
-    : "/api/miners/alerts";
+  const { apiPaths } = useMode();
+  const alertsPath = `${apiPaths.miners}/alerts`;
   const { autoRefreshEnabled } = useRefreshSettings();
 
   return useQuery<AlertEntry[], Error>({
@@ -61,16 +56,13 @@ const useAlertsHistoryQuery = (): UseQueryResult<AlertEntry[], Error> => {
  * The live miners list, for currently-active alerts (see
  * minerNotifications.currentAlertState for why this, not the alert
  * history, is the only reliable "is it happening right now" source).
- * Fetched independently of ModeContext for the same reason as the history
- * query above, but sharing its query key with useMiners() (see
- * useAppInfo's identical pattern) -- pages that already fetch the miners
- * list don't pay for a second network round trip just because the bell is
- * also mounted.
+ * Shares its query key with useMiners() (see useAppInfo's identical
+ * pattern) -- pages that already fetch the miners list don't pay for a
+ * second network round trip just because the bell is also mounted.
  */
 const useCurrentMinersQuery = (): UseQueryResult<MinersResult, Error> => {
-  const location = useLocation();
-  const boardId = boardIdFromPathname(location.pathname);
-  const minersPath = boardId ? `/api/${boardId}/miners` : "/api/miners";
+  const { apiPaths } = useMode();
+  const minersPath = apiPaths.miners;
   const { autoRefreshEnabled } = useRefreshSettings();
 
   return useQuery<MinersResult, Error>({

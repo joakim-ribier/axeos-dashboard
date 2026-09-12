@@ -1,8 +1,9 @@
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
@@ -19,16 +20,50 @@ vi.mock("@/hooks/useMiners", () => ({
   useUiFeatures: () => mockUseUiFeatures(),
 }));
 
-function renderSidebar(initialEntry: string) {
-  return render(
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <RefreshSettingsProvider>
-        <NotificationsProvider>
-          <Sidebar mobileOpen={false} onClose={() => {}} />
-        </NotificationsProvider>
-      </RefreshSettingsProvider>
-    </MemoryRouter>,
+function sidebarProviders(mobileOpen: boolean, onClose: () => void) {
+  return (
+    <RefreshSettingsProvider>
+      <NotificationsProvider>
+        <Sidebar mobileOpen={mobileOpen} onClose={onClose} />
+      </NotificationsProvider>
+    </RefreshSettingsProvider>
   );
+}
+
+// ModeProvider derives boardId via useParams(), which only populates from
+// an actual matching <Route path=":boardId/*">, not just being inside a
+// MemoryRouter -- mirrors how App.tsx's AppLayout route nests it for real
+// (see AppLayout.tsx). "/*" (rather than exact leaf paths) is enough here
+// since Sidebar itself only reads boardId + the raw pathname, never an
+// actual matched child route.
+function sidebarRouterTree(
+  initialEntry: string,
+  mode: "local" | "remote",
+  mobileOpen = false,
+  onClose: () => void = () => {},
+) {
+  const routePath = mode === "remote" ? "/:boardId/*" : "/*";
+  return (
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <Routes>
+        <Route
+          path={routePath}
+          element={
+            <ModeProvider mode={mode}>
+              {sidebarProviders(mobileOpen, onClose)}
+            </ModeProvider>
+          }
+        />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+function renderSidebar(
+  initialEntry: string,
+  mode: "local" | "remote" = "local",
+) {
+  return render(sidebarRouterTree(initialEntry, mode));
 }
 
 describe("Sidebar", () => {
@@ -52,7 +87,7 @@ describe("Sidebar", () => {
 
   describe("board public/private indicator", () => {
     it("shows the private icon by default", () => {
-      renderSidebar("/demo");
+      renderSidebar("/demo", "remote");
 
       expect(
         screen.getAllByLabelText("board is private").length,
@@ -70,7 +105,7 @@ describe("Sidebar", () => {
         hashboardUrl: null,
         isPublic: true,
       });
-      renderSidebar("/demo");
+      renderSidebar("/demo", "remote");
 
       expect(
         screen.getAllByLabelText("board is public").length,
@@ -110,7 +145,7 @@ describe("Sidebar", () => {
     });
 
     it("links Home/Alerts to the board-scoped routes when on a remote board", () => {
-      renderSidebar("/demo");
+      renderSidebar("/demo", "remote");
 
       const homeLinks = screen
         .getAllByText("nav.home")
@@ -124,12 +159,15 @@ describe("Sidebar", () => {
     });
 
     it("marks Home as selected on the board root, and Alerts as selected on the alerts route", () => {
-      const { container: homeContainer } = renderSidebar("/demo");
+      const { container: homeContainer } = renderSidebar("/demo", "remote");
       const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
       expect(homeSelected.length).toBeGreaterThan(0);
       expect(homeSelected[0]).toHaveTextContent("nav.home");
 
-      const { container: alertsContainer } = renderSidebar("/demo/alerts");
+      const { container: alertsContainer } = renderSidebar(
+        "/demo/alerts",
+        "remote",
+      );
       const alertsSelected = alertsContainer.querySelectorAll(".Mui-selected");
       expect(alertsSelected.length).toBeGreaterThan(0);
       expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
@@ -147,7 +185,7 @@ describe("Sidebar", () => {
     });
 
     it("links the Settings nav item to the board's own settings route, enabled, on a remote board", () => {
-      renderSidebar("/demo");
+      renderSidebar("/demo", "remote");
 
       const settingsLinks = screen
         .getAllByText("nav.settings")
@@ -175,7 +213,7 @@ describe("Sidebar", () => {
   });
 
   it("shows the current board id (without the word 'board') on a remote route", () => {
-    renderSidebar("/demo");
+    renderSidebar("/demo", "remote");
 
     expect(screen.getAllByText("demo").length).toBeGreaterThan(0);
     expect(screen.queryByText(/board demo/)).not.toBeInTheDocument();
@@ -183,7 +221,7 @@ describe("Sidebar", () => {
 
   it("shows the full board id, not truncated to a handful of characters", () => {
     const longBoardId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-    renderSidebar(`/${longBoardId}`);
+    renderSidebar(`/${longBoardId}`, "remote");
 
     expect(screen.getAllByText(longBoardId).length).toBeGreaterThan(0);
   });
@@ -217,15 +255,7 @@ describe("Sidebar", () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
 
-    render(
-      <MemoryRouter initialEntries={["/"]}>
-        <RefreshSettingsProvider>
-          <NotificationsProvider>
-            <Sidebar mobileOpen onClose={onClose} />
-          </NotificationsProvider>
-        </RefreshSettingsProvider>
-      </MemoryRouter>,
-    );
+    render(sidebarRouterTree("/", "local", true, onClose));
 
     for (const item of screen.getAllByText("nav.home")) {
       await user.click(item);
@@ -281,7 +311,7 @@ describe("Sidebar", () => {
     });
 
     it("links to the board's home page in remote mode", () => {
-      renderSidebar("/demo");
+      renderSidebar("/demo", "remote");
 
       const logos = screen.getAllByText("AxeOS");
       expect(logos[0].closest("a")).toHaveAttribute("href", "/demo");
@@ -346,15 +376,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(
-        <MemoryRouter initialEntries={["/"]}>
-          <RefreshSettingsProvider>
-            <NotificationsProvider>
-              <Sidebar mobileOpen={false} onClose={() => {}} />
-            </NotificationsProvider>
-          </RefreshSettingsProvider>
-        </MemoryRouter>,
-      );
+      rerender(sidebarRouterTree("/", "local"));
 
       const stored = JSON.parse(
         window.localStorage.getItem("axeos.notifications.local") ?? "[]",
@@ -368,16 +390,6 @@ describe("Sidebar", () => {
       // the very first render always sees "unknown" before it resolves --
       // the transition (and its notification) happens on a later render,
       // not on mount itself.
-      const sidebarTree = (
-        <MemoryRouter initialEntries={["/"]}>
-          <RefreshSettingsProvider>
-            <NotificationsProvider>
-              <Sidebar mobileOpen={false} onClose={() => {}} />
-            </NotificationsProvider>
-          </RefreshSettingsProvider>
-        </MemoryRouter>
-      );
-
       const { rerender } = renderSidebar("/");
 
       mockUseAppInfo.mockReturnValue({
@@ -385,7 +397,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(sidebarTree);
+      rerender(sidebarRouterTree("/", "local"));
 
       // Same status again, as if a later 90s poll came back unchanged.
       mockUseAppInfo.mockReturnValue({
@@ -393,7 +405,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(sidebarTree);
+      rerender(sidebarRouterTree("/", "local"));
 
       const stored = JSON.parse(
         window.localStorage.getItem("axeos.notifications.local") ?? "[]",
