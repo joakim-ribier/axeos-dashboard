@@ -51,6 +51,7 @@ import { matchesSearch } from "@/utils/minerSearch";
 const TEMP_THRESHOLD = 62;
 const FAN_THRESHOLD = 75;
 
+import { AlertList } from "../components/ui/AlertList";
 import { BoardLockedPage } from "../components/ui/BoardLockedPage";
 import { GlobalStats } from "../components/ui/GlobalStats";
 import { MinerCard } from "../components/ui/MinerCard/MinerCard";
@@ -591,7 +592,12 @@ export const Home = () => {
         </Box>
       )}
 
-      {!isLoading && data && data.length > 0 && filteredData?.length === 0 ? (
+      {!isLoading && data && data.length === 0 ? (
+        <AlertList severity="warning" items={[t("dashboard.noData")]} />
+      ) : !isLoading &&
+        data &&
+        data.length > 0 &&
+        filteredData?.length === 0 ? (
         <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
           {t("dashboard.filter.noResults")}
         </Typography>

@@ -6,6 +6,7 @@
       "title": "Tableau de bord"
     },
     "loading": "Chargement...",
+    "noData": "Aucune donnée pour le moment. Le relevé initial des mineurs configurés n'a pas encore eu lieu — réessaie dans quelques instants.",
     "filter": {
       "toggle": "Filtres",
       "all": "Tous",

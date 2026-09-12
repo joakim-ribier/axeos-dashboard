@@ -13,16 +13,36 @@ interface AlertListProps {
   items: React.ReactNode[];
 }
 
+/** The small colored, rounded-square swatch (not a round dot) that marks
+ * each point -- the exact shape hashboard.live itself uses for its own
+ * up/down status indicator in its top bar (10x10, 3px radius, solid
+ * fill), reused here as a decorative marker.
+ */
+const AlertBullet = () => (
+  <Box
+    sx={{
+      width: 10,
+      height: 10,
+      borderRadius: "3px",
+      flexShrink: 0,
+      backgroundColor: "currentColor",
+    }}
+  />
+);
+
 /** A single filled, icon-less alert banner with its items laid out as a
- * bullet list (a small dot per row, drawn by hand rather than relying on
- * native <ul>/<li> markers, which don't reliably render inside MUI's
+ * bullet list (one AlertBullet per row, drawn by hand rather than relying
+ * on native <ul>/<li> markers, which don't reliably render inside MUI's
  * layout) -- the "one banner, several points" pattern used wherever this
  * app groups more than one problem into a single alert: the Settings
  * page's top-of-page issues summary, PoolEditor's per-miner pool-config
- * drift warning, and the Remote (hashboard) push-status errors.
+ * drift warning, and the Remote (hashboard) push-status errors. A single
+ * item with no title is centered instead -- that's just a standalone
+ * message (e.g. an empty state), not a list.
  */
 export const AlertList = ({ severity, title, items }: AlertListProps) => {
   if (items.length === 0) return null;
+  const centered = !title && items.length === 1;
 
   return (
     <Alert severity={severity} variant="filled" icon={false}>
@@ -35,18 +55,14 @@ export const AlertList = ({ severity, title, items }: AlertListProps) => {
         {items.map((item, index) => (
           <Box
             key={index}
-            sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: centered ? "center" : "flex-start",
+              gap: 1,
+            }}
           >
-            <Box
-              sx={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                flexShrink: 0,
-                mt: "7px",
-                backgroundColor: "currentColor",
-              }}
-            />
+            <AlertBullet />
             <Typography variant="body2">{item}</Typography>
           </Box>
         ))}

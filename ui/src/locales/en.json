@@ -6,6 +6,7 @@
       "title": "Dashboard"
     },
     "loading": "Loading...",
+    "noData": "No data yet. The configured miners haven't been polled for the first time yet -- try again in a moment.",
     "filter": {
       "toggle": "Filters",
       "all": "All",
