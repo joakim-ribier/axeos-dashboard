@@ -12,19 +12,20 @@ import (
 )
 
 // Info handles GET /api/info — server-instance metadata (build/version
-// status, the UI feature flags, and for remote-dashboard-api, the
-// hashboard base URL). Never board-gated: none of this is board-specific,
-// so it must stay reachable even for a visitor locked out of a private
-// board. hashboardURL should be passed empty for dashboard-api (local
-// mode), where it's not applicable.
+// status, the UI feature flags, whether this binary even serves board
+// routes, and for remote-dashboard-api, the hashboard base URL). Never
+// board-gated: none of this is board-specific, so it must stay reachable
+// even for a visitor locked out of a private board. hashboardURL should
+// be passed empty and remote false for dashboard-api (local mode), where
+// neither applies.
 //
 // @Summary Server build/version info
-// @Description Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api only) the hashboard base URL.
+// @Description Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), whether this is remote-dashboard-api (as opposed to dashboard-api), and (remote-dashboard-api only) the hashboard base URL.
 // @Tags dashboard-api,remote-dashboard-api
 // @Produce json
 // @Success 200 {object} model.InfoResponse
 // @Router /api/info [get]
-func Info(versionChecker *appversion.Checker, hashboardURL string, ui config.UIConfig) http.HandlerFunc {
+func Info(versionChecker *appversion.Checker, hashboardURL string, remote bool, ui config.UIConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		versionCheck := versionChecker.Result()
 		resp := model.InfoResponse{
@@ -32,6 +33,7 @@ func Info(versionChecker *appversion.Checker, hashboardURL string, ui config.UIC
 			AppVersionStatus:     versionCheck.Status,
 			AppVersionReleaseURL: versionCheck.ReleaseURL,
 			HashboardURL:         hashboardURL,
+			Remote:               remote,
 			UI: model.UIFeatures{
 				Page: model.UIPageFeatures{
 					Settings: string(ui.Page.Settings.Normalized()),

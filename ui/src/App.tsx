@@ -32,11 +32,16 @@ import { getTheme } from "@/theme";
  * request.
  */
 const RemoteCatchAll: React.FC = () => {
-  const { boardId } = useMode();
+  const { boardId, isRemoteBackend } = useMode();
   const { hashboardUrl } = useAppInfo();
   const { error } = useMiners();
 
-  if (error instanceof ApiError && error.status === 403 && boardId) {
+  if (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    boardId &&
+    isRemoteBackend
+  ) {
     return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
   }
 

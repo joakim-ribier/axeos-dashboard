@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
+import { type AppVersionStatus, fetchInfo, type InfoResult } from "@/api/info";
 import { useMode } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
@@ -18,8 +19,6 @@ export class ApiError extends Error {
     this.name = "ApiError";
   }
 }
-
-export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
 
 export interface MinersResult {
   miners: Miner[];
@@ -87,31 +86,6 @@ export const useMiners = (): UseMinersReturn => {
   };
 };
 
-interface InfoResult {
-  buildSHA?: string;
-  appVersionStatus: AppVersionStatus;
-  appVersionReleaseURL: string | null;
-  hashboardUrl: string | null;
-  ui: UIFeatures;
-}
-
-export const fetchInfo = async (): Promise<InfoResult> => {
-  const { data } = await axios.get<{
-    buildSHA?: string;
-    appVersionStatus?: AppVersionStatus;
-    appVersionReleaseURL?: string;
-    hashboardURL?: string;
-    ui?: UIFeatures;
-  }>("/api/info");
-  return {
-    buildSHA: data.buildSHA,
-    appVersionStatus: data.appVersionStatus ?? "unknown",
-    appVersionReleaseURL: data.appVersionReleaseURL ?? null,
-    hashboardUrl: data.hashboardURL ?? null,
-    ui: data.ui ?? DEFAULT_UI_FEATURES,
-  };
-};
-
 export interface AppInfo {
   buildSHA: string | undefined;
   versionStatus: AppVersionStatus;
@@ -123,12 +97,13 @@ export interface AppInfo {
    * unknown board apart from a private one it just can't see into (403),
    * which still renders the normal board chrome. */
   boardNotFound: boolean;
-  /** True when this board is unreachable for any reason (404 not found, or
-   * 403 private/no access) -- every page under it (Home/Alerts/Settings)
-   * would show the same dead end, so the Sidebar disables navigating
-   * between them instead of offering links that just lead to more of the
-   * same error. Unlike boardNotFound, this stays true for a private board
-   * too, since its chrome (the lock icon) is still worth showing. */
+  /** True when this board is private (403) and we're locked out of it --
+   * every page under it (Home/Alerts/Settings) would show the same
+   * request-access screen, so the Sidebar disables navigating between them
+   * instead of offering links that just lead to more of the same. A plain
+   * "page not found" (404, or any other unmatched path) never blocks the
+   * Sidebar -- Home/Alerts/Settings are still real, useful destinations to
+   * navigate to from there. */
   boardBlocked: boolean;
 }
 
@@ -173,7 +148,7 @@ export const useUiFeatures = (): UseUiFeaturesReturn => {
  *   page already makes the privacy state obvious.
  */
 export const useAppInfo = (): AppInfo => {
-  const { boardId, apiPaths } = useMode();
+  const { boardId, apiPaths, isRemoteBackend } = useMode();
   const minersPath = apiPaths.miners;
 
   const infoQuery = useQuery<InfoResult, Error>({
@@ -198,13 +173,18 @@ export const useAppInfo = (): AppInfo => {
     releaseUrl: infoQuery.data?.appVersionReleaseURL ?? null,
     hashboardUrl: infoQuery.data?.hashboardUrl ?? null,
     isPublic: minersQuery.data?.isPublic ?? false,
+    // Gates every board-flavored inference below: a 404/403 only means
+    // "this board" when ModeContext has already confirmed (via
+    // /api/info) that this backend serves board routes at all.
     boardNotFound:
+      isRemoteBackend &&
       Boolean(boardId) &&
       minersQuery.error instanceof ApiError &&
       minersQuery.error.status === 404,
     boardBlocked:
+      isRemoteBackend &&
       Boolean(boardId) &&
       minersQuery.error instanceof ApiError &&
-      (minersQuery.error.status === 404 || minersQuery.error.status === 403),
+      minersQuery.error.status === 403,
   };
 };

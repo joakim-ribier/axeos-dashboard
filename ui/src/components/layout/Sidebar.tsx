@@ -154,7 +154,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  const { boardId } = useMode();
+  const { boardId, isRemoteBackend } = useMode();
   const { ui } = useUiFeatures();
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();
@@ -251,7 +251,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         </Typography>
       </Box>
 
-      {boardId && !boardNotFound && (
+      {boardId && isRemoteBackend && !boardNotFound && (
         <Box
           sx={{
             display: "flex",

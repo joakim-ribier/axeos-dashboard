@@ -122,9 +122,14 @@ describe("useAlertsHistory", () => {
 
     // fetchStatus stays "idle" (React Query never even attempts the
     // request) rather than "fetching" -- confirms this is `enabled: false`,
-    // not a request that fires and then errors.
+    // not a request that fires and then errors. ModeProvider's own
+    // unrelated GET /api/info (for isRemoteBackend) still fires and isn't
+    // what this test is about, so check the alerts endpoint specifically.
     expect(result.current.fetchStatus).toBe("idle");
-    expect(mockedAxios.get).not.toHaveBeenCalled();
+    expect(mockedAxios.get).not.toHaveBeenCalledWith(
+      "/api/miners/alerts/history",
+      expect.anything(),
+    );
   });
 
   it("always passes the date filter through as a query param -- the API requires it", async () => {

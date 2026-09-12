@@ -15,7 +15,7 @@ func TestInfo_localMode(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "/api/info", nil)
 
-	Info(testVersionChecker(), "", config.UIConfig{})(w, r)
+	Info(testVersionChecker(), "", false, config.UIConfig{})(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -29,6 +29,9 @@ func TestInfo_localMode(t *testing.T) {
 	}
 	if got.HashboardURL != "" {
 		t.Errorf("HashboardURL = %q, want empty for local mode", got.HashboardURL)
+	}
+	if got.Remote {
+		t.Errorf("Remote = %v, want false for local mode", got.Remote)
 	}
 	// A zero-value config.UIConfig (no ui: block in dashboard.yml) must
 	// normalize to everything enabled -- see UIVisibility.Normalized.
@@ -48,7 +51,7 @@ func TestInfo_remoteMode(t *testing.T) {
 		Page:   config.UIPageConfig{Settings: config.UIHidden},
 		Action: config.UIActionConfig{MinerRestart: config.UIHidden, MinerPoolSwitch: config.UIHidden},
 	}
-	Info(testVersionChecker(), "https://hashboard.live", ui)(w, r)
+	Info(testVersionChecker(), "https://hashboard.live", true, ui)(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -59,6 +62,9 @@ func TestInfo_remoteMode(t *testing.T) {
 	}
 	if got.HashboardURL != "https://hashboard.live" {
 		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.live")
+	}
+	if !got.Remote {
+		t.Errorf("Remote = %v, want true for remote mode", got.Remote)
 	}
 	if got.UI.Page.Settings != "hidden" {
 		t.Errorf("UI.Page.Settings = %q, want %q", got.UI.Page.Settings, "hidden")

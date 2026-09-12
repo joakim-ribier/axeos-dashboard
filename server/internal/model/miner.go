@@ -110,6 +110,17 @@ type InfoResponse struct {
 	// — lets the UI build a link to the board owner's hashboard account page.
 	HashboardURL string `json:"hashboardURL,omitempty"`
 
+	// Remote is true for remote-dashboard-api, false for dashboard-api --
+	// the single React codebase can't otherwise tell which binary it's
+	// talking to (both serve the same routes, and hashboardURL alone isn't
+	// a reliable signal: remote-dashboard-api can leave it unconfigured
+	// too, see resources/remote-dashboard.yml). The UI needs this to know
+	// whether an unrecognized single path segment is even worth treating
+	// as a possible board id in the first place -- on dashboard-api, no
+	// board ever exists, so a mistyped URL must never surface board-only
+	// chrome (the public/private chip, the "board is private" screen).
+	Remote bool `json:"remote"`
+
 	// UI mirrors config.UIConfig (each value normalized, so the frontend
 	// never sees an empty string) -- the single React codebase shows
 	// everything unless a flag here says otherwise, instead of hardcoding

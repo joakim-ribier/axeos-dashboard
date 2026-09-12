@@ -24,7 +24,8 @@ function renderApp(initialEntry: string) {
 describe("App routing smoke test (remote board)", () => {
   beforeEach(() => {
     mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info") return Promise.resolve({ data: {} });
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
       if (url.endsWith("/miners/alerts/history")) {
         return Promise.resolve({
           data: { episodes: [], total: 0, page: 1, pageSize: 50 },
@@ -54,7 +55,12 @@ describe("App routing smoke test (remote board)", () => {
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
     );
-    expect(screen.getAllByText("demo").length).toBeGreaterThan(0);
+    // The board chip also waits on /api/info (isRemoteBackend), a separate
+    // fetch from the miners call above -- wait for the actual DOM outcome
+    // rather than assuming both have settled by now.
+    await waitFor(() =>
+      expect(screen.getAllByText("demo").length).toBeGreaterThan(0),
+    );
   });
 
   it("renders Alerts under a remote board, scoped to that board's API", async () => {
@@ -76,9 +82,10 @@ describe("App routing smoke test (remote board)", () => {
     );
   });
 
-  it("hides the board chrome (no crash) when the board genuinely doesn't exist (404)", async () => {
+  it("hides the board chrome, but keeps the sidebar usable, when the board genuinely doesn't exist (404)", async () => {
     mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info") return Promise.resolve({ data: {} });
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
       const err = Object.assign(new Error("not found"), {
         response: { status: 404, data: { error: "board not found" } },
       });
@@ -104,21 +111,23 @@ describe("App routing smoke test (remote board)", () => {
     );
     expect(screen.queryByLabelText("board is public")).not.toBeInTheDocument();
 
-    // Nor should the sidebar let you wander between pages of a board that
-    // doesn't exist -- every one of them would show the same error.
+    // A plain "page not found" must never lock the sidebar -- unlike a
+    // private board, there's nowhere useful this could redirect to, so
+    // Home/Alerts/Settings stay real, clickable destinations.
     for (const href of [
       "/does-not-exist",
       "/does-not-exist/alerts",
       "/does-not-exist/settings",
     ]) {
       const link = container.querySelector(`a[href="${href}"]`);
-      expect(link).toHaveAttribute("aria-disabled", "true");
+      expect(link).not.toHaveAttribute("aria-disabled");
     }
   });
 
-  it("shows the exact same 'board not found' outcome on an unknown sub-path as on the board root -- what matters is that the board doesn't exist, not which sub-path was typed", async () => {
+  it("shows the exact same 'not found' outcome on an unknown sub-path as on the board root, sidebar left usable in both", async () => {
     mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info") return Promise.resolve({ data: {} });
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
       const err = Object.assign(new Error("not found"), {
         response: { status: 404, data: { error: "board not found" } },
       });
@@ -145,13 +154,14 @@ describe("App routing smoke test (remote board)", () => {
       "/does-not-exist/settings",
     ]) {
       const link = container.querySelector(`a[href="${href}"]`);
-      expect(link).toHaveAttribute("aria-disabled", "true");
+      expect(link).not.toHaveAttribute("aria-disabled");
     }
   });
 
   it("shows the same board-locked screen on an unknown sub-path as on a private board's root, instead of a generic 'not found'", async () => {
     mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info") return Promise.resolve({ data: {} });
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
       const err = Object.assign(new Error("forbidden"), {
         response: { status: 403, data: { error: "board is private" } },
       });
@@ -177,9 +187,48 @@ describe("App routing smoke test (remote board)", () => {
     );
   });
 
+  it("never shows board chrome/lockout for a board-shaped typo against a plain dashboard-api (remote: false) -- a mistyped local URL must stay a plain 404", async () => {
+    // Mirrors what dashboard-api actually does for /api/{anything}/miners:
+    // no such route exists there, so chi's router itself returns a plain
+    // 404 (no JSON body) -- easy to misread client-side as "board not
+    // found" if the client didn't first check whether boards are even a
+    // concept on this backend (see useAppInfo's isRemoteBackend).
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: false } });
+      const err = Object.assign(new Error("not found"), {
+        response: { status: 404, data: "404 page not found" },
+      });
+      return Promise.reject(err);
+    });
+    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+
+    const { container } = renderApp("/foobar");
+
+    await waitFor(() =>
+      expect(mockedAxios.get).toHaveBeenCalledWith("/api/foobar/miners"),
+    );
+    await screen.findByText("This page does not exist.");
+
+    // The generic OopsPage, not BoardLockedPage -- no "Send access link".
+    expect(
+      screen.queryByRole("button", { name: "Send access link" }),
+    ).not.toBeInTheDocument();
+
+    // And nav must stay usable -- there's no board to be blocked from.
+    for (const href of ["/foobar", "/foobar/alerts", "/foobar/settings"]) {
+      const link = container.querySelector(`a[href="${href}"]`);
+      expect(link).not.toHaveAttribute("aria-disabled");
+    }
+
+    // No board chip either -- this isn't a board at all.
+    expect(screen.queryByText("foobar")).not.toBeInTheDocument();
+  });
+
   it("also locks the sidebar for a private board (403), not just a missing one (404)", async () => {
     mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info") return Promise.resolve({ data: {} });
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
       const err = Object.assign(new Error("forbidden"), {
         response: { status: 403, data: { error: "board is private" } },
       });

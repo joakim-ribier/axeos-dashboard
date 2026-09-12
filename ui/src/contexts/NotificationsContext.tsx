@@ -85,7 +85,12 @@ interface NotificationsProviderProps {
 export const NotificationsProvider = ({
   children,
 }: NotificationsProviderProps) => {
-  const { boardId } = useMode();
+  // isRemoteBackend-gated the same way as the Sidebar's board chrome: a
+  // board-shaped URL typo'd against plain dashboard-api must still scope
+  // its notifications under "local", not under whatever the typo happened
+  // to spell (see ModeContext's own doc comment on isRemoteBackend).
+  const { boardId: rawBoardId, isRemoteBackend } = useMode();
+  const boardId = isRemoteBackend ? rawBoardId : undefined;
 
   const [notifications, setNotifications] = useState<MinerNotification[]>(() =>
     loadFromStorage(boardId),

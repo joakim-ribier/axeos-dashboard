@@ -203,7 +203,7 @@
         },
         "/api/info": {
             "get": {
-                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), and (remote-dashboard-api only) the hashboard base URL.",
+                "description": "Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), whether this is remote-dashboard-api (as opposed to dashboard-api), and (remote-dashboard-api only) the hashboard base URL.",
                 "produces": [
                     "application/json"
                 ],
@@ -1078,6 +1078,10 @@
                 "hashboardURL": {
                     "description": "HashboardURL is the base URL of the hashboard instance backing this\nremote-dashboard-api (remote-dashboard-api only, config.HashboardURL)\n— lets the UI build a link to the board owner's hashboard account page.",
                     "type": "string"
+                },
+                "remote": {
+                    "description": "Remote is true for remote-dashboard-api, false for dashboard-api --\nthe single React codebase can't otherwise tell which binary it's\ntalking to (both serve the same routes, and hashboardURL alone isn't\na reliable signal: remote-dashboard-api can leave it unconfigured\ntoo, see resources/remote-dashboard.yml). The UI needs this to know\nwhether an unrecognized single path segment is even worth treating\nas a possible board id in the first place -- on dashboard-api, no\nboard ever exists, so a mistyped URL must never surface board-only\nchrome (the public/private chip, the \"board is private\" screen).",
+                    "type": "boolean"
                 },
                 "ui": {
                     "description": "UI mirrors config.UIConfig (each value normalized, so the frontend\nnever sees an empty string) -- the single React codebase shows\neverything unless a flag here says otherwise, instead of hardcoding\nwhat \"local\" vs \"remote\" means.",

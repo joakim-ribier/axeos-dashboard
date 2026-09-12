@@ -1,5 +1,5 @@
 // src/utils/appVersion.ts
-import type { AppVersionStatus } from "@/hooks/useMiners";
+import type { AppVersionStatus } from "@/api/info";
 
 export type { AppVersionStatus };
 

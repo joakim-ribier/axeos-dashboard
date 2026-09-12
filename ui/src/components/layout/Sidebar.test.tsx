@@ -1,4 +1,5 @@
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -18,6 +19,16 @@ const mockUseUiFeatures = vi.fn();
 vi.mock("@/hooks/useMiners", () => ({
   useAppInfo: () => mockUseAppInfo(),
   useUiFeatures: () => mockUseUiFeatures(),
+}));
+
+// ModeProvider itself now fetches GET /api/info (for isRemoteBackend) --
+// mocked at the source rather than via axios, so this stays a one-line
+// constant instead of duplicating the URL-routing every other axios mock
+// in this suite would need. Every Sidebar test here exercises a board that
+// IS reachable (remote-dashboard-api) -- the "typo'd against dashboard-api"
+// case lives in App.smoke.test.tsx, which mounts the real ModeProvider tree.
+vi.mock("@/api/info", () => ({
+  fetchInfo: () => Promise.resolve({ remote: true }),
 }));
 
 function sidebarProviders(mobileOpen: boolean, onClose: () => void) {
@@ -43,19 +54,22 @@ function sidebarRouterTree(
   onClose: () => void = () => {},
 ) {
   const routePath = mode === "remote" ? "/:boardId/*" : "/*";
+  const queryClient = new QueryClient();
   return (
-    <MemoryRouter initialEntries={[initialEntry]}>
-      <Routes>
-        <Route
-          path={routePath}
-          element={
-            <ModeProvider mode={mode}>
-              {sidebarProviders(mobileOpen, onClose)}
-            </ModeProvider>
-          }
-        />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <Routes>
+          <Route
+            path={routePath}
+            element={
+              <ModeProvider mode={mode}>
+                {sidebarProviders(mobileOpen, onClose)}
+              </ModeProvider>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -86,18 +100,20 @@ describe("Sidebar", () => {
   });
 
   describe("board public/private indicator", () => {
-    it("shows the private icon by default", () => {
+    it("shows the private icon by default", async () => {
       renderSidebar("/demo", "remote");
 
+      // The chip now also waits on ModeProvider's own /api/info fetch
+      // (isRemoteBackend) -- find* auto-retries until that resolves.
       expect(
-        screen.getAllByLabelText("board is private").length,
+        (await screen.findAllByLabelText("board is private")).length,
       ).toBeGreaterThan(0);
       expect(
         screen.queryByLabelText("board is public"),
       ).not.toBeInTheDocument();
     });
 
-    it("shows the public icon when the board is public", () => {
+    it("shows the public icon when the board is public", async () => {
       mockUseAppInfo.mockReturnValue({
         buildSHA: undefined,
         versionStatus: "unknown",
@@ -108,7 +124,7 @@ describe("Sidebar", () => {
       renderSidebar("/demo", "remote");
 
       expect(
-        screen.getAllByLabelText("board is public").length,
+        (await screen.findAllByLabelText("board is public")).length,
       ).toBeGreaterThan(0);
       expect(
         screen.queryByLabelText("board is private"),
@@ -212,18 +228,18 @@ describe("Sidebar", () => {
     });
   });
 
-  it("shows the current board id (without the word 'board') on a remote route", () => {
+  it("shows the current board id (without the word 'board') on a remote route", async () => {
     renderSidebar("/demo", "remote");
 
-    expect(screen.getAllByText("demo").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("demo")).length).toBeGreaterThan(0);
     expect(screen.queryByText(/board demo/)).not.toBeInTheDocument();
   });
 
-  it("shows the full board id, not truncated to a handful of characters", () => {
+  it("shows the full board id, not truncated to a handful of characters", async () => {
     const longBoardId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
     renderSidebar(`/${longBoardId}`, "remote");
 
-    expect(screen.getAllByText(longBoardId).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(longBoardId)).length).toBeGreaterThan(0);
   });
 
   it("does not show a board id chip on the local route", () => {

@@ -280,7 +280,7 @@ const RowsSkeleton: React.FC = () => (
 /* ── Alerts page ─────────────────────────────────────────────── */
 export const Alerts = () => {
   const { t } = useTranslation();
-  const { boardId } = useMode();
+  const { boardId, isRemoteBackend } = useMode();
   const { hashboardUrl } = useAppInfo();
   const { data: miners } = useMiners();
 
@@ -318,7 +318,12 @@ export const Alerts = () => {
     [miners],
   );
 
-  if (error instanceof ApiError && error.status === 403 && boardId) {
+  if (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    boardId &&
+    isRemoteBackend
+  ) {
     return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
   }
 

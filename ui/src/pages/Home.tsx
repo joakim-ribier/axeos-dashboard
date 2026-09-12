@@ -324,7 +324,7 @@ export const Home = () => {
   const { t } = useTranslation();
   const { data, isLoading, error } = useMiners();
   const { hashboardUrl } = useAppInfo();
-  const { boardId } = useMode();
+  const { boardId, isRemoteBackend } = useMode();
   const { query } = useSearch();
   const { sort, setSort } = useMinerSort();
 
@@ -426,7 +426,12 @@ export const Home = () => {
     rowGap: theme.spacing(3),
   });
 
-  if (error instanceof ApiError && error.status === 403 && boardId) {
+  if (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    boardId &&
+    isRemoteBackend
+  ) {
     return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
   }
 
