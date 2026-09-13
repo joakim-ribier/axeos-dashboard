@@ -165,6 +165,17 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
 
   const name = displayName({ hostname, alias });
 
+  // MinerActionMenu renders nothing at all (not even a disabled button)
+  // when both actions are hidden -- true on a remote/read-only board,
+  // where those endpoints don't exist server-side at all. The title
+  // row's right padding below normally clears that button (it's
+  // absolutely positioned, so it doesn't otherwise push the timestamp
+  // out of the way on its own) -- without this, the timestamp sits with
+  // dead space to its right whenever the button isn't actually there.
+  const actionsMenuHidden =
+    ui.action.minerPoolSwitch === "hidden" &&
+    ui.action.minerRestart === "hidden";
+
   // Captured in an effect rather than read directly during render
   // (Date.now() is impure) -- refreshed whenever minerInfo changes, which
   // is this card's natural refresh cadence for the staleness check below.
@@ -471,7 +482,7 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
           justifyContent: "space-between",
           gap: 0.75,
           pl: 2,
-          pr: 6,
+          pr: actionsMenuHidden ? 2 : 6,
           pt: 2,
           pb: name || deviceModel ? 0.5 : 2,
         }}
