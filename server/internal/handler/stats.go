@@ -3,8 +3,10 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -49,11 +51,12 @@ func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *htt
 
 	entries, err := decodeJSONL(path)
 	if err != nil {
-		/*if errors.Is(err, os.ErrNotExist) {
-			// File does not exist yet today — return empty result, not 404
+		if errors.Is(err, os.ErrNotExist) {
+			// Today's file doesn't exist yet (fresh day, feeder hasn't
+			// polled since midnight) -- an empty result, not an error.
 			writeStatsResponse(w, []model.MinerInfo{})
 			return
-		}*/
+		}
 		writeErrorResponse(w, fmt.Sprintf("failed to read data file: %v", err), http.StatusInternalServerError)
 		return
 	}

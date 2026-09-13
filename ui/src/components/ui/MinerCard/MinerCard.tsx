@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { RestartAltOutlined, VerifiedUserOutlined } from "@mui/icons-material";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import AirIcon from "@mui/icons-material/Air";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -14,6 +15,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PersonIcon from "@mui/icons-material/Person";
 import ShowChartOutlined from "@mui/icons-material/ShowChartOutlined";
 import SpeedIcon from "@mui/icons-material/Speed";
+import SyncIcon from "@mui/icons-material/Sync";
 import SyncAltIcon from "@mui/icons-material/SyncAlt";
 import ThermostatIcon from "@mui/icons-material/Thermostat";
 import {
@@ -31,14 +33,21 @@ import {
 } from "@mui/material";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMinerAction } from "@/hooks/useMinerActions";
 import { useUiFeatures } from "@/hooks/useMiners";
 import { useMinerStats } from "@/hooks/useMinerStats";
 import { MinerInfo } from "@/types/miner";
-import { formatDuration, formatMetric, formatTimestamp } from "@/utils/format";
+import {
+  formatDuration,
+  formatMetric,
+  formatTimeOnly,
+  formatTimestamp,
+  parseGoDuration,
+} from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
 
-import { MinerActionBar } from "./components/MinerActionBar";
+import { MinerActionMenu } from "./components/MinerActionMenu";
 import { MinerTabPanel } from "./components/MinerTabPanel";
 import { MinerStatsChart } from "./MinerStatsChart";
 
@@ -48,6 +57,52 @@ const EXCLUSIVE_FIELDS: Set<keyof MinerInfo> = new Set([
 ]);
 
 const DEFAULT_CHART_FIELDS: (keyof MinerInfo)[] = ["temp", "fanspeed"];
+
+const TERMINAL_MONO_STACK =
+  "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
+// Matches hashboard.live's own TerminalCard component, mirrored in this
+// project's docs site (docs/_sass/custom/custom.scss's
+// .terminal-card-body) -- same near-black background, so the card's
+// "output" section reads as the same on-brand terminal across the
+// dashboard, hashboard, and the docs.
+const TERMINAL_BODY_BG = "#0d1117";
+
+// Fallback feeder interval (used both for flagging an uptime as "just
+// started" and a feed timestamp as "stale") when the real feeder.interval
+// isn't available -- a remote-viewed board never gets one
+// (remote-dashboard-api's own /api/config/settings never populates
+// readOnly.feederInterval, see RemoteAppSettings), since a remote board
+// doesn't run a feeder of its own to have an interval for. 5 minutes
+// comfortably covers the default 2m local interval plus one full poll
+// cycle.
+const FALLBACK_FEEDER_INTERVAL_SECONDS = 5 * 60;
+
+// "# pool", "# firmware", ... -- a terminal-comment-style label above a
+// section of the black content block, taking the place of a divider line
+// to structure the card without adding one more visual element.
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
+    <Box
+      sx={{
+        flexShrink: 0,
+        fontFamily: TERMINAL_MONO_STACK,
+        fontSize: "0.875rem",
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: "text.disabled",
+      }}
+    >
+      <Box component="span" sx={{ opacity: 0.6, mr: 0.5 }}>
+        #
+      </Box>
+      {children}
+    </Box>
+    <Box
+      sx={{ flex: 1, height: "1px", backgroundColor: "rgba(255,255,255,0.12)" }}
+    />
+  </Box>
+);
 
 const extractHostname = (url: string): string => {
   try {
@@ -66,6 +121,12 @@ interface Props {
 export const MinerCard = ({ minerInfo, loading, error }: Props) => {
   const { ui } = useUiFeatures();
   const { t } = useTranslation();
+  // Shares its cache entry with the Settings page's own useAppSettings()
+  // call (same query key) -- no extra request just for this.
+  const { data: appSettings } = useAppSettings();
+  const feederIntervalSeconds =
+    parseGoDuration(appSettings?.readOnly.feederInterval) / 1000 ||
+    FALLBACK_FEEDER_INTERVAL_SECONDS;
 
   const {
     timestamp = "",
@@ -103,6 +164,24 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
   } = minerInfo || {};
 
   const name = displayName({ hostname, alias });
+
+  // Captured in an effect rather than read directly during render
+  // (Date.now() is impure) -- refreshed whenever minerInfo changes, which
+  // is this card's natural refresh cadence for the staleness check below.
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+  }, [minerInfo]);
+
+  // A stalled feeder still leaves the health dot green (it pings the
+  // device directly, not the feeder) -- this is the signal that catches
+  // that case: the last successful write is more than 2 poll cycles old.
+  const feedAgeSeconds =
+    timestamp && now !== null
+      ? (now - new Date(timestamp).getTime()) / 1000
+      : null;
+  const isFeedStale =
+    feedAgeSeconds !== null && feedAgeSeconds > 2 * feederIntervalSeconds;
 
   const isFallback = isUsingFallbackStratum === 1;
   const poolURL = isFallback ? fallbackStratumURL : stratumURL;
@@ -231,519 +310,467 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
     return <Alert severity="error">{t("dashboard.error")}</Alert>;
   }
 
+  const healthDot = (
+    <Tooltip
+      title={
+        configError
+          ? `${t("miner.error.macMismatch")} · ${configError}`
+          : alive === undefined
+            ? t("miner.health.unknown")
+            : alive
+              ? `${t("miner.health.alive")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
+              : `${t("miner.health.unreachable")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
+      }
+      arrow
+    >
+      {/* Same rounded-square swatch as AlertBullet (see AlertList.tsx) --
+          the shape hashboard.live itself uses for its own up/down status
+          indicator, reused here (colored, not just decorative) so every
+          status marker in the app reads the same way. */}
+      <Box
+        sx={{
+          width: 10,
+          height: 10,
+          borderRadius: "3px",
+          flexShrink: 0,
+          backgroundColor: configError
+            ? "#ff9800"
+            : alive === undefined
+              ? "rgba(255,255,255,0.2)"
+              : alive
+                ? "#66bb6a"
+                : "#f44336",
+          boxShadow: configError
+            ? "0 0 6px #ff9800"
+            : alive === true
+              ? "0 0 6px #66bb6a"
+              : alive === false
+                ? "0 0 6px #f44336"
+                : "none",
+          // Unreachable is the one state that actually needs attention --
+          // blink to draw the eye, rather than blend in as just another
+          // static status swatch.
+          ...(alive === false && {
+            "@keyframes minerCardHealthBlink": {
+              "0%, 49%": { opacity: 1 },
+              "50%, 100%": { opacity: 0.25 },
+            },
+            animation: "minerCardHealthBlink 1s steps(1) infinite",
+            "@media (prefers-reduced-motion: reduce)": {
+              animation: "none",
+            },
+          }),
+        }}
+      />
+    </Tooltip>
+  );
+
+  // "> _ ip" prompt -- as if the IP were the command you typed, and the
+  // rest of the card (hashrate, shares, pool, ...) is that command's
+  // output (see the black terminal-body block below). Lives in the card's
+  // regular header, in the app's own usual colors (the accent blue for
+  // the "> " glyph, matching .terminal-card-icon in docs/_sass/custom/
+  // custom.scss) -- the green/black terminal look is reserved for the
+  // output block itself. The IP stays clickable, opening the device's own
+  // web UI, same affordance the old ip-as-title case already had.
+  const promptLine = (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.5,
+        minWidth: 0,
+        fontFamily: TERMINAL_MONO_STACK,
+        lineHeight: 1.2,
+      }}
+    >
+      <Box
+        component="span"
+        aria-hidden="true"
+        sx={{ color: "primary.main", fontWeight: 700 }}
+      >
+        &gt;
+      </Box>
+      {/* Static cursor -- no blink, keeps the prompt simple rather than
+          gimmicky. */}
+      <Box component="span" aria-hidden="true" sx={{ color: "primary.main" }}>
+        _
+      </Box>
+      {healthDot}
+      {ip !== "—" ? (
+        <Link
+          href={`http://${ip}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          underline="none"
+          sx={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 0.4,
+            minWidth: 0,
+            fontWeight: 700,
+            fontSize: "1rem",
+            color: "text.primary",
+            borderRadius: 1,
+            px: 0.5,
+            mx: -0.5,
+            transition: "background 0.15s ease, color 0.15s ease",
+            "&:hover": {
+              backgroundColor: "rgba(0,180,255,0.1)",
+              color: "primary.main",
+            },
+          }}
+          noWrap
+        >
+          {ip}
+          <OpenInNewIcon sx={{ fontSize: 12, opacity: 0.7 }} />
+        </Link>
+      ) : (
+        <Typography component="span" sx={{ fontWeight: 700, fontSize: "1rem" }}>
+          {ip}
+        </Typography>
+      )}
+    </Box>
+  );
+
   return (
     <Box
       sx={{
+        position: "relative",
         width: "100%",
         height: "100%",
         display: "flex",
         flexDirection: "column",
         borderRadius: 2,
         overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.08)",
         backgroundColor: (theme) => theme.palette.background.paper,
       }}
     >
+      {/* Actions menu -- a tab flush against the card's own top-right
+          corner (sharing its radius) rather than an inline icon lost
+          among the title row's other text. */}
+      <MinerActionMenu
+        isFallback={isFallback}
+        onSwitchPool={() => handleSwitchPoolClick(targetPool)}
+        onRestart={handleRestartClick}
+        isExecuting={isExecuting}
+        switchPoolVisibility={ui.action.minerPoolSwitch}
+        restartVisibility={ui.action.minerRestart}
+      />
+      {/* Title -- "> _ ip" in the app's usual colors, on the card's
+          regular background. Just the identity/command lives here; the
+          rest (hashrate, shares, pool, ...) is that command's "output",
+          styled as an actual terminal below. Last-feed time sits at the
+          other end of this same line -- it's about the prompt/command
+          itself (when it last ran), not the alias/model line below. */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 0.75,
+          pl: 2,
+          pr: 6,
+          pt: 2,
+          pb: name || deviceModel ? 0.5 : 2,
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>{promptLine}</Box>
+        {timestamp && (
+          <Tooltip
+            title={t("miner.lastUpdate", {
+              value: formatTimeOnly(timestamp),
+            })}
+            arrow
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.4,
+                flexShrink: 0,
+              }}
+            >
+              <SyncIcon
+                sx={{
+                  fontSize: 14,
+                  color: isFeedStale ? "error.main" : "text.disabled",
+                }}
+              />
+              <Typography
+                noWrap
+                sx={{
+                  fontFamily: TERMINAL_MONO_STACK,
+                  fontWeight: 700,
+                  fontSize: "0.78rem",
+                  color: isFeedStale ? "error.main" : "text.primary",
+                }}
+              >
+                {formatTimeOnly(timestamp)}
+              </Typography>
+            </Box>
+          </Tooltip>
+        )}
+      </Box>
+
+      {/* "# alias · model" -- a terminal-comment-style line right under
+          the prompt, so the identity stays anchored near the title
+          instead of floating disconnected at the bottom. */}
+      {(name || deviceModel) && (
+        <Box sx={{ px: 2, pb: 1.5 }}>
+          <Typography
+            noWrap
+            sx={{
+              fontFamily: TERMINAL_MONO_STACK,
+              fontSize: "0.78rem",
+              color: "text.disabled",
+              minWidth: 0,
+            }}
+          >
+            # {[name, deviceModel].filter(Boolean).join(" · ")}
+          </Typography>
+        </Box>
+      )}
+
+      {/* Terminal body -- the "output" of the "> _ ip" command above,
+          styled like hashboard.live's own TerminalCard (see
+          docs/_sass/custom/custom.scss's .terminal-card-body): same
+          near-black background as the docs/hashboard terminal card. */}
       <Box
         sx={{
           display: "flex",
           flexDirection: "column",
-          gap: 1.5,
-          p: 2,
+          flex: 1,
           minWidth: 0,
           overflow: "hidden",
+          backgroundColor: TERMINAL_BODY_BG,
         }}
       >
-        {/* 1. Header: hostname · model | timestamp */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-          }}
-        >
-          {/* Left: dot + name */}
-          <Stack
-            direction="row"
-            spacing={0.75}
-            alignItems="flex-start"
-            sx={{ minWidth: 0, flex: 1 }}
-          >
-            {/* Health dot — wrapper matches first-line height so dot centers naturally */}
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                height: "1.2rem",
-                flexShrink: 0,
-              }}
-            >
-              <Tooltip
-                title={
-                  configError
-                    ? `${t("miner.error.macMismatch")} · ${configError}`
-                    : alive === undefined
-                      ? t("miner.health.unknown")
-                      : alive
-                        ? `${t("miner.health.alive")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
-                        : `${t("miner.health.unreachable")}${aliveCheckedAt ? ` · ${formatTimestamp(aliveCheckedAt)}` : ""}`
-                }
-                arrow
-              >
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    backgroundColor: configError
-                      ? "#ff9800"
-                      : alive === undefined
-                        ? "rgba(255,255,255,0.2)"
-                        : alive
-                          ? "#66bb6a"
-                          : "#f44336",
-                    boxShadow: configError
-                      ? "0 0 6px #ff9800"
-                      : alive === true
-                        ? "0 0 6px #66bb6a"
-                        : alive === false
-                          ? "0 0 6px #f44336"
-                          : "none",
-                  }}
-                />
-              </Tooltip>
-            </Box>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              {/* Row 1: name (alias, else hostname) */}
-              {name ? (
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={700}
-                  sx={{ lineHeight: 1.2 }}
-                  noWrap
-                >
-                  {name}
-                </Typography>
-              ) : ip !== "—" ? (
-                <Link
-                  href={`http://${ip}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  underline="none"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.4,
-                    fontWeight: 700,
-                    fontSize: "1rem",
-                    lineHeight: 1.2,
-                    color: "primary.main",
-                    borderRadius: 1,
-                    px: 0.5,
-                    mx: -0.5,
-                    transition: "background 0.15s ease",
-                    "&:hover": { backgroundColor: "rgba(0,180,255,0.1)" },
-                  }}
-                  noWrap
-                >
-                  {ip}
-                  <OpenInNewIcon sx={{ fontSize: 12, opacity: 0.7 }} />
-                </Link>
-              ) : (
-                <Typography
-                  variant="subtitle1"
-                  fontWeight={700}
-                  sx={{ lineHeight: 1.2 }}
-                  noWrap
-                >
-                  {ip}
-                </Typography>
-              )}
-              {/* Row 2: timestamp */}
-              {timestamp && (
-                <Typography
-                  variant="caption"
-                  color="text.disabled"
-                  sx={{ fontSize: "0.8rem" }}
-                >
-                  {formatTimestamp(timestamp)}
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-          {/* Right: model chip + IP */}
-          <Stack
-            alignItems="flex-end"
-            spacing={0.4}
-            sx={{ flexShrink: 0, ml: 1 }}
-          >
-            {deviceModel && (
-              <Chip
-                label={deviceModel}
-                size="small"
-                variant="outlined"
-                sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-              />
-            )}
-            {name && ip !== "—" && (
-              <Link
-                href={`http://${ip}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                underline="none"
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.3,
-                  fontSize: "0.8rem",
-                  color: "primary.main",
-                  borderRadius: 1,
-                  px: 0.4,
-                  mx: -0.4,
-                  transition: "background 0.15s ease",
-                  "&:hover": { backgroundColor: "rgba(0,180,255,0.1)" },
-                }}
-              >
-                {ip}
-                <OpenInNewIcon sx={{ fontSize: 12, opacity: 0.7 }} />
-              </Link>
-            )}
-          </Stack>
-        </Box>
-
-        {/* Config error -- shown prominently, not buried in a hover tooltip */}
-        {configError && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.75,
-              backgroundColor: "rgba(255,152,0,0.08)",
-              border: "1px solid rgba(255,152,0,0.25)",
-              borderRadius: 1.5,
-              px: 1,
-              py: 0.5,
-            }}
-          >
-            <ErrorOutlineIcon
-              sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
-            />
-            <Typography
-              variant="caption"
-              sx={{
-                color: "warning.main",
-                flex: 1,
-                wordBreak: "break-word",
-                fontSize: "0.7rem",
-                lineHeight: 1.3,
-              }}
-            >
-              {t("miner.error.macMismatch")}: {configError}
-            </Typography>
-            <Tooltip
-              title={
-                configErrorCopied
-                  ? t("miner.error.copied")
-                  : t("miner.error.copy")
-              }
-            >
-              <IconButton
-                size="small"
-                onClick={() => {
-                  navigator.clipboard.writeText(configError).then(() => {
-                    setConfigErrorCopied(true);
-                    setTimeout(() => setConfigErrorCopied(false), 1500);
-                  });
-                }}
-                sx={{ p: 0.25, flexShrink: 0 }}
-              >
-                {configErrorCopied ? (
-                  <CheckCircleIcon
-                    sx={{ fontSize: 13, color: "success.main" }}
-                  />
-                ) : (
-                  <ContentCopyIcon sx={{ fontSize: 13 }} />
-                )}
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
-
-        {/* 2. Hashrate */}
-        {loading ? (
-          <Skeleton variant="text" width={180} height={48} />
-        ) : (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 1,
-            }}
-          >
-            <SpeedIcon
-              sx={{
-                color: (theme) => theme.palette.success.main,
-                fontSize: 32,
-              }}
-            />
-            <Box
-              sx={{
-                fontWeight: "bold",
-                color: (theme) => theme.palette.text.primary,
-                fontSize: "1.6rem",
-              }}
-            >
-              {hashRateTHs !== undefined
-                ? t("miner.hashrate", { value: hashRateTHs.toFixed(2) })
-                : "—"}
-            </Box>
-            {bestDiff !== undefined && (
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontWeight: 400 }}
-              >
-                ({t("miner.bestSession")} {formatMetric(bestDiff)})
-              </Typography>
-            )}
-            {!!blockFound && (
-              <Tooltip title={t("miner.blockFound.tooltip")} arrow>
-                <Chip
-                  icon={
-                    <DiamondOutlinedIcon sx={{ fontSize: "14px !important" }} />
-                  }
-                  label={t("miner.blockFound.label", { count: blockFound })}
-                  size="small"
-                  color="success"
-                  sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
-                />
-              </Tooltip>
-            )}
-          </Box>
-        )}
-
-        {/* 3. Compact stats: shares | temp · fan */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <CheckCircleIcon sx={{ color: "success.main", fontSize: 16 }} />
-            <Typography variant="body2" fontWeight={500}>
-              {sharesAccepted?.toLocaleString() ?? "—"}
-            </Typography>
-            <ErrorOutlineIcon sx={{ color: "error.main", fontSize: 16 }} />
-            <Typography variant="body2" color="error.main">
-              {sharesRejected?.toLocaleString() ?? "—"}
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <ThermostatIcon sx={{ color: "warning.main", fontSize: 16 }} />
-            <Typography variant="body2">
-              {temp !== undefined ? `${temp.toFixed(0)}°C` : "—"}
-            </Typography>
-            <AirIcon sx={{ color: "primary.main", fontSize: 16 }} />
-            <Typography variant="body2">
-              {fanspeed !== undefined ? `${fanspeed.toFixed(0)}%` : "—"}
-            </Typography>
-          </Stack>
-        </Box>
-
-        {/* 3b. Power + efficiency */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <BoltIcon sx={{ color: "warning.light", fontSize: 16 }} />
-            <Typography variant="body2">
-              {power !== undefined ? `${power.toFixed(1)} W` : "—"}
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <Typography variant="body2" color="text.secondary">
-              {energyJPerTh !== undefined
-                ? `${energyJPerTh.toFixed(0)} J/TH`
-                : "—"}
-            </Typography>
-          </Stack>
-        </Box>
-
-        {/* 4. Pool */}
         <Box
           sx={{
             display: "flex",
             flexDirection: "column",
-            minWidth: 0,
-            overflow: "hidden",
+            flex: 1,
+            gap: 1.5,
+            p: 2,
           }}
         >
+          {/* Config error -- shown prominently, not buried in a hover tooltip */}
+          {configError && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.75,
+                backgroundColor: "rgba(255,152,0,0.08)",
+                border: "1px solid rgba(255,152,0,0.25)",
+                borderRadius: 1.5,
+                px: 1,
+                py: 0.5,
+              }}
+            >
+              <ErrorOutlineIcon
+                sx={{ fontSize: 16, color: "warning.main", flexShrink: 0 }}
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "warning.main",
+                  flex: 1,
+                  wordBreak: "break-word",
+                  fontSize: "0.7rem",
+                  lineHeight: 1.3,
+                }}
+              >
+                {t("miner.error.macMismatch")}: {configError}
+              </Typography>
+              <Tooltip
+                title={
+                  configErrorCopied
+                    ? t("miner.error.copied")
+                    : t("miner.error.copy")
+                }
+              >
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    navigator.clipboard.writeText(configError).then(() => {
+                      setConfigErrorCopied(true);
+                      setTimeout(() => setConfigErrorCopied(false), 1500);
+                    });
+                  }}
+                  sx={{ p: 0.25, flexShrink: 0 }}
+                >
+                  {configErrorCopied ? (
+                    <CheckCircleIcon
+                      sx={{ fontSize: 13, color: "success.main" }}
+                    />
+                  ) : (
+                    <ContentCopyIcon sx={{ fontSize: 13 }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
+
+          {/* 2. Hashrate */}
+          {loading ? (
+            <Skeleton variant="text" width={180} height={48} />
+          ) : (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+              }}
+            >
+              <SpeedIcon
+                sx={{
+                  color: (theme) => theme.palette.success.main,
+                  fontSize: 32,
+                }}
+              />
+              <Box
+                sx={{
+                  fontWeight: "bold",
+                  color: (theme) => theme.palette.text.primary,
+                  fontSize: "1.6rem",
+                }}
+              >
+                {hashRateTHs !== undefined
+                  ? t("miner.hashrate", { value: hashRateTHs.toFixed(2) })
+                  : "—"}
+              </Box>
+              {bestDiff !== undefined && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontWeight: 400 }}
+                >
+                  ({t("miner.bestSession")} {formatMetric(bestDiff)})
+                </Typography>
+              )}
+              {!!blockFound && (
+                <Tooltip title={t("miner.blockFound.tooltip")} arrow>
+                  <Chip
+                    icon={
+                      <DiamondOutlinedIcon
+                        sx={{ fontSize: "14px !important" }}
+                      />
+                    }
+                    label={t("miner.blockFound.label", { count: blockFound })}
+                    size="small"
+                    color="success"
+                    sx={{ height: 22, fontSize: "0.7rem", borderRadius: 1 }}
+                  />
+                </Tooltip>
+              )}
+            </Box>
+          )}
+
+          {/* 3. Compact stats: shares | temp · fan */}
           <Box
             sx={{
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <CheckCircleIcon sx={{ color: "success.main", fontSize: 16 }} />
+              <Typography variant="body2" fontWeight={500}>
+                {sharesAccepted?.toLocaleString() ?? "—"}
+              </Typography>
+              <ErrorOutlineIcon sx={{ color: "error.main", fontSize: 16 }} />
+              <Typography variant="body2" color="error.main">
+                {sharesRejected?.toLocaleString() ?? "—"}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <ThermostatIcon sx={{ color: "warning.main", fontSize: 16 }} />
+              <Typography variant="body2">
+                {temp !== undefined ? `${temp.toFixed(0)}°C` : "—"}
+              </Typography>
+              <AirIcon sx={{ color: "primary.main", fontSize: 16 }} />
+              <Typography variant="body2">
+                {fanspeed !== undefined ? `${fanspeed.toFixed(0)}%` : "—"}
+              </Typography>
+            </Stack>
+          </Box>
+
+          {/* 3b. Power + efficiency */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <BoltIcon sx={{ color: "warning.light", fontSize: 16 }} />
+              <Typography variant="body2">
+                {power !== undefined ? `${power.toFixed(1)} W` : "—"}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                {energyJPerTh !== undefined
+                  ? `${energyJPerTh.toFixed(0)} J/TH`
+                  : "—"}
+              </Typography>
+            </Stack>
+          </Box>
+
+          {/* 4. Pool */}
+          <SectionLabel>{t("miner.sections.pool")}</SectionLabel>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+              overflow: "hidden",
             }}
           >
             <Box
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
-                minWidth: 0,
-                flex: 1,
+                justifyContent: "space-between",
               }}
             >
-              <SyncAltIcon
+              <Box
                 sx={{
-                  color: isFallback ? "warning.main" : "success.main",
-                  fontSize: 20,
-                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  minWidth: 0,
+                  flex: 1,
                 }}
-              />
-              {poolDashboardURL ? (
-                <Tooltip title={t("miner.openPool")} arrow>
-                  <Typography
-                    component="a"
-                    href={poolDashboardURL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    variant="body2"
-                    noWrap
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.4,
-                      color: "primary.main",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      borderRadius: 1,
-                      px: 0.75,
-                      py: 0.25,
-                      mx: -0.75,
-                      transition: "background 0.15s ease",
-                      "&:hover": { backgroundColor: "rgba(0,180,255,0.1)" },
-                    }}
-                  >
-                    {poolHostname}
-                    <OpenInNewIcon
-                      sx={{ fontSize: 11, opacity: 0.7, flexShrink: 0 }}
-                    />
-                  </Typography>
-                </Tooltip>
-              ) : (
-                <Tooltip title={poolURL ?? ""} arrow>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
-                    {poolHostname}
-                  </Typography>
-                </Tooltip>
-              )}
-              {typeof responseTime === "number" && (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ flexShrink: 0 }}
-                >
-                  ({responseTime.toFixed(0)} ms)
-                </Typography>
-              )}
-              <Chip
-                label={
-                  isFallback ? t("miner.fallbackPool") : t("miner.mainPool")
-                }
-                size="small"
-                color={isFallback ? "warning" : "success"}
-                variant="outlined"
-                sx={{
-                  height: 24,
-                  fontSize: "0.8rem",
-                  flexShrink: 0,
-                  borderRadius: 1,
-                }}
-              />
-            </Box>
-            <Tooltip
-              title={
-                showPoolDetails ? t("common.collapse") : t("common.expand")
-              }
-            >
-              <IconButton
-                onClick={() => setShowPoolDetails((p) => !p)}
-                size="small"
-                aria-label={
-                  showPoolDetails
-                    ? "collapse pool details"
-                    : "expand pool details"
-                }
               >
-                <ExpandMoreIcon
+                <SyncAltIcon
                   sx={{
-                    transition: "transform 0.2s",
-                    transform: showPoolDetails
-                      ? "rotate(180deg)"
-                      : "rotate(0deg)",
+                    color: isFallback ? "warning.main" : "success.main",
+                    fontSize: 20,
+                    flexShrink: 0,
                   }}
                 />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          <Collapse
-            in={showPoolDetails}
-            timeout="auto"
-            unmountOnExit
-            sx={{ px: 1.5, overflow: "hidden" }}
-          >
-            <Stack spacing={0.5} sx={{ pt: 0.5, overflow: "hidden" }}>
-              <Stack
-                direction="row"
-                spacing={0.5}
-                alignItems="center"
-                sx={{ minWidth: 0 }}
-              >
-                <PersonIcon
-                  sx={{ fontSize: 16, color: "primary.main", flexShrink: 0 }}
-                />
-                <Typography
-                  variant="body2"
-                  fontWeight={500}
-                  sx={{ wordBreak: "break-all" }}
-                >
-                  {poolUser ?? "—"}
-                </Typography>
-              </Stack>
-              {inactivePoolURL && (
-                <Stack
-                  direction="row"
-                  spacing={0.5}
-                  alignItems="center"
-                  sx={{ minWidth: 0 }}
-                >
-                  <SyncAltIcon
-                    sx={{ fontSize: 16, color: "text.disabled", flexShrink: 0 }}
-                  />
-                  <Typography
-                    variant="body2"
-                    color={
-                      inactivePoolDashboardURL
-                        ? "primary.main"
-                        : "text.disabled"
-                    }
-                    noWrap
-                    sx={{
-                      flex: 1,
-                      minWidth: 0,
-                      fontWeight: inactivePoolDashboardURL ? 600 : 400,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.4,
-                      ...(inactivePoolDashboardURL && {
+                {poolDashboardURL ? (
+                  <Tooltip title={t("miner.openPool")} arrow>
+                    <Typography
+                      component="a"
+                      href={poolDashboardURL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      variant="body2"
+                      noWrap
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.4,
+                        color: "primary.main",
+                        fontWeight: 600,
                         textDecoration: "none",
                         borderRadius: 1,
                         px: 0.75,
@@ -751,79 +778,316 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
                         mx: -0.75,
                         transition: "background 0.15s ease",
                         "&:hover": { backgroundColor: "rgba(0,180,255,0.1)" },
-                        cursor: "pointer",
-                      }),
-                    }}
-                    component={inactivePoolDashboardURL ? "a" : "span"}
-                    href={inactivePoolDashboardURL ?? undefined}
-                    target={inactivePoolDashboardURL ? "_blank" : undefined}
-                    rel={
-                      inactivePoolDashboardURL
-                        ? "noopener noreferrer"
-                        : undefined
-                    }
-                  >
-                    {extractHostname(inactivePoolURL)}
-                    {inactivePoolDashboardURL && (
+                      }}
+                    >
+                      {poolHostname}
                       <OpenInNewIcon
                         sx={{ fontSize: 11, opacity: 0.7, flexShrink: 0 }}
                       />
-                    )}
+                    </Typography>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title={poolURL ?? ""} arrow>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
+                      {poolHostname}
+                    </Typography>
+                  </Tooltip>
+                )}
+                {typeof responseTime === "number" && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ flexShrink: 0 }}
+                  >
+                    ({responseTime.toFixed(0)} ms)
                   </Typography>
-                  <Chip
-                    label={
-                      isFallback ? t("miner.mainPool") : t("miner.fallbackPool")
-                    }
-                    size="small"
-                    color={isFallback ? "success" : "warning"}
-                    variant="outlined"
-                    sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                )}
+                <Chip
+                  label={
+                    isFallback ? t("miner.fallbackPool") : t("miner.mainPool")
+                  }
+                  size="small"
+                  color={isFallback ? "warning" : "success"}
+                  variant="outlined"
+                  sx={{
+                    height: 24,
+                    fontSize: "0.8rem",
+                    flexShrink: 0,
+                    borderRadius: 1,
+                  }}
+                />
+              </Box>
+              <Tooltip
+                title={
+                  showPoolDetails ? t("common.collapse") : t("common.expand")
+                }
+              >
+                <IconButton
+                  onClick={() => setShowPoolDetails((p) => !p)}
+                  size="small"
+                  aria-label={
+                    showPoolDetails
+                      ? "collapse pool details"
+                      : "expand pool details"
+                  }
+                >
+                  <ExpandMoreIcon
+                    sx={{
+                      transition: "transform 0.2s",
+                      transform: showPoolDetails
+                        ? "rotate(180deg)"
+                        : "rotate(0deg)",
+                    }}
                   />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Collapse
+              in={showPoolDetails}
+              timeout="auto"
+              unmountOnExit
+              sx={{ px: 1.5, overflow: "hidden" }}
+            >
+              <Stack spacing={0.5} sx={{ pt: 0.5, overflow: "hidden" }}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  alignItems="center"
+                  sx={{ minWidth: 0 }}
+                >
+                  <PersonIcon
+                    sx={{
+                      fontSize: 16,
+                      color: "primary.main",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    fontWeight={500}
+                    sx={{ wordBreak: "break-all" }}
+                  >
+                    {poolUser ?? "—"}
+                  </Typography>
                 </Stack>
-              )}
-            </Stack>
-          </Collapse>
+                {inactivePoolURL && (
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    alignItems="center"
+                    sx={{ minWidth: 0 }}
+                  >
+                    <SyncAltIcon
+                      sx={{
+                        fontSize: 16,
+                        color: "text.disabled",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color={
+                        inactivePoolDashboardURL
+                          ? "primary.main"
+                          : "text.disabled"
+                      }
+                      noWrap
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontWeight: inactivePoolDashboardURL ? 600 : 400,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 0.4,
+                        ...(inactivePoolDashboardURL && {
+                          textDecoration: "none",
+                          borderRadius: 1,
+                          px: 0.75,
+                          py: 0.25,
+                          mx: -0.75,
+                          transition: "background 0.15s ease",
+                          "&:hover": {
+                            backgroundColor: "rgba(0,180,255,0.1)",
+                          },
+                          cursor: "pointer",
+                        }),
+                      }}
+                      component={inactivePoolDashboardURL ? "a" : "span"}
+                      href={inactivePoolDashboardURL ?? undefined}
+                      target={inactivePoolDashboardURL ? "_blank" : undefined}
+                      rel={
+                        inactivePoolDashboardURL
+                          ? "noopener noreferrer"
+                          : undefined
+                      }
+                    >
+                      {extractHostname(inactivePoolURL)}
+                      {inactivePoolDashboardURL && (
+                        <OpenInNewIcon
+                          sx={{ fontSize: 11, opacity: 0.7, flexShrink: 0 }}
+                        />
+                      )}
+                    </Typography>
+                    <Chip
+                      label={
+                        isFallback
+                          ? t("miner.mainPool")
+                          : t("miner.fallbackPool")
+                      }
+                      size="small"
+                      color={isFallback ? "success" : "warning"}
+                      variant="outlined"
+                      sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                    />
+                  </Stack>
+                )}
+              </Stack>
+            </Collapse>
+          </Box>
+
+          {/* 7. Chart / Cumulative totals tabs -- content grows directly out
+             of whichever tab is selected (see MinerTabPanel). */}
+          <SectionLabel>{t("miner.sections.stats")}</SectionLabel>
+          <MinerTabPanel
+            active={activePanel}
+            onSelect={(key) =>
+              setActivePanel((p) =>
+                p === key ? null : (key as "chart" | "totals"),
+              )
+            }
+            tabs={[
+              {
+                key: "chart",
+                icon: <ShowChartOutlined sx={{ fontSize: 16 }} />,
+                label: t("miner.statsTimeline"),
+                content: (
+                  <MinerStatsChart
+                    data={statsData || []}
+                    isLoading={statsLoading}
+                    selectedFields={selectedChartFields}
+                    onFieldToggle={handleFieldToggle}
+                    maxHeight={180}
+                  />
+                ),
+              },
+              ...(totalUptimeSeconds !== undefined ||
+              totalSharesAccepted !== undefined
+                ? [
+                    {
+                      key: "totals",
+                      icon: <HistoryIcon sx={{ fontSize: 16 }} />,
+                      label: t("miner.totalsLabel"),
+                      content: (
+                        <Stack direction="row" sx={{ width: "100%" }}>
+                          {totalUptimeSeconds !== undefined && (
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                              sx={{ flex: 1 }}
+                            >
+                              <RestartAltOutlined
+                                sx={{ color: "text.secondary", fontSize: 22 }}
+                              />
+                              <Box>
+                                <Typography variant="body1" fontWeight={600}>
+                                  {formatDuration(totalUptimeSeconds * 1000)}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {t("miner.totalUptimeLabel")}
+                                </Typography>
+                              </Box>
+                            </Stack>
+                          )}
+                          {totalSharesAccepted !== undefined && (
+                            <Tooltip
+                              title={totalSharesAccepted.toLocaleString()}
+                              arrow
+                            >
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
+                                sx={{ flex: 1 }}
+                              >
+                                <CheckCircleIcon
+                                  sx={{ color: "success.main", fontSize: 22 }}
+                                />
+                                <Box>
+                                  <Typography variant="body1" fontWeight={600}>
+                                    {formatMetric(totalSharesAccepted)}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {t("miner.totalSharesLabel")}
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                            </Tooltip>
+                          )}
+                        </Stack>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+          />
         </Box>
 
-        {/* 5. Footer: uptime + version */}
+        {/* Uptime/firmware -- a status strip glued to the terminal's own
+            bottom edge, like a real terminal's status bar. */}
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 1,
+            px: 2,
+            py: 1,
+            borderTop: "1px solid rgba(255,255,255,0.08)",
           }}
         >
           {uptimeSeconds !== undefined ? (
-            <Chip
-              icon={<RestartAltOutlined sx={{ fontSize: "16px !important" }} />}
-              label={formatDuration(uptimeSeconds * 1000)}
-              size="small"
-              color={
-                uptimeSeconds < 3600
-                  ? "warning"
-                  : uptimeSeconds >= 86400
-                    ? "success"
-                    : "default"
-              }
-              variant="outlined"
-              sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-            />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                color:
+                  uptimeSeconds < feederIntervalSeconds
+                    ? "error.main"
+                    : "text.secondary",
+              }}
+            >
+              <AccessTimeIcon sx={{ fontSize: 16 }} />
+              <Typography variant="body2" sx={{ color: "inherit" }}>
+                {formatDuration(uptimeSeconds * 1000)}
+              </Typography>
+            </Box>
           ) : (
-            <Typography variant="caption" color="text.disabled">
+            <Typography variant="body2" color="text.disabled">
               —
             </Typography>
           )}
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-            <Chip
-              icon={
-                <VerifiedUserOutlined sx={{ fontSize: "16px !important" }} />
-              }
-              label={version ?? "—"}
-              size="small"
-              variant="outlined"
-              color={updateAvailable ? "warning" : "default"}
-              sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-            />
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.5,
+                color: "text.secondary",
+              }}
+            >
+              <VerifiedUserOutlined sx={{ fontSize: 16 }} />
+              <Typography variant="body2" sx={{ color: "inherit" }}>
+                {version ?? "—"}
+              </Typography>
+            </Box>
             {updateAvailable && (
               <Tooltip
                 title={
@@ -856,108 +1120,6 @@ export const MinerCard = ({ minerInfo, loading, error }: Props) => {
             )}
           </Box>
         </Box>
-
-        {/* 6. Actions */}
-        <MinerActionBar
-          isFallback={isFallback}
-          onSwitchPool={() => handleSwitchPoolClick(targetPool)}
-          onRestart={handleRestartClick}
-          isExecuting={isExecuting}
-          switchPoolVisibility={ui.action.minerPoolSwitch}
-          restartVisibility={ui.action.minerRestart}
-        />
-
-        {/* 7. Chart / Cumulative totals tabs -- content grows directly out
-             of whichever tab is selected (see MinerTabPanel). */}
-        <MinerTabPanel
-          active={activePanel}
-          onSelect={(key) =>
-            setActivePanel((p) =>
-              p === key ? null : (key as "chart" | "totals"),
-            )
-          }
-          tabs={[
-            {
-              key: "chart",
-              icon: <ShowChartOutlined sx={{ fontSize: 16 }} />,
-              label: t("miner.statsTimeline"),
-              content: (
-                <MinerStatsChart
-                  data={statsData || []}
-                  isLoading={statsLoading}
-                  selectedFields={selectedChartFields}
-                  onFieldToggle={handleFieldToggle}
-                  maxHeight={180}
-                />
-              ),
-            },
-            ...(totalUptimeSeconds !== undefined ||
-            totalSharesAccepted !== undefined
-              ? [
-                  {
-                    key: "totals",
-                    icon: <HistoryIcon sx={{ fontSize: 16 }} />,
-                    label: t("miner.totalsLabel"),
-                    content: (
-                      <Stack direction="row" sx={{ width: "100%" }}>
-                        {totalUptimeSeconds !== undefined && (
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{ flex: 1 }}
-                          >
-                            <RestartAltOutlined
-                              sx={{ color: "text.secondary", fontSize: 22 }}
-                            />
-                            <Box>
-                              <Typography variant="body1" fontWeight={600}>
-                                {formatDuration(totalUptimeSeconds * 1000)}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {t("miner.totalUptimeLabel")}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        )}
-                        {totalSharesAccepted !== undefined && (
-                          <Tooltip
-                            title={totalSharesAccepted.toLocaleString()}
-                            arrow
-                          >
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              sx={{ flex: 1 }}
-                            >
-                              <CheckCircleIcon
-                                sx={{ color: "success.main", fontSize: 22 }}
-                              />
-                              <Box>
-                                <Typography variant="body1" fontWeight={600}>
-                                  {formatMetric(totalSharesAccepted)}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {t("miner.totalSharesLabel")}
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-        />
       </Box>
 
       <ConfirmDialog

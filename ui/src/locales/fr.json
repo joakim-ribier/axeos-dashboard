@@ -62,6 +62,7 @@
   },
   "miner": {
     "actions": {
+      "menuLabel": "Plus d'actions",
       "disabledHint": "Désactivé par la configuration de ce tableau de bord.",
       "restart": {
         "description": "Demande de redémarrage pour le mineur {{ip}}.",
@@ -111,6 +112,10 @@
       "macMismatch": "Erreur de configuration",
       "copy": "Copier",
       "copied": "Copié !"
+    },
+    "sections": {
+      "pool": "Pool",
+      "stats": "Stats"
     }
   },
   "nav": {

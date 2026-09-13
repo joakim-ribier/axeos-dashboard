@@ -195,6 +195,9 @@ func TestStats(t *testing.T) {
 	}
 }
 
+// A fresh day (or a miner that's never reported yet) has no JSONL file at
+// all until the feeder's next poll writes one -- that's the expected,
+// common case, not a server error (see Stats's own doc comment).
 func TestStats_noDataFileToday(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(envDataRoot, dir)
@@ -207,8 +210,16 @@ func TestStats_noDataFileToday(t *testing.T) {
 
 	Stats(miner, cfg, w, r)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d when today's file does not exist yet", w.Code, http.StatusInternalServerError)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d when today's file doesn't exist yet", w.Code, http.StatusOK)
+	}
+
+	var resp StatsResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Total != 0 || len(resp.Data) != 0 {
+		t.Errorf("resp = %+v, want an empty result", resp)
 	}
 }
 
@@ -452,6 +463,31 @@ func TestRemoteStats(t *testing.T) {
 
 		if w.Code != http.StatusNotFound {
 			t.Errorf("status = %d, want %d for an ip with no matching miner", w.Code, http.StatusNotFound)
+		}
+	})
+
+	// A miner resolvable via latest.json but with nothing pushed yet today
+	// (fresh day) -- an empty result, not a server error.
+	t.Run("no data file today", func(t *testing.T) {
+		otherDir := filepath.Join(dir, "data", "boards", "demo", "bitaxes", "112233445566")
+		writeTestFile(t, filepath.Join(otherDir, "latest.json"),
+			`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.2","payload":{"hashRate":100000}}`)
+
+		w := httptest.NewRecorder()
+		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/10.0.0.2/stats", nil),
+			map[string]string{"boardId": "demo", "ip": "10.0.0.2"})
+
+		RemoteStats(cfg)(w, r)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want %d when today's file doesn't exist yet", w.Code, http.StatusOK)
+		}
+		var got StatsResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if got.Total != 0 || len(got.Data) != 0 {
+			t.Errorf("resp = %+v, want an empty result", got)
 		}
 	})
 }

@@ -121,13 +121,22 @@ appel réseau supplémentaire :
 
 ![La card]({{ '/assets/images/card-collapsed.png' | relative_url }})
 
-1. **Nom** — alias ou hostname du mineur, précédé d'un point indiquant son
-   état : vert (joignable), rouge (injoignable), gris (première
-   vérification en attente), orange (configuration incohérente — voir
-   plus bas).
-2. **Horodatage** — date et heure de la dernière donnée reçue.
-3. **Modèle** — bitaxe ou nerdaxe, avec sa variante matérielle.
-4. **Adresse IP** — lien direct vers l'interface du mineur.
+La card reprend le style d'un terminal : la première ligne (`> _ adresse
+IP`) est la "commande", tout ce qui suit en est la "sortie".
+
+1. **Adresse IP** — précédée d'un point indiquant l'état du mineur : vert
+   (joignable), rouge (injoignable), gris (première vérification en
+   attente), orange (configuration incohérente — voir plus bas). L'adresse
+   est un lien direct vers l'interface du mineur.
+2. **Horodatage** — heure de la dernière donnée reçue par le feeder. Passe
+   en rouge si elle date de plus de 2 fois l'intervalle de sondage
+   configuré : le mineur peut répondre (point vert) alors que le feeder,
+   lui, ne l'interroge plus.
+3. **Nom · Modèle** — alias ou hostname du mineur, puis son modèle
+   (bitaxe ou nerdaxe, avec sa variante matérielle).
+4. **Menu actions** — changer de pool ou redémarrer le mineur (confirmation
+   demandée), regroupés derrière ce menu pour ne pas les afficher en
+   permanence sur chaque card.
 5. **Hashrate** — débit de hachage actuel (TH/s) et meilleure difficulté de la session.
 6. **Shares** — nombre de parts acceptées / rejetées.
 7. **Température · Ventilation** — température des puces et vitesse du ventilateur.
@@ -137,11 +146,10 @@ appel réseau supplémentaire :
    Une icône ⧉ ouvre le tableau de bord du pool, quand un lien est
    configuré pour lui (voir
    [Configuration]({{ '/configuration.html#electricite-pools' | relative_url }})).
-10. **Uptime · Firmware** — durée depuis le dernier redémarrage (badge
-    orange < 1h, gris 1-24h, vert ≥ 24h), version installée et badge
+10. **Historique / Totaux** — bascule entre le graphique du jour et les totaux cumulés depuis la première mise en route.
+11. **Uptime · Firmware** — durée depuis le dernier redémarrage (rouge si
+    plus récente que l'intervalle du feeder), version installée et badge
     orange si une mise à jour est disponible.
-11. **Actions** — changer de pool ou redémarrer le mineur (confirmation demandée).
-12. **Historique / Totaux** — bascule entre le graphique du jour et les totaux cumulés depuis la première mise en route.
 
 {: .note }
 > ⚠️ Si la `mac:` configurée pour un mineur ne correspond pas à ce qu'il

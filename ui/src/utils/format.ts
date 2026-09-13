@@ -26,21 +26,22 @@ export function formatCents(euros: number, decimals: number = 2): string {
  * @returns formatted date‑time (e.g. "16/01/2026, 18:18") or "—" if the
  *          input is missing or cannot be parsed.
  */
-export function formatTimestamp(ts?: string): string {
-  if (!ts) return "—";
-
+function parseTimestampMs(ts: string): number | null {
   const trimmed = ts.trim();
 
   const numeric = Number(trimmed);
-  let ms: number;
-
   if (!Number.isNaN(numeric)) {
-    ms = numeric > 1e12 ? numeric : numeric * 1000;
-  } else {
-    const parsed = new Date(trimmed);
-    if (Number.isNaN(parsed.getTime())) return "—";
-    ms = parsed.getTime();
+    return numeric > 1e12 ? numeric : numeric * 1000;
   }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
+}
+
+export function formatTimestamp(ts?: string): string {
+  if (!ts) return "—";
+  const ms = parseTimestampMs(ts);
+  if (ms === null) return "—";
 
   const date = new Date(ms);
   try {
@@ -48,6 +49,26 @@ export function formatTimestamp(ts?: string): string {
       dateStyle: "short",
       timeStyle: "short",
     }).format(date);
+  } catch {
+    return date.toISOString();
+  }
+}
+
+/**
+ * Same input as formatTimestamp, but time only (e.g. "6:18 PM") -- for a
+ * spot that's checked often enough (every poll cycle) that the date part
+ * would never actually change across a session, so it's just noise.
+ */
+export function formatTimeOnly(ts?: string): string {
+  if (!ts) return "—";
+  const ms = parseTimestampMs(ts);
+  if (ms === null) return "—";
+
+  const date = new Date(ms);
+  try {
+    return new Intl.DateTimeFormat(undefined, { timeStyle: "short" }).format(
+      date,
+    );
   } catch {
     return date.toISOString();
   }

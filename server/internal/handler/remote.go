@@ -135,6 +135,12 @@ func RemoteStats(cfg config.Config) http.HandlerFunc {
 
 		entries, err := decodeJSONL(path)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				// Today's file doesn't exist yet (fresh day, nothing
+				// pushed since midnight) -- an empty result, not an error.
+				writeStatsResponse(w, []model.MinerInfo{})
+				return
+			}
 			writeErrorResponse(w, fmt.Sprintf("failed to read data file: %v", err), http.StatusInternalServerError)
 			return
 		}

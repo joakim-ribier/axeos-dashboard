@@ -62,6 +62,7 @@
   },
   "miner": {
     "actions": {
+      "menuLabel": "More actions",
       "disabledHint": "Disabled by this dashboard's configuration.",
       "restart": {
         "description": "Restart miner {{ip}}.",
@@ -111,6 +112,10 @@
       "macMismatch": "Configuration error",
       "copy": "Copy",
       "copied": "Copied!"
+    },
+    "sections": {
+      "pool": "Pool",
+      "stats": "Stats"
     }
   },
   "nav": {
