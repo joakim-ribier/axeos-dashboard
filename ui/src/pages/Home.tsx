@@ -475,7 +475,7 @@ export const Home = () => {
               gap: 1.5,
             }}
           >
-            {poolEntries.length > 1 && (
+            {poolEntries.length >= 1 && (
               <PoolSelectButton
                 options={poolEntries.map(([url, stats]) => ({
                   url,

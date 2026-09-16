@@ -106,9 +106,9 @@ extra network calls:
 
 ![Search, filters and sort]({{ '/assets/images/actionbar.png' | relative_url }})
 
-1. **Pool** — dropdown listing the pools currently in use (only shown
-   when more than one is active), with each pool's miner count and
-   combined hashrate.
+1. **Pool** — dropdown listing the pools currently in use, with each
+   pool's miner count and combined hashrate. Shows that pool's name
+   directly when every miner is on it.
 2. **Sort** — 5 possible orders, remembered across visits: total uptime
    ascending (default), accepted shares, fastest fan, highest
    temperature, or pool name (A-Z).

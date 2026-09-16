@@ -99,9 +99,9 @@ appel réseau supplémentaire :
 
 ![Recherche, filtres et tri]({{ '/assets/images/actionbar.png' | relative_url }})
 
-1. **Pool** — liste déroulante des pools actuellement utilisés (n'apparaît
-   que si plusieurs sont actifs), avec le nombre de mineurs et le hashrate
-   cumulé par pool.
+1. **Pool** — liste déroulante des pools actuellement utilisés, avec le
+   nombre de mineurs et le hashrate cumulé par pool. Affiche directement
+   le nom du pool quand tous les mineurs y sont.
 2. **Tri** — 5 ordres possibles, mémorisés entre les visites : uptime
    total croissant (par défaut), parts acceptées, ventilateur le plus
    rapide, température la plus haute, ou nom de pool (A-Z).
