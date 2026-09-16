@@ -30,6 +30,7 @@ func Info(versionChecker *appversion.Checker, hashboardURL string, remote bool, 
 		versionCheck := versionChecker.Result()
 		resp := model.InfoResponse{
 			BuildSHA:             version.GitSHA,
+			AppVersion:           version.Version,
 			AppVersionStatus:     versionCheck.Status,
 			AppVersionReleaseURL: versionCheck.ReleaseURL,
 			HashboardURL:         hashboardURL,

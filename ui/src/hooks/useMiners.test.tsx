@@ -134,6 +134,32 @@ describe("useAppInfo", () => {
     expect(result.current.buildSHA).toBeUndefined();
   });
 
+  it("prefers appVersion over buildSHA when it's a real tagged-release version", async () => {
+    mockGetByUrl({
+      "/api/info": { buildSHA: "abc1234", appVersion: "0.1.0" },
+      "/api/miners": { miners: [] },
+    });
+
+    const { result } = renderHook(() => useAppInfo(), {
+      wrapper: makeWrapper("/"),
+    });
+
+    await waitFor(() => expect(result.current.buildSHA).toBe("0.1.0"));
+  });
+
+  it('falls back to buildSHA when appVersion is the "dev" default (rolling latest, local dev)', async () => {
+    mockGetByUrl({
+      "/api/info": { buildSHA: "abc1234", appVersion: "dev" },
+      "/api/miners": { miners: [] },
+    });
+
+    const { result } = renderHook(() => useAppInfo(), {
+      wrapper: makeWrapper("/"),
+    });
+
+    await waitFor(() => expect(result.current.buildSHA).toBe("abc1234"));
+  });
+
   it("returns the app version status and release URL from /api/info", async () => {
     mockGetByUrl({
       "/api/info": {

@@ -87,6 +87,9 @@ export const useMiners = (): UseMinersReturn => {
 };
 
 export interface AppInfo {
+  /** What the Sidebar shows for the running build: the real semver on a
+   * tagged-release build, falling back to the git SHA everywhere else
+   * (rolling "latest" build, local dev) -- see fetchInfo's appVersion. */
   buildSHA: string | undefined;
   versionStatus: AppVersionStatus;
   releaseUrl: string | null;
@@ -167,8 +170,12 @@ export const useAppInfo = (): AppInfo => {
     retry: false,
   });
 
+  const appVersion = infoQuery.data?.appVersion;
   return {
-    buildSHA: infoQuery.data?.buildSHA,
+    buildSHA:
+      appVersion && appVersion !== "dev"
+        ? appVersion
+        : infoQuery.data?.buildSHA,
     versionStatus: infoQuery.data?.appVersionStatus ?? "unknown",
     releaseUrl: infoQuery.data?.appVersionReleaseURL ?? null,
     hashboardUrl: infoQuery.data?.hashboardUrl ?? null,

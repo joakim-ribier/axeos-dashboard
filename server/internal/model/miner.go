@@ -107,6 +107,14 @@ type MinersResponse struct {
 type InfoResponse struct {
 	BuildSHA string `json:"buildSHA,omitempty"` // Git commit this binary was built from
 
+	// AppVersion is the semver this binary was published under (e.g.
+	// "0.1.0"), only set on a tagged-release build -- "dev" (the zero
+	// value's meaning) everywhere else, including the rolling "latest"
+	// build. The UI shows this instead of BuildSHA when it's a real
+	// version, and falls back to BuildSHA otherwise -- see
+	// internal/version.Version.
+	AppVersion string `json:"appVersion,omitempty"`
+
 	// Whether this dashboard-api/remote-dashboard-api build itself is up to
 	// date with GitHub's "latest" release ("unknown" | "upToDate" |
 	// "updateAvailable") — see internal/appversion. Checked server-side at

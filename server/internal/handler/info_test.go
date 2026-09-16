@@ -27,6 +27,9 @@ func TestInfo_localMode(t *testing.T) {
 	if got.BuildSHA != version.GitSHA {
 		t.Errorf("BuildSHA = %q, want %q", got.BuildSHA, version.GitSHA)
 	}
+	if got.AppVersion != version.Version {
+		t.Errorf("AppVersion = %q, want %q", got.AppVersion, version.Version)
+	}
 	if got.HashboardURL != "" {
 		t.Errorf("HashboardURL = %q, want empty for local mode", got.HashboardURL)
 	}

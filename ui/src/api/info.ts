@@ -11,6 +11,10 @@ export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
 
 export interface InfoResult {
   buildSHA?: string;
+  /** Real semver ("0.1.0"), only set on a tagged-release build -- "dev"
+   * (or undefined) everywhere else, including the rolling "latest" build.
+   * See server/internal/version.Version. */
+  appVersion?: string;
   appVersionStatus: AppVersionStatus;
   appVersionReleaseURL: string | null;
   hashboardUrl: string | null;
@@ -26,6 +30,7 @@ export interface InfoResult {
 export const fetchInfo = async (): Promise<InfoResult> => {
   const { data } = await axios.get<{
     buildSHA?: string;
+    appVersion?: string;
     appVersionStatus?: AppVersionStatus;
     appVersionReleaseURL?: string;
     hashboardURL?: string;
@@ -34,6 +39,7 @@ export const fetchInfo = async (): Promise<InfoResult> => {
   }>("/api/info");
   return {
     buildSHA: data.buildSHA,
+    appVersion: data.appVersion,
     appVersionStatus: data.appVersionStatus ?? "unknown",
     appVersionReleaseURL: data.appVersionReleaseURL ?? null,
     hashboardUrl: data.hashboardURL ?? null,
