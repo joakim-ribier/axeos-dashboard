@@ -25,6 +25,15 @@ type MinerInfo struct {
 	TotalSharesAccepted int64 `json:"totalSharesAccepted,omitempty"`
 	TotalSharesRejected int64 `json:"totalSharesRejected,omitempty"`
 
+	// TotalElectricityCost is this miner's cumulative cost (in the
+	// operator's own currency, see settings.yml's electricity.ratePerKwh)
+	// since it has been tracked -- each poll's slice uses the rate that was
+	// actually in effect at that poll (RawSample.ElectricityRate), not
+	// today's rate, so a later rate change never rewrites past cost. Not
+	// shown per-miner in the UI -- summed across the fleet for the
+	// "Électricité" KPI card's all-time figure instead.
+	TotalElectricityCost float64 `json:"totalElectricityCost,omitempty"`
+
 	Version         string  `json:"version"`              // Firmware version (e.g. "v2.12.2")
 	LatestVersion   string  `json:"latestVersion"`        // Latest firmware version available on GitHub
 	UpdateAvailable bool    `json:"updateAvailable"`      // True when LatestVersion != Version

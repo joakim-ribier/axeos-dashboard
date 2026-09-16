@@ -6,10 +6,20 @@ import { GlobalStats } from "./GlobalStats";
 import { MinerInfo } from "./types";
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    // Mimics real i18next's {{value}} interpolation just enough to assert
+    // on the resulting text (e.g. the "all-time: €X" sub-value) without
+    // pulling in the full i18n setup.
+    t: (key: string, options?: Record<string, unknown>) =>
+      options && "value" in options ? `${key}:${options.value}` : key,
+  }),
 }));
 
 const miner = (hashRateTHs: number): MinerInfo => ({ hashRateTHs });
+
+const buildMiner = (overrides: Partial<MinerInfo> = {}): MinerInfo => ({
+  ...overrides,
+});
 
 describe("GlobalStats", () => {
   beforeEach(() => {
@@ -41,5 +51,65 @@ describe("GlobalStats", () => {
     const { container } = render(<GlobalStats data={[]} isLoading={false} />);
 
     expect(container.textContent).toContain("0.00 TH/s");
+  });
+
+  it("shows the miner count and total power, with the min/max power range below", () => {
+    const { container } = render(
+      <GlobalStats
+        data={[buildMiner({ power: 100 }), buildMiner({ power: 200 })]}
+        isLoading={false}
+      />,
+    );
+
+    expect(container.textContent).toContain("2 · 300W"); // count · total
+    expect(container.textContent).toContain("100");
+    expect(container.textContent).toContain("200W");
+  });
+
+  it("shows the instant hourly cost and the all-time total spent", () => {
+    const { container } = render(
+      <GlobalStats
+        data={[
+          buildMiner({
+            power: 1000,
+            electricityRatePerKwh: 0.2,
+            totalElectricityCost: 12.5,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(container.textContent).toContain("0.20€/h");
+    expect(container.textContent).toContain("12.50€");
+  });
+
+  it("hides the all-time figure when there is no historical cost yet", () => {
+    const { container } = render(
+      <GlobalStats
+        data={[
+          buildMiner({
+            power: 1000,
+            electricityRatePerKwh: 0.2,
+            totalElectricityCost: 0,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    expect(container.textContent).toContain("0.20€/h");
+    // The shares card always renders its own "allTime:<n>" sub-value --
+    // only the cost-specific "allTime:0.00€" (which would come from the
+    // electricity card) must be absent.
+    expect(container.textContent).not.toContain("allTime:0.00€");
+  });
+
+  it("hides the electricity card entirely when no rate is configured", () => {
+    const { container } = render(
+      <GlobalStats data={[buildMiner({ power: 1000 })]} isLoading={false} />,
+    );
+
+    expect(container.textContent).not.toContain("€/h");
   });
 });

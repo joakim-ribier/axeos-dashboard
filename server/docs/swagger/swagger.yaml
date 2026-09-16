@@ -421,6 +421,16 @@ definitions:
         type: number
       timestamp:
         type: string
+      totalElectricityCost:
+        description: |-
+          TotalElectricityCost is this miner's cumulative cost (in the
+          operator's own currency, see settings.yml's electricity.ratePerKwh)
+          since it has been tracked -- each poll's slice uses the rate that was
+          actually in effect at that poll (RawSample.ElectricityRate), not
+          today's rate, so a later rate change never rewrites past cost. Not
+          shown per-miner in the UI -- summed across the fleet for the
+          "Électricité" KPI card's all-time figure instead.
+        type: number
       totalSharesAccepted:
         type: integer
       totalSharesRejected:

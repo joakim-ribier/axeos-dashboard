@@ -12,11 +12,12 @@ subnav:
 ## rebuild-totals
 {: #rebuild-totals }
 
-Recalcule les totaux persistants (uptime et parts cumulées, qui survivent
-aux redémarrages des mineurs) à partir de l'historique complet de chaque
-mineur. Utile après un problème d'installation (`totals.json` perdu ou
-corrompu), une migration de données, ou pour reconstruire l'historique
-existant avant que cette fonctionnalité n'ait été activée.
+Recalcule les totaux persistants (uptime, parts cumulées et coût
+électrique cumulé, qui survivent aux redémarrages des mineurs) à partir de
+l'historique complet de chaque mineur. Utile après un problème
+d'installation (`totals.json` perdu ou corrompu), une migration de
+données, ou pour reconstruire l'historique existant avant que cette
+fonctionnalité n'ait été activée.
 
 [Aller à Totaux des cards →]({{ '/dashboard.html#totaux-des-cards' | relative_url }}){: .btn .btn-primary }
 
@@ -39,35 +40,36 @@ existant avant que cette fonctionnalité n'ait été activée.
   <pre class="terminal-card-body">rebuild-totals: DRY RUN -- nothing will be written
 data dir: /home/pi/axeos-dashboard/storage/data/bitaxes
 miners: 5
+fallback electricity rate (for polls recorded before rate-tracking existed): 0.1915/kWh
 
 [G602-1 / aabbccddee01]
   files: 181, lines: 45273 (skipped: 1), reboots detected: 22
   history: 2026-01-09 17:29 -&gt; 2026-09-09 07:04
-  total uptime: 179j 13h 44m, total shares: accepted=2153000 rejected=734
+  total uptime: 179j 13h 44m, total shares: accepted=2153000 rejected=734, total cost: 14.13
   scan time: 9.324s
 
 [G602-2 / aabbccddee02]
   files: 174, lines: 44267 (skipped: 0), reboots detected: 22
   history: 2026-01-16 18:18 -&gt; 2026-09-09 07:04
-  total uptime: 175j 7h 26m, total shares: accepted=1960176 rejected=807
+  total uptime: 175j 7h 26m, total shares: accepted=1960176 rejected=807, total cost: 15.95
   scan time: 7.92s
 
 [G602-3 / aabbccddee03]
   files: 156, lines: 41773 (skipped: 1), reboots detected: 57
   history: 2026-02-04 12:04 -&gt; 2026-09-09 07:04
-  total uptime: 155j 12h 43m, total shares: accepted=1103582 rejected=1070
+  total uptime: 155j 12h 43m, total shares: accepted=1103582 rejected=1070, total cost: 13.84
   scan time: 7.647s
 
 [G602-4 / aabbccddee04]
   files: 156, lines: 41769 (skipped: 2), reboots detected: 61
   history: 2026-02-04 12:04 -&gt; 2026-09-09 07:04
-  total uptime: 155j 12h 21m, total shares: accepted=1099062 rejected=924
+  total uptime: 155j 12h 21m, total shares: accepted=1099062 rejected=924, total cost: 13.76
   scan time: 8.569s
 
 [NerdqaxePlusPlus / aabbccddee05]
   files: 142, lines: 39913 (skipped: 2), reboots detected: 44
   history: 2026-04-21 14:22 -&gt; 2026-09-09 07:04
-  total uptime: 142j 8h 15m, total shares: accepted=1869958 rejected=1318
+  total uptime: 142j 8h 15m, total shares: accepted=1869958 rejected=1318, total cost: 59.14
   scan time: 7.661s
 
 <span class="term-comment">==================== SUMMARY ====================
@@ -87,6 +89,10 @@ elapsed: 41.122s
   qu'elle ferait ; ajoutez `-dry-run=false` pour écrire réellement.
 - **Un seul mineur** — `-miner <mac|hostname|ip>` pour ne recalculer
   qu'un mineur en particulier.
+- **Tarif électrique de secours** — les données antérieures au suivi du
+  tarif électrique n'ont pas ce champ dans leur `.jsonl` ; ces lignes sont
+  facturées avec `-fallback-rate <€/kWh>` (par défaut, le tarif actuellement
+  configuré).
 - **Sans risque** — un `totals.json` existant est d'abord copié en
   `totals.json.bak` ; l'écriture est atomique (jamais de fichier à moitié
   écrit) ; les fichiers `.jsonl`/`latest.json` ne sont jamais modifiés.

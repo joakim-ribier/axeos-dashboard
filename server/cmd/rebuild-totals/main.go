@@ -1,12 +1,20 @@
 // ./cmd/rebuild-totals/main.go
 //
 // One-off tool: reconstructs each miner's totals.json (persistent,
-// reboot-surviving uptime/shares counters -- see internal/storage.Totals)
-// by replaying its entire JSONL history through the exact same delta/reset
-// algorithm the live feeder uses (internal/storage.ApplyPoll). Needed
-// because totals.json only started accumulating from whenever the feeder
-// first shipped this feature -- this backfills everything recorded before
-// that point.
+// reboot-surviving uptime/shares/electricity-cost counters -- see
+// internal/storage.Totals) by replaying its entire JSONL history through the
+// exact same delta/reset algorithm the live feeder uses
+// (internal/storage.ApplyPoll). Needed because totals.json only started
+// accumulating from whenever the feeder first shipped each field -- this
+// backfills everything recorded before that point.
+//
+// Older jsonl lines recorded before electricity-cost tracking existed carry
+// no electricityRatePerKwh at all (decodes to 0, indistinguishable from a
+// genuinely-configured €0/kWh) -- -fallback-rate fills in a rate to use for
+// those lines instead of silently costing them at zero. Defaults to
+// whatever's configured in -config right now, but takes an explicit value
+// too, so a backfill run's result doesn't depend on config state at the
+// moment it happens to be run.
 //
 // Only enabled miners present in config (-config, and its managed miners
 // file -- see internal/config.LoadConfig) are processed -- deliberately,
@@ -36,9 +44,11 @@ import (
 func main() {
 	var configPath, minerFilter, deprecatedMinersPath string
 	var dryRun bool
+	var fallbackRate float64
 	flag.StringVar(&configPath, "config", "", "Config path (required)")
 	flag.StringVar(&minerFilter, "miner", "", "Restrict to one miner (mac, hostname, or ip) -- default: all configured miners")
 	flag.BoolVar(&dryRun, "dry-run", true, "If true (the default), only compute and print totals -- pass -dry-run=false to actually write totals.json")
+	flag.Float64Var(&fallbackRate, "fallback-rate", -1, "Electricity rate (€/kWh) to bill for polls recorded before rate-tracking existed -- defaults to the rate configured in -config right now")
 	// Deprecated -- see the identical flag in cmd/dashboard-api/main.go.
 	flag.StringVar(&deprecatedMinersPath, "miners", "", "Deprecated, ignored -- miners.yml is found automatically next to -config, or via minersFile: inside it")
 	flag.Parse()
@@ -54,6 +64,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+	if fallbackRate < 0 {
+		fallbackRate = cfg.Electricity.RatePerKwh
+	}
 
 	root := cfg.Storage.BitaxesDir()
 	miners := filterMiners(cfg.GetMiners(), minerFilter)
@@ -67,12 +80,13 @@ func main() {
 	}
 	fmt.Printf("rebuild-totals: %s\n", mode)
 	fmt.Printf("data dir: %s\n", root)
-	fmt.Printf("miners: %d\n\n", len(miners))
+	fmt.Printf("miners: %d\n", len(miners))
+	fmt.Printf("fallback electricity rate (for polls recorded before rate-tracking existed): %.4f/kWh\n\n", fallbackRate)
 
 	start := time.Now()
 	results := make([]minerResult, 0, len(miners))
 	for _, miner := range miners {
-		res := rebuildMinerTotals(root, miner, dryRun)
+		res := rebuildMinerTotals(root, miner, dryRun, fallbackRate)
 		printResult(res)
 		results = append(results, res)
 	}
@@ -120,7 +134,7 @@ type minerResult struct {
 	Err error
 }
 
-func rebuildMinerTotals(root string, miner config.Bitaxe, dryRun bool) minerResult {
+func rebuildMinerTotals(root string, miner config.Bitaxe, dryRun bool, fallbackRate float64) minerResult {
 	start := time.Now()
 	key := miner.StorageKey()
 	res := minerResult{Hostname: miner.Hostname, Ip: miner.Ip, Mac: key}
@@ -151,7 +165,7 @@ func rebuildMinerTotals(root string, miner config.Bitaxe, dryRun bool) minerResu
 
 	var t storage.Totals
 	for _, f := range files {
-		readJSONLIntoTotals(f, &t, &res)
+		readJSONLIntoTotals(f, &t, &res, fallbackRate)
 	}
 	res.Totals = t
 
@@ -177,7 +191,10 @@ func rebuildMinerTotals(root string, miner config.Bitaxe, dryRun bool) minerResu
 // tolerating malformed lines (logged and skipped, never fatal -- same
 // convention as internal/handler's JSONL readers) and skipping alert-only
 // entries (offline/mac-mismatch polls, which carry no payload to fold in).
-func readJSONLIntoTotals(path string, t *storage.Totals, res *minerResult) {
+// A line predating electricity-cost tracking decodes its rate as 0 -- billed
+// at fallbackRate instead, since a genuinely-configured €0/kWh is not a
+// realistic case to protect at the expense of silently losing that history.
+func readJSONLIntoTotals(path string, t *storage.Totals, res *minerResult, fallbackRate float64) {
 	f, err := os.Open(path)
 	if err != nil {
 		log.Printf("warning: cannot open %s: %v", path, err)
@@ -219,8 +236,13 @@ func readJSONLIntoTotals(path string, t *storage.Totals, res *minerResult) {
 			res.LastSeen = sample.Timestamp
 		}
 
+		rate := sample.ElectricityRate
+		if rate == 0 {
+			rate = fallbackRate
+		}
+
 		prevLastUptime := t.LastUptimeSeconds
-		updated, err := storage.ApplyPoll(*t, sample.Timestamp, sample.Payload)
+		updated, err := storage.ApplyPoll(*t, sample.Timestamp, sample.Payload, rate)
 		if err != nil {
 			log.Printf("warning: skipping unparsable payload at line %d in %s: %v", lineNum, path, err)
 			res.LinesSkipped++
@@ -270,8 +292,8 @@ func printResult(res minerResult) {
 		fmt.Printf("  history: %s -> %s\n",
 			res.FirstSeen.Format("2006-01-02 15:04"), res.LastSeen.Format("2006-01-02 15:04"))
 	}
-	fmt.Printf("  total uptime: %s, total shares: accepted=%d rejected=%d\n",
-		formatDuration(res.Totals.TotalUptimeSeconds), res.Totals.TotalSharesAccepted, res.Totals.TotalSharesRejected)
+	fmt.Printf("  total uptime: %s, total shares: accepted=%d rejected=%d, total cost: %.2f\n",
+		formatDuration(res.Totals.TotalUptimeSeconds), res.Totals.TotalSharesAccepted, res.Totals.TotalSharesRejected, res.Totals.TotalElectricityCost)
 	fmt.Printf("  scan time: %s\n\n", res.Elapsed.Round(time.Millisecond))
 }
 

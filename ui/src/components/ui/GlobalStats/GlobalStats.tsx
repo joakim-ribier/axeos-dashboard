@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import AirIcon from "@mui/icons-material/Air";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import BoltIcon from "@mui/icons-material/Bolt";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import EuroIcon from "@mui/icons-material/Euro";
 import HardwareIcon from "@mui/icons-material/Hardware";
@@ -148,6 +147,14 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
     return { min: Math.min(...rates), max: Math.max(...rates) };
   }, [data]);
 
+  const powerRange = React.useMemo(() => {
+    const powers = (data ?? [])
+      .map((m) => m.power)
+      .filter((v): v is number => v !== undefined);
+    if (!powers.length) return undefined;
+    return { min: Math.min(...powers), max: Math.max(...powers) };
+  }, [data]);
+
   const tempRange = React.useMemo(() => {
     const temps = (data ?? [])
       .map((m) => m.temp)
@@ -173,9 +180,17 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
   const electricityRate =
     data?.find((m) => (m.electricityRatePerKwh ?? 0) > 0)
       ?.electricityRatePerKwh ?? 0;
-  const costPerDay =
-    electricityRate > 0 ? (totalPower / 1000) * electricityRate * 24 : 0;
-  const costPerMonth = costPerDay * 30;
+  const costPerHour =
+    electricityRate > 0 ? (totalPower / 1000) * electricityRate : 0;
+
+  // Each miner's persistent, reboot-surviving cumulative cost (see
+  // MinerInfo.totalElectricityCost) -- summed across the fleet for the
+  // "since the beginning" figure, decoupled from today's instant rate above
+  // so it still reflects real spend even after a rate change.
+  const totalCumulativeCost = React.useMemo(
+    () => data?.reduce((s, m) => s + (m.totalElectricityCost ?? 0), 0) ?? 0,
+    [data],
+  );
 
   /* trend via localStorage */
   useEffect(() => {
@@ -243,7 +258,7 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
 
   const hashSubValue =
     hashRange !== undefined ? (
-      <Tooltip title={t("dashboard.stats.kpi.minMaxHashrate")} arrow>
+      <Tooltip title={t("dashboard.stats.kpi.minMax")} arrow>
         <Stack direction="row" alignItems="center" spacing={0.5}>
           {hashRange.min === hashRange.max ? (
             <span>{`${hashRange.min.toFixed(2)} TH/s`}</span>
@@ -254,6 +269,25 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
               <span>·</span>
               <ArrowUpwardIcon sx={{ fontSize: 10 }} />
               <span>{`${hashRange.max.toFixed(2)} TH/s`}</span>
+            </>
+          )}
+        </Stack>
+      </Tooltip>
+    ) : undefined;
+
+  const powerSubValue =
+    powerRange !== undefined ? (
+      <Tooltip title={t("dashboard.stats.kpi.minMax")} arrow>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          {powerRange.min === powerRange.max ? (
+            <span>{`${powerRange.min.toFixed(0)}W`}</span>
+          ) : (
+            <>
+              <ArrowDownwardIcon sx={{ fontSize: 10 }} />
+              <span>{powerRange.min.toFixed(0)}</span>
+              <span>·</span>
+              <ArrowUpwardIcon sx={{ fontSize: 10 }} />
+              <span>{`${powerRange.max.toFixed(0)}W`}</span>
             </>
           )}
         </Stack>
@@ -291,7 +325,7 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
             />
           }
           value={totalShares.toLocaleString()}
-          subValue={t("dashboard.stats.kpi.sharesAllTime", {
+          subValue={t("dashboard.stats.kpi.allTime", {
             value: formatMetric(totalCumulativeShares),
           })}
           label={t("dashboard.stats.kpi.shares")}
@@ -310,26 +344,23 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
         {/* Finance */}
         <KpiCard
           icon={<HardwareIcon sx={{ color: "primary.main", fontSize: 28 }} />}
-          value={minerCount}
-          subValue={
-            totalPower > 0 ? (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <BoltIcon sx={{ fontSize: 12 }} />
-                <span>{`${totalPower.toFixed(0)}W · ~${((totalPower * 8760) / 1000).toFixed(0)} kWh/${t("dashboard.stats.kpi.perYear")}`}</span>
-              </Stack>
-            ) : undefined
-          }
+          value={`${minerCount} · ${totalPower.toFixed(0)}W`}
+          subValue={powerSubValue}
           label={t("dashboard.stats.kpi.miners")}
           loading={isLoading}
         />
-        {costPerDay > 0 && (
+        {costPerHour > 0 && (
           <KpiCard
             icon={<EuroIcon sx={{ color: "error.main", fontSize: 28 }} />}
-            value={`${costPerDay.toFixed(2)}€`}
+            value={`${costPerHour.toFixed(2)}€/h`}
             subValue={
-              <Stack direction="row" alignItems="center" spacing={0.5}>
-                <span>{`~${costPerMonth.toFixed(0)}€/${t("dashboard.stats.kpi.perMonth")}`}</span>
-              </Stack>
+              totalCumulativeCost > 0 ? (
+                <span>
+                  {t("dashboard.stats.kpi.allTime", {
+                    value: `${totalCumulativeCost.toFixed(2)}€`,
+                  })}
+                </span>
+              ) : undefined
             }
             label={t("dashboard.stats.kpi.electricityCost")}
             loading={isLoading}

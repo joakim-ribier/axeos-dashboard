@@ -79,6 +79,7 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 			info.TotalUptimeSeconds = totals.TotalUptimeSeconds
 			info.TotalSharesAccepted = totals.TotalSharesAccepted
 			info.TotalSharesRejected = totals.TotalSharesRejected
+			info.TotalElectricityCost = totals.TotalElectricityCost
 		}
 
 		if hasStatus {

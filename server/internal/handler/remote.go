@@ -80,6 +80,7 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 				info.TotalUptimeSeconds = totals.TotalUptimeSeconds
 				info.TotalSharesAccepted = totals.TotalSharesAccepted
 				info.TotalSharesRejected = totals.TotalSharesRejected
+				info.TotalElectricityCost = totals.TotalElectricityCost
 			}
 
 			resp.Miners = append(resp.Miners, info)

@@ -34,15 +34,13 @@
       "timestampDivergence": "Miners have different timestamps",
       "kpi": {
         "hashrate": "Total Hashrate",
-        "minMaxHashrate": "Min · Max per miner",
+        "minMax": "Min · Max per miner",
         "miners": "Miners",
         "shares": "Shares (session)",
-        "sharesAllTime": "All-time: {{value}}",
+        "allTime": "All-time: {{value}}",
         "tempFan": "Temp · Fan",
         "maxFan": "Max fan speed",
-        "perYear": "yr",
-        "perMonth": "month",
-        "electricityCost": "Elec. cost / day"
+        "electricityCost": "Electricity"
       }
     }
   },

@@ -118,7 +118,7 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
 | `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots); `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
-| `internal/model/` | `MinerInfo` (40 fields) / `MinersResponse` JSON types |
+| `internal/model/` | `MinerInfo` (41 fields) / `MinersResponse` JSON types |
 | `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions; `config.go` also serves `/api/config/miners` and `/api/config/settings` (read/write the two managed YAML files) |
 
 #### API Endpoints
@@ -167,7 +167,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 #### MinerInfo Fields
 
-40 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals, firmware version, response time, fallback flag, alerts, electricity rate.
+41 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals (including cumulative electricity cost), firmware version, response time, fallback flag, alerts, electricity rate.
 
 ### React Frontend (`ui/`)
 

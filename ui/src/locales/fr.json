@@ -34,15 +34,13 @@
       "timestampDivergence": "Les mineurs ont des timestamps différents",
       "kpi": {
         "hashrate": "Hashrate total",
-        "minMaxHashrate": "Min · Max par mineur",
+        "minMax": "Min · Max par mineur",
         "miners": "Mineurs",
         "shares": "Parts (session)",
-        "sharesAllTime": "Depuis le début : {{value}}",
+        "allTime": "Depuis le début : {{value}}",
         "tempFan": "Temp · Ventil.",
         "maxFan": "Vitesse ventilateur max",
-        "perYear": "an",
-        "perMonth": "mois",
-        "electricityCost": "Coût élec. / jour"
+        "electricityCost": "Électricité"
       }
     }
   },

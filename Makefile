@@ -138,22 +138,25 @@ run-feeder:
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
 	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)
 
-# Reconstruct totals.json (persistent, reboot-surviving uptime/shares) from
-# each miner's full JSONL history. Safe by default: DRY_RUN=1 unless
-# overridden, and the tool itself backs up any existing totals.json before
-# overwriting it. Examples:
+# Reconstruct totals.json (persistent, reboot-surviving uptime/shares/
+# electricity-cost counters) from each miner's full JSONL history. Safe by
+# default: DRY_RUN=1 unless overridden, and the tool itself backs up any
+# existing totals.json before overwriting it. Examples:
 #   make rebuild-totals                              # dry-run, all miners
 #   make rebuild-totals MINER=aabbccddeeff            # dry-run, one miner
 #   make rebuild-totals MINER=aabbccddeeff DRY_RUN=   # write it for real, one miner
 #   make rebuild-totals DRY_RUN=                      # write it for real, all miners
+#   make rebuild-totals DRY_RUN= FALLBACK_RATE=0.15   # ...billing pre-tracking polls at €0.15/kWh instead of today's configured rate
 DRY_RUN ?= 1
 MINER ?=
+FALLBACK_RATE ?=
 DRY_RUN_FLAG = $(if $(DRY_RUN),-dry-run=true,-dry-run=false)
 MINER_FLAG = $(if $(MINER),-miner $(MINER),)
+FALLBACK_RATE_FLAG = $(if $(FALLBACK_RATE),-fallback-rate $(FALLBACK_RATE),)
 rebuild-totals:
 	@echo ">>> Backfilling totals.json (config: $(CONFIG_FILE))..."
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG)
+	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG) $(FALLBACK_RATE_FLAG)
 
 # Run remote-dashboard-api (read-only) with remote-dashboard.yml
 run-remote-dashboard-api:

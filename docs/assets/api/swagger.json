@@ -1222,6 +1222,10 @@
                 "timestamp": {
                     "type": "string"
                 },
+                "totalElectricityCost": {
+                    "description": "TotalElectricityCost is this miner's cumulative cost (in the\noperator's own currency, see settings.yml's electricity.ratePerKwh)\nsince it has been tracked -- each poll's slice uses the rate that was\nactually in effect at that poll (RawSample.ElectricityRate), not\ntoday's rate, so a later rate change never rewrites past cost. Not\nshown per-miner in the UI -- summed across the fleet for the\n\"Électricité\" KPI card's all-time figure instead.",
+                    "type": "number"
+                },
                 "totalSharesAccepted": {
                     "type": "integer"
                 },

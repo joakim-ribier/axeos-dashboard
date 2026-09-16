@@ -36,6 +36,7 @@ export const minerSchema = z.object({
   totalUptimeSeconds: z.number().optional(),
   totalSharesAccepted: z.number().optional(),
   totalSharesRejected: z.number().optional(),
+  totalElectricityCost: z.number().optional(),
 
   version: z.string(),
   latestVersion: z.string().optional(),

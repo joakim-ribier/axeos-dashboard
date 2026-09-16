@@ -263,9 +263,10 @@ func decodeLatestJSON(path string) (latestFileStructure, error) {
 // Last* bookkeeping fields storage uses to detect device reboots are of no
 // use to the API.
 type totalsFileStructure struct {
-	TotalUptimeSeconds  int64 `json:"totalUptimeSeconds"`
-	TotalSharesAccepted int64 `json:"totalSharesAccepted"`
-	TotalSharesRejected int64 `json:"totalSharesRejected"`
+	TotalUptimeSeconds   int64   `json:"totalUptimeSeconds"`
+	TotalSharesAccepted  int64   `json:"totalSharesAccepted"`
+	TotalSharesRejected  int64   `json:"totalSharesRejected"`
+	TotalElectricityCost float64 `json:"totalElectricityCost"`
 }
 
 // decodeTotalsJSON reads and decodes a single `totals.json` file. Returns an

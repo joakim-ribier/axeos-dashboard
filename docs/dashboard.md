@@ -86,8 +86,14 @@ subnav:
    du feeder ; en dessous, le total cumulé depuis la toute première mise
    en route, qui persiste après un redémarrage d'un mineur.
 3. **Temp · Ventil.** — température : le chiffre de **gauche** est le minimum, celui de **droite** le maximum, parmi tous les mineurs. En dessous, la vitesse de ventilation **maximale** relevée.
-4. **Mineurs** — nombre de mineurs configurés, consommation totale (W) et estimation annuelle (kWh/an).
-5. **Coût élec. / jour** — coût électrique journalier estimé, à partir du tarif configuré.
+4. **Mineurs** — nombre de mineurs configurés et consommation totale (W).
+   En dessous, le minimum et le maximum de puissance relevés parmi les
+   mineurs (une seule valeur si tous consomment pareil).
+5. **Électricité** — coût instantané (€/h), calculé à partir de la
+   consommation actuelle et du tarif configuré (carte masquée si aucun
+   tarif n'est configuré). En dessous, le total réellement dépensé depuis
+   que chaque mineur est suivi -- un changement de tarif plus tard ne
+   modifie jamais ce total passé.
 
 ---
 

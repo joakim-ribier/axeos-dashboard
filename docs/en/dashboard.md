@@ -91,10 +91,13 @@ subnav:
 3. **Temp · Fan** — temperature: the number on the **left** is the
    minimum, the one on the **right** the maximum, across all miners.
    Below it, the **peak** fan speed recorded.
-4. **Miners** — number of configured miners, total power draw (W) and
-   yearly estimate (kWh/yr).
-5. **Elec. cost / day** — estimated daily electricity cost, based on the
-   configured rate.
+4. **Miners** — number of configured miners and total power draw (W).
+   Below it, the minimum and maximum power draw recorded across miners
+   (a single value when every miner draws the same).
+5. **Electricity** — instant cost (€/h), computed from the current power
+   draw and the configured rate (card hidden if no rate is set). Below it,
+   the actual total spent since each miner started being tracked -- a
+   later rate change never rewrites that past total.
 
 ---
 

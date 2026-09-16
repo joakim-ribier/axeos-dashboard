@@ -20,6 +20,10 @@ type Totals struct {
 	TotalSharesAccepted int64 `json:"totalSharesAccepted"`
 	TotalSharesRejected int64 `json:"totalSharesRejected"`
 
+	// TotalElectricityCost accumulates power(kW) * uptime-delta(h) * the
+	// electricity rate that was active at each poll -- see ApplyPoll.
+	TotalElectricityCost float64 `json:"totalElectricityCost"`
+
 	// Last* are the raw device counters as of the previous update -- kept
 	// only to detect a device reboot (a raw value lower than its
 	// predecessor) on the next call, never read by anything else.
@@ -89,15 +93,29 @@ func accumulate(total, last, current int64) int64 {
 // updated totals. Pure and file-IO-free so it can replay a miner's whole
 // JSONL history from Totals{} (see cmd/rebuild-totals) using the exact same
 // logic as the live path (RawStorage.Append, one poll at a time).
-func ApplyPoll(t Totals, now time.Time, payload []byte) (Totals, error) {
+//
+// electricityRatePerKwh is the rate that was in effect for this specific
+// poll (RawSample.ElectricityRate, not necessarily today's configured
+// rate) -- the cost slice this poll contributes uses it, so replaying
+// history after a rate change reproduces the same total every time.
+func ApplyPoll(t Totals, now time.Time, payload []byte, electricityRatePerKwh float64) (Totals, error) {
 	var counters struct {
-		UptimeSeconds  int64 `json:"uptimeSeconds"`
-		SharesAccepted int64 `json:"sharesAccepted"`
-		SharesRejected int64 `json:"sharesRejected"`
+		UptimeSeconds  int64   `json:"uptimeSeconds"`
+		SharesAccepted int64   `json:"sharesAccepted"`
+		SharesRejected int64   `json:"sharesRejected"`
+		Power          float64 `json:"power"`
 	}
 	if err := json.Unmarshal(payload, &counters); err != nil {
 		return t, err
 	}
+
+	// Seconds actually run since the previous poll -- the same reboot-aware
+	// delta already used for TotalUptimeSeconds below, reused here instead
+	// of wall-clock time between polls so a feeder outage never
+	// double-bills for time the miner wasn't actually confirmed running.
+	upDeltaSeconds := accumulate(0, t.LastUptimeSeconds, counters.UptimeSeconds)
+	kwh := counters.Power / 1000 * float64(upDeltaSeconds) / 3600
+	t.TotalElectricityCost += kwh * electricityRatePerKwh
 
 	t.TotalUptimeSeconds = accumulate(t.TotalUptimeSeconds, t.LastUptimeSeconds, counters.UptimeSeconds)
 	t.TotalSharesAccepted = accumulate(t.TotalSharesAccepted, t.LastSharesAccepted, counters.SharesAccepted)
@@ -115,7 +133,7 @@ func ApplyPoll(t Totals, now time.Time, payload []byte) (Totals, error) {
 func (s *RawStorage) updateTotals(now time.Time, bitaxeAddr string, payload []byte) error {
 	path := TotalsPath(s.baseDir, bitaxeAddr)
 
-	updated, err := ApplyPoll(ReadTotals(path), now, payload)
+	updated, err := ApplyPoll(ReadTotals(path), now, payload, s.electricityRate)
 	if err != nil {
 		return err
 	}
