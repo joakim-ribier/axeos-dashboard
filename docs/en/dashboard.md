@@ -82,7 +82,9 @@ subnav:
 
 ![Stats bar]({{ '/assets/images/globalstats.png' | relative_url }})
 
-1. **Total hashrate** — sum of the hashrate of all active miners.
+1. **Total hashrate** — sum of the hashrate of all active miners. Below
+   it, the minimum and maximum recorded across miners (a single value
+   when every miner has the same hashrate).
 2. **Shares (session)** — total shares accepted since the feeder
    started; below it, the lifetime total since the very first run, which
    survives a miner reboot.

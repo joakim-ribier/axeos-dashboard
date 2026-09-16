@@ -79,7 +79,9 @@ subnav:
 
 ![Totaux des cards]({{ '/assets/images/globalstats.png' | relative_url }})
 
-1. **Hashrate total** — somme du hashrate de tous les mineurs actifs.
+1. **Hashrate total** — somme du hashrate de tous les mineurs actifs. En
+   dessous, le minimum et le maximum relevés parmi les mineurs (une seule
+   valeur si tous les mineurs ont le même hashrate).
 2. **Parts (session)** — total des shares acceptées depuis le démarrage
    du feeder ; en dessous, le total cumulé depuis la toute première mise
    en route, qui persiste après un redémarrage d'un mineur.

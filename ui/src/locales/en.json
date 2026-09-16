@@ -34,6 +34,7 @@
       "timestampDivergence": "Miners have different timestamps",
       "kpi": {
         "hashrate": "Total Hashrate",
+        "minMaxHashrate": "Min · Max per miner",
         "miners": "Miners",
         "shares": "Shares (session)",
         "sharesAllTime": "All-time: {{value}}",

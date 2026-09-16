@@ -140,6 +140,14 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
     [data],
   );
 
+  const hashRange = React.useMemo(() => {
+    const rates = (data ?? [])
+      .map((m) => m.hashRateTHs)
+      .filter((v): v is number => v !== undefined);
+    if (!rates.length) return undefined;
+    return { min: Math.min(...rates), max: Math.max(...rates) };
+  }, [data]);
+
   const tempRange = React.useMemo(() => {
     const temps = (data ?? [])
       .map((m) => m.temp)
@@ -233,6 +241,25 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
         : `${tempRange.min.toFixed(0)}–${tempRange.max.toFixed(0)}°C`
       : "—";
 
+  const hashSubValue =
+    hashRange !== undefined ? (
+      <Tooltip title={t("dashboard.stats.kpi.minMaxHashrate")} arrow>
+        <Stack direction="row" alignItems="center" spacing={0.5}>
+          {hashRange.min === hashRange.max ? (
+            <span>{`${hashRange.min.toFixed(2)} TH/s`}</span>
+          ) : (
+            <>
+              <ArrowDownwardIcon sx={{ fontSize: 10 }} />
+              <span>{hashRange.min.toFixed(2)}</span>
+              <span>·</span>
+              <ArrowUpwardIcon sx={{ fontSize: 10 }} />
+              <span>{`${hashRange.max.toFixed(2)} TH/s`}</span>
+            </>
+          )}
+        </Stack>
+      </Tooltip>
+    ) : undefined;
+
   const fanSubValue =
     maxFan !== undefined ? (
       <Tooltip title={t("dashboard.stats.kpi.maxFan")} arrow>
@@ -251,6 +278,7 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
         <KpiCard
           icon={<SpeedIcon sx={{ color: "success.main", fontSize: 28 }} />}
           value={`${totalHashRate.toFixed(2)} TH/s`}
+          subValue={hashSubValue}
           label={t("dashboard.stats.kpi.hashrate")}
           trend={hashTrend}
           showTrend={prevHashRate !== undefined}
