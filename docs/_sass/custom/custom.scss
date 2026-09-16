@@ -24,6 +24,9 @@ $dashboard-terminal-body-bg: #0d1117;
 // MUI's default dark-mode warning color -- see the app's AlertList
 // (Alert variant="filled" severity="warning"), e.g. Settings' issue banner.
 $dashboard-warning: #ffa726;
+// MUI's default dark-mode success color (Alert variant="filled"
+// severity="success") -- used by the homepage's "release" callout.
+$dashboard-success: #66bb6a;
 // The app never actually loads a Roboto webfont (no Google Fonts link, no
 // @fontsource package) -- MUI's default stack just falls through to the
 // system sans-serif, which is what this reproduces.
@@ -280,6 +283,29 @@ body {
     background-color: rgba(0, 0, 0, 0.12);
     border-color: rgba(0, 0, 0, 0.25);
     color: rgba(0, 0, 0, 0.87);
+  }
+}
+
+// "Release" callout on the homepage, same recipe as .note above but for
+// the app's own AlertList severity="success" look: flat green fill, white
+// text.
+.main-content blockquote.release,
+.main-content p.release {
+  border: none;
+  box-shadow: none;
+  border-radius: 4px;
+  padding: 0.8rem 1rem;
+  background-color: $dashboard-success;
+  color: #fff;
+
+  &::before {
+    content: none;
+  }
+
+  a {
+    color: #fff;
+    font-weight: normal;
+    text-decoration: none;
   }
 }
 

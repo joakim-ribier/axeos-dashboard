@@ -4,12 +4,10 @@
   ungrouped pages and for pages nested inside a "group" wrapper.
   Usage: {% include components/nav_item.html node=some_page %}
 
-  Only the first level (a page's own subnav) starts pre-expanded (active
-  class), so the whole top level is open by default instead of only the
-  current page's own item (the theme's own built-in behaviour). A second
-  level nested under one of those items (e.g. Docker's own subnav) starts
-  collapsed and is toggled by hand, via the arrow or the label click
-  handled in head_custom.html.
+  Every page's own subnav starts collapsed by default -- toggled by hand,
+  via the arrow or the label click handled in head_custom.html. The
+  theme's own built-in behaviour still force-expands whichever item's
+  subnav contains the current page on load.
 
   Every link also carries a data-nav-key equal to its own href, for
   head_custom.html's collapse-state persistence to key off instead of the
@@ -19,7 +17,7 @@
   item's stored state (and, since every stripped link reads back the same
   null, merge it with any other currently-on-that-page item's state too).
 {%- endcomment -%}
-<li class="nav-list-item{% if include.node.subnav %} active{% endif %}">
+<li class="nav-list-item">
   {%- if include.node.subnav -%}
     <button class="nav-list-expander btn-reset" aria-label="{{ include.node.title }} submenu" aria-expanded="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><use xlink:href="#svg-arrow-right"></use></svg>
