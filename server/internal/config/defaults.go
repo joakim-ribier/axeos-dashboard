@@ -10,8 +10,9 @@ package config
 // only reads it or produces a fresh merged copy, never mutates it in
 // place.
 var DefaultPoolDashboards = map[string]string{
-	"stratum.braiins.com": "https://pool.braiins.com/mining/overview/{user}",
-	"solo.atlaspool.io":   "https://atlaspool.io/dashboard.html?wallet={user}",
+	"stratum.braiins.com":        "https://pool.braiins.com/mining/overview/{user}",
+	"solo.atlaspool.io":          "https://atlaspool.io/dashboard.html?wallet={user}",
+	"stratum.btcpowlab-pool.com": "https://btcpowlab-pool.com/miner/{user}",
 }
 
 // DefaultFirmwareRepos is the built-in GitHub "latest release" API URL per
