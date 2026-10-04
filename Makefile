@@ -60,7 +60,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build docs-serve
 
 # ==============================================================================
 # Main Commands
@@ -119,6 +119,11 @@ swagger:
 	cd server && go tool swag init -g cmd/dashboard-api/main.go -o docs/swagger --outputTypes json,yaml --parseInternal
 	cp server/docs/swagger/swagger.json docs/assets/api/swagger.json
 	@echo ">>> Done. See server/docs/swagger/swagger.yaml and docs/assets/api/swagger.json"
+
+# Serve the docs site (GitHub Pages / Jekyll) locally, with live rebuild
+docs-serve:
+	@echo ">>> Starting Jekyll docs server..."
+	cd docs && jekyll serve
 
 # Clean build artifacts
 clean:
@@ -182,6 +187,7 @@ help:
 	@echo "  make build                     - Compile feeder, dashboard-api and remote-dashboard-api"
 	@echo "  make lintAll                   - Run linter on all packages"
 	@echo "  make swagger                   - Regenerate the OpenAPI spec (server/docs/swagger/)"
+	@echo "  make docs-serve                - Serve the docs site locally (cd docs && jekyll serve)"
 	@echo "  make clean                     - Remove generated binaries"
 	@echo "  make docker-build               - Build the Docker images locally with the real git SHA baked in (docker compose build)"
 	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
