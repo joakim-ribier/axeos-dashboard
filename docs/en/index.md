@@ -168,5 +168,5 @@ to proxy the few control actions (pool switch, restart) to the miners.
 
 Tested firmware, up to these versions:
 
-- **Bitaxe Gamma** — [v2.15.1](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.1){:target="_blank" rel="noopener noreferrer"}
-- **NerdQAxe++** — [v1.0.37.3-LTS](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.0.37.3-LTS){:target="_blank" rel="noopener noreferrer"}
+- **Bitaxe Gamma** — [v2.15.3](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.3){:target="_blank" rel="noopener noreferrer"}
+- **NerdQAxe++** — [v1.1.0.1](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.0.1){:target="_blank" rel="noopener noreferrer"}
