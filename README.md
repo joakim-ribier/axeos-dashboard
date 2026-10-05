@@ -136,3 +136,7 @@ Full device API docs: https://osmu.wiki/bitaxe/api/
 ## License
 
 [MIT](LICENSE) © Joakim Ribier
+
+<p align="center">
+  <a href="https://badele.github.io/build-with-ai/"><img src="readme/build-with-ai.png" alt="Build with AI" width="300"></a>
+</p>
