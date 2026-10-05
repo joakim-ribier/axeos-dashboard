@@ -1,12 +1,18 @@
 // src/schemas/appSettingsSchema.ts
 import { z } from "zod";
 
+export const powerDeviceSchema = z.object({
+  name: z.string(),
+  power: z.number(),
+});
+
 // Mirrors config.ElectricityConfig/PoolsConfig/RemoteConfig/AppSettingsFirmware
 // (server/internal/config/config.go) -- this is both what GET
 // /api/config/settings returns and what POST /api/config/settings accepts
 // as-is (minus readOnly/lastUpdated, which are response-only).
 export const electricitySchema = z.object({
   ratePerKwh: z.number(),
+  devices: z.array(powerDeviceSchema).optional(),
 });
 
 export const poolsSchema = z.object({
@@ -74,6 +80,7 @@ export const appSettingsSchema = z.object({
   lastUpdated: z.string().optional(),
 });
 
+export type PowerDevice = z.infer<typeof powerDeviceSchema>;
 export type ElectricitySettings = z.infer<typeof electricitySchema>;
 export type PoolsSettings = z.infer<typeof poolsSchema>;
 export type RemoteSettings = z.infer<typeof remoteSchema>;

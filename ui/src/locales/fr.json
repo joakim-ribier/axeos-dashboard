@@ -40,7 +40,8 @@
         "allTime": "Depuis le début : {{value}}",
         "tempFan": "Temp · Ventil.",
         "maxFan": "Vitesse ventilateur max",
-        "electricityCost": "Électricité"
+        "electricityCost": "Électricité",
+        "costPerDay": "~{{value}}\u00a0/\u00a0jour"
       }
     }
   },
@@ -299,7 +300,17 @@
       "saveSuccess": "Réglages enregistrés.",
       "electricity": {
         "title": "Électricité",
-        "rateLabel": "Tarif (€/kWh)"
+        "rateLabel": "Tarif (€/kWh)",
+        "devices": {
+          "title": "Autres appareils",
+          "description": "Équipements qui tournent avec les mineurs (ventilateur, routeur...), à puissance constante. Servent à estimer le coût journalier de l'installation complète.",
+          "nameLabel": "Nom",
+          "namePlaceholder": "Ventilateur d'extraction",
+          "powerLabel": "Puissance (W)",
+          "empty": "Aucun appareil déclaré",
+          "add": "Ajouter",
+          "remove": "Supprimer"
+        }
       },
       "pools": {
         "title": "Dashboards des pools",

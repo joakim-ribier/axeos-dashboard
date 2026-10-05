@@ -249,6 +249,9 @@ firmware:
 # immediately and to the feeder on its next poll cycle, no restart needed.
 electricity:
   ratePerKwh: 0.1915
+  devices:                      # optional non-miner consumers (fan, router...), constant draw in W --
+    - name: Extractor fan       # only added to the miners' power for the Electricity card's estimated
+      power: 30                 # cost per day; nothing is stored or accumulated
 pools:
   dashboards:
     # extra pool(s), or an override for a built-in one -- see defaults.go

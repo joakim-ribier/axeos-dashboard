@@ -1,4 +1,6 @@
 // src/components/ui/GlobalStats/types/index.ts
+import { type PowerDevice } from "@/schemas/appSettingsSchema";
+
 export interface MinerInfo {
   timestamp?: string;
   hashRateTHs?: number;
@@ -29,5 +31,6 @@ export interface PoolStats {
 
 export interface GlobalStatsProps {
   data?: MinerInfo[];
+  devices?: PowerDevice[];
   isLoading: boolean;
 }

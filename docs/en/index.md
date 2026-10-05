@@ -53,7 +53,8 @@ No authentication required — internal LAN use only.
 - Automatic network discovery of miners
 - Pool configuration
 - Cron-based scheduler to switch pools or restart automatically
-- Electricity rate setting
+- Electricity rate and other devices (fan, router...) to estimate the
+  whole installation's daily cost
 
 [See Configuration in detail]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
 

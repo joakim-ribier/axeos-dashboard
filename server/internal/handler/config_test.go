@@ -341,6 +341,66 @@ func TestSaveMinersConfig_emptyBodyRejected(t *testing.T) {
 	}
 }
 
+func postSaveAppSettings(t *testing.T, settings config.AppSettingsFile) (*httptest.ResponseRecorder, config.AppSettingsFile, bool) {
+	t.Helper()
+	dir := t.TempDir()
+	cfg := config.Config{
+		AppSettingsFilePath: filepath.Join(dir, "settings.yml"),
+		Storage:             config.StorageConfig{DataDir: dir},
+	}
+	payload, err := json.Marshal(settings)
+	if err != nil {
+		t.Fatalf("marshal request body: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, "/api/config/settings", bytes.NewReader(payload))
+	saved, ok := SaveAppSettings(cfg, w, r)
+	return w, saved, ok
+}
+
+func TestSaveAppSettings_devicesValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		device config.PowerDevice
+	}{
+		{name: "empty name", device: config.PowerDevice{Name: "", Power: 30}},
+		{name: "blank name", device: config.PowerDevice{Name: "   ", Power: 30}},
+		{name: "zero power", device: config.PowerDevice{Name: "Fan", Power: 0}},
+		{name: "negative power", device: config.PowerDevice{Name: "Fan", Power: -5}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w, _, ok := postSaveAppSettings(t, config.AppSettingsFile{
+				Electricity: config.ElectricityConfig{RatePerKwh: 0.2, Devices: []config.PowerDevice{tt.device}},
+			})
+
+			if ok {
+				t.Fatal("SaveAppSettings() ok = true, want false")
+			}
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
+			}
+		})
+	}
+}
+
+func TestSaveAppSettings_validDevicesSaved(t *testing.T) {
+	devices := []config.PowerDevice{{Name: "Fan", Power: 30}, {Name: "Router", Power: 8}}
+
+	w, saved, ok := postSaveAppSettings(t, config.AppSettingsFile{
+		Electricity: config.ElectricityConfig{RatePerKwh: 0.2, Devices: devices},
+	})
+
+	if !ok {
+		t.Fatalf("SaveAppSettings() ok = false, want true (status %d: %s)", w.Code, w.Body.String())
+	}
+	if len(saved.Electricity.Devices) != 2 || saved.Electricity.Devices[0] != devices[0] || saved.Electricity.Devices[1] != devices[1] {
+		t.Errorf("saved devices = %+v, want %+v", saved.Electricity.Devices, devices)
+	}
+}
+
 func TestDiscover_byIP(t *testing.T) {
 	addr := fakeAxeOsDevice(t, "my-bitaxe", "aabbccddeeff")
 

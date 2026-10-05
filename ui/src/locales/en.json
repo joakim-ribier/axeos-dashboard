@@ -40,7 +40,8 @@
         "allTime": "All-time: {{value}}",
         "tempFan": "Temp · Fan",
         "maxFan": "Max fan speed",
-        "electricityCost": "Electricity"
+        "electricityCost": "Electricity",
+        "costPerDay": "~{{value}}\u00a0/\u00a0day"
       }
     }
   },
@@ -299,7 +300,17 @@
       "saveSuccess": "App settings saved.",
       "electricity": {
         "title": "Electricity",
-        "rateLabel": "Rate (€/kWh)"
+        "rateLabel": "Rate (€/kWh)",
+        "devices": {
+          "title": "Other devices",
+          "description": "Equipment that runs alongside the miners (fan, router...), at a constant power. Used to estimate the whole installation's daily cost.",
+          "nameLabel": "Name",
+          "namePlaceholder": "Extractor fan",
+          "powerLabel": "Power (W)",
+          "empty": "No device declared",
+          "add": "Add",
+          "remove": "Remove"
+        }
       },
       "pools": {
         "title": "Pool dashboards",

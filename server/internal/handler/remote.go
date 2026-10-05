@@ -89,6 +89,17 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 		resp.Configured = len(resp.Miners)
 		resp.Total = len(resp.Miners)
 
+		// Devices aren't pushed per-sample like miners -- they ride along
+		// with the board's pushed settings (see cmd/feeder.configSettingsPush).
+		// A board with no settings pushed yet simply has no devices to show.
+		var pushed struct {
+			Electricity config.ElectricityConfig `json:"electricity"`
+		}
+		settingsPath := filepath.Join(boardConfigDir(cfg.Storage.ResolveBoardsDir(), boardID), "settings.json")
+		if _, err := readBoardConfigFile(settingsPath, &pushed); err == nil {
+			resp.Devices = pushed.Electricity.Devices
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			http.Error(w, "failed to encode response", http.StatusInternalServerError)

@@ -99,6 +99,7 @@ interface Snapshot {
 
 export const GlobalStats: React.FC<GlobalStatsProps> = ({
   data,
+  devices = [],
   isLoading,
 }) => {
   const { t } = useTranslation();
@@ -180,8 +181,12 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
   const electricityRate =
     data?.find((m) => (m.electricityRatePerKwh ?? 0) > 0)
       ?.electricityRatePerKwh ?? 0;
-  const costPerHour =
-    electricityRate > 0 ? (totalPower / 1000) * electricityRate : 0;
+  // The whole installation at today's draw: the miners' measured power plus
+  // the other devices' declared one -- an estimate, unlike the miners'
+  // all-time cost below, which is what was actually spent.
+  const devicesPower = devices.reduce((s, d) => s + d.power, 0);
+  const costPerDay =
+    ((totalPower + devicesPower) / 1000) * 24 * electricityRate;
 
   // Each miner's persistent, reboot-surviving cumulative cost (see
   // MinerInfo.totalElectricityCost) -- summed across the fleet for the
@@ -349,10 +354,12 @@ export const GlobalStats: React.FC<GlobalStatsProps> = ({
           label={t("dashboard.stats.kpi.miners")}
           loading={isLoading}
         />
-        {costPerHour > 0 && (
+        {costPerDay > 0 && (
           <KpiCard
             icon={<EuroIcon sx={{ color: "error.main", fontSize: 28 }} />}
-            value={`${costPerHour.toFixed(2)}€/h`}
+            value={t("dashboard.stats.kpi.costPerDay", {
+              value: `${costPerDay.toFixed(2)}\u00a0€`,
+            })}
             subValue={
               totalCumulativeCost > 0 ? (
                 <span>

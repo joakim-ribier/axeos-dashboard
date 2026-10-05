@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModeProvider } from "@/contexts/ModeContext";
 
-import { useAppInfo } from "./useMiners";
+import { fetchMiners, useAppInfo } from "./useMiners";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
@@ -214,5 +214,32 @@ describe("useAppInfo", () => {
     await waitFor(() =>
       expect(result.current.hashboardUrl).toBe("https://hashboard.live"),
     );
+  });
+});
+
+describe("fetchMiners", () => {
+  beforeEach(() => {
+    mockedAxios.get.mockReset();
+  });
+
+  it("returns the declared non-miner devices", async () => {
+    mockGetByUrl({
+      "/api/miners": {
+        miners: [],
+        devices: [{ name: "Fan", power: 30 }],
+      },
+    });
+
+    const result = await fetchMiners("/api/miners");
+
+    expect(result.devices).toEqual([{ name: "Fan", power: 30 }]);
+  });
+
+  it("defaults to no devices when the response has none", async () => {
+    mockGetByUrl({ "/api/miners": { miners: [] } });
+
+    const result = await fetchMiners("/api/miners");
+
+    expect(result.devices).toEqual([]);
   });
 });

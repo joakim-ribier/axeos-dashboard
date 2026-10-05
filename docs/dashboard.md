@@ -89,11 +89,13 @@ subnav:
 4. **Mineurs** — nombre de mineurs configurés et consommation totale (W).
    En dessous, le minimum et le maximum de puissance relevés parmi les
    mineurs (une seule valeur si tous consomment pareil).
-5. **Électricité** — coût instantané (€/h), calculé à partir de la
-   consommation actuelle et du tarif configuré (carte masquée si aucun
-   tarif n'est configuré). En dessous, le total réellement dépensé depuis
-   que chaque mineur est suivi -- un changement de tarif plus tard ne
-   modifie jamais ce total passé.
+5. **Électricité** — coût estimé sur une journée à la consommation
+   actuelle et au tarif configuré (carte masquée si aucun tarif n'est
+   configuré), pour l'installation complète : les mineurs plus les
+   [autres appareils]({{ '/configuration.html#electricite-pools' | relative_url }})
+   déclarés (ventilateur, routeur...). En dessous, le total réellement
+   dépensé depuis que chaque mineur est suivi -- un changement de tarif
+   plus tard ne modifie jamais ce total passé.
 
 ---
 

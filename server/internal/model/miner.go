@@ -1,6 +1,8 @@
 // internal/model/miner.go
 package model
 
+import "github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+
 // MinerInfo holds the information that is exposed for each miner.
 type MinerInfo struct {
 	Timestamp string `json:"timestamp"`
@@ -92,6 +94,11 @@ type MinersResponse struct {
 	Configured int         `json:"configured"` // Number of miners in config
 	Total      int         `json:"total"`      // Number of miners successfully loaded
 	Miners     []MinerInfo `json:"miners"`
+
+	// Echoed from settings so the dashboard needs no second request. Nothing
+	// about them is tracked over time: a constant declared draw can't give a
+	// real cumulative cost, only an informative estimate.
+	Devices []config.PowerDevice `json:"devices,omitempty"`
 
 	// BoardPublic reflects hashboard's Account.Public flag for this board
 	// (remote-dashboard-api only) — meaningless/always false for local

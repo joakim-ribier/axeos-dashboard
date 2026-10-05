@@ -81,6 +81,11 @@ Schedules a pool switch or a restart on a cron schedule.
 The electricity rate (€/kWh) is used to estimate the daily cost shown on
 the home screen.
 
+Below the rate, **Other devices** lets you declare the equipment running
+alongside the miners (fan, router...) with its power in watts, assumed
+constant, to estimate the whole installation's daily cost. A device is
+saved as soon as it's added or removed.
+
 ![Electricity]({{ '/assets/images/settings-electricity.png' | relative_url }})
 
 ### Pool dashboards

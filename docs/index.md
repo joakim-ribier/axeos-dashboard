@@ -54,7 +54,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
 - Configuration des pools
 - Programmation d'un scheduler (cron) pour switcher ou redémarrer
   automatiquement
-- Réglage du tarif électrique
+- Réglage du tarif électrique et des autres appareils (ventilateur,
+  routeur...) pour estimer le coût journalier de l'installation complète
 
 [Voir le détail de Configuration]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
 

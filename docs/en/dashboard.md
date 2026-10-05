@@ -94,10 +94,13 @@ subnav:
 4. **Miners** — number of configured miners and total power draw (W).
    Below it, the minimum and maximum power draw recorded across miners
    (a single value when every miner draws the same).
-5. **Electricity** — instant cost (€/h), computed from the current power
-   draw and the configured rate (card hidden if no rate is set). Below it,
-   the actual total spent since each miner started being tracked -- a
-   later rate change never rewrites that past total.
+5. **Electricity** — estimated cost over one day at the current power
+   draw and the configured rate (card hidden if no rate is set), for the
+   whole installation: the miners plus the declared
+   [other devices]({{ '/en/configuration.html#electricity-pools' | relative_url }})
+   (fan, router...). Below it, the actual total spent since each miner
+   started being tracked -- a later rate change never rewrites that past
+   total.
 
 ---
 

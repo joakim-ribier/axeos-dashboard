@@ -88,6 +88,23 @@ func TestListMiners(t *testing.T) {
 	}
 }
 
+func TestListMiners_echoesConfiguredDevices(t *testing.T) {
+	t.Setenv(envDataRoot, t.TempDir())
+	devices := []config.PowerDevice{{Name: "Fan", Power: 30}}
+	cfg := config.Config{Electricity: config.ElectricityConfig{RatePerKwh: 0.2, Devices: devices}}
+
+	w := httptest.NewRecorder()
+	ListMiners(cfg, healtcheck.NewWatcher(testLogger(), cfg), w, httptest.NewRequest(http.MethodGet, "/api/miners", nil))
+
+	var got model.MinersResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if len(got.Devices) != 1 || got.Devices[0] != devices[0] {
+		t.Errorf("Devices = %+v, want %+v", got.Devices, devices)
+	}
+}
+
 func TestListMiners_surfacesMacMismatchAsError(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(envDataRoot, dir)
@@ -337,6 +354,32 @@ func TestListRemoteMiners(t *testing.T) {
 		}
 		if got.BoardPublic {
 			t.Error("BoardPublic = true, want false (no accounts/demo.json fixture -> defaults private)")
+		}
+		if got.Devices != nil {
+			t.Errorf("Devices = %+v, want none (no settings pushed for this board yet)", got.Devices)
+		}
+	})
+
+	t.Run("devices from the board's pushed settings", func(t *testing.T) {
+		withSettings := t.TempDir()
+		writeTestFile(t, filepath.Join(withSettings, "data", "boards", "demo", "bitaxes", "10.0.0.1", "latest.json"),
+			`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{}}`)
+		writeTestFile(t, filepath.Join(withSettings, "data", "boards", "demo", "config", "settings.json"),
+			`{"electricity":{"ratePerKwh":0.2,"devices":[{"name":"Fan","power":30}]}}`)
+		cfg := config.Config{Storage: config.StorageConfig{DataDir: withSettings}}
+
+		w := httptest.NewRecorder()
+		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
+
+		ListRemoteMiners(cfg, testAccessChecker(t))(w, r)
+
+		var got model.MinersResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		want := config.PowerDevice{Name: "Fan", Power: 30}
+		if len(got.Devices) != 1 || got.Devices[0] != want {
+			t.Errorf("Devices = %+v, want [%+v]", got.Devices, want)
 		}
 	})
 
