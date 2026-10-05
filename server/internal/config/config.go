@@ -358,6 +358,19 @@ type PoolsConfig struct {
 type ElectricityConfig struct {
 	// RatePerKwh is the electricity cost in euros per kilowatt-hour (e.g. 0.1915 for 19.15 cts/kWh).
 	RatePerKwh float64 `yaml:"ratePerKwh" json:"ratePerKwh"`
+
+	// Devices are the non-miner power consumers (fan, router...), declared by
+	// hand since nothing can poll them -- so the installation's figures
+	// they feed are only ever an informative estimate, kept apart from the
+	// miners' measured ones.
+	Devices []PowerDevice `yaml:"devices,omitempty" json:"devices,omitempty"`
+}
+
+// PowerDevice is one non-miner power consumer, assumed always on.
+type PowerDevice struct {
+	Name string `yaml:"name" json:"name"`
+	// Power is the device's constant draw, in watts.
+	Power float64 `yaml:"power" json:"power"`
 }
 
 type RemoteConfig struct {

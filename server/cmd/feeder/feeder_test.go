@@ -451,3 +451,42 @@ func TestFeeder_withMinersStore_picksUpMinerAddedAfterConstruction(t *testing.T)
 		t.Errorf("latest.json still missing after the miner was added via the miners file -- runOnce() didn't reload: %v", err)
 	}
 }
+
+// A remote board has no settings.yml of its own: the devices only reach its
+// dashboard through this push.
+func TestFeeder_pushSettingsConfigToRemote_includesDevices(t *testing.T) {
+	bodyCh := make(chan []byte, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusNoContent)
+		if r.URL.Path == "/config/settings" {
+			bodyCh <- body
+		}
+	}))
+	defer remoteServer.Close()
+
+	cfg := config.Config{
+		Storage: config.StorageConfig{DataDir: t.TempDir()},
+		Remote:  config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+	devices := []config.PowerDevice{{Name: "Fan", Power: 30}}
+
+	NewFeeder(testLogger(), cfg).pushSettingsConfigToRemote(config.AppSettingsFile{
+		Electricity: config.ElectricityConfig{RatePerKwh: 0.2, Devices: devices},
+	}, time.Time{})
+
+	var pushed struct {
+		Electricity config.ElectricityConfig `json:"electricity"`
+	}
+	select {
+	case body := <-bodyCh:
+		if err := json.Unmarshal(body, &pushed); err != nil {
+			t.Fatalf("decode pushed settings: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected a push to /config/settings, none received")
+	}
+	if len(pushed.Electricity.Devices) != 1 || pushed.Electricity.Devices[0] != devices[0] {
+		t.Errorf("pushed devices = %+v, want %+v", pushed.Electricity.Devices, devices)
+	}
+}

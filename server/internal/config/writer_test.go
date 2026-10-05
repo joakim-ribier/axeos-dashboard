@@ -205,3 +205,29 @@ func TestSaveMiners_noTempFileLeftBehindOnSuccess(t *testing.T) {
 		t.Errorf("temp file still present after a successful save (err = %v)", err)
 	}
 }
+
+func TestSaveAppSettings_devicesRoundTripThroughStore(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.yml")
+	saved := AppSettingsFile{
+		Electricity: ElectricityConfig{
+			RatePerKwh: 0.2,
+			Devices: []PowerDevice{
+				{Name: "Extractor fan", Power: 30},
+				{Name: "Router", Power: 8.5},
+			},
+		},
+	}
+
+	if err := SaveAppSettings(path, saved); err != nil {
+		t.Fatalf("SaveAppSettings() error = %v", err)
+	}
+
+	got, err := NewAppSettingsStore(path, AppSettingsFile{}).Reload()
+	if err != nil {
+		t.Fatalf("Reload() error = %v", err)
+	}
+	devices := got.Electricity.Devices
+	if len(devices) != 2 || devices[0] != saved.Electricity.Devices[0] || devices[1] != saved.Electricity.Devices[1] {
+		t.Errorf("round-tripped devices = %+v, want %+v", devices, saved.Electricity.Devices)
+	}
+}

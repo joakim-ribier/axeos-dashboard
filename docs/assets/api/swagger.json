@@ -788,6 +788,13 @@
         "config.ElectricityConfig": {
             "type": "object",
             "properties": {
+                "devices": {
+                    "description": "Devices are the non-miner power consumers (fan, router...), declared by\nhand since nothing can poll them -- so the installation's figures\nthey feed are only ever an informative estimate, kept apart from the\nminers' measured ones.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.PowerDevice"
+                    }
+                },
                 "ratePerKwh": {
                     "description": "RatePerKwh is the electricity cost in euros per kilowatt-hour (e.g. 0.1915 for 19.15 cts/kWh).",
                     "type": "number"
@@ -814,6 +821,18 @@
                     "additionalProperties": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "config.PowerDevice": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "power": {
+                    "description": "Power is the device's constant draw, in watts.",
+                    "type": "number"
                 }
             }
         },
@@ -1064,6 +1083,10 @@
         "model.InfoResponse": {
             "type": "object",
             "properties": {
+                "appVersion": {
+                    "description": "AppVersion is the semver this binary was published under (e.g.\n\"0.1.0\"), only set on a tagged-release build -- \"dev\" (the zero\nvalue's meaning) everywhere else, including the rolling \"latest\"\nbuild. The UI shows this instead of BuildSHA when it's a real\nversion, and falls back to BuildSHA otherwise -- see\ninternal/version.Version.",
+                    "type": "string"
+                },
                 "appVersionReleaseURL": {
                     "type": "string"
                 },
@@ -1264,6 +1287,13 @@
                 "configured": {
                     "description": "Number of miners in config",
                     "type": "integer"
+                },
+                "devices": {
+                    "description": "Echoed from settings so the dashboard needs no second request. Nothing\nabout them is tracked over time: a constant declared draw can't give a\nreal cumulative cost, only an informative estimate.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.PowerDevice"
+                    }
                 },
                 "miners": {
                     "type": "array",

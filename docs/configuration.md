@@ -81,6 +81,12 @@ Programme un changement de pool ou un redémarrage selon un planning cron.
 Le tarif électrique (€/kWh) sert à estimer le coût journalier affiché
 sur l'accueil.
 
+Sous le tarif, **Autres appareils** permet de déclarer les équipements
+qui tournent avec les mineurs (ventilateur, routeur...) avec leur
+puissance en watts, considérée comme constante, pour estimer le coût
+journalier de l'installation complète. Un appareil est enregistré dès
+qu'il est ajouté ou supprimé.
+
 ![Électricité]({{ '/assets/images/settings-electricity.png' | relative_url }})
 
 ### Dashboards des pools

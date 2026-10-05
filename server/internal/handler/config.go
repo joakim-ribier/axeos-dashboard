@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
@@ -452,6 +453,14 @@ func SaveAppSettings(cfg config.Config, w http.ResponseWriter, r *http.Request) 
 func validateAppSettings(s config.AppSettingsFile) error {
 	if s.Electricity.RatePerKwh < 0 {
 		return fmt.Errorf("electricity.ratePerKwh must not be negative")
+	}
+	for i, d := range s.Electricity.Devices {
+		if strings.TrimSpace(d.Name) == "" {
+			return fmt.Errorf("electricity.devices[%d]: name is empty", i)
+		}
+		if d.Power <= 0 {
+			return fmt.Errorf("electricity.devices[%d] (%s): power must be greater than 0", i, d.Name)
+		}
 	}
 	for host, dashboardURL := range s.Pools.Dashboards {
 		if host == "" {

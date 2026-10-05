@@ -36,7 +36,10 @@ import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners } from "@/hooks/useMiners";
-import { type AppSettingsInput } from "@/schemas/appSettingsSchema";
+import {
+  type AppSettingsInput,
+  type PowerDevice,
+} from "@/schemas/appSettingsSchema";
 import { formatTimestamp, parseGoDuration } from "@/utils/format";
 
 interface PoolDashboardRow {
@@ -57,6 +60,16 @@ interface PoolDashboardRow {
  * full payload from whatever's currently in every section's local state,
  * not just the section that triggered it.
  */
+// A French keyboard types "," as the decimal separator; Number() only
+// understands ".".
+const toDecimalInput = (value: string): string => {
+  const [whole, ...decimals] = value
+    .replace(/,/g, ".")
+    .replace(/[^\d.]/g, "")
+    .split(".");
+  return decimals.length ? `${whole}.${decimals.join("")}` : whole;
+};
+
 /** Latest of a list of possibly-missing ISO timestamps, or undefined if none. */
 const latestTimestamp = (values: (string | undefined)[]): string | undefined =>
   values.reduce<string | undefined>((latest, v) => {
@@ -92,6 +105,9 @@ export const AppSettingsSection = ({
   }, [miners]);
 
   const [electricityRate, setElectricityRate] = useState("");
+  const [devices, setDevices] = useState<PowerDevice[]>([]);
+  const [newDeviceName, setNewDeviceName] = useState("");
+  const [newDevicePower, setNewDevicePower] = useState("");
   const [poolDashboards, setPoolDashboards] = useState<PoolDashboardRow[]>([]);
   const [newPoolHost, setNewPoolHost] = useState("");
   const [newPoolUrl, setNewPoolUrl] = useState("");
@@ -106,6 +122,7 @@ export const AppSettingsSection = ({
   useEffect(() => {
     if (!data) return;
     setElectricityRate(String(data.electricity.ratePerKwh));
+    setDevices(data.electricity.devices ?? []);
     setPoolDashboards(
       Object.entries(data.pools.dashboards).map(([host, url]) => ({
         host,
@@ -140,11 +157,45 @@ export const AppSettingsSection = ({
     }
   };
 
-  const handleSaveElectricity = () =>
-    persist({
-      ...serverBasePayload(),
-      electricity: { ratePerKwh: Number(electricityRate) || 0 },
+  // Rate and devices share the electricity block but are saved separately --
+  // each one keeps the other's last confirmed server value, never wiping it.
+  const handleSaveElectricity = () => {
+    const base = serverBasePayload();
+    return persist({
+      ...base,
+      electricity: {
+        ...base.electricity,
+        ratePerKwh: Number(electricityRate) || 0,
+      },
     });
+  };
+
+  const persistDevices = (nextDevices: PowerDevice[]) => {
+    setDevices(nextDevices);
+    const base = serverBasePayload();
+    return persist({
+      ...base,
+      electricity: { ...base.electricity, devices: nextDevices },
+    });
+  };
+
+  const newDevicePowerValue = Number(newDevicePower);
+  const isNewDeviceValid =
+    newDeviceName.trim() !== "" && newDevicePowerValue > 0;
+
+  const handleAddDevice = () => {
+    if (!isNewDeviceValid) return;
+    const name = newDeviceName.trim();
+    setNewDeviceName("");
+    setNewDevicePower("");
+    return persistDevices([
+      ...devices.filter((d) => d.name !== name),
+      { name, power: newDevicePowerValue },
+    ]);
+  };
+
+  const handleRemoveDevice = (name: string) =>
+    persistDevices(devices.filter((d) => d.name !== name));
 
   const handleSaveRemote = () =>
     persist({
@@ -286,12 +337,13 @@ export const AppSettingsSection = ({
             >
               <TextField
                 size="small"
-                type="number"
                 label={t("settingsPage.appSettings.electricity.rateLabel")}
                 value={electricityRate}
-                onChange={(e) => setElectricityRate(e.target.value)}
+                onChange={(e) =>
+                  setElectricityRate(toDecimalInput(e.target.value))
+                }
                 slotProps={{
-                  htmlInput: { step: "0.0001", min: 0 },
+                  htmlInput: { inputMode: "decimal" },
                   inputLabel: { shrink: true },
                 }}
                 sx={{ minWidth: 220 }}
@@ -316,6 +368,106 @@ export const AppSettingsSection = ({
               </Button>
             </Stack>
           )}
+
+          {/* Non-miner devices */}
+          <Typography variant="body2" fontWeight={600} sx={{ mt: 3, mb: 0.5 }}>
+            {t("settingsPage.appSettings.electricity.devices.title")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            {t("settingsPage.appSettings.electricity.devices.description")}
+          </Typography>
+
+          <DataTable sx={{ mb: 2 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>
+                  {t("settingsPage.appSettings.electricity.devices.nameLabel")}
+                </TableCell>
+                <TableCell align="right">
+                  {t("settingsPage.appSettings.electricity.devices.powerLabel")}
+                </TableCell>
+                <Writable readOnly={readOnly}>
+                  <TableCell align="right" sx={{ width: 56 }} />
+                </Writable>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {devices.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={readOnly ? 2 : 3}>
+                    <Typography variant="caption" color="text.disabled">
+                      {t("settingsPage.appSettings.electricity.devices.empty")}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+              {devices.map((device) => (
+                <TableRow hover key={device.name}>
+                  <TableCell>{device.name}</TableCell>
+                  <TableCell align="right" sx={{ fontFamily: "monospace" }}>
+                    {`${device.power} W`}
+                  </TableCell>
+                  <Writable readOnly={readOnly}>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        disabled={isSaving}
+                        onClick={() => void handleRemoveDevice(device.name)}
+                        aria-label={t(
+                          "settingsPage.appSettings.electricity.devices.remove",
+                        )}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </Writable>
+                </TableRow>
+              ))}
+            </TableBody>
+          </DataTable>
+
+          <Writable readOnly={readOnly}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                size="small"
+                label={t(
+                  "settingsPage.appSettings.electricity.devices.nameLabel",
+                )}
+                placeholder={t(
+                  "settingsPage.appSettings.electricity.devices.namePlaceholder",
+                )}
+                value={newDeviceName}
+                onChange={(e) => setNewDeviceName(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+                fullWidth
+              />
+              <TextField
+                size="small"
+                label={t(
+                  "settingsPage.appSettings.electricity.devices.powerLabel",
+                )}
+                placeholder="30"
+                value={newDevicePower}
+                onChange={(e) =>
+                  setNewDevicePower(e.target.value.replace(/\D/g, ""))
+                }
+                slotProps={{
+                  htmlInput: { inputMode: "numeric" },
+                  inputLabel: { shrink: true },
+                }}
+                sx={{ minWidth: 160 }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                disabled={isSaving || !isNewDeviceValid}
+                onClick={() => void handleAddDevice()}
+                sx={{ flexShrink: 0 }}
+              >
+                {t("settingsPage.appSettings.electricity.devices.add")}
+              </Button>
+            </Stack>
+          </Writable>
         </Box>
 
         <SectionDivider />

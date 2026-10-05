@@ -93,6 +93,7 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 		resp.Miners = append(resp.Miners, info)
 	}
 	resp.Total = len(resp.Miners)
+	resp.Devices = cfg.Electricity.Devices
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {

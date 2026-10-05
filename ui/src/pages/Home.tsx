@@ -322,7 +322,7 @@ const PoolSelectButton = ({
 /* ── Home ────────────────────────────────────────────────────── */
 export const Home = () => {
   const { t } = useTranslation();
-  const { data, isLoading, error } = useMiners();
+  const { data, devices, isLoading, error } = useMiners();
   const { hashboardUrl } = useAppInfo();
   const { boardId, isRemoteBackend } = useMode();
   const { query } = useSearch();
@@ -457,7 +457,7 @@ export const Home = () => {
         }}
       />
 
-      <GlobalStats data={data} isLoading={isLoading} />
+      <GlobalStats data={data} devices={devices} isLoading={isLoading} />
 
       {!isLoading && (
         // The Collapse panel below uses its own inner "mt" for spacing

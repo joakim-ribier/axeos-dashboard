@@ -1,6 +1,6 @@
 // src/hooks/useAppSettings.ts
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
 import { useMode } from "@/contexts/ModeContext";
@@ -51,6 +51,7 @@ export interface UseAppSettingsReturn {
  */
 export const useAppSettings = (): UseAppSettingsReturn => {
   const { apiPaths } = useMode();
+  const queryClient = useQueryClient();
   const query = useQuery<AppSettings, Error>({
     queryKey: ["config", "settings", apiPaths.config.settings],
     queryFn: () => fetchAppSettings(apiPaths.config.settings),
@@ -71,6 +72,9 @@ export const useAppSettings = (): UseAppSettingsReturn => {
     try {
       const result = await postAppSettings(apiPaths.config.settings, settings);
       await query.refetch();
+      // GET /api/miners echoes electricity.devices -- drop its cached copy
+      // so the dashboard shows a device added/removed here right away.
+      void queryClient.invalidateQueries({ queryKey: ["miners"] });
       return result;
     } catch (err: unknown) {
       setSaveError(extractErrorMessage(err));

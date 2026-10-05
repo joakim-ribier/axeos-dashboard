@@ -1,6 +1,7 @@
 // src/hooks/useMiners.ts
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { z } from "zod";
 
 import { type AppVersionStatus, fetchInfo, type InfoResult } from "@/api/info";
 import { useMode } from "@/contexts/ModeContext";
@@ -8,6 +9,10 @@ import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { MinerInfo } from "@/types/miner";
 import { DEFAULT_UI_FEATURES, UIFeatures } from "@/types/uiFeatures";
 
+import {
+  type PowerDevice,
+  powerDeviceSchema,
+} from "../schemas/appSettingsSchema";
 import { type Miner, minerSchema } from "../schemas/minerSchema";
 
 export class ApiError extends Error {
@@ -23,6 +28,7 @@ export class ApiError extends Error {
 export interface MinersResult {
   miners: Miner[];
   isPublic: boolean;
+  devices: PowerDevice[];
 }
 
 export const fetchMiners = async (url: string): Promise<MinersResult> => {
@@ -32,10 +38,12 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
       total: number;
       miners: MinerInfo[];
       boardPublic?: boolean;
+      devices?: unknown;
     }>(url);
     return {
       miners: data.miners.map((raw) => minerSchema.parse(raw)),
       isPublic: data.boardPublic ?? false,
+      devices: z.array(powerDeviceSchema).parse(data.devices ?? []),
     };
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
@@ -50,6 +58,7 @@ export const fetchMiners = async (url: string): Promise<MinersResult> => {
 
 export interface UseMinersReturn {
   data: Miner[] | undefined;
+  devices: PowerDevice[];
   isLoading: boolean;
   error: Error | null;
   isFetching: boolean;
@@ -80,6 +89,7 @@ export const useMiners = (): UseMinersReturn => {
   return {
     ...query,
     data: query.data?.miners,
+    devices: query.data?.devices ?? [],
     refetch: async () => {
       await query.refetch();
     },

@@ -66,7 +66,7 @@ describe("GlobalStats", () => {
     expect(container.textContent).toContain("200W");
   });
 
-  it("shows the instant hourly cost and the all-time total spent", () => {
+  it("shows the daily cost and the all-time total spent", () => {
     const { container } = render(
       <GlobalStats
         data={[
@@ -80,8 +80,31 @@ describe("GlobalStats", () => {
       />,
     );
 
-    expect(container.textContent).toContain("0.20€/h");
+    expect(container.textContent).toContain("4.80\u00a0€");
     expect(container.textContent).toContain("12.50€");
+  });
+
+  it("adds the declared devices to the daily cost, never to the all-time spent", () => {
+    const { container } = render(
+      <GlobalStats
+        data={[
+          buildMiner({
+            power: 1000,
+            electricityRatePerKwh: 0.2,
+            totalElectricityCost: 12.5,
+          }),
+        ]}
+        devices={[
+          { name: "Fan", power: 200 },
+          { name: "Router", power: 50 },
+        ]}
+        isLoading={false}
+      />,
+    );
+
+    // (1000 + 200 + 50) W * 24 h * 0.2 €/kWh
+    expect(container.textContent).toContain("6.00 €");
+    expect(container.textContent).toContain("allTime:12.50€");
   });
 
   it("hides the all-time figure when there is no historical cost yet", () => {
@@ -98,7 +121,7 @@ describe("GlobalStats", () => {
       />,
     );
 
-    expect(container.textContent).toContain("0.20€/h");
+    expect(container.textContent).toContain("4.80\u00a0€");
     // The shares card always renders its own "allTime:<n>" sub-value --
     // only the cost-specific "allTime:0.00€" (which would come from the
     // electricity card) must be absent.
@@ -110,6 +133,8 @@ describe("GlobalStats", () => {
       <GlobalStats data={[buildMiner({ power: 1000 })]} isLoading={false} />,
     );
 
-    expect(container.textContent).not.toContain("€/h");
+    expect(container.textContent).not.toContain(
+      "dashboard.stats.kpi.electricityCost",
+    );
   });
 });

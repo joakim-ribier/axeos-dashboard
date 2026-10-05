@@ -73,6 +73,15 @@ definitions:
     type: object
   config.ElectricityConfig:
     properties:
+      devices:
+        description: |-
+          Devices are the non-miner power consumers (fan, router...), declared by
+          hand since nothing can poll them -- so the installation's figures
+          they feed are only ever an informative estimate, kept apart from the
+          miners' measured ones.
+        items:
+          $ref: '#/definitions/config.PowerDevice'
+        type: array
       ratePerKwh:
         description: RatePerKwh is the electricity cost in euros per kilowatt-hour
           (e.g. 0.1915 for 19.15 cts/kWh).
@@ -97,6 +106,14 @@ definitions:
           of the stratum user (before the first dot). Example:
           "stratum.braiins.com" -> "https://pool.braiins.com/mining/overview/{user}"
         type: object
+    type: object
+  config.PowerDevice:
+    properties:
+      name:
+        type: string
+      power:
+        description: Power is the device's constant draw, in watts.
+        type: number
     type: object
   config.RemoteConfig:
     properties:
@@ -274,6 +291,15 @@ definitions:
     type: object
   model.InfoResponse:
     properties:
+      appVersion:
+        description: |-
+          AppVersion is the semver this binary was published under (e.g.
+          "0.1.0"), only set on a tagged-release build -- "dev" (the zero
+          value's meaning) everywhere else, including the rolling "latest"
+          build. The UI shows this instead of BuildSHA when it's a real
+          version, and falls back to BuildSHA otherwise -- see
+          internal/version.Version.
+        type: string
       appVersionReleaseURL:
         type: string
       appVersionStatus:
@@ -468,6 +494,14 @@ definitions:
       configured:
         description: Number of miners in config
         type: integer
+      devices:
+        description: |-
+          Echoed from settings so the dashboard needs no second request. Nothing
+          about them is tracked over time: a constant declared draw can't give a
+          real cumulative cost, only an informative estimate.
+        items:
+          $ref: '#/definitions/config.PowerDevice'
+        type: array
       miners:
         items:
           $ref: '#/definitions/model.MinerInfo'
