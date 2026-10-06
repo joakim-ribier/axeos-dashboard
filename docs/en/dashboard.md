@@ -125,7 +125,8 @@ extra network calls:
    with `!offline`/`-offline`). Multiple terms separated by a space must
    all match; negate with `-`/`!`.
 5. **Model** — quick filter by miner type, with a count for each.
-6. **Alerts** — quick filter by condition (high temperature, high fan,
+6. **Version** — quick filter by firmware version, with a count for each.
+7. **Alerts** — quick filter by condition (high temperature, high fan,
    offline), with a count for each.
 
 ---

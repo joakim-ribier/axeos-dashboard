@@ -319,6 +319,55 @@ const PoolSelectButton = ({
   );
 };
 
+/* ── ChipFilterGroup ────────────────────────────────────────── */
+interface ChipFilterGroupProps {
+  label: string;
+  entries: [string, number][];
+  total: number;
+  selected: string | null;
+  onChange: (value: string | null) => void;
+}
+
+const ChipFilterGroup = ({
+  label,
+  entries,
+  total,
+  selected,
+  onChange,
+}: ChipFilterGroupProps) => {
+  const { t } = useTranslation();
+  if (entries.length === 0) return null;
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+      <Typography variant="caption" color="text.secondary">
+        {label}
+      </Typography>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+        {entries.length > 1 && (
+          <Chip
+            size="small"
+            label={`${t("dashboard.filter.all")} (${total})`}
+            color={selected === null ? "primary" : "default"}
+            variant={selected === null ? "filled" : "outlined"}
+            onClick={() => onChange(null)}
+          />
+        )}
+        {entries.map(([value, count]) => (
+          <Chip
+            key={value}
+            size="small"
+            label={`${value} (${count})`}
+            color={selected === value ? "primary" : "default"}
+            variant={selected === value ? "filled" : "outlined"}
+            onClick={() => onChange(value === selected ? null : value)}
+          />
+        ))}
+      </Box>
+    </Box>
+  );
+};
+
 /* ── Home ────────────────────────────────────────────────────── */
 export const Home = () => {
   const { t } = useTranslation();
@@ -332,6 +381,7 @@ export const Home = () => {
   const [selectedDeviceModel, setSelectedDeviceModel] = useState<string | null>(
     null,
   );
+  const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
   const [alertTemp, setAlertTemp] = useState(false);
   const [alertFan, setAlertFan] = useState(false);
   const [alertOffline, setAlertOffline] = useState(false);
@@ -370,6 +420,15 @@ export const Home = () => {
     return Object.entries(map);
   }, [data]);
 
+  const versionEntries = useMemo(() => {
+    const map: Record<string, number> = {};
+    data?.forEach((m) => {
+      if (!m.version) return;
+      map[m.version] = (map[m.version] ?? 0) + 1;
+    });
+    return Object.entries(map);
+  }, [data]);
+
   const alertCounts = useMemo(() => {
     let temp = 0;
     let fan = 0;
@@ -387,11 +446,19 @@ export const Home = () => {
       ...NO_QUICK_FILTERS,
       selectedPool,
       selectedDeviceModel,
+      selectedVersion,
       alertTemp,
       alertFan,
       alertOffline,
     }),
-    [selectedPool, selectedDeviceModel, alertTemp, alertFan, alertOffline],
+    [
+      selectedPool,
+      selectedDeviceModel,
+      selectedVersion,
+      alertTemp,
+      alertFan,
+      alertOffline,
+    ],
   );
 
   const filteredData = useMemo(() => {
@@ -413,6 +480,11 @@ export const Home = () => {
       setSelectedDeviceModel(null);
     }
   }, [deviceModelEntries]);
+
+  useEffect(() => {
+    if (versionEntries.length === 1) setSelectedVersion(versionEntries[0][0]);
+    else if (versionEntries.length > 1) setSelectedVersion(null);
+  }, [versionEntries]);
 
   const gridContainerSx = (theme: Theme) => ({
     display: "grid",
@@ -521,48 +593,21 @@ export const Home = () => {
             >
               <SearchField />
 
-              {deviceModelEntries.length >= 1 && (
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}
-                >
-                  <Typography variant="caption" color="text.secondary">
-                    {t("dashboard.filter.deviceLabel")}
-                  </Typography>
-                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                    {deviceModelEntries.length > 1 && (
-                      <Chip
-                        size="small"
-                        label={`${t("dashboard.filter.all")} (${data?.length ?? 0})`}
-                        color={
-                          selectedDeviceModel === null ? "primary" : "default"
-                        }
-                        variant={
-                          selectedDeviceModel === null ? "filled" : "outlined"
-                        }
-                        onClick={() => setSelectedDeviceModel(null)}
-                      />
-                    )}
-                    {deviceModelEntries.map(([model, count]) => (
-                      <Chip
-                        key={model}
-                        size="small"
-                        label={`${model} (${count})`}
-                        color={
-                          selectedDeviceModel === model ? "primary" : "default"
-                        }
-                        variant={
-                          selectedDeviceModel === model ? "filled" : "outlined"
-                        }
-                        onClick={() =>
-                          setSelectedDeviceModel(
-                            model === selectedDeviceModel ? null : model,
-                          )
-                        }
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
+              <ChipFilterGroup
+                label={t("dashboard.filter.deviceLabel")}
+                entries={deviceModelEntries}
+                total={data?.length ?? 0}
+                selected={selectedDeviceModel}
+                onChange={setSelectedDeviceModel}
+              />
+
+              <ChipFilterGroup
+                label={t("dashboard.filter.versionLabel")}
+                entries={versionEntries}
+                total={data?.length ?? 0}
+                selected={selectedVersion}
+                onChange={setSelectedVersion}
+              />
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary">

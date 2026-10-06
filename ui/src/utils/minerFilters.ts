@@ -4,6 +4,7 @@ import { Miner } from "@/schemas/minerSchema";
 export interface QuickFilters {
   selectedPool: string | null;
   selectedDeviceModel: string | null;
+  selectedVersion: string | null;
   alertTemp: boolean;
   alertFan: boolean;
   alertOffline: boolean;
@@ -12,6 +13,7 @@ export interface QuickFilters {
 export const NO_QUICK_FILTERS: QuickFilters = {
   selectedPool: null,
   selectedDeviceModel: null,
+  selectedVersion: null,
   alertTemp: false,
   alertFan: false,
   alertOffline: false,
@@ -23,10 +25,10 @@ const minerPoolUrl = (miner: Miner): string | undefined =>
     : miner.stratumURL;
 
 /**
- * Quick, pre-built filters — pool, device model, and "currently in an
- * alert state" — as an alternative to typing a comparison into the free
- * text search (matchesSearch in minerSearch.ts, still available alongside
- * these). Pool and device model narrow the set (AND'd with everything
+ * Quick, pre-built filters — pool, device model, firmware version, and
+ * "currently in an alert state" — as an alternative to typing a comparison
+ * into the free text search (matchesSearch in minerSearch.ts, still
+ * available alongside these). Pool, device model and version narrow the set (AND'd with everything
  * else); the three alert flags are OR'd together when more than one is
  * active — "show anyone flagged for ANY of these reasons" reads more
  * useful at a glance than requiring all of them at once.
@@ -48,6 +50,10 @@ export const matchesQuickFilters = (
     filters.selectedDeviceModel &&
     miner.deviceModel !== filters.selectedDeviceModel
   ) {
+    return false;
+  }
+
+  if (filters.selectedVersion && miner.version !== filters.selectedVersion) {
     return false;
   }
 

@@ -121,7 +121,9 @@ appel réseau supplémentaire :
    espace doivent tous correspondre ; négation avec `-`/`!`.
 5. **Modèle** — filtre rapide par type de mineur, avec le compteur pour
    chacun.
-6. **Alertes** — filtre rapide par condition (température haute,
+6. **Version** — filtre rapide par version firmware, avec le compteur
+   pour chacune.
+7. **Alertes** — filtre rapide par condition (température haute,
    ventilateur haut, hors ligne), avec le compteur pour chacune.
 
 ---

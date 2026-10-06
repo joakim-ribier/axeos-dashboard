@@ -84,6 +84,16 @@ describe("matchesQuickFilters", () => {
     });
   });
 
+  describe("version", () => {
+    it("matches the exact firmware version", () => {
+      expect(check(baseMiner, { selectedVersion: "v2.4.1" })).toBe(true);
+    });
+
+    it("does not match a different firmware version", () => {
+      expect(check(baseMiner, { selectedVersion: "v2.5.0" })).toBe(false);
+    });
+  });
+
   describe("alerts", () => {
     it("matches a miner flagged tempHigh by the server when alertTemp is on", () => {
       const hot: Miner = {

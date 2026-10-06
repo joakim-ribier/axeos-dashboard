@@ -17,6 +17,7 @@
       "offline": "Offline",
       "poolLabel": "Pool",
       "deviceLabel": "Device",
+      "versionLabel": "Version",
       "alertsLabel": "Alerts"
     },
     "sort": {
