@@ -10,13 +10,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
 import { OopsPage } from "@/components/ui/OopsPage";
 import { RequireMinersConfigured } from "@/components/ui/RequireMinersConfigured";
-import { RequireSettingsEnabled } from "@/components/ui/RequireSettingsEnabled";
+import { RequirePageEnabled } from "@/components/ui/RequirePageEnabled";
 import { useMode } from "@/contexts/ModeContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
 import i18n from "@/i18n";
 import { Alerts } from "@/pages/Alerts";
+import { Backups } from "@/pages/Backups";
 import { Home } from "@/pages/Home";
 import { Settings } from "@/pages/Settings";
 import { getTheme } from "@/theme";
@@ -68,12 +69,12 @@ export const App: React.FC = () => {
             <SearchProvider>
               <Routes>
                 {/* Local mode: this server's own configured miners --
-                    exactly these three exact-depth paths, nothing else. A
+                    exactly these four exact-depth paths, nothing else. A
                     static route always outranks the remote branch's dynamic
                     :boardId below (see AppLayout's doc comment for why
                     mode/boardId live one level up), so e.g. plain "/alerts"
                     stays local even though "alerts" could in principle be a
-                    boardId too. Anything that isn't one of these three
+                    boardId too. Anything that isn't one of these four
                     exact paths -- including "/alerts/foo" -- falls to the
                     remote branch's own catch-all instead of a local one:
                     there's no such thing as a bare local 404 here, only
@@ -99,9 +100,17 @@ export const App: React.FC = () => {
                   <Route
                     path="settings"
                     element={
-                      <RequireSettingsEnabled>
+                      <RequirePageEnabled page="settings">
                         <Settings />
-                      </RequireSettingsEnabled>
+                      </RequirePageEnabled>
+                    }
+                  />
+                  <Route
+                    path="backups"
+                    element={
+                      <RequirePageEnabled page="backups">
+                        <Backups />
+                      </RequirePageEnabled>
                     }
                   />
                 </Route>
@@ -121,9 +130,9 @@ export const App: React.FC = () => {
                   <Route
                     path="settings"
                     element={
-                      <RequireSettingsEnabled>
+                      <RequirePageEnabled page="settings">
                         <Settings />
-                      </RequireSettingsEnabled>
+                      </RequirePageEnabled>
                     }
                   />
                   <Route path="*" element={<RemoteCatchAll />} />

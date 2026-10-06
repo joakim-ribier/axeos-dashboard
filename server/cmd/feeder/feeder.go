@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/backup"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/bitaxe"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
@@ -100,6 +101,8 @@ func (f *Feeder) Feed() {
 	ticker := time.NewTicker(f.config.Feeder.Interval)
 	defer ticker.Stop()
 
+	go f.backupLoop(ctx)
+
 	f.runOnce(ctx)
 
 	for {
@@ -109,6 +112,30 @@ func (f *Feeder) Feed() {
 			return
 		case <-ticker.C:
 			f.runOnce(ctx)
+		}
+	}
+}
+
+// backupLoop runs off the polling loop so that a first catch-up over months
+// of existing history (several seconds on a Pi) never delays a poll. Checked
+// hourly, so a finished UTC day is added within the hour after midnight UTC.
+func (f *Feeder) backupLoop(ctx context.Context) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+
+	for {
+		months, err := backup.ArchiveCompletedDays(f.config.Storage.BitaxesDir(), f.config.Storage.BackupsDir(), time.Now())
+		for _, month := range months {
+			f.logger.Info("Monthly backup updated", "month", month)
+		}
+		if err != nil {
+			f.logger.Error("failed to update monthly backup", "error", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
 		}
 	}
 }

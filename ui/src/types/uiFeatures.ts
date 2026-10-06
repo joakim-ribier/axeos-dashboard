@@ -7,6 +7,7 @@ export type UIVisibility = "enabled" | "readonly" | "hidden";
 export interface UIFeatures {
   page: {
     settings: UIVisibility;
+    backups: UIVisibility;
   };
   action: {
     minerRestart: UIVisibility;
@@ -18,6 +19,6 @@ export interface UIFeatures {
 // resolved yet, and what an instance with no ui: block in its config
 // effectively gets server-side too (see UIVisibility.Normalized).
 export const DEFAULT_UI_FEATURES: UIFeatures = {
-  page: { settings: "enabled" },
+  page: { settings: "enabled", backups: "enabled" },
   action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
 };

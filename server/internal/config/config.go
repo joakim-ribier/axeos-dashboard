@@ -295,9 +295,25 @@ type StorageConfig struct {
 	DataDir string `yaml:"dataDir"`
 }
 
+// Layout under storage.dataDir, slash-separated so the same paths also name
+// a backup archive's entries (see internal/backup).
+const (
+	BitaxesRelDir = "data/bitaxes"
+	BackupsRelDir = "data/backups"
+	BoardsRelDir  = "data/boards"
+	// BoardBitaxesDirName is each board's miners directory, under
+	// BoardsRelDir/{boardId}.
+	BoardBitaxesDirName = "bitaxes"
+)
+
 // BitaxesDir returns the directory that holds per-miner data folders.
 func (s StorageConfig) BitaxesDir() string {
-	return filepath.Join(s.DataDir, "data", "bitaxes")
+	return filepath.Join(s.DataDir, filepath.FromSlash(BitaxesRelDir))
+}
+
+// BackupsDir returns the directory that holds the monthly backup archives.
+func (s StorageConfig) BackupsDir() string {
+	return filepath.Join(s.DataDir, filepath.FromSlash(BackupsRelDir))
 }
 
 // ResolveBoardsDir returns the boards root directory: {dataDir}/data/boards,
@@ -308,7 +324,7 @@ func (s StorageConfig) BitaxesDir() string {
 // checkout's own resources dir (e.g. ../hashboard/resources), not just
 // this repo's own resources/.
 func (s StorageConfig) ResolveBoardsDir() string {
-	return filepath.Join(s.DataDir, "data", "boards")
+	return filepath.Join(s.DataDir, filepath.FromSlash(BoardsRelDir))
 }
 
 // ResolveHashboardDataDir returns hashboard's shared data root — the parent
@@ -488,6 +504,11 @@ type UIPageConfig struct {
 	// without any write action, "hidden" hides the page and its nav entry
 	// entirely.
 	Settings UIVisibility `yaml:"settings"`
+	// Backups controls the /backups page: "enabled" (default) shows it,
+	// "hidden" hides the page and its nav entry. The feeder keeps creating
+	// the archives either way. remote-dashboard-api serves no backups, so
+	// remote-dashboard.yml sets it to hidden.
+	Backups UIVisibility `yaml:"backups"`
 }
 
 type UIActionConfig struct {

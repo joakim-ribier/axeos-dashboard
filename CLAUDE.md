@@ -101,6 +101,13 @@ resources/data/bitaxes/
     2026-06-21.jsonl
   aabbccddee02/
   ...
+resources/data/backups/
+  2026-09.zip           ← one per month, the feeder adds each completed (UTC)
+                          day to it: data/bitaxes/{mac}/*.jsonl only -- unzip
+                          into storage.dataDir to restore
+  checksums.md5         ← MD5 of each past month's archive, written once it's
+                          complete -- a month listed here is final, never
+                          opened or rewritten again
 ```
 
 ### Go Backend (`server/`)
@@ -109,11 +116,12 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 
 | Package | Role |
 |---|---|
-| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard |
+| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
+| `internal/backup/` | Monthly zip archives (`ArchiveCompletedDays`, `List`, `Merge`); a past month becomes final once its MD5 is in `checksums.md5` |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
@@ -143,6 +151,8 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/config/settings` | `GetAppSettings()` | Read `settings.yml` (merged with defaults) |
 | `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
+| `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
+| `GET` | `/api/backups/download?months=` | `DownloadBackups()` | One or several months in one zip |
 
 `MinerCtx` middleware resolves `hostnameOrIp` URL param → config entry, injects into request context.
 

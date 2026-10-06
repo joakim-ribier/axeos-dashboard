@@ -9,6 +9,67 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/backups": {
+            "get": {
+                "description": "Returns the monthly backup archives, most recent first. The feeder adds each completed (UTC) day to its month's archive, so the current month's archive is complete up to yesterday.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List monthly backups",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.BackupsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/backups/download": {
+            "get": {
+                "description": "Returns one zip holding the given months' archives (up to yesterday for the current month): every miner's daily JSONL files under data/bitaxes/ -- unzip into storage.dataDir to restore.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Download monthly backups",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Comma-separated months, YYYY-MM",
+                        "name": "months",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid or missing months",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no backup for one of the months",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/config/discover": {
             "get": {
                 "description": "Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24, defaults to the server's own local /24 subnet when both are omitted). ip takes priority if both are set.",
@@ -697,6 +758,24 @@
         }
     },
     "definitions": {
+        "backup.Info": {
+            "type": "object",
+            "properties": {
+                "checksum": {
+                    "description": "Checksum is the archive's MD5, set once the month is final.",
+                    "type": "string"
+                },
+                "month": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "config.AppSettingsFile": {
             "type": "object",
             "properties": {
@@ -935,6 +1014,17 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.BackupsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/backup.Info"
+                    }
                 }
             }
         },
@@ -1333,6 +1423,10 @@
         "model.UIPageFeatures": {
             "type": "object",
             "properties": {
+                "backups": {
+                    "description": "Backups: \"enabled\" | \"hidden\" -- see config.UIPageConfig.",
+                    "type": "string"
+                },
                 "settings": {
                     "description": "Settings: \"enabled\" | \"readonly\" | \"hidden\" -- see config.UIPageConfig.",
                     "type": "string"

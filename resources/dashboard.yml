@@ -33,6 +33,7 @@ firmware:
 ui:
   page:
     settings: enabled
+    backups: enabled
   action:
     minerRestart: enabled
     minerPoolSwitch: enabled

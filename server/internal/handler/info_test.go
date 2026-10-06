@@ -38,8 +38,8 @@ func TestInfo_localMode(t *testing.T) {
 	}
 	// A zero-value config.UIConfig (no ui: block in dashboard.yml) must
 	// normalize to everything enabled -- see UIVisibility.Normalized.
-	if got.UI.Page.Settings != "enabled" {
-		t.Errorf("UI.Page.Settings = %q, want %q", got.UI.Page.Settings, "enabled")
+	if got.UI.Page.Settings != "enabled" || got.UI.Page.Backups != "enabled" {
+		t.Errorf("UI.Page = %+v, want both enabled", got.UI.Page)
 	}
 	if got.UI.Action.MinerRestart != "enabled" || got.UI.Action.MinerPoolSwitch != "enabled" {
 		t.Errorf("UI.Action = %+v, want both enabled", got.UI.Action)
@@ -51,7 +51,7 @@ func TestInfo_remoteMode(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/api/info", nil)
 
 	ui := config.UIConfig{
-		Page:   config.UIPageConfig{Settings: config.UIHidden},
+		Page:   config.UIPageConfig{Settings: config.UIHidden, Backups: config.UIHidden},
 		Action: config.UIActionConfig{MinerRestart: config.UIHidden, MinerPoolSwitch: config.UIHidden},
 	}
 	Info(testVersionChecker(), "https://hashboard.live", true, ui)(w, r)
@@ -69,7 +69,7 @@ func TestInfo_remoteMode(t *testing.T) {
 	if !got.Remote {
 		t.Errorf("Remote = %v, want true for remote mode", got.Remote)
 	}
-	if got.UI.Page.Settings != "hidden" {
-		t.Errorf("UI.Page.Settings = %q, want %q", got.UI.Page.Settings, "hidden")
+	if got.UI.Page.Settings != "hidden" || got.UI.Page.Backups != "hidden" {
+		t.Errorf("UI.Page = %+v, want both hidden", got.UI.Page)
 	}
 }

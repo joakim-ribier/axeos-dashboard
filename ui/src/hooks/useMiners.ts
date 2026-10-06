@@ -122,7 +122,7 @@ export interface AppInfo {
 
 export interface UseUiFeaturesReturn {
   ui: UIFeatures;
-  /** True until GET /api/info's first response resolves -- see RequireSettingsEnabled, which waits for this instead of rendering the DEFAULT_UI_FEATURES fallback (everything enabled) and flashing content it may need to hide. */
+  /** True until GET /api/info's first response resolves -- see RequirePageEnabled, which waits for this instead of rendering the DEFAULT_UI_FEATURES fallback (everything enabled) and flashing content it may need to hide. */
   isLoading: boolean;
 }
 

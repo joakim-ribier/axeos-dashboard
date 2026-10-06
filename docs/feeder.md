@@ -1,10 +1,12 @@
 ---
 title: Feeder
-nav_order: 8
+nav_order: 9
 group: Dev
 subnav:
   - title: Firmware
     anchor: firmware-update-detection
+  - title: Sauvegardes
+    anchor: sauvegardes
 ---
 
 # Feeder
@@ -33,3 +35,18 @@ jour — c'est ce qui déclenche le badge orange de mise à jour sur la card
 d'un mineur.
 
 [Aller à La card →]({{ '/dashboard.html#la-card' | relative_url }}){: .btn .btn-primary }
+
+## Sauvegardes mensuelles
+{: #sauvegardes }
+
+Toutes les heures, le feeder ajoute chaque journée terminée (UTC) qui
+n'est pas encore archivée à l'archive de son mois,
+`{dataDir}/data/backups/YYYY-MM.zip` — en pratique, la veille, juste
+après minuit UTC. Les journées déjà archivées sont recopiées telles
+quelles sans être recompressées, et l'archive n'est remplacée qu'une fois
+entièrement écrite. Une fois un mois terminé, le MD5 de son archive est
+enregistré dans `checksums.md5` : l'archive est alors définitive et n'est
+plus jamais rouverte. Le tout tourne à côté du polling, sans jamais le
+retarder.
+
+[Aller à Sauvegardes →]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }

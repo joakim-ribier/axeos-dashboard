@@ -92,7 +92,7 @@ describe("Sidebar", () => {
     });
     mockUseUiFeatures.mockReturnValue({
       ui: {
-        page: { settings: "enabled" },
+        page: { settings: "enabled", backups: "enabled" },
         action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
       },
       isLoading: false,
@@ -215,7 +215,7 @@ describe("Sidebar", () => {
 
       // The page itself renders read-only (ui.page.settings: readonly) --
       // the nav link is no longer force-disabled here, see
-      // RequireSettingsEnabled/Settings.tsx's own readOnly gating.
+      // RequirePageEnabled/Settings.tsx's own readOnly gating.
       await waitFor(() => {
         const settingsLinks = screen
           .getAllByText("nav.settings")
@@ -231,7 +231,7 @@ describe("Sidebar", () => {
     it("hides the Settings nav item entirely when ui.page.settings is hidden", () => {
       mockUseUiFeatures.mockReturnValue({
         ui: {
-          page: { settings: "hidden" },
+          page: { settings: "hidden", backups: "enabled" },
           action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
         },
         isLoading: false,
@@ -239,6 +239,28 @@ describe("Sidebar", () => {
       renderSidebar("/");
 
       expect(screen.queryByText("nav.settings")).not.toBeInTheDocument();
+    });
+
+    it("links the Backups nav item to /backups", () => {
+      renderSidebar("/");
+
+      const backupsLinks = screen
+        .getAllByText("nav.backups")
+        .map((el) => el.closest("a"));
+      expect(backupsLinks[0]).toHaveAttribute("href", "/backups");
+    });
+
+    it("hides the Backups nav item entirely when ui.page.backups is hidden", () => {
+      mockUseUiFeatures.mockReturnValue({
+        ui: {
+          page: { settings: "enabled", backups: "hidden" },
+          action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
+        },
+        isLoading: false,
+      });
+      renderSidebar("/");
+
+      expect(screen.queryByText("nav.backups")).not.toBeInTheDocument();
     });
   });
 

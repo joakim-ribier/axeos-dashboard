@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation } from "react-router-dom";
+import BackupIcon from "@mui/icons-material/Backup";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LockIcon from "@mui/icons-material/Lock";
@@ -364,7 +365,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)
             -- the route itself also 404s in that case, see
-            RequireSettingsEnabled. On a remote board, ui.page.settings is
+            RequirePageEnabled. On a remote board, ui.page.settings is
             normally "readonly" (see remote-dashboard.yml): the entry links
             to /{boardId}/settings, which renders the same page with every
             write affordance disabled rather than a separate "unavailable"
@@ -380,6 +381,15 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             label={t("nav.settings")}
             onClick={onItemClick}
             disabled={boardBlocked}
+          />
+        )}
+        {ui.page.backups !== "hidden" && (
+          <NavItem
+            to="/backups"
+            selected={location.pathname === "/backups"}
+            icon={<BackupIcon sx={{ fontSize: 18 }} />}
+            label={t("nav.backups")}
+            onClick={onItemClick}
           />
         )}
       </List>

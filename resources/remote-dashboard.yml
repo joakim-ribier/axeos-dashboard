@@ -22,6 +22,9 @@ ui:
   # write affordance (Save, Add/remove, discovery, enable/disable) disabled.
   page:
     settings: readonly
+    # Backups are archived by the local feeder and served by dashboard-api
+    # only -- remote-dashboard-api has no backup endpoints.
+    backups: hidden
   # remote-dashboard-api is read-only by design (no restart/pool-switch
   # endpoints exist here at all) -- hidden so the dashboard doesn't show
   # buttons that would just 404.

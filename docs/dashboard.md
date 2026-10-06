@@ -3,7 +3,7 @@ title: Écran d'accueil
 nav_order: 3
 group: Pages
 subnav:
-  - title: Sidebar
+  - title: Menu
     anchor: sidebar
   - title: Top bar
     anchor: top-bar
@@ -22,7 +22,7 @@ subnav:
 <div class="toc-grid">
   <a href="#sidebar" class="toc-card">
     <span class="toc-card-icon">☰</span>
-    <span class="toc-card-title">Sidebar</span>
+    <span class="toc-card-title">Menu</span>
   </a>
   <a href="#top-bar" class="toc-card">
     <span class="toc-card-icon">🔔</span>
@@ -46,10 +46,10 @@ subnav:
   </a>
 </div>
 
-## ☰ Sidebar
+## ☰ Menu
 {: #sidebar }
 
-![Sidebar]({{ '/assets/images/sidebar-only.png' | relative_url }})
+![Menu]({{ '/assets/images/sidebar-only.png' | relative_url }})
 
 1. **AxeOS · D#hashboard** — nom de l'application, cliquable pour revenir à l'accueil.
 2. **Accueil** — vue d'ensemble de tous les mineurs.
@@ -57,9 +57,11 @@ subnav:
    [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }
 4. **Configuration** — détection automatique, mineurs configurés, remote.
    [Aller à Configuration →]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
-5. **Actualisation auto** — active/désactive le rafraîchissement automatique des données.
-6. **Version** — SHA du build actuellement déployé.
-7. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
+5. **Sauvegardes** — archives mensuelles de l'historique des mineurs, à télécharger.
+   [Aller à Sauvegardes →]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
+6. **Actualisation auto** — active/désactive le rafraîchissement automatique des données.
+7. **Version** — SHA du build actuellement déployé.
+8. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
 
 ---
 

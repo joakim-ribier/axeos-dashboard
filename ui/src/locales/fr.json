@@ -123,6 +123,7 @@
     "home": "Accueil",
     "alerts": "Alertes",
     "settings": "Configuration",
+    "backups": "Sauvegardes",
     "autoRefresh": "Actualisation auto"
   },
   "sidebar": {
@@ -176,6 +177,26 @@
     "pagination": {
       "rowsPerPage": "Lignes par page :"
     }
+  },
+  "backupsPage": {
+    "header": {
+      "title": "Sauvegardes",
+      "description": "Une archive par mois, complétée chaque nuit avec la journée de la veille"
+    },
+    "columns": {
+      "month": "Mois",
+      "size": "Taille",
+      "updatedAt": "Mise à jour le (UTC)",
+      "checksum": "Checksum (MD5)"
+    },
+    "download": "Télécharger",
+    "selection": "Sélection : {{count}} · ≈ {{size}}",
+    "selectAll": "Tout sélectionner",
+    "inProgress": "en cours",
+    "previousYear": "Année précédente",
+    "nextYear": "Année suivante",
+    "empty": "Aucune sauvegarde pour l'instant : la première sera créée cette nuit.",
+    "loadError": "Impossible de charger les sauvegardes."
   },
   "search": {
     "helpTitle": "Astuces de recherche",

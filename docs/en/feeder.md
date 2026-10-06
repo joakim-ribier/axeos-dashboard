@@ -1,11 +1,13 @@
 ---
 title: Feeder
-nav_order: 8
+nav_order: 9
 group: Dev
 lang: en
 subnav:
   - title: Firmware
     anchor: firmware-update-detection
+  - title: Backups
+    anchor: backups
 ---
 
 # Feeder
@@ -33,3 +35,17 @@ feeder has completed a cycle) or when the firmware is already up to
 date — this is what triggers the orange update badge on a miner card.
 
 [Go to Miner card →]({{ '/en/dashboard.html#miner-card' | relative_url }}){: .btn .btn-primary }
+
+## Monthly backups
+{: #backups }
+
+Every hour, the feeder adds each completed (UTC) day not yet archived to
+its month's archive, `{dataDir}/data/backups/YYYY-MM.zip` — in
+practice, the previous day, right after midnight UTC. Days already
+archived are copied over as-is without being recompressed, and the
+archive is only replaced once fully written. Once a month is over, its
+archive's MD5 is recorded in `checksums.md5`: the archive is then final
+and never opened again. All of this runs alongside polling, without ever
+delaying it.
+
+[Go to Backups →]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }

@@ -11,7 +11,7 @@ subnav:
 
 Historique des alertes détectées par le feeder, un jour à la fois —
 aujourd'hui par défaut, ou un autre jour via le calendrier. Accessible
-depuis la sidebar.
+depuis le menu.
 
 ![Page Alertes]({{ '/assets/images/alerts.png' | relative_url }})
 

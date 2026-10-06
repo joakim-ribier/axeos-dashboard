@@ -62,6 +62,14 @@ No authentication required — internal LAN use only.
 
 - Dedicated alerts page (temperature, fan, offline, config, firmware...)
 
+### Backups
+
+- Automatic archive of the miners' history, one zip per month extended
+  every night
+- Download one month or several at once
+
+[See Backups in detail]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }
+
 ---
 
 ## Architecture

@@ -12,6 +12,8 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 
 Two Go binaries handle data collection and the REST API; a React SPA provides the UI. No authentication — internal LAN use only.
 
+![axeos-dashboard home screen](docs/assets/images/dashboard-screenshot.png)
+
 > [!TIP]
 > **Easy to use** — one line, everything else configured from the UI:
 >

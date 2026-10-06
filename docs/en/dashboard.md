@@ -58,9 +58,11 @@ subnav:
    [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }
 4. **Configuration** — automatic detection, configured miners, remote.
    [Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
-5. **Auto-refresh** — toggles automatic data refresh.
-6. **Version** — the currently deployed build's SHA.
-7. **Update available** — only shows up if a newer dashboard version is
+5. **Backups** — monthly archives of the miners' history, to download.
+   [Go to Backups →]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }
+6. **Auto-refresh** — toggles automatic data refresh.
+7. **Version** — the currently deployed build's SHA.
+8. **Update available** — only shows up if a newer dashboard version is
    available on GitHub; click to open the release.
 
 ---

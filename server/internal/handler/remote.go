@@ -18,7 +18,7 @@ import (
 
 // boardDataRoot returns the bitaxes directory for a given boardId.
 func boardDataRoot(dataDir, boardID string) string {
-	return filepath.Join(dataDir, boardID, "bitaxes")
+	return filepath.Join(dataDir, boardID, config.BoardBitaxesDirName)
 }
 
 // ListRemoteMiners handles GET /api/{boardId}/miners/ for the remote-api.

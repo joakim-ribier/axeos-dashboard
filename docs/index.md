@@ -64,6 +64,14 @@ local. Aucune authentification requise — usage réseau local uniquement.
 - Page dédiée aux alertes (température, ventilation, hors-ligne,
   configuration, firmware...)
 
+### Sauvegardes
+
+- Archive automatique de l'historique des mineurs, un zip par mois
+  complété chaque nuit
+- Téléchargement d'un mois ou de plusieurs à la fois
+
+[Voir le détail des Sauvegardes]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
+
 ---
 
 ## Architecture

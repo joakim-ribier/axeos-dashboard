@@ -1,5 +1,17 @@
 basePath: /
 definitions:
+  backup.Info:
+    properties:
+      checksum:
+        description: Checksum is the archive's MD5, set once the month is final.
+        type: string
+      month:
+        type: string
+      size:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
   config.AppSettingsFile:
     properties:
       electricity:
@@ -182,6 +194,13 @@ definitions:
         type: integer
       total:
         type: integer
+    type: object
+  handler.BackupsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/backup.Info'
+        type: array
     type: object
   handler.ErrorResponse:
     properties:
@@ -530,6 +549,9 @@ definitions:
     type: object
   model.UIPageFeatures:
     properties:
+      backups:
+        description: 'Backups: "enabled" | "hidden" -- see config.UIPageConfig.'
+        type: string
       settings:
         description: 'Settings: "enabled" | "readonly" | "hidden" -- see config.UIPageConfig.'
         type: string
@@ -712,6 +734,50 @@ paths:
         into episodes and paginated (read-only)
       tags:
       - remote-dashboard-api
+  /api/backups:
+    get:
+      description: Returns the monthly backup archives, most recent first. The feeder
+        adds each completed (UTC) day to its month's archive, so the current month's
+        archive is complete up to yesterday.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.BackupsResponse'
+      summary: List monthly backups
+      tags:
+      - dashboard-api
+  /api/backups/download:
+    get:
+      description: 'Returns one zip holding the given months'' archives (up to yesterday
+        for the current month): every miner''s daily JSONL files under data/bitaxes/
+        -- unzip into storage.dataDir to restore.'
+      parameters:
+      - description: Comma-separated months, YYYY-MM
+        in: query
+        name: months
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: invalid or missing months
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: no backup for one of the months
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Download monthly backups
+      tags:
+      - dashboard-api
   /api/config/discover:
     get:
       description: Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24,

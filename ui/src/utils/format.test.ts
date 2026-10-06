@@ -39,6 +39,12 @@ describe("formatTimestamp", () => {
     const got = formatTimestamp("2026-01-16T18:18:10Z");
     expect(got).not.toBe("—");
   });
+
+  it("formats in the given time zone rather than the local one", () => {
+    expect(formatTimestamp("2026-01-16T18:18:10Z", "UTC")).toMatch(
+      /\b(18|6):18\b/,
+    );
+  });
 });
 
 describe("formatMetric", () => {

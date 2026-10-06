@@ -150,6 +150,12 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)
 	})
+	router.Get("/api/backups", func(w http.ResponseWriter, r *http.Request) {
+		handler.ListBackups(f.config, w, r)
+	})
+	router.Get("/api/backups/download", func(w http.ResponseWriter, r *http.Request) {
+		handler.DownloadBackups(f.logger, f.config, w, r)
+	})
 	router.Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Primary, w, r)
 	})

@@ -123,6 +123,7 @@
     "home": "Home",
     "alerts": "Alerts",
     "settings": "Settings",
+    "backups": "Backups",
     "autoRefresh": "Auto-refresh"
   },
   "sidebar": {
@@ -176,6 +177,26 @@
     "pagination": {
       "rowsPerPage": "Rows per page:"
     }
+  },
+  "backupsPage": {
+    "header": {
+      "title": "Backups",
+      "description": "One archive per month, extended every night with the previous day"
+    },
+    "columns": {
+      "month": "Month",
+      "size": "Size",
+      "updatedAt": "Updated (UTC)",
+      "checksum": "Checksum (MD5)"
+    },
+    "download": "Download",
+    "selection": "Selected: {{count}} · ≈ {{size}}",
+    "selectAll": "Select all",
+    "inProgress": "in progress",
+    "previousYear": "Previous year",
+    "nextYear": "Next year",
+    "empty": "No backups yet: the first one will be created tonight.",
+    "loadError": "Failed to load backups."
   },
   "search": {
     "helpTitle": "Search tips",

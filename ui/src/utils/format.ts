@@ -38,7 +38,7 @@ function parseTimestampMs(ts: string): number | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed.getTime();
 }
 
-export function formatTimestamp(ts?: string): string {
+export function formatTimestamp(ts?: string, timeZone?: string): string {
   if (!ts) return "—";
   const ms = parseTimestampMs(ts);
   if (ms === null) return "—";
@@ -48,6 +48,7 @@ export function formatTimestamp(ts?: string): string {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "short",
       timeStyle: "short",
+      timeZone,
     }).format(date);
   } catch {
     return date.toISOString();

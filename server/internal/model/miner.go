@@ -160,6 +160,8 @@ type UIFeatures struct {
 type UIPageFeatures struct {
 	// Settings: "enabled" | "readonly" | "hidden" -- see config.UIPageConfig.
 	Settings string `json:"settings"`
+	// Backups: "enabled" | "hidden" -- see config.UIPageConfig.
+	Backups string `json:"backups"`
 }
 
 type UIActionFeatures struct {
