@@ -13,6 +13,13 @@ on:
   # (main, by default) without waiting on that trigger.
   workflow_dispatch: {}
 
+# Several pushes in a row each trigger a run: two runs publishing at once
+# deleted each other's release, leaving "latest" on an older commit. Queued
+# one at a time, the run for the newest commit always publishes last.
+concurrency:
+  group: latest-release
+  cancel-in-progress: false
+
 jobs:
   # Resolves which commit to publish and whether it's safe to proceed.
   # Automatic runs (triggered by Checks completing) require Checks to have
@@ -24,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
+      publish: ${{ steps.resolve.outputs.publish }}
     steps:
       - name: require Checks to have succeeded (automatic runs only)
         if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion != 'success'
@@ -31,17 +39,32 @@ jobs:
           echo "::error::Checks did not succeed (conclusion: ${{ github.event.workflow_run.conclusion }}) for ${{ github.event.workflow_run.head_sha }} — refusing to publish 'latest'."
           exit 1
 
+      # An automatic run whose commit is no longer the tip of main is
+      # skipped: the run for the newer commit publishes instead, so an older
+      # commit's run finishing late can never overwrite it.
       - name: resolve commit to publish
         id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+            sha="${{ github.event.workflow_run.head_sha }}"
+            tip=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
+            if [ "$sha" != "$tip" ]; then
+              echo "::notice::$sha is no longer the tip of main ($tip) -- skipping, the run for the tip publishes 'latest'."
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "publish=true" >> "$GITHUB_OUTPUT"
+            fi
           else
-            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            sha="${{ github.sha }}"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
   build:
     needs: guard
+    if: needs.guard.outputs.publish == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -83,6 +106,7 @@ jobs:
   # doesn't depend on the `build` job's artifacts.
   docker:
     needs: guard
+    if: needs.guard.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -127,6 +151,7 @@ jobs:
 
   release:
     needs: [guard, build]
+    if: needs.guard.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
