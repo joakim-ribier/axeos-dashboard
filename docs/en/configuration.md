@@ -94,7 +94,7 @@ Some pools already have a clickable link built in (Braiins, Atlas...).
 For a pool the app doesn't natively recognize, you can add your own
 mapping between its hostname and its dashboard URL, with `{user}` as a
 placeholder for the stratum user's account part — the link then becomes
-clickable on miner cards using that pool.
+clickable in the list and details of the miners using that pool.
 
 ![Pool dashboards]({{ '/assets/images/settings-pools.png' | relative_url }})
 

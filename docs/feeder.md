@@ -31,10 +31,10 @@ Chaque mineur de la réponse API inclut :
 
 `updateAvailable` vaut `false` au tout premier démarrage (avant que le
 feeder n'ait terminé un premier cycle) ou quand le firmware est déjà à
-jour — c'est ce qui déclenche le badge orange de mise à jour sur la card
-d'un mineur.
+jour — c'est ce qui affiche la nouvelle version disponible dans la
+liste des mineurs et dans le détail d'un mineur.
 
-[Aller à La card →]({{ '/dashboard.html#la-card' | relative_url }}){: .btn .btn-primary }
+[Aller à La liste des mineurs →]({{ '/dashboard.html#liste' | relative_url }}){: .btn .btn-primary }
 
 ## Sauvegardes mensuelles
 {: #sauvegardes }

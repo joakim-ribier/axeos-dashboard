@@ -19,8 +19,8 @@ Plutôt qu'une ligne par sondage — une alerte qui dure des heures créerait
 sinon des dizaines de lignes quasi identiques — les occurrences
 consécutives d'un même type d'alerte sur un même mineur sont regroupées
 en un seul **épisode** : première apparition, dernière apparition, et
-nombre d'occurrences (ci-dessus, "61 occurrences" pour les mises à jour
-firmware qui durent depuis le début de la journée). Une alerte qui
+nombre d'occurrences (ci-dessus, "289 occurrences" pour les mises à jour
+firmware en attente toute la journée). Une alerte qui
 n'apparaît qu'une seule fois reste affichée sans plage horaire ni
 compteur (ex. "Atchoum : ventilateur à 76%" ci-dessus).
 

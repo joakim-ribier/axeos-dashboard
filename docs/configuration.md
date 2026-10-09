@@ -95,8 +95,8 @@ Certains pools ont déjà un lien cliquable intégré (Braiins, Atlas...).
 Pour un pool non reconnu nativement par l'app, on peut ajouter
 soi-même la correspondance entre son hostname et l'URL de son
 dashboard, avec `{user}` comme placeholder pour la partie compte de
-l'utilisateur stratum — le lien devient alors cliquable sur les cartes
-mineurs qui utilisent ce pool.
+l'utilisateur stratum — le lien devient alors cliquable dans la liste et
+le détail des mineurs qui utilisent ce pool.
 
 ![Dashboards des pools]({{ '/assets/images/settings-pools.png' | relative_url }})
 

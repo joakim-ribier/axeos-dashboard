@@ -5,16 +5,18 @@ group: Pages
 subnav:
   - title: Menu
     anchor: sidebar
-  - title: Top bar
+  - title: Barre du haut
     anchor: top-bar
-  - title: Totaux des cards
-    anchor: totaux-des-cards
+  - title: La flotte
+    anchor: flotte
+  - title: État des mineurs & pools
+    anchor: etat-pools
   - title: Recherche, filtres & tri
     anchor: recherche-filtres-tri
-  - title: La card
-    anchor: la-card
-  - title: La card avec le graphique du jour
-    anchor: la-card-avec-le-graphique-du-jour
+  - title: La liste des mineurs
+    anchor: liste
+  - title: Le détail d'un mineur
+    anchor: detail
 ---
 
 # Écran d'accueil
@@ -26,32 +28,39 @@ subnav:
   </a>
   <a href="#top-bar" class="toc-card">
     <span class="toc-card-icon">🔔</span>
-    <span class="toc-card-title">Top bar</span>
+    <span class="toc-card-title">Barre du haut</span>
   </a>
-  <a href="#totaux-des-cards" class="toc-card">
+  <a href="#flotte" class="toc-card">
     <span class="toc-card-icon">📊</span>
-    <span class="toc-card-title">Totaux des cards</span>
+    <span class="toc-card-title">La flotte</span>
+  </a>
+  <a href="#etat-pools" class="toc-card">
+    <span class="toc-card-icon">🚦</span>
+    <span class="toc-card-title">État & pools</span>
   </a>
   <a href="#recherche-filtres-tri" class="toc-card">
     <span class="toc-card-icon">🔍</span>
     <span class="toc-card-title">Recherche, filtres & tri</span>
   </a>
-  <a href="#la-card" class="toc-card">
-    <span class="toc-card-icon">📇</span>
-    <span class="toc-card-title">La card</span>
+  <a href="#liste" class="toc-card">
+    <span class="toc-card-icon">📋</span>
+    <span class="toc-card-title">La liste</span>
   </a>
-  <a href="#la-card-avec-le-graphique-du-jour" class="toc-card">
-    <span class="toc-card-icon">📈</span>
-    <span class="toc-card-title">Card + graphique</span>
+  <a href="#detail" class="toc-card">
+    <span class="toc-card-icon">🔎</span>
+    <span class="toc-card-title">Le détail</span>
   </a>
 </div>
 
 ## ☰ Menu
 {: #sidebar }
 
-![Menu]({{ '/assets/images/sidebar-only.png' | relative_url }})
+<div class="shot-aside" markdown="1">
 
-1. **AxeOS · D#hashboard** — nom de l'application, cliquable pour revenir à l'accueil.
+![Menu]({{ '/assets/images/sidebar-only.png' | relative_url }}){: width="240" }
+
+1. **AxeOS · D#hashboard** — recharge l'application et revient à l'accueil,
+   comme à l'arrivée sur le dashboard.
 2. **Accueil** — vue d'ensemble de tous les mineurs.
 3. **Alertes** — historique des alertes (température, ventilation, hors-ligne...).
    [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }
@@ -63,123 +72,200 @@ subnav:
 7. **Version** — SHA du build actuellement déployé.
 8. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
 
+</div>
+
+Sur téléphone, le menu s'ouvre avec le bouton ☰ de la barre du haut.
+
 ---
 
-## 🔔 Top bar
+## 🔔 Barre du haut
 {: #top-bar }
 
-![Top bar]({{ '/assets/images/topbar-only.png' | relative_url }})
+Toujours visible en haut de l'écran, même en faisant défiler la page.
 
-1. **Rafraîchir** — indique si l'actualisation auto est active.
-2. **Notifications** — historique des événements (alerte résolue, mise à jour disponible...).
-3. **Langue** — bascule entre français et anglais.
+![Barre du haut]({{ '/assets/images/topbar-only.png' | relative_url }})
+
+1. **Page** — icône, titre et description de la page affichée.
+2. **Documentation** — ouvre cette documentation.
+3. **Actualisation auto** — indique si l'actualisation automatique est
+   active (bleu) ou non (gris).
+4. **Notifications** — alertes en cours et événements récents (alerte
+   résolue, mise à jour disponible...) ; le badge rouge compte les non
+   lues.
+5. **Langue** — bascule entre français et anglais.
+
+Sur téléphone, la barre garde l'essentiel :
+
+![Barre du haut sur téléphone]({{ '/assets/images/topbar-mobile.png' | relative_url }}){: width="390" }
+
+1. **Menu** — ouvre le menu.
+2. **Page** — icône et titre de la page affichée.
+3. **Actualisation auto**
+4. **Notifications**
+5. **Plus** — déplie la documentation et la langue sous la barre ; se
+   replie à chaque changement de page.
 
 ---
 
-## 📊 Totaux des cards
-{: #totaux-des-cards }
+## 📊 La flotte
+{: #flotte }
 
-![Totaux des cards]({{ '/assets/images/globalstats.png' | relative_url }})
+![La flotte]({{ '/assets/images/fleet.png' | relative_url }})
 
-1. **Hashrate total** — somme du hashrate de tous les mineurs actifs. En
-   dessous, le minimum et le maximum relevés parmi les mineurs (une seule
-   valeur si tous les mineurs ont le même hashrate).
-2. **Parts (session)** — total des shares acceptées depuis le démarrage
-   du feeder ; en dessous, le total cumulé depuis la toute première mise
-   en route, qui persiste après un redémarrage d'un mineur.
-3. **Temp · Ventil.** — température : le chiffre de **gauche** est le minimum, celui de **droite** le maximum, parmi tous les mineurs. En dessous, la vitesse de ventilation **maximale** relevée.
-4. **Mineurs** — nombre de mineurs configurés et consommation totale (W).
-   En dessous, le minimum et le maximum de puissance relevés parmi les
-   mineurs (une seule valeur si tous consomment pareil).
-5. **Électricité** — coût estimé sur une journée à la consommation
-   actuelle et au tarif configuré (carte masquée si aucun tarif n'est
-   configuré), pour l'installation complète : les mineurs plus les
+1. **Hashrate de la flotte · 24 h** — la production de l'ensemble des
+   mineurs.
+2. **Santé** — nombre de mineurs sans problème sur le total. Prend la
+   couleur du problème le plus urgent s'il y en a un. Un clic déplie la
+   liste de tous les mineurs, ceux à problème en tête, chacun avec son
+   état ; un clic sur un mineur ouvre [son détail](#detail).
+
+   ![Liste des mineurs sous la santé]({{ '/assets/images/fleet-health.png' | relative_url }}){: width="328" }
+
+3. **Dernier relevé** — heure du relevé le plus récent. Passe en rouge
+   quand même ce relevé date de plus de 2 fois l'intervalle de sondage
+   configuré : le feeder ne tourne plus.
+4. **Hashrate actuel** — somme du hashrate des mineurs joignables, et à
+   côté la moyenne sur les dernières 24 h.
+5. **Graphique 24 h** — le hashrate cumulé de la flotte, par tranches de
+   15 minutes. Une période sans aucun relevé (feeder arrêté) apparaît en
+   gris.
+6. **Puissance** — consommation totale des mineurs joignables ; en
+   dessous, la plus faible ↓ et la plus forte ↑ d'un mineur.
+7. **Efficacité** — rendement de la flotte (J/TH) ; en dessous, le
+   meilleur ↓ et le moins bon ↑ des mineurs.
+8. **Électricité** — coût estimé sur une journée à la consommation
+   actuelle et au tarif configuré, pour l'installation complète : les
+   mineurs plus les
    [autres appareils]({{ '/configuration.html#electricite-pools' | relative_url }})
    déclarés (ventilateur, routeur...). En dessous, le total réellement
-   dépensé depuis que chaque mineur est suivi -- un changement de tarif
+   dépensé depuis que chaque mineur est suivi — un changement de tarif
    plus tard ne modifie jamais ce total passé.
+9. **Parts** — total des parts acceptées depuis le démarrage des mineurs ;
+   en dessous, le total cumulé depuis leur toute première mise en route.
+10. **Meilleure diff.** — la meilleure difficulté atteinte, et le mineur
+    qui la détient.
+11. **Température** — la plus basse ↓ et la plus haute ↑ des puces ; en
+    dessous, la vitesse de ventilateur la plus élevée.
+
+---
+
+## 🚦 État des mineurs & pools
+{: #etat-pools }
+
+![État des mineurs et pools]({{ '/assets/images/breakdowns.png' | relative_url }})
+
+1. **État des mineurs** — la répartition des mineurs par état, du plus
+   urgent au moins urgent :
+   - **Hors ligne** — le mineur ne répond plus.
+   - **Erreur de config** — la `mac:` configurée ne correspond pas à ce
+     que le mineur reporte (mauvais appareil à cette IP, ou faute de
+     frappe).
+   - **En retard** — le mineur répond, mais aucun relevé n'est arrivé
+     depuis plus de 2 fois l'intervalle de sondage.
+   - **En alerte** — température de puce à 62 °C ou plus, ou ventilateur
+     à 75 % ou plus.
+   - **En ligne** — tout va bien.
+2. **Pools** — la part du hashrate de la flotte envoyée à chaque pool.
+
+Chaque pastille filtre la liste des mineurs en dessous ; un second clic
+retire le filtre.
 
 ---
 
 ## 🔍 Recherche, filtres & tri
 {: #recherche-filtres-tri }
 
-Une ligne sous les totaux permet d'affiner l'affichage des cards, sans
-appel réseau supplémentaire :
+![Recherche, filtres et tri]({{ '/assets/images/toolbar.png' | relative_url }})
 
-![Recherche, filtres et tri]({{ '/assets/images/actionbar.png' | relative_url }})
-
-1. **Pool** — liste déroulante des pools actuellement utilisés, avec le
-   nombre de mineurs et le hashrate cumulé par pool. Affiche directement
-   le nom du pool quand tous les mineurs y sont.
-2. **Tri** — 5 ordres possibles, mémorisés entre les visites : uptime
-   total croissant (par défaut), parts acceptées, ventilateur le plus
-   rapide, température la plus haute, ou nom de pool (A-Z).
-3. **Filtres** — ouvre/ferme le panneau ci-dessous.
-4. **Recherche** — texte libre (hostname, IP, modèle, pool, utilisateur
+1. **Recherche** — texte libre (nom, IP, modèle, pool, utilisateur
    stratum, version firmware) ou comparaisons : `temp>60`, `fan<=50`,
    `power>15`, `hashrate<0.3`, `uptime>3600` (secondes). Mot-clé `offline`
    (négation avec `!offline`/`-offline`). Plusieurs termes séparés par un
    espace doivent tous correspondre ; négation avec `-`/`!`.
-5. **Modèle** — filtre rapide par type de mineur, avec le compteur pour
-   chacun.
-6. **Version** — filtre rapide par version firmware, avec le compteur
+2. **Astuces** — rappel de cette syntaxe.
+3. **Tri** — plus chaud (par défaut), hashrate, ventilateur le plus
+   rapide, plus de parts, plus ancien (uptime total) ou pool (A-Z),
+   mémorisé entre les visites. Quel que soit le tri, les mineurs à
+   problème restent en tête, du plus urgent au moins urgent.
+4. **Modèle** — filtre par type de mineur, avec le nombre de mineurs
+   pour chacun.
+5. **Firmware** — filtre par version firmware, avec le nombre de mineurs
    pour chacune.
-7. **Alertes** — filtre rapide par condition (température haute,
-   ventilateur haut, hors ligne), avec le compteur pour chacune.
+6. **Affichage** — liste ou tuiles, mémorisé entre les visites. Sur
+   téléphone, les mineurs s'affichent toujours en tuiles.
+7. **Compteur** — nombre de mineurs affichés sur le total.
 
 ---
 
-## 📇 La card
-{: #la-card }
+## 📋 La liste des mineurs
+{: #liste }
 
-![La card]({{ '/assets/images/card-collapsed.png' | relative_url }})
+![La liste des mineurs]({{ '/assets/images/miner-list.png' | relative_url }})
 
-La card reprend le style d'un terminal : la première ligne (`> _ adresse
-IP`) est la "commande", tout ce qui suit en est la "sortie".
+1. **Mineur** — alias ou hostname, puis l'IP et le modèle.
+2. **Hashrate · 24 h** — le hashrate des dernières 24 h et sa valeur
+   actuelle. Les périodes où le mineur était injoignable apparaissent en
+   rouge sur la ligne de base.
+3. **Temp. puce** — température des puces, sur une jauge verte qui passe
+   à l'orange à l'approche du seuil de 62 °C (marqué d'un trait), puis au
+   rouge une fois atteint.
+4. **Ventilateur** — vitesse du ventilateur, sur la même jauge, avec un
+   seuil à 75 %.
+5. **Conso.** — puissance (W) et rendement (J/TH).
+6. **Pool** — le pool actif, cliquable vers son tableau de bord quand un
+   lien est connu pour lui (voir
+   [Configuration]({{ '/configuration.html#electricite-pools' | relative_url }})),
+   et s'il s'agit du pool **Principal** ou de **Secours**.
+7. **Firmware** — version installée ; en dessous, en bleu, la nouvelle
+   version disponible s'il y en a une.
+8. **État** — le liseré à gauche prend la couleur de
+   [l'état du mineur](#etat-pools).
+9. **Détail** — un clic n'importe où sur la ligne ouvre
+   [le détail du mineur](#detail).
 
-1. **Adresse IP** — précédée d'un point indiquant l'état du mineur : vert
-   (joignable), rouge (injoignable), gris (première vérification en
-   attente), orange (configuration incohérente — voir plus bas). L'adresse
-   est un lien direct vers l'interface du mineur.
-2. **Horodatage** — heure de la dernière donnée reçue par le feeder. Passe
-   en rouge si elle date de plus de 2 fois l'intervalle de sondage
-   configuré : le mineur peut répondre (point vert) alors que le feeder,
-   lui, ne l'interroge plus.
-3. **Nom · Modèle** — alias ou hostname du mineur, puis son modèle
-   (bitaxe ou nerdaxe, avec sa variante matérielle).
-4. **Menu actions** — changer de pool ou redémarrer le mineur (confirmation
-   demandée), regroupés derrière ce menu pour ne pas les afficher en
-   permanence sur chaque card.
-5. **Hashrate** — débit de hachage actuel (TH/s) et meilleure difficulté de la session.
-6. **Shares** — nombre de parts acceptées / rejetées.
-7. **Température · Ventilation** — température des puces et vitesse du ventilateur.
-8. **Consommation · Efficacité** — puissance (W) et rendement (J/TH).
-9. **Pool actif** — pool utilisé, temps de réponse, badge Principal/Secours.
-   Le chevron développe le détail : utilisateur stratum et pool inactif.
-   Une icône ⧉ ouvre le tableau de bord du pool, quand un lien est
-   configuré pour lui (voir
-   [Configuration]({{ '/configuration.html#electricite-pools' | relative_url }})).
-10. **Historique / Totaux** — bascule entre le graphique du jour et les totaux cumulés depuis la première mise en route.
-11. **Uptime · Firmware** — durée depuis le dernier redémarrage (rouge si
-    plus récente que l'intervalle du feeder), version installée et badge
-    orange si une mise à jour est disponible.
+En tuiles, chaque mineur reprend les mêmes informations, avec son état
+écrit en toutes lettres :
 
-{: .note }
-> ⚠️ Si la `mac:` configurée pour un mineur ne correspond pas à ce qu'il
-> reporte réellement (mauvais appareil à cette IP, ou faute de frappe),
-> un bandeau orange apparaît sous l'en-tête de la card avec le détail de
-> l'erreur (et un bouton pour le copier), et le point de statut passe à
-> l'orange.
+![Les mineurs en tuiles]({{ '/assets/images/miner-tiles.png' | relative_url }}){: width="580" }
 
 ---
 
-## 📈 La card avec le graphique du jour
-{: #la-card-avec-le-graphique-du-jour }
+## 🔎 Le détail d'un mineur
+{: #detail }
 
-![La card avec le graphique du jour]({{ '/assets/images/card-day-graph.png' | relative_url }})
+Un panneau qui s'ouvre sur la droite (plein écran sur téléphone) ; il se
+ferme avec la croix, en cliquant à côté, ou d'un glissement vers la
+droite sur téléphone.
 
-1. **Historique de la journée** — onglet à déplier pour afficher le graphique.
-2. **Métriques** — choix de la donnée affichée : température, ventilation, hashrate ou ping.
-3. **Période** — **1H** (dernière heure) ou **Jour** (moyennes horaires sur la journée complète).
-4. **Graphique** — évolution de la métrique choisie sur la période sélectionnée.
+<div class="shot-aside" markdown="1">
+
+![Le détail d'un mineur]({{ '/assets/images/drawer.png' | relative_url }}){: width="340" }
+
+1. **Nom et état** — le liseré du haut reprend la couleur de l'état.
+2. **IP** — lien direct vers l'interface du mineur, suivi de son modèle.
+3. **Mesures** — hashrate des dernières 24 h, puissance et rendement,
+   température des puces et ventilateur avec leur seuil.
+4. **Dernières 24 h** — graphique de la température, du ventilateur, du
+   hashrate ou du ping, sur la dernière heure (**1H**) ou les dernières
+   24 h (**24H**).
+5. **Pools** — le pool principal et celui de secours, le pool actif
+   marqué **Actif** ; chacun est cliquable vers son tableau de bord quand
+   un lien est connu pour lui.
+6. **Utilisateur** — l'utilisateur stratum du pool sélectionné, à copier
+   en un clic. Cliquer sur l'autre pool affiche le sien.
+7. **Session** — parts acceptées et rejetées, meilleure difficulté et
+   temps de fonctionnement depuis le dernier redémarrage.
+8. **Depuis le début** — parts acceptées, temps de fonctionnement et
+   électricité dépensée depuis la toute première mise en route.
+9. **Appareil** — version firmware, adresse MAC, ping du pool et heure du
+   dernier relevé.
+10. **Actions** — **Redémarrer** le mineur ou **Basculer** sur l'autre
+    pool (le mineur redémarre pour l'appliquer), toujours après
+    confirmation.
+
+</div>
+
+Quand le mineur a un problème, un bandeau le détaille juste sous
+l'en-tête : injoignable, aucun relevé depuis une heure donnée, erreur de
+configuration, température ou ventilateur au seuil. Une nouvelle version
+firmware s'annonce dans un bandeau bleu, avec un lien vers sa release.

@@ -32,9 +32,10 @@ Each miner in the API response includes:
 
 `updateAvailable` is `false` on the very first startup (before the
 feeder has completed a cycle) or when the firmware is already up to
-date — this is what triggers the orange update badge on a miner card.
+date — this is what shows the newer version available in the miner list
+and in a miner's details.
 
-[Go to Miner card →]({{ '/en/dashboard.html#miner-card' | relative_url }}){: .btn .btn-primary }
+[Go to The miner list →]({{ '/en/dashboard.html#list' | relative_url }}){: .btn .btn-primary }
 
 ## Monthly backups
 {: #backups }

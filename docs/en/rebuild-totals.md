@@ -19,7 +19,7 @@ history. Useful after an installation issue (`totals.json` lost or
 corrupted), a data migration, or to backfill existing history from before
 this feature was enabled.
 
-[Go to Stats bar →]({{ '/en/dashboard.html#stats-bar' | relative_url }}){: .btn .btn-primary }
+[Go to The fleet →]({{ '/en/dashboard.html#fleet' | relative_url }}){: .btn .btn-primary }
 
 <div class="terminal-card">
   <div class="terminal-card-header">
