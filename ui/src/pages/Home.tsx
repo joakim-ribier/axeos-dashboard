@@ -1,502 +1,76 @@
 // src/pages/Home.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import AirIcon from "@mui/icons-material/Air";
-import CheckIcon from "@mui/icons-material/Check";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import DoneAllIcon from "@mui/icons-material/DoneAll";
-import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import SearchIcon from "@mui/icons-material/Search";
-import SortByAlphaIcon from "@mui/icons-material/SortByAlpha";
-import SwapVertIcon from "@mui/icons-material/SwapVert";
-import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
-import ThermostatIcon from "@mui/icons-material/Thermostat";
-import UpdateIcon from "@mui/icons-material/Update";
-import {
-  Box,
-  Button,
-  Chip,
-  Collapse,
-  Grid,
-  IconButton,
-  InputBase,
-  ListItemIcon,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Popover,
-  Tooltip,
-  Typography,
-} from "@mui/material";
-import { Theme } from "@mui/material/styles";
+import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
 
+import { MinerDrawer } from "@/components/dashboard/drawer/MinerDrawer";
+import {
+  poolSegments,
+  statusSegments,
+} from "@/components/dashboard/fleet/breakdowns";
+import { BreakdownStrip } from "@/components/dashboard/fleet/BreakdownStrip";
+import { FleetSummary } from "@/components/dashboard/fleet/FleetSummary";
+import { MinerList } from "@/components/dashboard/miners/MinerList";
+import { MinerTiles } from "@/components/dashboard/miners/MinerTiles";
+import {
+  MINER_VIEWS,
+  MinerToolbar,
+} from "@/components/dashboard/toolbar/MinerToolbar";
+import { AlertList } from "@/components/ui/AlertList";
+import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
+import { OopsPage } from "@/components/ui/OopsPage";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { useMode } from "@/contexts/ModeContext";
 import { useSearch } from "@/contexts/SearchContext";
-import {
-  type MinerSortKey,
-  sortMiners,
-  useMinerSort,
-} from "@/hooks/useMinerSort";
+import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
+import { useMinersHistory } from "@/hooks/useMinersHistory";
+import { sortMiners, useMinerSort } from "@/hooks/useMinerSort";
+import { useMinerStatus } from "@/hooks/useMinerStatus";
+import { useStoredChoice } from "@/hooks/useStoredChoice";
+import { type Miner } from "@/schemas/minerSchema";
 import {
   matchesQuickFilters,
   NO_QUICK_FILTERS,
-  QuickFilters,
+  type QuickFilters,
 } from "@/utils/minerFilters";
 import { matchesSearch } from "@/utils/minerSearch";
+import { type MinerStatus } from "@/utils/minerStatus";
 
-// Matches the server's hardcoded defaults (model.DefaultTempThreshold/
-// DefaultFanThreshold) -- display-only here, filtering itself reads each
-// miner's own `alerts` field (computed server-side), not these constants.
-const TEMP_THRESHOLD = 62;
-const FAN_THRESHOLD = 75;
-
-import { AlertList } from "../components/ui/AlertList";
-import { BoardLockedPage } from "../components/ui/BoardLockedPage";
-import { GlobalStats } from "../components/ui/GlobalStats";
-import { MinerCard } from "../components/ui/MinerCard/MinerCard";
-import { OopsPage } from "../components/ui/OopsPage";
-import { PageHeader } from "../components/ui/PageHeader";
-import { ApiError, useAppInfo, useMiners } from "../hooks/useMiners";
-
-const getPoolLabel = (url: string): string => {
-  try {
-    return url.replace(/^[^:]+:\/\//, "").split(":")[0];
-  } catch {
-    return url;
-  }
+/** [value, number of miners] pairs, most common first. */
+const countBy = (miners: Miner[], key: (m: Miner) => string | undefined) => {
+  const counts = new Map<string, number>();
+  miners.forEach((m) => {
+    const value = key(m);
+    if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+  });
+  return [...counts].sort((a, b) => b[1] - a[1]);
 };
 
-/* ── Search ──────────────────────────────────────────────────── */
-const SearchHelpTooltip = () => {
-  const { t } = useTranslation();
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
-  return (
-    <>
-      <IconButton
-        size="small"
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        aria-label="search syntax help"
-      >
-        <InfoOutlinedIcon fontSize="inherit" sx={{ color: "text.secondary" }} />
-      </IconButton>
-
-      <Popover
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-        slotProps={{ paper: { sx: { p: 1, maxWidth: 280 } } }}
-      >
-        <Typography
-          variant="caption"
-          component="div"
-          sx={{ fontWeight: 700, mb: 0.5 }}
-        >
-          {t("search.helpTitle")}
-        </Typography>
-        <Typography variant="caption" component="div">
-          {t("search.helpPlain")}
-        </Typography>
-        <Typography variant="caption" component="div">
-          {t("search.helpCompare")}
-        </Typography>
-        <Typography variant="caption" component="div">
-          {t("search.helpKeywords")}
-        </Typography>
-        <Typography variant="caption" component="div">
-          {t("search.helpExclude")}
-        </Typography>
-        <Typography variant="caption" component="div">
-          {t("search.helpCombine")}
-        </Typography>
-      </Popover>
-    </>
-  );
-};
-
-const SearchField = () => {
-  const { query, setQuery } = useSearch();
-
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 1,
-        bgcolor: "background.default",
-        borderRadius: 2,
-        border: "1px solid",
-        borderColor: "divider",
-        px: 1.5,
-        py: 1,
-        width: "100%",
-      }}
-    >
-      <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
-      <InputBase
-        placeholder="Search…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        sx={{ color: "text.primary", fontSize: "0.875rem", width: "100%" }}
-      />
-      <SearchHelpTooltip />
-    </Box>
-  );
-};
-
-/* ── Sort ────────────────────────────────────────────────────── */
-const SORT_OPTIONS: { key: MinerSortKey; icon: React.ReactNode }[] = [
-  { key: "oldest", icon: <UpdateIcon fontSize="small" /> },
-  { key: "sharesAccepted", icon: <DoneAllIcon fontSize="small" /> },
-  { key: "fan", icon: <AirIcon fontSize="small" /> },
-  { key: "temp", icon: <ThermostatIcon fontSize="small" /> },
-  { key: "pool", icon: <SortByAlphaIcon fontSize="small" /> },
-];
-
-const SortMenuButton = ({
-  sort,
-  onChange,
-}: {
-  sort: MinerSortKey;
-  onChange: (sort: MinerSortKey) => void;
-}) => {
-  const { t } = useTranslation();
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
-  return (
-    <>
-      <Button
-        size="small"
-        variant="outlined"
-        color="inherit"
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        startIcon={<SwapVertIcon fontSize="small" />}
-        sx={{
-          borderColor: "divider",
-          color: "text.secondary",
-          flexShrink: 0,
-          whiteSpace: "nowrap",
-          "&:hover": { borderColor: "primary.main", color: "primary.main" },
-        }}
-      >
-        {t(`dashboard.sort.${sort}`)}
-      </Button>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
-      >
-        {SORT_OPTIONS.map((option) => (
-          <MenuItem
-            key={option.key}
-            selected={option.key === sort}
-            onClick={() => {
-              onChange(option.key);
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemIcon sx={{ minWidth: 32 }}>{option.icon}</ListItemIcon>
-            <ListItemText>{t(`dashboard.sort.${option.key}`)}</ListItemText>
-            {option.key === sort && (
-              <CheckIcon
-                fontSize="small"
-                sx={{ color: "primary.main", ml: 2 }}
-              />
-            )}
-          </MenuItem>
-        ))}
-      </Menu>
-    </>
-  );
-};
-
-/* ── Pool select ─────────────────────────────────────────────── */
-interface PoolOption {
-  url: string;
-  label: string;
-  count: number;
-  hashRate: number;
-}
-
-const PoolSelectButton = ({
-  options,
-  totalCount,
-  totalHashRate,
-  selected,
-  onChange,
-}: {
-  options: PoolOption[];
-  totalCount: number;
-  totalHashRate: number;
-  selected: string | null;
-  onChange: (url: string | null) => void;
-}) => {
-  const { t } = useTranslation();
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
-  const currentLabel =
-    selected === null
-      ? t("dashboard.filter.all")
-      : (options.find((o) => o.url === selected)?.label ?? selected);
-
-  const summary = (count: number, hashRate: number) =>
-    `${count} ${t("dashboard.filter.miners")} · ${hashRate.toFixed(2)} TH/s`;
-
-  return (
-    <>
-      <Button
-        size="small"
-        variant="outlined"
-        color="inherit"
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        startIcon={<SystemUpdateAltIcon fontSize="small" />}
-        sx={{
-          borderColor: "divider",
-          color: "text.secondary",
-          flexShrink: 0,
-          whiteSpace: "nowrap",
-          maxWidth: 220,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          "&:hover": { borderColor: "primary.main", color: "primary.main" },
-        }}
-      >
-        {currentLabel}
-      </Button>
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
-      >
-        <MenuItem
-          selected={selected === null}
-          onClick={() => {
-            onChange(null);
-            setAnchorEl(null);
-          }}
-        >
-          <ListItemText
-            primary={t("dashboard.filter.all")}
-            secondary={summary(totalCount, totalHashRate)}
-          />
-          {selected === null && (
-            <CheckIcon
-              fontSize="small"
-              sx={{ color: "primary.main", ml: 2, flexShrink: 0 }}
-            />
-          )}
-        </MenuItem>
-        {options.map((option) => (
-          <MenuItem
-            key={option.url}
-            selected={option.url === selected}
-            onClick={() => {
-              onChange(option.url);
-              setAnchorEl(null);
-            }}
-          >
-            <ListItemText
-              primary={option.label}
-              secondary={summary(option.count, option.hashRate)}
-            />
-            {option.url === selected && (
-              <CheckIcon
-                fontSize="small"
-                sx={{ color: "primary.main", ml: 2, flexShrink: 0 }}
-              />
-            )}
-          </MenuItem>
-        ))}
-      </Menu>
-    </>
-  );
-};
-
-/* ── ChipFilterGroup ────────────────────────────────────────── */
-interface ChipFilterGroupProps {
-  label: string;
-  entries: [string, number][];
-  total: number;
-  selected: string | null;
-  onChange: (value: string | null) => void;
-}
-
-const ChipFilterGroup = ({
-  label,
-  entries,
-  total,
-  selected,
-  onChange,
-}: ChipFilterGroupProps) => {
-  const { t } = useTranslation();
-  if (entries.length === 0) return null;
-
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-      <Typography variant="caption" color="text.secondary">
-        {label}
-      </Typography>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-        {entries.length > 1 && (
-          <Chip
-            size="small"
-            label={`${t("dashboard.filter.all")} (${total})`}
-            color={selected === null ? "primary" : "default"}
-            variant={selected === null ? "filled" : "outlined"}
-            onClick={() => onChange(null)}
-          />
-        )}
-        {entries.map(([value, count]) => (
-          <Chip
-            key={value}
-            size="small"
-            label={`${value} (${count})`}
-            color={selected === value ? "primary" : "default"}
-            variant={selected === value ? "filled" : "outlined"}
-            onClick={() => onChange(value === selected ? null : value)}
-          />
-        ))}
-      </Box>
-    </Box>
-  );
-};
-
-/* ── Home ────────────────────────────────────────────────────── */
 export const Home = () => {
   const { t } = useTranslation();
   const { data, devices, isLoading, error } = useMiners();
+  const { data: history } = useMinersHistory();
   const { hashboardUrl } = useAppInfo();
   const { boardId, isRemoteBackend } = useMode();
   const { query } = useSearch();
-  const { sort, setSort } = useMinerSort();
-
-  const [selectedPool, setSelectedPool] = useState<string | null>(null);
-  const [selectedDeviceModel, setSelectedDeviceModel] = useState<string | null>(
-    null,
+  const [sort, setSort] = useMinerSort();
+  const { statusOf, isStale } = useMinerStatus();
+  const [view, setView] = useStoredChoice(
+    "axeos.minerView",
+    MINER_VIEWS,
+    "list",
   );
-  const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
-  const [alertTemp, setAlertTemp] = useState(false);
-  const [alertFan, setAlertFan] = useState(false);
-  const [alertOffline, setAlertOffline] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const toggleFilters = () => setFiltersOpen((current) => !current);
-
-  const poolEntries = useMemo(() => {
-    const map: Record<
-      string,
-      { count: number; hashRate: number; label: string }
-    > = {};
-    data?.forEach((m) => {
-      const isFallback = m.isUsingFallbackStratum === 1;
-      const url = (isFallback ? m.fallbackStratumURL : m.stratumURL) ?? "";
-      if (!url) return;
-      if (!map[url])
-        map[url] = { count: 0, hashRate: 0, label: getPoolLabel(url) };
-      map[url].count++;
-      map[url].hashRate += m.hashRateTHs ?? 0;
-    });
-    return Object.entries(map);
-  }, [data]);
-
-  const totalHashRate = useMemo(
-    () => data?.reduce((s, m) => s + (m.hashRateTHs ?? 0), 0) ?? 0,
-    [data],
-  );
-
-  const deviceModelEntries = useMemo(() => {
-    const map: Record<string, number> = {};
-    data?.forEach((m) => {
-      const model = m.deviceModel;
-      if (!model) return;
-      map[model] = (map[model] ?? 0) + 1;
-    });
-    return Object.entries(map);
-  }, [data]);
-
-  const versionEntries = useMemo(() => {
-    const map: Record<string, number> = {};
-    data?.forEach((m) => {
-      if (!m.version) return;
-      map[m.version] = (map[m.version] ?? 0) + 1;
-    });
-    return Object.entries(map);
-  }, [data]);
-
-  const alertCounts = useMemo(() => {
-    let temp = 0;
-    let fan = 0;
-    let offline = 0;
-    data?.forEach((m) => {
-      if (m.alerts?.some((a) => a.type === "tempHigh")) temp++;
-      if (m.alerts?.some((a) => a.type === "fanHigh")) fan++;
-      if (m.alive === false) offline++;
-    });
-    return { temp, fan, offline };
-  }, [data]);
-
-  const quickFilters: QuickFilters = useMemo(
-    () => ({
-      ...NO_QUICK_FILTERS,
-      selectedPool,
-      selectedDeviceModel,
-      selectedVersion,
-      alertTemp,
-      alertFan,
-      alertOffline,
-    }),
-    [
-      selectedPool,
-      selectedDeviceModel,
-      selectedVersion,
-      alertTemp,
-      alertFan,
-      alertOffline,
-    ],
-  );
-
-  const filteredData = useMemo(() => {
-    const filtered = data?.filter(
-      (m) => matchesQuickFilters(m, quickFilters) && matchesSearch(m, query),
-    );
-    return filtered && sortMiners(filtered, sort);
-  }, [data, quickFilters, query, sort]);
-
-  useEffect(() => {
-    if (poolEntries.length === 1) setSelectedPool(poolEntries[0][0]);
-    else if (poolEntries.length > 1) setSelectedPool(null);
-  }, [poolEntries]);
-
-  useEffect(() => {
-    if (deviceModelEntries.length === 1) {
-      setSelectedDeviceModel(deviceModelEntries[0][0]);
-    } else if (deviceModelEntries.length > 1) {
-      setSelectedDeviceModel(null);
-    }
-  }, [deviceModelEntries]);
-
-  useEffect(() => {
-    if (versionEntries.length === 1) setSelectedVersion(versionEntries[0][0]);
-    else if (versionEntries.length > 1) setSelectedVersion(null);
-  }, [versionEntries]);
-
-  const gridContainerSx = (theme: Theme) => ({
-    display: "grid",
-    width: "100%",
-    gridTemplateColumns: {
-      xs: "repeat(1, 1fr)",
-      md: "repeat(2, 1fr)",
-      lg: "repeat(3, 1fr)",
-    },
-    columnGap: theme.spacing(3),
-    rowGap: theme.spacing(3),
+  // The list's columns don't fit a phone -- tiles there, whatever the
+  // remembered choice for wider screens.
+  const isNarrow = useMediaQuery(useTheme().breakpoints.down("md"), {
+    noSsr: true,
   });
+  const [filters, setFilters] = useState<QuickFilters>(NO_QUICK_FILTERS);
+  // Kept apart from the open flag so the panel still shows its miner while
+  // it slides out.
+  const [selectedIp, setSelectedIp] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (
     error instanceof ApiError &&
@@ -516,8 +90,31 @@ export const Home = () => {
     );
   }
 
+  const miners = data ?? [];
+  const setFilter = <K extends keyof QuickFilters>(
+    key: K,
+    value: QuickFilters[K],
+  ) => setFilters((f) => ({ ...f, [key]: value }));
+
+  const shown = sortMiners(
+    miners.filter(
+      (m) =>
+        matchesQuickFilters(m, statusOf(m), filters) && matchesSearch(m, query),
+    ),
+    sort,
+    statusOf,
+  );
+  const selected = miners.find((m) => m.ip === selectedIp);
+  const openMiner = (ip: string) => {
+    setSelectedIp(ip);
+    setDrawerOpen(true);
+  };
+  const hashRateHistory = new Map(
+    history?.miners.map((h) => [h.ip, h.hashRate]),
+  );
+
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
         title={t("dashboard.header.title")}
         description={t("dashboard.header.description")}
@@ -529,146 +126,97 @@ export const Home = () => {
         }}
       />
 
-      <GlobalStats data={data} devices={devices} isLoading={isLoading} />
+      {error && !data ? (
+        <AlertList severity="error" items={[t("dashboard.error")]} />
+      ) : isLoading ? null : miners.length === 0 ? (
+        <AlertList severity="warning" items={[t("dashboard.noData")]} />
+      ) : (
+        <>
+          <FleetSummary
+            miners={miners}
+            devices={devices}
+            history={history}
+            isStale={isStale}
+            statusOf={statusOf}
+            onOpen={openMiner}
+          />
 
-      {!isLoading && (
-        // The Collapse panel below uses its own inner "mt" for spacing
-        // instead of this group's `gap` -- a Collapse still occupies a gap
-        // slot on both sides even at 0 height, so relying on `gap` here
-        // would leave a stray double-gap when the panel is closed. A margin
-        // on the *inner* content only ever shows once the panel is actually
-        // open, since Collapse clips overflow while collapsed.
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
           <Box
             sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              alignItems: "center",
-              gap: 1.5,
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "minmax(0,1fr)",
+                md: "repeat(2, minmax(0,1fr))",
+              },
+              gap: 2,
             }}
           >
-            {poolEntries.length >= 1 && (
-              <PoolSelectButton
-                options={poolEntries.map(([url, stats]) => ({
-                  url,
-                  ...stats,
-                }))}
-                totalCount={data?.length ?? 0}
-                totalHashRate={totalHashRate}
-                selected={selectedPool}
-                onChange={setSelectedPool}
-              />
-            )}
-            <SortMenuButton sort={sort} onChange={setSort} />
-            <Tooltip title={t("dashboard.filter.toggle")}>
-              <IconButton
-                size="small"
-                onClick={toggleFilters}
-                aria-label="filters"
-                sx={{
-                  border: "1px solid",
-                  borderColor: filtersOpen ? "primary.main" : "divider",
-                  color: filtersOpen ? "primary.main" : "text.secondary",
-                  borderRadius: 1,
-                }}
-              >
-                <FilterAltIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <BreakdownStrip
+              icon="status"
+              title={t("dashboard.breakdown.status")}
+              hint={t("dashboard.breakdown.statusHint", {
+                count: miners.length,
+              })}
+              segments={statusSegments(miners, statusOf, t)}
+              selected={filters.selectedStatus}
+              onSelect={(s) =>
+                setFilter("selectedStatus", s as MinerStatus | null)
+              }
+            />
+            <BreakdownStrip
+              icon="pools"
+              title={t("dashboard.breakdown.pools")}
+              hint={t("dashboard.breakdown.poolsHint")}
+              segments={poolSegments(miners)}
+              selected={filters.selectedPool}
+              onSelect={(url) => setFilter("selectedPool", url)}
+            />
           </Box>
 
-          <Collapse in={filtersOpen}>
-            <Box
-              sx={{
-                mt: 2,
-                p: 2,
-                borderRadius: 2,
-                border: "1px solid",
-                borderColor: "divider",
-                bgcolor: "background.paper",
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
-              <SearchField />
+          <MinerToolbar
+            sort={sort}
+            onSortChange={setSort}
+            view={view}
+            onViewChange={setView}
+            models={countBy(miners, (m) => m.deviceModel)}
+            versions={countBy(miners, (m) => m.version)}
+            filters={filters}
+            onFilterChange={setFilter}
+            shown={shown.length}
+            total={miners.length}
+          />
 
-              <ChipFilterGroup
-                label={t("dashboard.filter.deviceLabel")}
-                entries={deviceModelEntries}
-                total={data?.length ?? 0}
-                selected={selectedDeviceModel}
-                onChange={setSelectedDeviceModel}
-              />
-
-              <ChipFilterGroup
-                label={t("dashboard.filter.versionLabel")}
-                entries={versionEntries}
-                total={data?.length ?? 0}
-                selected={selectedVersion}
-                onChange={setSelectedVersion}
-              />
-
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
-                <Typography variant="caption" color="text.secondary">
-                  {t("dashboard.filter.alertsLabel")}
-                </Typography>
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                  <Chip
-                    size="small"
-                    label={`${t("dashboard.filter.highTemp", { value: TEMP_THRESHOLD })} (${alertCounts.temp})`}
-                    color={alertTemp ? "error" : "default"}
-                    variant={alertTemp ? "filled" : "outlined"}
-                    onClick={() => setAlertTemp((v) => !v)}
-                  />
-                  <Chip
-                    size="small"
-                    label={`${t("dashboard.filter.highFan", { value: FAN_THRESHOLD })} (${alertCounts.fan})`}
-                    color={alertFan ? "error" : "default"}
-                    variant={alertFan ? "filled" : "outlined"}
-                    onClick={() => setAlertFan((v) => !v)}
-                  />
-                  <Chip
-                    size="small"
-                    label={`${t("dashboard.filter.offline")} (${alertCounts.offline})`}
-                    color={alertOffline ? "error" : "default"}
-                    variant={alertOffline ? "filled" : "outlined"}
-                    onClick={() => setAlertOffline((v) => !v)}
-                  />
-                </Box>
-              </Box>
-            </Box>
-          </Collapse>
-        </Box>
+          {shown.length === 0 ? (
+            <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+              {t("dashboard.toolbar.noResults")}
+            </Typography>
+          ) : view === "list" && !isNarrow ? (
+            <MinerList
+              miners={shown}
+              statusOf={statusOf}
+              hashRateHistory={hashRateHistory}
+              onOpen={openMiner}
+            />
+          ) : (
+            <MinerTiles
+              miners={shown}
+              statusOf={statusOf}
+              hashRateHistory={hashRateHistory}
+              onOpen={openMiner}
+            />
+          )}
+        </>
       )}
 
-      {!isLoading && data && data.length === 0 ? (
-        <AlertList severity="warning" items={[t("dashboard.noData")]} />
-      ) : !isLoading &&
-        data &&
-        data.length > 0 &&
-        filteredData?.length === 0 ? (
-        <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-          {t("dashboard.filter.noResults")}
-        </Typography>
-      ) : (
-        <Grid container sx={gridContainerSx}>
-          {(filteredData ?? []).map((miner, idx) => (
-            <Box
-              key={idx}
-              sx={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "stretch",
-              }}
-            >
-              <MinerCard minerInfo={miner} loading={isLoading} error={error} />
-            </Box>
-          ))}
-        </Grid>
-      )}
+      <MinerDrawer
+        open={drawerOpen}
+        miner={selected}
+        status={selected && statusOf(selected)}
+        hashRateHistory={
+          selectedIp ? hashRateHistory.get(selectedIp) : undefined
+        }
+        onClose={() => setDrawerOpen(false)}
+      />
     </Box>
   );
 };

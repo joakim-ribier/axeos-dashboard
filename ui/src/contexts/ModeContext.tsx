@@ -8,6 +8,7 @@ type Mode = "local" | "remote";
 
 interface ApiPaths {
   miners: string;
+  history: string;
   stats: (ip: string) => string;
   alertsHistory: string;
   config: {
@@ -52,6 +53,7 @@ export const ModeProvider = ({ mode, children }: ModeProviderProps) => {
     mode === "remote" && boardId
       ? {
           miners: `/api/${boardId}/miners`,
+          history: `/api/${boardId}/miners/history`,
           stats: (ip: string) => `/api/${boardId}/${ip}/stats`,
           alertsHistory: `/api/${boardId}/miners/alerts/history`,
           config: {
@@ -61,6 +63,7 @@ export const ModeProvider = ({ mode, children }: ModeProviderProps) => {
         }
       : {
           miners: "/api/miners",
+          history: "/api/miners/history",
           stats: (ip: string) => `/api/miners/${ip}/stats`,
           alertsHistory: "/api/miners/alerts/history",
           config: {

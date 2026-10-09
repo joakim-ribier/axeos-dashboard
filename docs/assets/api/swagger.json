@@ -387,6 +387,26 @@
                 }
             }
         },
+        "/api/miners/history": {
+            "get": {
+                "description": "Hashrate of every configured miner over the last 24 hours, averaged into 15-minute buckets (96 points, oldest first). Feeds the dashboard's fleet chart and per-miner sparklines.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Get the last 24h of every miner, downsampled",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.HistoryResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/miners/pool/fallback/enable": {
             "put": {
                 "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
@@ -480,14 +500,14 @@
         },
         "/api/miners/{hostnameOrIp}/stats": {
             "get": {
-                "description": "Returns today's JSONL entries (one per poll cycle) for a single miner, used by the \"Today's History\" chart.",
+                "description": "Returns every JSONL entry (one per poll cycle) of the last 24 hours for a single miner, oldest first, used by the miner panel's history chart. An empty array when nothing was recorded in that time.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "dashboard-api"
                 ],
-                "summary": "Get today's stats for one miner",
+                "summary": "Get the last 24h of stats for one miner",
                 "parameters": [
                     {
                         "type": "string",
@@ -714,16 +734,51 @@
                 }
             }
         },
-        "/api/{boardId}/{ip}/stats": {
+        "/api/{boardId}/miners/history": {
             "get": {
-                "description": "Returns today's JSONL entries pushed to hashboard.live for a single miner in the board.",
+                "description": "Same as /api/miners/history, for the miners pushed to a hashboard board.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "remote-dashboard-api"
                 ],
-                "summary": "Get today's stats for one remote miner (read-only)",
+                "summary": "Get the last 24h of every remote miner, downsampled (read-only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.HistoryResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "board not found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/{boardId}/{ip}/stats": {
+            "get": {
+                "description": "Same as /api/miners/{hostnameOrIp}/stats, for a miner pushed to a hashboard board.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "remote-dashboard-api"
+                ],
+                "summary": "Get the last 24h of stats for one remote miner (read-only)",
                 "parameters": [
                     {
                         "type": "string",
@@ -1038,6 +1093,38 @@
                     "type": "string"
                 },
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.HistoryResponse": {
+            "type": "object",
+            "properties": {
+                "bucketSeconds": {
+                    "type": "integer"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "miners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.MinerHistory"
+                    }
+                }
+            }
+        },
+        "handler.MinerHistory": {
+            "type": "object",
+            "properties": {
+                "hashRate": {
+                    "description": "TH/s",
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "ip": {
                     "type": "string"
                 }
             }

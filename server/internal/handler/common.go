@@ -311,7 +311,7 @@ func decodeJSONL(path string) ([]latestFileStructure, error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		lineNum++
-		line := scanner.Text()
+		line := scanner.Bytes()
 
 		// Skip blank lines
 		if len(line) == 0 {
@@ -319,7 +319,7 @@ func decodeJSONL(path string) ([]latestFileStructure, error) {
 		}
 
 		var raw latestFileStructure
-		if err := json.Unmarshal([]byte(line), &raw); err != nil {
+		if err := json.Unmarshal(line, &raw); err != nil {
 			log.Printf("warning: skipping malformed JSON line %d in %s: %v", lineNum, path, err)
 			continue
 		}

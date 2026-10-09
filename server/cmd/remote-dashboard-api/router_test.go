@@ -76,8 +76,9 @@ func TestNewRouter_stats(t *testing.T) {
 	minerDir := filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff")
 	writeFixture(t, filepath.Join(minerDir, "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`)
+	ts := time.Now().UTC().Add(-time.Minute).Format(time.RFC3339)
 	writeFixture(t, filepath.Join(minerDir, today+".jsonl"),
-		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
+		`{"ts":"`+ts+`","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 	router := NewRouter(cfg, testVersionChecker(), publicAccessChecker(t, "demo"))

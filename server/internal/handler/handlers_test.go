@@ -187,10 +187,12 @@ func TestStats(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(envDataRoot, dir)
 
-	today := time.Now().UTC().Format("2006-01-02")
+	now := time.Now().UTC()
+	today := now.Format("2006-01-02")
+	ts := now.Add(-time.Minute).Format(time.RFC3339)
 	writeTestFile(t, filepath.Join(dir, "aabbccddeeff", today+".jsonl"),
-		`{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":100000}}`+"\n"+
-			`{"ts":"2026-07-14T10:05:00Z","payload":{"hashRate":110000}}`+"\n")
+		`{"ts":"`+ts+`","payload":{"hashRate":100000}}`+"\n"+
+			`{"ts":"`+ts+`","payload":{"hashRate":110000}}`+"\n")
 
 	miner := config.Bitaxe{Ip: "10.0.0.1", Mac: "aabbccddeeff"}
 	cfg := config.Config{}
@@ -237,6 +239,34 @@ func TestStats_noDataFileToday(t *testing.T) {
 	}
 	if resp.Total != 0 || len(resp.Data) != 0 {
 		t.Errorf("resp = %+v, want an empty result", resp)
+	}
+}
+
+// The last 24 hours, not the current UTC day: yesterday's file is read too,
+// but only what falls inside the window.
+func TestStats_last24Hours(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(envDataRoot, dir)
+
+	now := time.Now().UTC()
+	days := map[string]string{}
+	for _, ts := range []time.Time{now.Add(-25 * time.Hour), now.Add(-23 * time.Hour), now.Add(-time.Minute)} {
+		days[ts.Format("2006-01-02")] += `{"ts":"` + ts.Format(time.RFC3339) + `","payload":{"hashRate":100000}}` + "\n"
+	}
+	for day, content := range days {
+		writeTestFile(t, filepath.Join(dir, "aabbccddeeff", day+".jsonl"), content)
+	}
+
+	w := httptest.NewRecorder()
+	Stats(config.Bitaxe{Ip: "10.0.0.1", Mac: "aabbccddeeff"}, config.Config{}, w,
+		httptest.NewRequest(http.MethodGet, "/api/miners/10.0.0.1/stats", nil))
+
+	var got StatsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if got.Total != 2 {
+		t.Errorf("Total = %d, want 2 (23h and 1min old, not 25h)", got.Total)
 	}
 }
 
@@ -461,8 +491,9 @@ func TestRemoteStats(t *testing.T) {
 	minerDir := filepath.Join(dir, "data", "boards", "demo", "bitaxes", "aabbccddeeff")
 	writeTestFile(t, filepath.Join(minerDir, "latest.json"),
 		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`)
+	ts := time.Now().UTC().Add(-time.Minute).Format(time.RFC3339)
 	writeTestFile(t, filepath.Join(minerDir, today+".jsonl"),
-		`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
+		`{"ts":"`+ts+`","ip":"10.0.0.1","payload":{"hashRate":100000}}`+"\n")
 
 	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
 

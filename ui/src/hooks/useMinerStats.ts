@@ -10,38 +10,19 @@ interface FetchMinerStatsResponse {
   data: MinerInfo[];
 }
 
-const fetchMinerStats = async (url: string): Promise<MinerInfo[]> => {
-  const { data } = await axios.get<FetchMinerStatsResponse>(url);
-  return data.data;
-};
-
-export interface UseMinerStatsReturn {
-  data: MinerInfo[] | undefined;
-  isLoading: boolean;
-  error: Error | null;
-  refetch: () => Promise<void>;
-}
-
-export const useMinerStats = (
-  ip: string,
-  enabled: boolean,
-): UseMinerStatsReturn => {
+/** The last 24h of full-resolution samples for one miner. */
+export const useMinerStats = (ip: string) => {
   const { apiPaths } = useMode();
   const url = apiPaths.stats(ip);
 
-  const query = useQuery<MinerInfo[], Error>({
+  return useQuery<MinerInfo[], Error>({
     queryKey: ["miner-stats", url],
-    queryFn: () => fetchMinerStats(url),
-    staleTime: Infinity,
+    queryFn: async () =>
+      (await axios.get<FetchMinerStatsResponse>(url)).data.data,
+    // Reopening a miner's panel after a poll cycle shows the new samples,
+    // switching back and forth between miners doesn't refetch each time.
+    staleTime: 60_000,
     refetchOnWindowFocus: false,
     retry: 2,
-    enabled: enabled && !!ip,
   });
-
-  return {
-    ...query,
-    refetch: async () => {
-      await query.refetch();
-    },
-  };
 };
