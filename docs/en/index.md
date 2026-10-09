@@ -38,10 +38,12 @@ No authentication required — internal LAN use only.
 
 ### Home
 
-- Overview of all your miners: hashrate, temperature, fans, shares,
-  uptime...
+- Fleet overview: last 24 h hashrate, power, efficiency, electricity
+  cost, shares...
+- Every miner's status at a glance, the ones with a problem first
+- Miners as a list or tiles, with search, filters and sort
+- A miner's full details in one click: charts, pools, totals
 - Lifetime totals (uptime + accepted shares)
-- Primary and fallback pool view, one click away
 - Switch pool and restart on demand
 - New firmware version detection
 - New dashboard version detection
@@ -167,7 +169,7 @@ history of every poll, stored per day.
 
 The dashboard is made of an API and a web interface. It never talks
 directly to the miners — its job is mainly to serve the information
-already stored by the feeder (`latest.json` and the day's history), and
+already stored by the feeder (`latest.json` and the miners' history), and
 to proxy the few control actions (pool switch, restart) to the miners.
 
 ---

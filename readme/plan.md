@@ -83,6 +83,11 @@ every commit.
   `/settings`, with a warning (banner, row badge, and page-top summary)
   whenever the saved config disagrees with what the miner is actually
   reporting.
+- ✅ **Dashboard redesign around the fleet**: a 24 h fleet summary, the
+  miners as a dense list or tiles with their problems first, and a detail
+  panel per miner replace the old cards.
+- ✅ **Page title in a sticky top bar**: every page's title now sits in a
+  top bar that stays on screen, with a compact layout on a phone.
 
 ## To do
 

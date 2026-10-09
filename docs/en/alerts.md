@@ -18,8 +18,8 @@ default, or any other day via the calendar. Available from the sidebar.
 Rather than one row per poll — an alert lasting hours would otherwise
 create dozens of near-identical rows — consecutive occurrences of the
 same alert type on the same miner are grouped into a single **episode**:
-first seen, last seen, and occurrence count (above, "61 occurrences" for
-the firmware update alerts running since the start of the day). An alert
+first seen, last seen, and occurrence count (above, "289 occurrences" for
+the firmware updates pending all day long). An alert
 that only shows up once is displayed with no time range or count (e.g.
 "Atchoum: fan at 76%" above).
 

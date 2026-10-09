@@ -38,10 +38,12 @@ local. Aucune authentification requise — usage réseau local uniquement.
 
 ### Accueil
 
-- Vue d'ensemble de tous les mineurs : hashrate, température,
-  ventilation, shares, uptime...
+- Vue d'ensemble de la flotte : hashrate des dernières 24 h, puissance,
+  efficacité, coût électrique, parts...
+- État de chaque mineur en un coup d'œil, les mineurs à problème en tête
+- Liste ou tuiles des mineurs, avec recherche, filtres et tri
+- Détail complet d'un mineur en un clic : graphiques, pools, totaux
 - Calcul des totaux de vie (uptime + shares acceptés)
-- Vue des pools primaire et secours, accessible en un clic
 - Switch de pool et redémarrage à la demande
 - Détection des nouvelles versions de firmware
 - Détection d'une nouvelle version du dashboard
@@ -170,7 +172,7 @@ l'historique de chaque itération, stocké par jour.
 Le dashboard comprend une API et une interface web. Il ne parle pas
 directement aux mineurs — son rôle est principalement de restituer les
 informations déjà stockées par le feeder (`latest.json` et l'historique
-du jour), et de proxyfier les quelques actions de contrôle (switch de
+des mineurs), et de proxyfier les quelques actions de contrôle (switch de
 pool, redémarrage) vers les mineurs.
 
 ---

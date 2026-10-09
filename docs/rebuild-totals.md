@@ -19,7 +19,7 @@ d'installation (`totals.json` perdu ou corrompu), une migration de
 données, ou pour reconstruire l'historique existant avant que cette
 fonctionnalité n'ait été activée.
 
-[Aller à Totaux des cards →]({{ '/dashboard.html#totaux-des-cards' | relative_url }}){: .btn .btn-primary }
+[Aller à La flotte →]({{ '/dashboard.html#flotte' | relative_url }}){: .btn .btn-primary }
 
 <div class="terminal-card">
   <div class="terminal-card-header">

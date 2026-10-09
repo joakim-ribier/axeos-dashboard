@@ -143,7 +143,8 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/miners` | `ListMiners()` | All miners + latest snapshot |
 | `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alerts across miners |
 | `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One day's alerts, grouped into episodes, paginated |
-| `GET` | `/api/miners/{hostnameOrIp}/stats` | `Stats()` | Today's JSONL entries for one miner |
+| `GET` | `/api/miners/history` | `History()` | Last 24h of every miner's hashrate, in 96 buckets of 15 min (0 = offline, null = no reading) |
+| `GET` | `/api/miners/{hostnameOrIp}/stats` | `Stats()` | Last 24h (rolling) of JSONL entries for one miner |
 | `POST` | `/api/miners/{hostnameOrIp}/restart` | `Restart()` | Proxies restart to device |
 | `PUT` | `/api/miners/pool/{primary\|fallback}/enable` | `SwitchPool()` | Switches stratum pool |
 | `GET` | `/api/config/miners` | `ListMinersConfig()` | Read `miners.yml` |
@@ -164,7 +165,8 @@ remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all read-onl
 | `GET` | `/api/{boardId}/miners` | `ListRemoteMiners()` | Miners pushed to this board |
 | `GET` | `/api/{boardId}/miners/alerts` | `ListRemoteAlerts()` | Recent alerts for this board |
 | `GET` | `/api/{boardId}/miners/alerts/history` | `ListRemoteAlertsHistory()` | Paginated alert episodes for this board |
-| `GET` | `/api/{boardId}/{ip}/stats` | `RemoteStats()` | Today's stats for one remote miner |
+| `GET` | `/api/{boardId}/miners/history` | `RemoteHistory()` | Last 24h of every remote miner's hashrate, same buckets as local |
+| `GET` | `/api/{boardId}/{ip}/stats` | `RemoteStats()` | Last 24h (rolling) of stats for one remote miner |
 | `GET` | `/api/{boardId}/config/miners` | `RemoteMinersConfig()` | The board's `miners.yml`, read-only |
 | `GET` | `/api/{boardId}/config/settings` | `RemoteAppSettings()` | The board's `settings.yml`, read-only |
 
@@ -181,22 +183,28 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 ### React Frontend (`ui/`)
 
-Single page (`/`). MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
+Pages: Home (`/`), Alerts, Settings, Backups (local only), each also under `/{boardId}` in remote mode. MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
+
+Every page declares its title with `PageHeader`, which renders into the sticky `TopBar` (a portal into a slot `AppLayout` provides) rather than above the page; on a phone the bar keeps the title, auto-refresh and the bell, the rest unfolds under a "More" button.
 
 #### Key Files
 
 | File | Role |
 |---|---|
 | `src/App.tsx` | MUI theme, i18next, React Query provider, routing |
-| `src/pages/Home.tsx` | Dashboard: `PageHeader` + `GlobalStats` + responsive grid of `MinerCard` (1/2/3 cols) |
-| `src/components/ui/MinerCard/MinerCard.tsx` | Main card: hash rate, shares, temp, fan, pool, uptime, version; collapsible pool details + lazy-loaded stats chart |
-| `src/components/ui/GlobalStats/GlobalStats.tsx` | Aggregated totals across all miners |
+| `src/pages/Home.tsx` | Dashboard: `FleetSummary` + status/pool `BreakdownStrip`s (also quick filters) + `MinerToolbar` + `MinerList`/`MinerTiles` + `MinerDrawer` |
+| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`) |
+| `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
+| `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
+| `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
+| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp >= 62 / fan >= 75) > ok |
 | `src/hooks/useMiners.ts` | TanStack Query: `GET /api/miners`, Zod validation, staleTime=Infinity |
+| `src/hooks/useMinersHistory.ts` | `GET /api/miners/history` -- the fleet chart and every sparkline |
 | `src/hooks/useMinerActions.ts` | Local state (isExecuting, error); restart + pool switch mutations |
 | `src/schemas/minerSchema.ts` | Zod schema validating API response |
 | `src/utils/format.ts` | `formatMetric()` (K/M/G/T suffixes), `formatDuration()`, `formatTimestamp()` |
 
-Charts: ApexCharts + Recharts (daily stats, lazy-loaded on first chart open). Validation: Zod. State: Zustand (present as dep, minimal current use in core flow).
+Charts: Recharts (fleet chart, per-miner 24h chart) plus a hand-drawn SVG sparkline. Validation: Zod. State: Zustand (present as dep, minimal current use in core flow).
 
 Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard).
 Route `/:boardId` → remote mode; route `/` → local mode.
@@ -318,4 +326,4 @@ remote-dashboard-api's data dir has no override of its own -- always `{storage.d
 
 **Go:** `go-chi/chi/v5`, `robfig/cron/v3`, `go.yaml.in/yaml/v3`
 
-**React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `apexcharts`, `recharts`, `zustand`
+**React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `recharts`, `zustand`
