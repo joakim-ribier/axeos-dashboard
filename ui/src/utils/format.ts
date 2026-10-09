@@ -1,21 +1,4 @@
 // src/utils/format.ts
-/** Convert a monetary amount expressed in euros to a string of cents.
- *
- * @param euros      – amount in euros (e.g. 0.1234)
- * @param decimals   – number of decimal places to keep after the cent value
- *                     (default = 2 → "12.34 €")
- * @returns a string containing the amount in cents, rounded to the given
- *          number of decimals.
- *
- * Example:
- *   formatCents(0.1234)      → "12.34"
- *   formatCents(0.123456,4) → "12.3456"
- */
-export function formatCents(euros: number, decimals: number = 2): string {
-  const cents = euros * 100;
-  return cents.toFixed(decimals);
-}
-
 /**
  * Formats a timestamp supplied as a string into a short, locale‑aware date‑time.
  *
@@ -98,16 +81,6 @@ export function formatMetric(num: number): string {
     return `${sign}${Math.round(value)}`;
   }
   return `${sign}${value.toFixed(2)} ${units[magnitude]}`;
-}
-
-// ---------------------------------------------------------------------------
-// Helper: format MM:SS for countdown timer
-// ---------------------------------------------------------------------------
-export function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
 // ---------------------------------------------------------------------------

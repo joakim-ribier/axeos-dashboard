@@ -1,26 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatCents,
-  formatDuration,
-  formatMetric,
-  formatTime,
-  formatTimestamp,
-} from "./format";
-
-describe("formatCents", () => {
-  it("converts euros to a cents string with 2 decimals by default", () => {
-    expect(formatCents(0.1234)).toBe("12.34");
-  });
-
-  it("respects a custom decimals count", () => {
-    expect(formatCents(0.123456, 4)).toBe("12.3456");
-  });
-
-  it("handles zero", () => {
-    expect(formatCents(0)).toBe("0.00");
-  });
-});
+import { formatDuration, formatMetric, formatTimestamp } from "./format";
 
 describe("formatTimestamp", () => {
   it("returns — for an undefined timestamp", () => {
@@ -66,20 +46,6 @@ describe("formatMetric", () => {
 
   it("handles zero", () => {
     expect(formatMetric(0)).toBe("0");
-  });
-});
-
-describe("formatTime", () => {
-  it("formats zero as 0:00", () => {
-    expect(formatTime(0)).toBe("0:00");
-  });
-
-  it("pads seconds under 10", () => {
-    expect(formatTime(65_000)).toBe("1:05");
-  });
-
-  it("does not roll minutes over into hours", () => {
-    expect(formatTime(3_661_000)).toBe("61:01");
   });
 });
 
