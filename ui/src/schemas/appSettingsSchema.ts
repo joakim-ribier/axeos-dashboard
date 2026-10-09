@@ -81,15 +81,6 @@ export const appSettingsSchema = z.object({
 });
 
 export type PowerDevice = z.infer<typeof powerDeviceSchema>;
-export type ElectricitySettings = z.infer<typeof electricitySchema>;
-export type PoolsSettings = z.infer<typeof poolsSchema>;
-export type RemoteSettings = z.infer<typeof remoteSchema>;
-export type FirmwareReposSettings = z.infer<typeof firmwareReposSchema>;
-export type AppSettingsDefaults = z.infer<typeof appSettingsDefaultsSchema>;
-export type AppSettingsReadOnly = z.infer<typeof appSettingsReadOnlySchema>;
-export type RemotePushEndpointStatus = z.infer<
-  typeof remotePushEndpointStatusSchema
->;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 
 // What POST /api/config/settings accepts -- the editable subset only

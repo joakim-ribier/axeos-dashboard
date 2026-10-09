@@ -27,7 +27,7 @@ export interface MinerInfo {
   totalUptimeSeconds?: number;
   totalSharesAccepted?: number;
   totalSharesRejected?: number;
-  totalElectricityCost?: number; // € since the miner has been tracked -- summed fleet-wide by GlobalStats, not shown per-miner
+  totalElectricityCost?: number; // € since the miner has been tracked
 
   responseTime: number; // ms
 

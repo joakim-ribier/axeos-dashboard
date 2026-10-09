@@ -128,8 +128,8 @@ describe("matchesSearch", () => {
       expect(matchesSearch(baseMiner, "volts>10")).toBe(false);
     });
 
-    it("compares temp/fan against the rounded value shown on the card, not the raw one", () => {
-      // MinerCard displays temp/fan via toFixed(0) — a raw 59.6 shows as
+    it("compares temp/fan against the rounded value shown on the dashboard, not the raw one", () => {
+      // The dashboard displays temp/fan via toFixed(0) — a raw 59.6 shows as
       // "60°C", so ">=60" and ">59" must agree once rounded.
       const fractional: Miner = { ...baseMiner, temp: 59.6 };
 

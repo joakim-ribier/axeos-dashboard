@@ -5,45 +5,96 @@
       "description": "Overview of all connected AxeOs miners.",
       "title": "Dashboard"
     },
-    "loading": "Loading...",
     "noData": "No data yet. The configured miners haven't been polled for the first time yet -- try again in a moment.",
-    "filter": {
-      "toggle": "Filters",
+    "toolbar": {
+      "search": "Search",
+      "searchHint": "Name, IP, model, temp>60…",
+      "sort": "Sort",
+      "model": "Model",
+      "firmware": "Firmware",
       "all": "All",
-      "miners": "miners",
-      "noResults": "No miners match your search.",
-      "highTemp": "Temp > {{value}}°C",
-      "highFan": "Fan > {{value}}%",
-      "offline": "Offline",
-      "poolLabel": "Pool",
-      "deviceLabel": "Device",
-      "versionLabel": "Version",
-      "alertsLabel": "Alerts"
+      "list": "List",
+      "tiles": "Tiles",
+      "count": "{{shown}} of {{total}} miners",
+      "noResults": "No miners match your filters."
     },
     "sort": {
-      "oldest": "Oldest",
-      "sharesAccepted": "Most shares",
-      "fan": "Fastest fan",
+      "hashrate": "Hashrate",
       "temp": "Hottest",
+      "fan": "Fastest fan",
+      "sharesAccepted": "Most shares",
+      "oldest": "Oldest",
       "pool": "Pool (A-Z)"
     },
-    "stats": {
-      "lastUpdate": "Last update:",
-      "name": "Name",
-      "title": "Pools",
-      "totalPower": "Total TH/s",
-      "timestampDivergence": "Miners have different timestamps",
-      "kpi": {
-        "hashrate": "Total Hashrate",
-        "minMax": "Min · Max per miner",
-        "miners": "Miners",
-        "shares": "Shares (session)",
-        "allTime": "All-time: {{value}}",
-        "tempFan": "Temp · Fan",
-        "maxFan": "Max fan speed",
-        "electricityCost": "Electricity",
-        "costPerDay": "~{{value}}\u00a0/\u00a0day"
-      }
+    "fleet": {
+      "hashrate24h": "Fleet hashrate · 24 h",
+      "hashrate": "Hashrate",
+      "average": "24 h average: {{value}} TH/s",
+      "lastPoll": "Last poll {{value}}"
+    },
+    "kpi": {
+      "power": "Power",
+      "efficiency": "Efficiency",
+      "electricity": "Electricity",
+      "costPerDay": "{{value}} / day",
+      "allTime": "All-time: {{value}}",
+      "shares": "Shares",
+      "bestDiff": "Best diff",
+      "temperature": "Temperature",
+      "maxFan": "Max fan {{value}} %"
+    },
+    "breakdown": {
+      "status": "Miner status",
+      "statusHint_one": "{{count}} miner",
+      "statusHint_other": "{{count}} miners",
+      "pools": "Pools",
+      "poolsHint": "share of hashrate"
+    },
+    "status": {
+      "offline": "Offline",
+      "configError": "Config error",
+      "stale": "Delayed",
+      "warning": "Alert",
+      "ok": "Online"
+    },
+    "columns": {
+      "miner": "Miner",
+      "hashrate": "Hashrate · 24 h",
+      "temp": "Chip temp",
+      "fan": "Fan",
+      "power": "Power",
+      "pool": "Pool",
+      "firmware": "Firmware"
+    },
+    "issues": {
+      "unreachable": "Unreachable · checked {{value}}",
+      "tempHigh": "Chip temperature {{value}} °C (threshold {{threshold}} °C)",
+      "fanHigh": "Fan {{value}} % (threshold {{threshold}} %)",
+      "update": "Firmware {{value}} available",
+      "stale": "No reading since {{value}}"
+    },
+    "drawer": {
+      "close": "Close",
+      "uptime": "Uptime",
+      "ping": "Pool ping",
+      "lastPoll": "Last poll",
+      "poolUser": "User",
+      "confirmSwitch": {
+        "primary": "Switch {{ip}} to its primary pool? The miner restarts to apply it.",
+        "fallback": "Switch {{ip}} to its fallback pool? The miner restarts to apply it."
+      },
+      "threshold": "Threshold {{value}}",
+      "pools": "Pools",
+      "activePool": "Active",
+      "session": "Session",
+      "allTime": "Since tracking began",
+      "device": "Device",
+      "sharesAccepted": "Shares accepted",
+      "rejectRate": "Rejected",
+      "mac": "MAC address"
+    },
+    "health": {
+      "ok": "{{ok}}/{{total}} miners OK"
     }
   },
   "dialog": {
@@ -57,13 +108,12 @@
     }
   },
   "graph": {
-    "day": "Day",
+    "day": "24H",
     "loading": "Loading data...",
     "noDataAvailable": "No data available"
   },
   "miner": {
     "actions": {
-      "menuLabel": "More actions",
       "disabledHint": "Disabled by this dashboard's configuration.",
       "restart": {
         "description": "Restart miner {{ip}}.",
@@ -73,50 +123,26 @@
       "switchPool": {
         "description": "Switch pool of {{ip}}.",
         "label": "Switch",
-        "title": "Switch miner pool",
-        "toMain": "Switch",
-        "toFallback": "Switch"
+        "title": "Switch miner pool"
       }
     },
-    "bestSession": "Best:",
     "blockFound": {
       "label": "{{count}} block",
       "tooltip": "Block found this session!"
     },
-    "energy": "Energy (J/TH):",
     "fallbackPool": "Fallback",
-    "fanspeed": "Fan speed:",
-    "hashrate": "{{value}} TH/s",
-    "lastUpdate": "Last update: {{value}}",
     "mainPool": "Primary",
-    "poolUrl": "Pool:",
-    "poolUser": "User:",
-    "responseTime": "Ping:",
-    "sharesAccepted": "Shares accepted:",
-    "sharesRejected": "Shares rejected:",
-    "statsTimeline": "Today's History",
-    "temp": "Temp:",
+    "statsTimeline": "Last 24 hours",
     "openDevice": "Open device UI",
     "openPool": "Open pool dashboard",
-    "unknown": "Unknown miner",
     "updateAvailable": "Update available",
-    "uptime": "Uptime:",
-    "totalUptimeLabel": "Total uptime",
-    "totalSharesLabel": "Total shares accepted",
-    "totalsLabel": "All-time Totals",
     "health": {
-      "alive": "Reachable",
-      "unreachable": "Unreachable",
-      "unknown": "Health check pending"
+      "unreachable": "Unreachable"
     },
     "error": {
       "macMismatch": "Configuration error",
       "copy": "Copy",
       "copied": "Copied!"
-    },
-    "sections": {
-      "pool": "Pool",
-      "stats": "Stats"
     }
   },
   "nav": {
@@ -214,14 +240,8 @@
     "retry": "Retry"
   },
   "common": {
-    "expand": "Show details",
-    "collapse": "Hide details",
     "on": "on",
     "off": "off"
-  },
-  "theme": {
-    "dark": "Dark",
-    "light": "Light"
   },
   "topBar": {
     "autoRefreshOn": "Auto-refresh is on",

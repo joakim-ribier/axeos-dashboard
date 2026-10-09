@@ -5,45 +5,96 @@
       "description": "Vue d’ensemble de tous les mineurs AxeOs connectés.",
       "title": "Tableau de bord"
     },
-    "loading": "Chargement...",
     "noData": "Aucune donnée pour le moment. Le relevé initial des mineurs configurés n'a pas encore eu lieu — réessaie dans quelques instants.",
-    "filter": {
-      "toggle": "Filtres",
+    "toolbar": {
+      "search": "Rechercher",
+      "searchHint": "Nom, IP, modèle, temp>60…",
+      "sort": "Tri",
+      "model": "Modèle",
+      "firmware": "Firmware",
       "all": "Tous",
-      "miners": "mineurs",
-      "noResults": "Aucun mineur ne correspond à votre recherche.",
-      "highTemp": "Temp > {{value}}°C",
-      "highFan": "Ventil. > {{value}}%",
-      "offline": "Hors ligne",
-      "poolLabel": "Pool",
-      "deviceLabel": "Modèle",
-      "versionLabel": "Version",
-      "alertsLabel": "Alertes"
+      "list": "Liste",
+      "tiles": "Tuiles",
+      "count": "{{shown}} sur {{total}} mineurs",
+      "noResults": "Aucun mineur ne correspond à ces filtres."
     },
     "sort": {
-      "oldest": "Plus ancien",
-      "sharesAccepted": "Plus de parts",
-      "fan": "Ventilateur max",
+      "hashrate": "Hashrate",
       "temp": "Plus chaud",
+      "fan": "Ventilateur max",
+      "sharesAccepted": "Plus de parts",
+      "oldest": "Plus ancien",
       "pool": "Pool (A-Z)"
     },
-    "stats": {
-      "lastUpdate": "Dernière mise à jour :",
-      "name": "Nom",
+    "fleet": {
+      "hashrate24h": "Hashrate de la flotte · 24 h",
+      "hashrate": "Hashrate",
+      "average": "Moyenne 24 h : {{value}} TH/s",
+      "lastPoll": "Dernier relevé {{value}}"
+    },
+    "kpi": {
+      "power": "Puissance",
+      "efficiency": "Efficacité",
+      "electricity": "Électricité",
+      "costPerDay": "{{value}} / jour",
+      "allTime": "Depuis le début : {{value}}",
+      "shares": "Parts",
+      "bestDiff": "Meilleure diff.",
+      "temperature": "Température",
+      "maxFan": "Ventil. max {{value}} %"
+    },
+    "breakdown": {
+      "status": "État des mineurs",
+      "statusHint_one": "{{count}} mineur",
+      "statusHint_other": "{{count}} mineurs",
       "pools": "Pools",
-      "totalPower": "TH/s total",
-      "timestampDivergence": "Les mineurs ont des timestamps différents",
-      "kpi": {
-        "hashrate": "Hashrate total",
-        "minMax": "Min · Max par mineur",
-        "miners": "Mineurs",
-        "shares": "Parts (session)",
-        "allTime": "Depuis le début : {{value}}",
-        "tempFan": "Temp · Ventil.",
-        "maxFan": "Vitesse ventilateur max",
-        "electricityCost": "Électricité",
-        "costPerDay": "~{{value}}\u00a0/\u00a0jour"
-      }
+      "poolsHint": "part du hashrate"
+    },
+    "status": {
+      "offline": "Hors ligne",
+      "configError": "Erreur de config",
+      "stale": "En retard",
+      "warning": "En alerte",
+      "ok": "En ligne"
+    },
+    "columns": {
+      "miner": "Mineur",
+      "hashrate": "Hashrate · 24 h",
+      "temp": "Temp. puce",
+      "fan": "Ventilateur",
+      "power": "Conso.",
+      "pool": "Pool",
+      "firmware": "Firmware"
+    },
+    "issues": {
+      "unreachable": "Injoignable · vérifié {{value}}",
+      "tempHigh": "Température puce {{value}} °C (seuil {{threshold}} °C)",
+      "fanHigh": "Ventilateur {{value}} % (seuil {{threshold}} %)",
+      "update": "Firmware {{value}} disponible",
+      "stale": "Aucun relevé depuis {{value}}"
+    },
+    "drawer": {
+      "close": "Fermer",
+      "uptime": "Temps de fonctionnement",
+      "ping": "Ping du pool",
+      "lastPoll": "Dernier relevé",
+      "poolUser": "Utilisateur",
+      "confirmSwitch": {
+        "primary": "Basculer {{ip}} sur son pool principal ? Le mineur redémarre pour l'appliquer.",
+        "fallback": "Basculer {{ip}} sur son pool de secours ? Le mineur redémarre pour l'appliquer."
+      },
+      "threshold": "Seuil {{value}}",
+      "pools": "Pools",
+      "activePool": "Actif",
+      "session": "Session",
+      "allTime": "Depuis le début",
+      "device": "Appareil",
+      "sharesAccepted": "Parts acceptées",
+      "rejectRate": "Rejetées",
+      "mac": "Adresse MAC"
+    },
+    "health": {
+      "ok": "{{ok}}/{{total}} mineurs OK"
     }
   },
   "dialog": {
@@ -57,13 +108,12 @@
     }
   },
   "graph": {
-    "day": "Jour",
+    "day": "24H",
     "loading": "Chargement des données...",
     "noDataAvailable": "Aucune donnée disponible"
   },
   "miner": {
     "actions": {
-      "menuLabel": "Plus d'actions",
       "disabledHint": "Désactivé par la configuration de ce tableau de bord.",
       "restart": {
         "description": "Demande de redémarrage pour le mineur {{ip}}.",
@@ -73,50 +123,26 @@
       "switchPool": {
         "description": "Demande de changement de pool pour {{ip}}.",
         "label": "Basculer",
-        "title": "Basculer de Pool",
-        "toMain": "Basculer",
-        "toFallback": "Basculer"
+        "title": "Basculer de Pool"
       }
     },
-    "bestSession": "Meilleure :",
     "blockFound": {
       "label": "{{count}} bloc",
       "tooltip": "Bloc trouvé cette session !"
     },
-    "energy": "Énergie (J/TH) :",
     "fallbackPool": "Secours",
-    "fanspeed": "Ventilateur :",
-    "hashrate": "{{value}} TH/s",
-    "lastUpdate": "Dernière mise à jour : {{value}}",
     "mainPool": "Principal",
-    "poolUrl": "Pool :",
-    "poolUser": "Utilisateur :",
-    "responseTime": "Ping :",
-    "sharesAccepted": "Parts acceptées :",
-    "sharesRejected": "Parts rejetées :",
-    "statsTimeline": "Historique de la journée",
-    "temp": "Température :",
+    "statsTimeline": "Dernières 24 h",
     "openDevice": "Ouvrir l'interface du mineur",
     "openPool": "Ouvrir le tableau de bord du pool",
-    "unknown": "Mineur inconnu",
     "updateAvailable": "Mise à jour disponible",
-    "uptime": "Temps de fonctionnement :",
-    "totalUptimeLabel": "Temps de fonctionnement total",
-    "totalSharesLabel": "Total des parts acceptées",
-    "totalsLabel": "Totaux cumulés",
     "health": {
-      "alive": "Accessible",
-      "unreachable": "Inaccessible",
-      "unknown": "Vérification en attente"
+      "unreachable": "Inaccessible"
     },
     "error": {
       "macMismatch": "Erreur de configuration",
       "copy": "Copier",
       "copied": "Copié !"
-    },
-    "sections": {
-      "pool": "Pool",
-      "stats": "Stats"
     }
   },
   "nav": {
@@ -214,14 +240,8 @@
     "retry": "Réessayer"
   },
   "common": {
-    "expand": "Voir les détails",
-    "collapse": "Masquer les détails",
     "on": "activé",
     "off": "désactivé"
-  },
-  "theme": {
-    "dark": "Sombre",
-    "light": "Clair"
   },
   "topBar": {
     "autoRefreshOn": "Actualisation auto activée",

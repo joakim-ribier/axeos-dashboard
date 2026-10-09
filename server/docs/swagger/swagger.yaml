@@ -211,6 +211,27 @@ definitions:
       message:
         type: string
     type: object
+  handler.HistoryResponse:
+    properties:
+      bucketSeconds:
+        type: integer
+      from:
+        type: string
+      miners:
+        items:
+          $ref: '#/definitions/handler.MinerHistory'
+        type: array
+    type: object
+  handler.MinerHistory:
+    properties:
+      hashRate:
+        description: TH/s
+        items:
+          type: number
+        type: array
+      ip:
+        type: string
+    type: object
   handler.StatsResponse:
     properties:
       data:
@@ -571,8 +592,8 @@ info:
 paths:
   /api/{boardId}/{ip}/stats:
     get:
-      description: Returns today's JSONL entries pushed to hashboard.live for a single
-        miner in the board.
+      description: Same as /api/miners/{hostnameOrIp}/stats, for a miner pushed to
+        a hashboard board.
       parameters:
       - description: hashboard board ID
         in: path
@@ -595,7 +616,7 @@ paths:
           description: data file missing or unreadable
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Get today's stats for one remote miner (read-only)
+      summary: Get the last 24h of stats for one remote miner (read-only)
       tags:
       - remote-dashboard-api
   /api/{boardId}/config/miners:
@@ -732,6 +753,30 @@ paths:
             $ref: '#/definitions/handler.AlertHistoryResponse'
       summary: List a single day's recorded miner alerts for a hashboard board, grouped
         into episodes and paginated (read-only)
+      tags:
+      - remote-dashboard-api
+  /api/{boardId}/miners/history:
+    get:
+      description: Same as /api/miners/history, for the miners pushed to a hashboard
+        board.
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.HistoryResponse'
+        "404":
+          description: board not found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get the last 24h of every remote miner, downsampled (read-only)
       tags:
       - remote-dashboard-api
   /api/backups:
@@ -970,8 +1015,9 @@ paths:
       - dashboard-api
   /api/miners/{hostnameOrIp}/stats:
     get:
-      description: Returns today's JSONL entries (one per poll cycle) for a single
-        miner, used by the "Today's History" chart.
+      description: Returns every JSONL entry (one per poll cycle) of the last 24 hours
+        for a single miner, oldest first, used by the miner panel's history chart.
+        An empty array when nothing was recorded in that time.
       parameters:
       - description: Miner IP or configured hostname
         in: path
@@ -989,7 +1035,7 @@ paths:
           description: miner not found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Get today's stats for one miner
+      summary: Get the last 24h of stats for one miner
       tags:
       - dashboard-api
   /api/miners/alerts:
@@ -1049,6 +1095,21 @@ paths:
             $ref: '#/definitions/handler.AlertHistoryResponse'
       summary: List a single day's recorded miner alerts, grouped into episodes and
         paginated
+      tags:
+      - dashboard-api
+  /api/miners/history:
+    get:
+      description: Hashrate of every configured miner over the last 24 hours, averaged
+        into 15-minute buckets (96 points, oldest first). Feeds the dashboard's fleet
+        chart and per-miner sparklines.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.HistoryResponse'
+      summary: Get the last 24h of every miner, downsampled
       tags:
       - dashboard-api
   /api/miners/pool/fallback/enable:

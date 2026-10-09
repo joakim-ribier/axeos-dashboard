@@ -115,3 +115,20 @@ export const alertHistoryResponseSchema = z.object({
 });
 
 export type AlertHistoryResponse = z.infer<typeof alertHistoryResponseSchema>;
+
+// GET /api/miners/history (and the remote equivalent) -- see
+// handler.HistoryResponse server-side. Each series has one point per
+// bucket, oldest first, starting at `from`. A hashRate of 0 means the miner
+// was unreachable; null means nothing was recorded at all (feeder stopped).
+const minerHistorySchema = z.object({
+  ip: z.string(),
+  hashRate: z.array(z.number().nullable()),
+});
+
+export const minersHistorySchema = z.object({
+  from: z.string(),
+  bucketSeconds: z.number(),
+  miners: z.array(minerHistorySchema),
+});
+
+export type MinersHistory = z.infer<typeof minersHistorySchema>;

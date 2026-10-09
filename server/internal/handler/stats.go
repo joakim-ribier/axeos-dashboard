@@ -18,19 +18,22 @@ import (
 // HTTP handlers
 // ---------------------------------------------------------------------------
 
-// StatsResponse wraps the daily stats for a single miner.
+// rollingWindow is how far back every chart looks: the last 24 hours rather
+// than the current day, which the storage splits on UTC midnight -- a "day"
+// that would start at some arbitrary local hour and restart almost empty
+// right after it.
+const rollingWindow = 24 * time.Hour
+
+// StatsResponse wraps the last 24h of stats for a single miner.
 type StatsResponse struct {
 	Total int               `json:"total"`
 	Data  []model.MinerInfo `json:"data"`
 }
 
 // Stats handles GET /api/miners/{miner}/stats.
-// It retrieves the daily JSONL file for the specified miner (e.g. 2026-05-04.jsonl)
-// and returns all entries for the day. Returns an empty array when no data is
-// available yet for today.
 //
-// @Summary Get today's stats for one miner
-// @Description Returns today's JSONL entries (one per poll cycle) for a single miner, used by the "Today's History" chart.
+// @Summary Get the last 24h of stats for one miner
+// @Description Returns every JSONL entry (one per poll cycle) of the last 24 hours for a single miner, oldest first, used by the miner panel's history chart. An empty array when nothing was recorded in that time.
 // @Tags dashboard-api
 // @Produce json
 // @Param hostnameOrIp path string true "Miner IP or configured hostname"
@@ -44,19 +47,9 @@ func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Build the path to today's JSONL file: <dataRoot>/<mac>/YYYY-MM-DD.jsonl
-	root := getDataRoot(cfg.Storage)
-	today := time.Now().UTC().Format("2006-01-02")
-	path := filepath.Join(root, key, fmt.Sprintf("%s.jsonl", today))
-
-	entries, err := decodeJSONL(path)
+	now := time.Now()
+	entries, err := readWindow(filepath.Join(getDataRoot(cfg.Storage), key), now.Add(-rollingWindow), now)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			// Today's file doesn't exist yet (fresh day, feeder hasn't
-			// polled since midnight) -- an empty result, not an error.
-			writeStatsResponse(w, []model.MinerInfo{})
-			return
-		}
 		writeErrorResponse(w, fmt.Sprintf("failed to read data file: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -68,6 +61,26 @@ func Stats(miner config.Bitaxe, cfg config.Config, w http.ResponseWriter, r *htt
 	}
 
 	writeStatsResponse(w, stats)
+}
+
+// readWindow returns the lines of dir's daily files (named by UTC date)
+// timestamped within [from, to). A day with no file yet -- the feeder hasn't
+// polled since midnight, or wasn't running -- simply contributes nothing.
+func readWindow(dir string, from, to time.Time) ([]latestFileStructure, error) {
+	var lines []latestFileStructure
+	for day := from.UTC().Truncate(24 * time.Hour); day.Before(to); day = day.Add(24 * time.Hour) {
+		entries, err := decodeJSONL(filepath.Join(dir, day.Format("2006-01-02")+".jsonl"))
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return lines, err
+		}
+		for _, entry := range entries {
+			ts, err := time.Parse(time.RFC3339, entry.Timestamp)
+			if err == nil && !ts.Before(from) && ts.Before(to) {
+				lines = append(lines, entry)
+			}
+		}
+	}
+	return lines, nil
 }
 
 // writeStatsResponse encodes the stats response as JSON.

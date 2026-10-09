@@ -1,7 +1,7 @@
 // src/utils/minerSearch.ts
 import { Miner } from "@/schemas/minerSchema";
 
-// The same fields actually surfaced to the user in MinerCard.tsx.
+// The fields shown for a miner on the dashboard.
 const SEARCHABLE_FIELDS: (keyof Miner)[] = [
   "hostname",
   "alias",
@@ -17,7 +17,7 @@ const SEARCHABLE_FIELDS: (keyof Miner)[] = [
 
 interface NumericFieldConfig {
   field: keyof Miner;
-  // temp/fan are displayed rounded to the nearest integer on MinerCard
+  // temp/fan are displayed rounded to the nearest integer on the dashboard
   // (toFixed(0)) — round before comparing so a search matches what the
   // user actually sees. hashrate/power/uptime are shown with more
   // precision (or aren't rounded to a whole unit), so compare raw.

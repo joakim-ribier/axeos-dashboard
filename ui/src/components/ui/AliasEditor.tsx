@@ -24,7 +24,7 @@ interface AliasEditorProps {
 }
 
 /** Per-miner display-name override: an optional alias shown everywhere the
- * hostname otherwise would be (MinerCard, notifications, this same table's
+ * hostname otherwise would be (the dashboard, notifications, this same table's
  * Name column...) -- defaults to the hostname when left empty. Unlike
  * hostname, an alias is never touched by a network discovery refresh (see
  * the "select an already-configured device" flow in Settings.tsx), so it's

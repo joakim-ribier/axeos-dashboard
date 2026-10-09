@@ -1,4 +1,4 @@
-// src/components/ui/MinerCard/MinerStatsChart.tsx
+// src/components/dashboard/drawer/MinerStatsChart.tsx
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Box, Stack, Typography } from "@mui/material";
@@ -14,6 +14,8 @@ import {
 } from "recharts";
 
 import { MinerInfo } from "@/types/miner";
+
+import { bridgeAreas, withBridgeSeries } from "../gapBridges";
 
 interface ChartField {
   key: keyof MinerInfo;
@@ -91,19 +93,21 @@ export const MinerStatsChart = ({
         });
     }
 
-    // "day" mode: hourly averages
+    // "day" mode: hourly averages over the last 24h. Keyed by the hour's
+    // actual start rather than its "HH:00" label, since the window spans two
+    // calendar days -- the same hour of yesterday and today must not merge.
     type Bucket = {
       sums: Partial<
         Pick<MinerInfo, "temp" | "fanspeed" | "hashRateTHs" | "responseTime">
       >;
       count: number;
     };
-    const buckets: Record<string, Bucket> = {};
+    const buckets = new Map<number, Bucket>();
     data.forEach((entry) => {
-      const date = new Date(entry.timestamp);
-      const key = String(date.getHours()).padStart(2, "0") + ":00";
-      if (!buckets[key]) buckets[key] = { sums: {}, count: 0 };
-      const b = buckets[key];
+      const hourStart = new Date(entry.timestamp).setMinutes(0, 0, 0);
+      if (!buckets.has(hourStart))
+        buckets.set(hourStart, { sums: {}, count: 0 });
+      const b = buckets.get(hourStart)!;
       b.count++;
       AVAILABLE_FIELDS.forEach((f) => {
         const val = entry[f.key];
@@ -114,21 +118,29 @@ export const MinerStatsChart = ({
       });
     });
 
-    return Object.entries(buckets)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([hour, { sums, count }]) => ({
-        formattedTime: hour,
-        originalTimestamp: hour,
-        temp: sums.temp !== undefined ? sums.temp / count : undefined,
-        fanspeed:
-          sums.fanspeed !== undefined ? sums.fanspeed / count : undefined,
-        hashRateTHs:
-          sums.hashRateTHs !== undefined ? sums.hashRateTHs / count : undefined,
-        responseTime:
-          sums.responseTime !== undefined
-            ? sums.responseTime / count
-            : undefined,
-      }));
+    // Every hour gets a point, empty when nothing was recorded, so the axis
+    // stays proportional to time and a break (feeder stopped) shows as one
+    // instead of its two sides being drawn next to each other.
+    const hours = [...buckets.keys()];
+    const points: ChartPoint[] = [];
+    for (
+      let hourStart = Math.min(...hours);
+      hourStart <= Math.max(...hours);
+      hourStart += 3_600_000
+    ) {
+      const b = buckets.get(hourStart);
+      const avg = (key: keyof Bucket["sums"]) =>
+        b && b.sums[key] !== undefined ? b.sums[key] / b.count : undefined;
+      points.push({
+        formattedTime: `${String(new Date(hourStart).getHours()).padStart(2, "0")}:00`,
+        originalTimestamp: new Date(hourStart).toISOString(),
+        temp: avg("temp"),
+        fanspeed: avg("fanspeed"),
+        hashRateTHs: avg("hashRateTHs"),
+        responseTime: avg("responseTime"),
+      });
+    }
+    return points;
   }, [data, timeRange]);
 
   const referenceX = useMemo(() => {
@@ -186,6 +198,20 @@ export const MinerStatsChart = ({
       </Box>
     );
   }
+
+  // An hour with nothing recorded (feeder not running) gets the same grey
+  // bridge as the fleet chart and the sparklines, for each plotted field.
+  let rows: (ChartPoint & Record<string, unknown>)[] = chartData;
+  const gapKeys: string[] = [];
+  selectedFields.forEach((fieldKey) => {
+    const added = withBridgeSeries(
+      rows,
+      rows.map((p) => p[fieldKey as keyof ChartPoint] as number | undefined),
+      `gap-${String(fieldKey)}-`,
+    );
+    rows = added.rows;
+    gapKeys.push(...added.keys);
+  });
 
   return (
     <Box sx={{ width: "100%" }}>
@@ -299,8 +325,8 @@ export const MinerStatsChart = ({
       <Box sx={{ height: maxHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={chartData}
-            margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+            data={rows}
+            margin={{ top: 4, right: 0, left: 0, bottom: 0 }}
           >
             <defs>
               {AVAILABLE_FIELDS.map((field) => (
@@ -335,8 +361,11 @@ export const MinerStatsChart = ({
               textAnchor="end"
               height={40}
             />
+            {/* Ticks drawn inside the plot rather than in a column of their
+                own, so the curve runs from edge to edge of the card. */}
             <YAxis
-              tick={{ fontSize: 9, fill: "rgba(255,255,255,0.4)" }}
+              mirror
+              tick={{ fontSize: 9, fill: "rgba(255,255,255,0.5)" }}
               tickLine={false}
               axisLine={false}
               tickCount={4}
@@ -369,6 +398,7 @@ export const MinerStatsChart = ({
                 ] as [string, string];
               }}
             />
+            {bridgeAreas(gapKeys, "rgba(255,255,255,0.6)")}
             <ReferenceLine
               x={referenceX}
               stroke="rgba(255,255,255,0.2)"
@@ -383,6 +413,7 @@ export const MinerStatsChart = ({
             {selectedFields.map((fieldKey) => {
               const field = AVAILABLE_FIELDS.find((f) => f.key === fieldKey);
               if (!field) return null;
+              const pointKey = fieldKey as keyof ChartPoint;
               return (
                 <Area
                   key={String(fieldKey)}
@@ -391,9 +422,25 @@ export const MinerStatsChart = ({
                   stroke={field.color}
                   strokeWidth={1.5}
                   fill={`url(#grad-${String(fieldKey)})`}
-                  dot={false}
+                  // A point with no neighbour on either side (the only hour
+                  // with samples, or one between two breaks) has no line to
+                  // sit on -- show it as a dot.
+                  dot={({ cx, cy, index }) => (
+                    <circle
+                      key={index}
+                      cx={cx}
+                      cy={cy}
+                      r={
+                        chartData[index]?.[pointKey] != null &&
+                        chartData[index - 1]?.[pointKey] == null &&
+                        chartData[index + 1]?.[pointKey] == null
+                          ? 3
+                          : 0
+                      }
+                      fill={field.color}
+                    />
+                  )}
                   activeDot={{ r: 3, strokeWidth: 0 }}
-                  connectNulls
                 />
               );
             })}

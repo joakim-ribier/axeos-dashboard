@@ -109,8 +109,8 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 
 // RemoteStats handles GET /api/{boardId}/{ip}/stats for the remote-api.
 //
-// @Summary Get today's stats for one remote miner (read-only)
-// @Description Returns today's JSONL entries pushed to hashboard.live for a single miner in the board.
+// @Summary Get the last 24h of stats for one remote miner (read-only)
+// @Description Same as /api/miners/{hostnameOrIp}/stats, for a miner pushed to a hashboard board.
 // @Tags remote-dashboard-api
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
@@ -142,17 +142,9 @@ func RemoteStats(cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		today := time.Now().UTC().Format("2006-01-02")
-		path := filepath.Join(root, mac, fmt.Sprintf("%s.jsonl", today))
-
-		entries, err := decodeJSONL(path)
+		now := time.Now()
+		entries, err := readWindow(filepath.Join(root, mac), now.Add(-rollingWindow), now)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				// Today's file doesn't exist yet (fresh day, nothing
-				// pushed since midnight) -- an empty result, not an error.
-				writeStatsResponse(w, []model.MinerInfo{})
-				return
-			}
 			writeErrorResponse(w, fmt.Sprintf("failed to read data file: %v", err), http.StatusInternalServerError)
 			return
 		}
