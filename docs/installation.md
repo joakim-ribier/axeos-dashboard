@@ -44,16 +44,20 @@ subnav:
 - C'est tout — pas de configuration manuelle de nginx ou systemd, pas de
   fichier de config à écrire à la main.
 
+La version à installer est obligatoire, via `IMAGE_TAG` : `latest` pour la
+toute dernière, ou une release précise (ex. `0.1.0`).
+
 <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | HTTP_PORT=81 bash</span>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=latest HTTP_PORT=81 bash</span>
 
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100  1174  100  1174    0     0   2541      0 --:--:-- --:--:-- --:--:--  2546
+<span class="term-comment">&gt;&gt;&gt; Image tag: latest</span>
 [+] pull 10/10
  ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest  Pulled                                                                           12.7s
  ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-dashboard:latest Pulled                                                                            9.6s
@@ -69,20 +73,18 @@ axeos-services    ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest   
 </div>
 
 Elle peut être relancée sans risque plus tard — elle n'écrase jamais un
-`config/dashboard.yml` existant, ni le fichier `.env` qui mémorise le
-port et la version choisis (`HTTP_PORT`/`IMAGE_TAG`) d'un lancement à
-l'autre.
+`config/dashboard.yml` existant, et le port choisi (`HTTP_PORT`) est
+mémorisé d'un lancement à l'autre.
 
 {: .note }
-> 💡 **Astuce** — épinglez une version précise au lieu de `latest` avec
-> `IMAGE_TAG`
+> 💡 **Astuce** — installez une release précise plutôt que `latest`
 
 <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=sha-3e09149 bash</span></pre>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=0.1.0 bash</span></pre>
 </div>
 
 ### Structure
