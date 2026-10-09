@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -75,7 +76,7 @@ describe("ConfirmDialog", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("Confirm"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
@@ -85,7 +86,27 @@ describe("ConfirmDialog", () => {
       <ConfirmDialog open onClose={onClose} onConfirm={vi.fn()} title="t" />,
     );
 
-    fireEvent.click(screen.getByText("dialog.actions.cancel.label"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "dialog.actions.cancel.label" }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("reaches Cancel first from the keyboard, so Enter can't confirm by accident", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onConfirm = vi.fn();
+    render(
+      <ConfirmDialog open onClose={onClose} onConfirm={onConfirm} title="t" />,
+    );
+
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "dialog.actions.cancel.label" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });

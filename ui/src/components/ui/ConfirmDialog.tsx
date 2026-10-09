@@ -1,6 +1,6 @@
 // src/components/ui/ConfirmDialog.tsx
 import { useTranslation } from "react-i18next";
-import { Box, Dialog, Divider, Typography } from "@mui/material";
+import { Box, ButtonBase, Dialog, Divider, Typography } from "@mui/material";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -20,6 +20,11 @@ const COLOR_MAP: Record<string, string> = {
   error: "#f44336",
   success: "#66bb6a",
   secondary: "#ab47bc",
+};
+
+// Keyboard focus only -- a mouse click shouldn't leave a ring behind.
+const focusRing = {
+  "&.Mui-focusVisible": { outline: "2px solid", outlineOffset: 2 },
 };
 
 export const ConfirmDialog = ({
@@ -83,10 +88,12 @@ export const ConfirmDialog = ({
           py: 1.5,
         }}
       >
-        {/* Cancel */}
-        <Box
+        {/* Cancel -- first, so it's what the keyboard reaches first: a
+            destructive action's dialog shouldn't run on a reflex Enter. */}
+        <ButtonBase
           onClick={onClose}
           sx={{
+            ...focusRing,
             display: "flex",
             alignItems: "center",
             px: 1.5,
@@ -104,12 +111,13 @@ export const ConfirmDialog = ({
           <Typography variant="caption" sx={{ fontSize: "0.75rem" }}>
             {t("dialog.actions.cancel.label")}
           </Typography>
-        </Box>
+        </ButtonBase>
 
         {/* Confirm */}
-        <Box
+        <ButtonBase
           onClick={onConfirm}
           sx={{
+            ...focusRing,
             display: "flex",
             alignItems: "center",
             px: 1.5,
@@ -131,7 +139,7 @@ export const ConfirmDialog = ({
           >
             {actionLabel || t("dialog.actions.confirm.label")}
           </Typography>
-        </Box>
+        </ButtonBase>
       </Box>
     </Dialog>
   );
