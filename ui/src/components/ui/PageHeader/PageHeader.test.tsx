@@ -1,65 +1,43 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import { PageTitleSlotContext } from "@/components/layout/pageTitleSlot";
 
 import { PageHeader } from "./PageHeader";
 
-describe("PageHeader", () => {
-  it("renders title and description by default", () => {
-    render(<PageHeader title="Dashboard" description="Overview" />);
+const renderInSlot = (ui: React.ReactNode) => {
+  const slot = document.createElement("div");
+  document.body.appendChild(slot);
+  render(
+    <PageTitleSlotContext.Provider value={slot}>
+      {ui}
+    </PageTitleSlotContext.Provider>,
+  );
+  return slot;
+};
 
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Overview")).toBeInTheDocument();
+describe("PageHeader", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
   });
 
-  it("hides title, badge and description when showHeader is false", () => {
-    render(
+  it("renders title, description and icon into the top bar's slot", () => {
+    const slot = renderInSlot(
       <PageHeader
         title="Dashboard"
         description="Overview"
-        titleBadge={<span>badge</span>}
-        showHeader={false}
-      />,
-    );
-
-    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
-    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
-    expect(screen.queryByText("badge")).not.toBeInTheDocument();
-  });
-
-  it("renders the title badge next to the title when showHeader is true", () => {
-    render(
-      <PageHeader
-        title="Dashboard"
-        titleBadge={<span>REMOTE</span>}
-        showHeader
-      />,
-    );
-
-    expect(screen.getByText("Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("REMOTE")).toBeInTheDocument();
-  });
-
-  it("renders actions on desktop", () => {
-    render(
-      <PageHeader
-        title="Dashboard"
-        actions={[<button key="a">Do thing</button>]}
-      />,
-    );
-
-    expect(
-      screen.getByRole("button", { name: "Do thing" }),
-    ).toBeInTheDocument();
-  });
-
-  it("renders a custom icon when provided", () => {
-    render(
-      <PageHeader
-        title="Dashboard"
         icon={<span data-testid="custom-icon">icon</span>}
       />,
     );
 
-    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
+    expect(within(slot).getByText("Dashboard")).toBeInTheDocument();
+    expect(within(slot).getByText("Overview")).toBeInTheDocument();
+    expect(within(slot).getByTestId("custom-icon")).toBeInTheDocument();
+  });
+
+  it("renders nothing outside the app layout", () => {
+    render(<PageHeader title="Dashboard" />);
+
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
   });
 });

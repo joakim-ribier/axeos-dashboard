@@ -246,7 +246,8 @@
   "topBar": {
     "autoRefreshOn": "Actualisation auto activée",
     "autoRefreshOff": "Actualisation auto désactivée",
-    "docs": "Documentation"
+    "docs": "Documentation",
+    "more": "Plus"
   },
   "language": "Langue",
   "boardLocked": {

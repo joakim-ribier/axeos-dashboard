@@ -1,9 +1,9 @@
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
@@ -43,7 +43,12 @@ function renderTopBar(onMenuClick: () => void = () => {}) {
                 <ModeProvider mode="local">
                   <RefreshSettingsProvider>
                     <NotificationsProvider>
-                      <TopBar onMenuClick={onMenuClick} />
+                      <TopBar
+                        onMenuClick={onMenuClick}
+                        titleSlotRef={() => {}}
+                      />
+                      <Link to="/">to home</Link>
+                      <Link to="/alerts">to alerts</Link>
                     </NotificationsProvider>
                   </RefreshSettingsProvider>
                 </ModeProvider>
@@ -191,6 +196,51 @@ describe("TopBar", () => {
       expect(
         screen.getByLabelText("Auto-refresh is off", { exact: false }),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("on a phone", () => {
+    beforeEach(() => {
+      vi.spyOn(window, "matchMedia").mockImplementation(
+        (query) =>
+          ({
+            matches: true,
+            media: query,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+          }) as unknown as MediaQueryList,
+      );
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("unfolds the rest of the controls from the 'More' button", async () => {
+      const user = userEvent.setup();
+      renderTopBar();
+      const more = await screen.findByRole("button", { name: "More" });
+
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      await user.click(more);
+      expect(more).toHaveAttribute("aria-expanded", "true");
+      await user.click(more);
+      expect(more).toHaveAttribute("aria-expanded", "false");
+    });
+
+    it("folds back on navigation, and stays folded coming back", async () => {
+      const user = userEvent.setup();
+      renderTopBar();
+      const more = await screen.findByRole("button", { name: "More" });
+
+      await user.click(more);
+      await user.click(screen.getByRole("link", { name: "to alerts" }));
+      expect(more).toHaveAttribute("aria-expanded", "false");
+
+      await user.click(screen.getByRole("link", { name: "to home" }));
+      expect(more).toHaveAttribute("aria-expanded", "false");
     });
   });
 });

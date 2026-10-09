@@ -81,12 +81,7 @@ export const Backups: React.FC = () => {
       <PageHeader
         title={t("backupsPage.header.title")}
         description={t("backupsPage.header.description")}
-        icon={<BackupIcon fontSize="large" />}
-        gradientProps={{
-          height: 3,
-          radius: 2,
-          colors: ["#00b4ff", "#0066cc"],
-        }}
+        icon={<BackupIcon />}
       />
 
       <Box

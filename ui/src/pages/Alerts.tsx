@@ -341,12 +341,7 @@ export const Alerts = () => {
       <PageHeader
         title={t("alertsPage.header.title")}
         description={t("alertsPage.header.description")}
-        icon={<NotificationsActiveIcon fontSize="large" />}
-        gradientProps={{
-          height: 3,
-          radius: 2,
-          colors: ["#00b4ff", "#0066cc"],
-        }}
+        icon={<NotificationsActiveIcon />}
       />
 
       <Box

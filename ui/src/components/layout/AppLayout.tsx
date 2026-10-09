@@ -6,6 +6,7 @@ import { Box } from "@mui/material";
 import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 
+import { PageTitleSlotContext } from "./pageTitleSlot";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -27,6 +28,7 @@ interface AppLayoutProps {
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({ mode }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
 
   return (
     <ModeProvider mode={mode}>
@@ -45,10 +47,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ mode }) => {
               minWidth: 0,
             }}
           >
-            <TopBar onMenuClick={() => setMobileNavOpen(true)} />
+            <TopBar
+              onMenuClick={() => setMobileNavOpen(true)}
+              titleSlotRef={setTitleSlot}
+            />
 
             <Box component="main" sx={{ flexGrow: 1, p: 2 }}>
-              <Outlet />
+              <PageTitleSlotContext.Provider value={titleSlot}>
+                <Outlet />
+              </PageTitleSlotContext.Provider>
             </Box>
           </Box>
         </Box>
