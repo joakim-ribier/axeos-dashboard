@@ -49,8 +49,7 @@ describe("MinerActions", () => {
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent("Restart Miner");
-    // ConfirmDialog's choices are clickable text, not buttons.
-    await user.click(within(dialog).getByText("Restart"));
+    await user.click(within(dialog).getByRole("button", { name: "Restart" }));
 
     expect(restartMiner).toHaveBeenCalledWith("10.0.0.7");
     expect(switchPool).not.toHaveBeenCalled();
@@ -61,7 +60,11 @@ describe("MinerActions", () => {
     renderActions({ isUsingFallbackStratum: 1 });
 
     await user.click(screen.getByRole("button", { name: "Switch" }));
-    await user.click(within(screen.getByRole("dialog")).getByText("Switch"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Switch",
+      }),
+    );
 
     expect(switchPool).toHaveBeenCalledWith("10.0.0.7", "primary");
   });
@@ -71,7 +74,7 @@ describe("MinerActions", () => {
     renderActions();
 
     await user.click(screen.getByRole("button", { name: "Restart" }));
-    await user.click(within(screen.getByRole("dialog")).getByText("Cancel"));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(restartMiner).not.toHaveBeenCalled();
   });
