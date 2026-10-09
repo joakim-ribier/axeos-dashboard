@@ -204,7 +204,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 | `src/schemas/minerSchema.ts` | Zod schema validating API response |
 | `src/utils/format.ts` | `formatMetric()` (K/M/G/T suffixes), `formatDuration()`, `formatTimestamp()` |
 
-Charts: Recharts (fleet chart, per-miner 24h chart) plus a hand-drawn SVG sparkline. Validation: Zod. State: Zustand (present as dep, minimal current use in core flow).
+Charts: Recharts (fleet chart, per-miner 24h chart) plus a hand-drawn SVG sparkline. Validation: Zod. State: TanStack Query for server data, React state and contexts (`src/contexts/`) otherwise.
 
 Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard).
 Route `/:boardId` → remote mode; route `/` → local mode.
@@ -326,4 +326,4 @@ remote-dashboard-api's data dir has no override of its own -- always `{storage.d
 
 **Go:** `go-chi/chi/v5`, `robfig/cron/v3`, `go.yaml.in/yaml/v3`
 
-**React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `recharts`, `zustand`
+**React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `recharts`
