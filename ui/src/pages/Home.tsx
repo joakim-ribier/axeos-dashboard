@@ -118,12 +118,7 @@ export const Home = () => {
       <PageHeader
         title={t("dashboard.header.title")}
         description={t("dashboard.header.description")}
-        icon={<DashboardIcon fontSize="large" />}
-        gradientProps={{
-          height: 3,
-          radius: 2,
-          colors: ["#00b4ff", "#0066cc"],
-        }}
+        icon={<DashboardIcon />}
       />
 
       {error && !data ? (

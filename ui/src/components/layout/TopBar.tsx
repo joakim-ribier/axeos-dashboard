@@ -1,8 +1,10 @@
 // src/components/layout/TopBar.tsx
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SyncIcon from "@mui/icons-material/Sync";
 import SyncDisabledIcon from "@mui/icons-material/SyncDisabled";
@@ -10,11 +12,14 @@ import {
   Badge,
   Box,
   Button,
+  Collapse,
   IconButton,
   Popover,
   Toolbar,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -30,6 +35,8 @@ import {
 
 interface TopBarProps {
   onMenuClick: () => void;
+  /** Receives the element the current page's PageHeader renders into. */
+  titleSlotRef: (el: HTMLElement | null) => void;
 }
 
 const DOCS_URL_FR = "https://joakim-ribier.github.io/axeos-dashboard/";
@@ -244,35 +251,93 @@ const NotificationBell: React.FC = () => {
   );
 };
 
-export const TopBar: React.FC<TopBarProps> = ({ onMenuClick }) => {
+// Stays on screen while the page scrolls. On a phone only the status icons
+// (auto-refresh, the bell's badge) stay next to the page title, the rest
+// unfolds below the bar.
+export const TopBar: React.FC<TopBarProps> = ({
+  onMenuClick,
+  titleSlotRef,
+}) => {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { pathname } = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+  // Folds back on every navigation.
+  const [shownPathname, setShownPathname] = useState(pathname);
+  if (shownPathname !== pathname) {
+    setShownPathname(pathname);
+    setMoreOpen(false);
+  }
+
   return (
-    <Toolbar
+    <Box
       sx={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
+        position: "sticky",
+        top: 0,
+        zIndex: "appBar",
+        bgcolor: "background.default",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
-        px: { xs: 2, sm: 3 },
       }}
     >
-      <IconButton
-        onClick={onMenuClick}
-        edge="start"
-        aria-label="open navigation menu"
-        sx={{ display: { sm: "none" } }}
+      <Toolbar
+        disableGutters
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: { xs: 1, sm: 2 },
+          px: 2,
+        }}
       >
-        <MenuIcon />
-      </IconButton>
+        <IconButton
+          onClick={onMenuClick}
+          edge="start"
+          aria-label="open navigation menu"
+          sx={{ display: { sm: "none" } }}
+        >
+          <MenuIcon />
+        </IconButton>
 
-      <Box sx={{ flexGrow: 1 }} />
+        <Box ref={titleSlotRef} sx={{ flexGrow: 1, minWidth: 0 }} />
 
-      <DocsLink />
+        {!isMobile && <DocsLink />}
 
-      <AutoRefreshIndicator />
+        <AutoRefreshIndicator />
 
-      <NotificationBell />
+        <NotificationBell />
 
-      <LanguageSwitcher />
-    </Toolbar>
+        {isMobile ? (
+          <IconButton
+            onClick={() => setMoreOpen((open) => !open)}
+            edge="end"
+            aria-label={t("topBar.more")}
+            aria-expanded={moreOpen}
+            sx={{ color: moreOpen ? "primary.main" : "text.secondary" }}
+          >
+            <MoreVertIcon />
+          </IconButton>
+        ) : (
+          <LanguageSwitcher />
+        )}
+      </Toolbar>
+
+      {isMobile && (
+        <Collapse in={moreOpen}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 2,
+              px: 2,
+              pb: 1.5,
+            }}
+          >
+            <DocsLink />
+            <LanguageSwitcher />
+          </Box>
+        </Collapse>
+      )}
+    </Box>
   );
 };

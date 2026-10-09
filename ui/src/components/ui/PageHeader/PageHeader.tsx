@@ -1,79 +1,71 @@
 // src/components/ui/PageHeader/PageHeader.tsx
-import React from "react";
+import React, { useContext } from "react";
+import { createPortal } from "react-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import { Box, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
-import { GradientBar } from "./GradientBar";
+import { PageTitleSlotContext } from "@/components/layout/pageTitleSlot";
+
 import { PageHeaderProps } from "./types";
 
 /**
- * Reusable page header.
- * Handles mobile detection internally and allows forcing the visibility
- * of actions on mobile via the `forceShowActions` prop.
+ * The page's icon, title and description, shown in the TopBar rather than
+ * above the page. A phone has no room for the description.
  */
 export const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   icon,
   description,
-  titleBadge,
-  actions = [],
-  forceShowActions = false,
-  showHeader = true,
-  sx = {},
-  gradientProps = {},
 }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const slot = useContext(PageTitleSlotContext);
 
-  const LeftIcon = icon ?? <DashboardIcon fontSize="large" />;
+  if (!slot) return null;
 
-  return (
-    <Box
-      sx={{
-        width: "100%",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        px: { xs: 2, md: 3 },
-        ...sx,
-      }}
-    >
-      <Stack spacing={0.5}>
-        {showHeader && (
-          <>
-            <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1 }}>
-              <Box sx={{ mr: 1 }}>{LeftIcon}</Box>
-              <Typography
-                variant="h5"
-                component="h2"
-                color="text.primary"
-                sx={{ lineHeight: 1.2 }}
-              >
-                {title}
-              </Typography>
-              {titleBadge}
-            </Box>
-            <GradientBar {...gradientProps} />
-            {description && (
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-                sx={{ mt: 0.5 }}
-              >
-                {description}
-              </Typography>
-            )}
-          </>
+  return createPortal(
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+      <Box
+        sx={{
+          position: "relative",
+          flexShrink: 0,
+          display: "grid",
+          placeItems: "center",
+          width: 36,
+          height: 36,
+          color: "primary.main",
+          "& svg": { fontSize: 20 },
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            borderRadius: 1,
+            bgcolor: "primary.main",
+            opacity: 0.15,
+          },
+        }}
+      >
+        {icon ?? <DashboardIcon />}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          variant="subtitle1"
+          component="h1"
+          noWrap
+          sx={{ fontWeight: 600, lineHeight: 1.25 }}
+        >
+          {title}
+        </Typography>
+        {description && (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            noWrap
+            sx={{ display: { xs: "none", md: "block" } }}
+          >
+            {description}
+          </Typography>
         )}
-      </Stack>
-
-      {(!isMobile || forceShowActions) && actions.length > 0 && (
-        <Stack direction="row" spacing={1}>
-          {actions.map((action, idx) => (
-            <React.Fragment key={idx}>{action}</React.Fragment>
-          ))}
-        </Stack>
-      )}
-    </Box>
+      </Box>
+    </Box>,
+    slot,
   );
 };

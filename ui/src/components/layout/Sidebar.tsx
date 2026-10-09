@@ -184,9 +184,11 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         bgcolor: "background.paper",
       }}
     >
+      {/* A plain link, not a router one: the page reloads, as if arriving
+          on the dashboard. */}
       <Box
-        component={RouterLink}
-        to={boardId ? `/${boardId}` : "/"}
+        component="a"
+        href={boardId ? `/${boardId}` : "/"}
         title={boardBlocked ? undefined : t("nav.home")}
         onClick={boardBlocked ? (e) => e.preventDefault() : undefined}
         tabIndex={boardBlocked ? -1 : undefined}

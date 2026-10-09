@@ -668,8 +668,7 @@ export const Settings = () => {
       <PageHeader
         title={t("settingsPage.header.title")}
         description={t("settingsPage.header.description")}
-        icon={<WifiFindIcon fontSize="large" />}
-        gradientProps={{ height: 3, radius: 2, colors: ["#00b4ff", "#0066cc"] }}
+        icon={<WifiFindIcon />}
       />
 
       <AlertList
@@ -728,9 +727,9 @@ export const Settings = () => {
               </Typography>
             </Box>
             <Stack
-              direction="row"
+              direction={{ xs: "column", sm: "row" }}
               spacing={1.5}
-              alignItems="center"
+              alignItems={{ xs: "stretch", sm: "center" }}
               sx={{ flexShrink: 0 }}
             >
               <FormControlLabel
