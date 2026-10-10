@@ -74,6 +74,15 @@ local. Aucune authentification requise — usage réseau local uniquement.
 
 [Voir le détail des Sauvegardes]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
 
+### Audit
+
+- Historique de tout ce qui modifie un mineur ou la configuration, sort
+  des données du Pi ou scanne le réseau, depuis le dashboard (avec l'IP et
+  le navigateur) ou par le planificateur
+- Filtres par mineur, type et jour, export JSON
+
+[Voir le détail de l'Audit]({{ '/audit.html' | relative_url }}){: .btn .btn-primary }
+
 ---
 
 ## Architecture

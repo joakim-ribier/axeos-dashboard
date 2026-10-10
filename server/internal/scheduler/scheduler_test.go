@@ -3,10 +3,14 @@ package scheduler
 import (
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
 
@@ -164,5 +168,59 @@ func TestScheduler_reloadDoesNotDuplicateJobsWhenNothingChanged(t *testing.T) {
 			t.Fatalf("entries = %d, want exactly 1 (no duplicate registration across reload ticks)", got)
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func TestScheduler_recordsEachRunInTheAuditLog(t *testing.T) {
+	restarted := false
+	device := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		restarted = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer device.Close()
+	unreachable := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	unreachableAddr := strings.TrimPrefix(unreachable.URL, "http://")
+	unreachable.Close()
+
+	cfg := config.Config{
+		Endpoints: config.EndpointConfig{Restart: "restart", Timeout: time.Second},
+		Bitaxes: []config.Bitaxe{
+			{
+				Ip: strings.TrimPrefix(device.URL, "http://"), Enabled: true,
+				Schedule: []config.CronSchedule{{Cron: "0 30 12 * * *", Action: config.ActionRestart}},
+			},
+			{
+				Ip: unreachableAddr, Enabled: true,
+				Schedule: []config.CronSchedule{{Cron: "0 45 12 * * *", Action: config.ActionRestart}},
+			},
+		},
+	}
+	log := audit.NewLog(t.TempDir())
+	s := NewScheduler(testLogger(), cfg).WithAuditLog(log)
+
+	// Run every job now rather than waiting for its schedule.
+	for _, entry := range s.cron.Entries() {
+		entry.Job.Run()
+	}
+
+	entries, err := log.ReadRange(time.Now().Add(-time.Hour), time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !restarted || len(entries) != 2 {
+		t.Fatalf("restarted = %v, %d entries, want the device restarted and 2 entries", restarted, len(entries))
+	}
+	byCron := map[string]audit.Entry{}
+	for _, e := range entries {
+		if e.Source != audit.SourceSystem || e.Service != audit.ServiceScheduler || e.Type != audit.TypeRestart {
+			t.Errorf("entry = %+v, want a scheduler restart", e)
+		}
+		byCron[e.Cron] = e
+	}
+	if e := byCron["0 30 12 * * *"]; e.Error != "" {
+		t.Errorf("successful run recorded error %q", e.Error)
+	}
+	if e := byCron["0 45 12 * * *"]; e.Target != unreachableAddr || e.Error == "" {
+		t.Errorf("failed run = %+v, want its target and error", e)
 	}
 }

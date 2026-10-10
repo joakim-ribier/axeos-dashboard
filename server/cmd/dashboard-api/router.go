@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/handler"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
@@ -34,6 +35,7 @@ type Router struct {
 	appSettingsStore *config.AppSettingsStore
 	watcher          *healtcheck.Watcher
 	versionChecker   *appversion.Checker
+	auditLog         *audit.Log
 }
 
 func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Watcher, versionChecker *appversion.Checker) *Router {
@@ -62,6 +64,28 @@ func (f *Router) WithMinersStore(store *config.MinersStore) *Router {
 func (f *Router) WithAppSettingsStore(store *config.AppSettingsStore) *Router {
 	f.appSettingsStore = store
 	return f
+}
+
+// WithAuditLog attaches the log every state-changing route records into
+// (see audit). Optional: without one, those routes just aren't recorded.
+func (f *Router) WithAuditLog(log *audit.Log) *Router {
+	f.auditLog = log
+	return f
+}
+
+// audited records every call to the route it's set on -- see
+// audit.Log.Middleware.
+func (f *Router) audited(entryType string) func(http.Handler) http.Handler {
+	return f.auditLog.Middleware(entryType, f.minerIP, f.logger)
+}
+
+// minerIP is the IP of the configured miner a request addresses by IP or
+// hostname -- or what it was given, if that's no configured miner.
+func (f *Router) minerIP(hostnameOrIP string) string {
+	if miners := f.snapshotConfig().GetMinersFilterBy(hostnameOrIP); len(miners) > 0 {
+		return miners[0].Ip
+	}
+	return hostnameOrIP
 }
 
 // snapshotConfig returns the current config by value, with Bitaxes and the
@@ -137,7 +161,7 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListMinersConfig(f.snapshotConfig(), w, r)
 	})
-	router.Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeSaveMiners)).Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		if merged, ok := handler.SaveMinersConfig(f.snapshotConfig(), w, r); ok && f.minersStore != nil {
 			f.minersStore.Set(merged)
 		}
@@ -145,24 +169,26 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
 		handler.GetAppSettings(f.snapshotConfig(), f.currentAppSettings(), w, r)
 	})
-	router.Post("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeSaveSettings)).Post("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
 		if saved, ok := handler.SaveAppSettings(f.snapshotConfig(), w, r); ok && f.appSettingsStore != nil {
 			f.appSettingsStore.Set(saved)
 		}
 	})
-	router.Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeDiscover)).Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)
 	})
+	router.Get("/api/audit", handler.ListAudit(f.auditLog))
+	router.With(f.audited(audit.TypeExportAudit)).Get("/api/audit/export", handler.ExportAudit(f.auditLog))
 	router.Get("/api/backups", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListBackups(f.config, w, r)
 	})
-	router.Get("/api/backups/download", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeDownloadBackups)).Get("/api/backups/download", func(w http.ResponseWriter, r *http.Request) {
 		handler.DownloadBackups(f.logger, f.config, w, r)
 	})
-	router.Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeSwitchPrimary)).Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Primary, w, r)
 	})
-	router.Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
+	router.With(f.audited(audit.TypeSwitchFallback)).Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
 		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
 	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
@@ -174,7 +200,7 @@ func (f *Router) Handler() http.Handler {
 				handler.Stats(miner, f.snapshotConfig(), w, r)
 			})
 		})
-		r.Post("/restart", func(w http.ResponseWriter, r *http.Request) {
+		r.With(f.audited(audit.TypeRestart)).Post("/restart", func(w http.ResponseWriter, r *http.Request) {
 			WithMinerCtx(w, r, func(miner config.Bitaxe) {
 				handler.Restart(miner, f.logger, f.snapshotConfig(), w)
 			})

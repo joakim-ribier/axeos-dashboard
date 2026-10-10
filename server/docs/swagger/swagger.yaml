@@ -1,5 +1,52 @@
 basePath: /
 definitions:
+  audit.Entry:
+    properties:
+      cron:
+        type: string
+      error:
+        description: Why it failed, whatever its source.
+        type: string
+      ip:
+        description: |-
+          API only: there's no authentication, so the client's IP and
+          User-Agent are the closest thing to "who" this tool can record.
+        type: string
+      query:
+        description: |-
+          The request's query string, unescaped -- what was asked for (the
+          months downloaded, the exported range, the miner a pool switch
+          targeted...).
+        type: string
+      requestId:
+        type: string
+      service:
+        description: System only.
+        type: string
+      source:
+        $ref: '#/definitions/audit.Source'
+      status:
+        type: integer
+      target:
+        description: |-
+          Target is the IP of the miner acted on -- empty for a config save,
+          or a pool switch applied to every miner.
+        type: string
+      ts:
+        type: string
+      type:
+        type: string
+      userAgent:
+        type: string
+    type: object
+  audit.Source:
+    enum:
+    - api
+    - system
+    type: string
+    x-enum-varnames:
+    - SourceAPI
+    - SourceSystem
   backup.Info:
     properties:
       checksum:
@@ -187,6 +234,38 @@ definitions:
       episodes:
         items:
           $ref: '#/definitions/handler.AlertEpisode'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+    type: object
+  handler.AuditExport:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/audit.Entry'
+        type: array
+      exportedAt:
+        type: string
+      from:
+        type: string
+      ip:
+        type: string
+      to:
+        type: string
+      total:
+        type: integer
+      type:
+        type: string
+    type: object
+  handler.AuditResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/audit.Entry'
         type: array
       page:
         type: integer
@@ -570,6 +649,9 @@ definitions:
     type: object
   model.UIPageFeatures:
     properties:
+      audit:
+        description: 'Audit: "enabled" | "hidden" -- see config.UIPageConfig.'
+        type: string
       backups:
         description: 'Backups: "enabled" | "hidden" -- see config.UIPageConfig.'
         type: string
@@ -779,6 +861,100 @@ paths:
       summary: Get the last 24h of every remote miner, downsampled (read-only)
       tags:
       - remote-dashboard-api
+  /api/audit:
+    get:
+      description: Every user-triggered action that matters (miner restart, pool switch,
+        config save, audit export, backups download, network scan) between from (inclusive)
+        and to (exclusive) -- newest first. Both default to the last 24 hours; the
+        range can't exceed 7 days. API entries carry the client's IP and User-Agent,
+        system entries the service that acted (e.g. the scheduler).
+      parameters:
+      - description: 'range start, RFC 3339 (default: to minus 24h)'
+        in: query
+        name: from
+        type: string
+      - description: 'range end, RFC 3339 (default: now)'
+        in: query
+        name: to
+        type: string
+      - description: only this miner's entries (its IP) -- a pool switch applied to
+          every miner included
+        in: query
+        name: ip
+        type: string
+      - description: only this type (restart, switch_primary, switch_fallback, save_miners,
+          save_settings, export_audit, download_backups, discover)
+        in: query
+        name: type
+        type: string
+      - description: page number, 1-based (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: entries per page (default 50, max 200)
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuditResponse'
+        "400":
+          description: from/to malformed, from not before to, or range over 7 days
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: the audit log couldn't be read
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: List audit entries
+      tags:
+      - dashboard-api
+  /api/audit/export:
+    get:
+      description: 'Same range and defaults as GET /api/audit (last 24 hours, at most
+        7 days), unpaginated, as a JSON file attachment: the resolved range, the export
+        time and the entry count, then every entry.'
+      parameters:
+      - description: 'range start, RFC 3339 (default: to minus 24h)'
+        in: query
+        name: from
+        type: string
+      - description: 'range end, RFC 3339 (default: now)'
+        in: query
+        name: to
+        type: string
+      - description: only this miner's entries (its IP) -- a pool switch applied to
+          every miner included
+        in: query
+        name: ip
+        type: string
+      - description: only this type (restart, switch_primary, switch_fallback, save_miners,
+          save_settings, export_audit, download_backups, discover)
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuditExport'
+        "400":
+          description: from/to malformed, from not before to, or range over 7 days
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: the audit log couldn't be read
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Export audit entries
+      tags:
+      - dashboard-api
   /api/backups:
     get:
       description: Returns the monthly backup archives, most recent first. The feeder

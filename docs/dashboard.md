@@ -68,9 +68,11 @@ subnav:
    [Aller à Configuration →]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
 5. **Sauvegardes** — archives mensuelles de l'historique des mineurs, à télécharger.
    [Aller à Sauvegardes →]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
-6. **Actualisation auto** — active/désactive le rafraîchissement automatique des données.
-7. **Version** — SHA du build actuellement déployé.
-8. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
+6. **Audit** — historique des redémarrages, bascules de pool, modifications de la configuration, exports et détections réseau.
+   [Aller à Audit →]({{ '/audit.html' | relative_url }}){: .btn .btn-primary }
+7. **Actualisation auto** — active/désactive le rafraîchissement automatique des données.
+8. **Version** — SHA du build actuellement déployé.
+9. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
 
 </div>
 

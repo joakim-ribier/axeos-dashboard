@@ -226,7 +226,7 @@ describe("Alerts page", () => {
     });
   });
 
-  it("defaults to today's date (fast path, required by the API) with the reset button disabled", () => {
+  it("defaults to today's date (fast path, required by the API) with nothing to clear", () => {
     mockUseAlertsHistory.mockReturnValue({
       data: { episodes: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
@@ -241,10 +241,10 @@ describe("Alerts page", () => {
         date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       }),
     );
-    // today is the no-filter default -- nothing to reset yet.
+    // today is the no-filter default -- nothing to clear yet.
     expect(
-      screen.getByRole("button", { name: "Reset filters" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "Clear all" }),
+    ).not.toBeInTheDocument();
   });
 
   it("resets to page 1 when another filter is chosen on top of the default date", async () => {
@@ -270,7 +270,7 @@ describe("Alerts page", () => {
     });
   });
 
-  it("resets ip/type back to unset and date back to today when reset is clicked", async () => {
+  it("resets ip/type back to unset and date back to today when clear all is clicked", async () => {
     mockUseAlertsHistory.mockReturnValue({
       data: { episodes: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
@@ -291,9 +291,9 @@ describe("Alerts page", () => {
         expect.objectContaining({ type: "offline" }),
       );
     });
-    expect(screen.getByRole("button", { name: "Reset filters" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Clear all" })).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Reset filters" }));
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
 
     const today = format(new Date(), "yyyy-MM-dd");
     await waitFor(() => {
@@ -306,8 +306,8 @@ describe("Alerts page", () => {
       );
     });
     expect(
-      screen.getByRole("button", { name: "Reset filters" }),
-    ).toBeDisabled();
+      screen.queryByRole("button", { name: "Clear all" }),
+    ).not.toBeInTheDocument();
   });
 
   describe("date filter", () => {
@@ -343,12 +343,10 @@ describe("Alerts page", () => {
           expect.objectContaining({ page: 1, date: "2026-07-14" }),
         );
       });
-      expect(
-        screen.getByRole("button", { name: "Reset filters" }),
-      ).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Clear all" })).toBeEnabled();
     });
 
-    it("puts the date back to today (not unset -- the API requires a date) when reset is clicked", async () => {
+    it("puts the date back to today (not unset -- the API requires a date) when clear all is clicked", async () => {
       mockUseAlertsHistory.mockReturnValue({
         data: { episodes: [], total: 0, page: 1, pageSize: 50 },
         isLoading: false,
@@ -366,7 +364,7 @@ describe("Alerts page", () => {
         );
       });
 
-      await user.click(screen.getByRole("button", { name: "Reset filters" }));
+      await user.click(screen.getByRole("button", { name: "Clear all" }));
 
       const today = format(new Date(), "yyyy-MM-dd");
       await waitFor(() => {

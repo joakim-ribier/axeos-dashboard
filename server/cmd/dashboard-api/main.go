@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/scheduler"
@@ -78,6 +79,8 @@ func main() {
 	// and why the rest of dashboard.yml stays hand-edited-only.
 	appSettingsStore := config.NewAppSettingsStore(cfg.AppSettingsFilePath, cfg.AppSettingsSnapshot())
 
+	auditLog := audit.NewLog(cfg.Storage.AuditDir())
+
 	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
 	watcher.Start(&wg)
 
@@ -86,9 +89,10 @@ func main() {
 	NewRouter(logger, cfg, watcher, versionChecker).
 		WithMinersStore(minersStore).
 		WithAppSettingsStore(appSettingsStore).
+		WithAuditLog(auditLog).
 		Listen()
 
-	sched := scheduler.NewScheduler(logger, cfg).WithMinersStore(minersStore)
+	sched := scheduler.NewScheduler(logger, cfg).WithMinersStore(minersStore).WithAuditLog(auditLog)
 	sched.Start()
 
 	quit := make(chan os.Signal, 1)

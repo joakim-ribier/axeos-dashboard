@@ -72,6 +72,15 @@ No authentication required — internal LAN use only.
 
 [See Backups in detail]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }
 
+### Audit
+
+- History of everything that changes a miner or the configuration, takes
+  data off the Pi or scans the network, from the dashboard (with the IP
+  and browser) or by the scheduler
+- Filters by miner, type and day, JSON export
+
+[See Audit in detail]({{ '/en/audit.html' | relative_url }}){: .btn .btn-primary }
+
 ---
 
 ## Architecture
