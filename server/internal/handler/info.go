@@ -39,6 +39,7 @@ func Info(versionChecker *appversion.Checker, hashboardURL string, remote bool, 
 				Page: model.UIPageFeatures{
 					Settings: string(ui.Page.Settings.Normalized()),
 					Backups:  string(ui.Page.Backups.Normalized()),
+					Audit:    string(ui.Page.Audit.Normalized()),
 				},
 				Action: model.UIActionFeatures{
 					MinerRestart:    string(ui.Action.MinerRestart.Normalized()),

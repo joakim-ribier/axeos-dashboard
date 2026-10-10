@@ -45,16 +45,20 @@ subnav:
 - That's it — no manual nginx or systemd setup, no config file to write
   by hand.
 
+The version to install is required, via `IMAGE_TAG`: `latest` for the very
+newest, or a specific release (e.g. `0.1.0`).
+
 <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | HTTP_PORT=81 bash</span>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=latest HTTP_PORT=81 bash</span>
 
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100  1174  100  1174    0     0   2541      0 --:--:-- --:--:-- --:--:--  2546
+<span class="term-comment">&gt;&gt;&gt; Image tag: latest</span>
 [+] pull 10/10
  ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest  Pulled                                                                           12.7s
  ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-dashboard:latest Pulled                                                                            9.6s
@@ -70,19 +74,18 @@ axeos-services    ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest   
 </div>
 
 Safe to re-run later — it never overwrites an existing
-`config/dashboard.yml`, nor the `.env` file that remembers the port and
-version you chose (`HTTP_PORT`/`IMAGE_TAG`) from one run to the next.
+`config/dashboard.yml`, and the port you chose (`HTTP_PORT`) is
+remembered from one run to the next.
 
 {: .note }
-> 💡 **Tip** — pin a specific version instead of `latest` with
-> `IMAGE_TAG`
+> 💡 **Tip** — install a specific release rather than `latest`
 
 <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=sha-3e09149 bash</span></pre>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=0.1.0 bash</span></pre>
 </div>
 
 ### Structure

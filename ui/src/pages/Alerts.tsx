@@ -1,27 +1,12 @@
 // src/pages/Alerts.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import FilterAltOffIcon from "@mui/icons-material/FilterAltOff";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  type SelectChangeEvent,
-  Skeleton,
-  TablePagination,
-  Typography,
-} from "@mui/material";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { format, isValid, parseISO } from "date-fns";
-import { enUS, fr } from "date-fns/locale";
+import { Box, Skeleton, TablePagination, Typography } from "@mui/material";
+import { format, parseISO } from "date-fns";
 
 import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
+import { FilterBar } from "@/components/ui/FilterBar";
 import { OopsPage } from "@/components/ui/OopsPage";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useMode } from "@/contexts/ModeContext";
@@ -37,7 +22,6 @@ import {
 
 const DEFAULT_PAGE_SIZE = 50;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
-const ALL_VALUE = "__all__";
 
 // Defaulting the date filter to today isn't just a UX nicety -- reading a
 // single day's JSONL is what lets the backend skip scanning every day a
@@ -46,150 +30,6 @@ const ALL_VALUE = "__all__";
 // full history, just slower, same as explicitly picking an older date would
 // have been anyway.
 const todayISO = (): string => format(new Date(), "yyyy-MM-dd");
-
-/* ── Filters ─────────────────────────────────────────────────── */
-interface FiltersBarProps {
-  ip: string;
-  onIpChange: (ip: string) => void;
-  type: string;
-  onTypeChange: (type: string) => void;
-  date: string;
-  onDateChange: (date: string) => void;
-  minerOptions: { ip: string; label: string }[];
-  onReset: () => void;
-}
-
-// Shared width for every filter control. The height/alignment mismatch
-// wasn't a font-size issue (Select and DatePicker already match at the
-// same MUI "small" size) -- it was that the Selects had no floating label
-// at all (just displayEmpty), while the DatePicker had one, and MUI
-// renders a taller box for a labeled field. Giving all three an explicit
-// label (below) is what actually fixes it, by giving them the same
-// internal structure instead of fighting the height with an override.
-const FILTER_MIN_WIDTH = 180;
-// Full width on mobile (one control per row, easy to tap), fixed min width
-// once there's room for them to sit side by side.
-const SELECT_SX = { minWidth: { xs: "100%", sm: FILTER_MIN_WIDTH } };
-const DATE_FIELD_SX = { minWidth: { xs: "100%", sm: FILTER_MIN_WIDTH } };
-
-const FiltersBar: React.FC<FiltersBarProps> = ({
-  ip,
-  onIpChange,
-  type,
-  onTypeChange,
-  date,
-  onDateChange,
-  minerOptions,
-  onReset,
-}) => {
-  const { t, i18n } = useTranslation();
-  // date is never "" (the API requires it -- see onReset in the parent),
-  // so a filter only counts as "active" when it differs from the no-filter
-  // default: today.
-  const hasActiveFilter = ip !== "" || type !== "" || date !== todayISO();
-  const dateLocale = i18n.language.startsWith("fr") ? fr : enUS;
-
-  return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: { xs: "column", sm: "row" },
-        flexWrap: { sm: "wrap" },
-        alignItems: { xs: "stretch", sm: "center" },
-        gap: 1.5,
-        width: { xs: "100%", sm: "auto" },
-      }}
-    >
-      <FormControl size="small" sx={SELECT_SX}>
-        <InputLabel id="alerts-ip-filter-label">
-          {t("alertsPage.filters.ipLabel")}
-        </InputLabel>
-        <Select
-          labelId="alerts-ip-filter-label"
-          label={t("alertsPage.filters.ipLabel")}
-          value={ip === "" ? ALL_VALUE : ip}
-          onChange={(e: SelectChangeEvent) =>
-            onIpChange(e.target.value === ALL_VALUE ? "" : e.target.value)
-          }
-        >
-          <MenuItem value={ALL_VALUE}>
-            {t("alertsPage.filters.allIps")}
-          </MenuItem>
-          {minerOptions.map((m) => (
-            <MenuItem key={m.ip} value={m.ip}>
-              {m.label}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <FormControl size="small" sx={SELECT_SX}>
-        <InputLabel id="alerts-type-filter-label">
-          {t("alertsPage.filters.typeLabel")}
-        </InputLabel>
-        <Select
-          labelId="alerts-type-filter-label"
-          label={t("alertsPage.filters.typeLabel")}
-          value={type === "" ? ALL_VALUE : type}
-          onChange={(e: SelectChangeEvent) =>
-            onTypeChange(e.target.value === ALL_VALUE ? "" : e.target.value)
-          }
-        >
-          <MenuItem value={ALL_VALUE}>
-            {t("alertsPage.filters.allTypes")}
-          </MenuItem>
-          {ALERT_TYPES.map((alertType) => (
-            <MenuItem key={alertType} value={alertType}>
-              {t(`alertsPage.types.${alertType}`)}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <LocalizationProvider
-        dateAdapter={AdapterDateFns}
-        adapterLocale={dateLocale}
-      >
-        <DatePicker
-          label={t("alertsPage.filters.date")}
-          value={date ? parseISO(date) : null}
-          onChange={(newValue) =>
-            // date is required (the API 400s without one) -- never let the
-            // field go empty, whether from a bad/incomplete typed value or
-            // (previously) the clear button; fall back to today instead of
-            // "". "Reset filters" below is the one intended way back to the
-            // no-filter default.
-            onDateChange(
-              newValue && isValid(newValue)
-                ? format(newValue, "yyyy-MM-dd")
-                : todayISO(),
-            )
-          }
-          // MUI defaults closeOnSelect to true on desktop (popper) but false
-          // on mobile (dialog, expects an explicit OK) -- forcing it true
-          // makes both close immediately on pick, matching the desktop feel.
-          closeOnSelect
-          // No `field: { clearable: true }` -- a clear (X) button that can't
-          // actually clear the field (see above) is a dead-end affordance,
-          // not a fix.
-          slotProps={{
-            textField: { size: "small", sx: DATE_FIELD_SX },
-          }}
-        />
-      </LocalizationProvider>
-
-      <Button
-        size="small"
-        disabled={!hasActiveFilter}
-        onClick={onReset}
-        startIcon={<FilterAltOffIcon fontSize="small" />}
-        sx={{ alignSelf: { xs: "flex-end", sm: "center" }, flexShrink: 0 }}
-      >
-        {t("alertsPage.filters.reset")}
-      </Button>
-    </Box>
-  );
-};
 
 /* ── Row ─────────────────────────────────────────────────────── */
 type AlertRowData = ReturnType<typeof episodesToAlertHistoryRows>[number];
@@ -311,7 +151,7 @@ export const Alerts = () => {
     () =>
       (miners ?? [])
         .map((m) => ({
-          ip: m.ip,
+          value: m.ip,
           label: displayName(m) ? `${displayName(m)} (${m.ip})` : m.ip,
         }))
         .sort((a, b) => a.label.localeCompare(b.label)),
@@ -346,7 +186,7 @@ export const Alerts = () => {
 
       <Box
         sx={{
-          mx: { xs: 2, md: 3 },
+          mx: { xs: 0, md: 3 },
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -354,47 +194,53 @@ export const Alerts = () => {
           transition: "opacity 0.15s ease",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: { xs: "column", sm: "row" },
-            flexWrap: { sm: "wrap" },
-            alignItems: { xs: "stretch", sm: "center" },
-            justifyContent: "space-between",
-            gap: 1.5,
-          }}
-        >
-          <FiltersBar
-            ip={ip}
-            onIpChange={setIp}
-            type={type}
-            onTypeChange={setType}
-            date={date}
-            onDateChange={setDate}
-            minerOptions={minerOptions}
-            onReset={() => {
-              setIp("");
-              setType("");
-              // Not "" -- the API requires a date on every request (see
-              // server/internal/handler/alerts.go), so "reset" means back
-              // to today, not "no date" (which would 400).
-              setDate(todayISO());
-            }}
-          />
-
-          {data && data.total > 0 && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ textAlign: { xs: "right", sm: "left" } }}
-            >
-              {t("alertsPage.shownCount", {
-                count: rows.length,
-                total: data.total,
-              })}
-            </Typography>
-          )}
-        </Box>
+        <FilterBar
+          filters={[
+            {
+              kind: "select",
+              id: "ip",
+              label: t("alertsPage.filters.ipLabel"),
+              value: ip,
+              onChange: setIp,
+              allLabel: t("alertsPage.filters.allIps"),
+              options: minerOptions,
+            },
+            {
+              kind: "select",
+              id: "type",
+              label: t("alertsPage.filters.typeLabel"),
+              value: type,
+              onChange: setType,
+              allLabel: t("alertsPage.filters.allTypes"),
+              options: ALERT_TYPES.map((alertType) => ({
+                value: alertType,
+                label: t(`alertsPage.types.${alertType}`),
+              })),
+            },
+            {
+              kind: "date",
+              id: "date",
+              label: t("alertsPage.filters.date"),
+              value: parseISO(date),
+              // The API requires a date (it 400s without one) -- clearing
+              // the filter means back to today, never "no date".
+              onChange: (value) =>
+                setDate(value ? format(value, "yyyy-MM-dd") : todayISO()),
+              defaultValue: parseISO(todayISO()),
+            },
+          ]}
+          summary={
+            data &&
+            data.total > 0 && (
+              <Typography variant="caption" color="text.secondary">
+                {t("alertsPage.shownCount", {
+                  count: rows.length,
+                  total: data.total,
+                })}
+              </Typography>
+            )
+          }
+        />
 
         {!isLoading && rows.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 6 }}>

@@ -108,6 +108,8 @@ resources/data/backups/
   checksums.md5         ← MD5 of each past month's archive, written once it's
                           complete -- a month listed here is final, never
                           opened or rewritten again
+resources/data/audit/
+  2026-06-22.jsonl      ← append-only audit log (dashboard-api), one per UTC day
 ```
 
 ### Go Backend (`server/`)
@@ -121,6 +123,7 @@ Three separate `cmd/` binaries sharing `internal/` packages:
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
+| `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- via the router's `audit(type)` middleware (client IP/User-Agent, status, query string), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
 | `internal/backup/` | Monthly zip archives (`ArchiveCompletedDays`, `List`, `Merge`); a past month becomes final once its MD5 is in `checksums.md5` |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
@@ -152,6 +155,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/config/settings` | `GetAppSettings()` | Read `settings.yml` (merged with defaults) |
 | `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
+| `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max 7 days): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file) |
 | `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
 | `GET` | `/api/backups/download?months=` | `DownloadBackups()` | One or several months in one zip |
 

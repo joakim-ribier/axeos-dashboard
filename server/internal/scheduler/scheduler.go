@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/axeos"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/robfig/cron/v3"
@@ -19,6 +20,7 @@ type Scheduler struct {
 	config config.Config
 
 	minersStore *config.MinersStore
+	auditLog    *audit.Log
 	ctx         context.Context
 	cancel      context.CancelFunc
 
@@ -62,6 +64,13 @@ func (s *Scheduler) WithMinersStore(store *config.MinersStore) *Scheduler {
 	return s
 }
 
+// WithAuditLog attaches the log every scheduled action is recorded into,
+// next to the API's own actions (see audit). Optional.
+func (s *Scheduler) WithAuditLog(log *audit.Log) *Scheduler {
+	s.auditLog = log
+	return s
+}
+
 // execute runs the one action a scheduled entry can trigger. Both
 // SwitchPool and Restart already log internally on failure, so a caller
 // looping over jobs (rebuild below) only needs the error to decide whether
@@ -102,8 +111,20 @@ func (s *Scheduler) rebuild(bitaxes []config.Bitaxe) {
 			_, err := s.cron.AddFunc(schedule.Cron, func() {
 				s.logger.Info("Running scheduled action!", "ip", miner.Ip, "action", schedule.Action)
 
+				entry := audit.Entry{
+					Timestamp: time.Now(),
+					Source:    audit.SourceSystem,
+					Service:   audit.ServiceScheduler,
+					Type:      string(schedule.Action),
+					Target:    miner.Ip,
+					Cron:      schedule.Cron,
+				}
 				if err := execute(axeOs, miner, schedule.Action); err != nil {
 					s.logger.Error("Scheduled action failed!", "ip", miner.Ip, "action", schedule.Action, "error", err)
+					entry.Error = err.Error()
+				}
+				if err := s.auditLog.Record(entry); err != nil {
+					s.logger.Error("failed to record audit entry", "type", schedule.Action, "error", err)
 				}
 			})
 

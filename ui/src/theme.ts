@@ -18,6 +18,11 @@ export const getTheme = (mode: "light" | "dark") => {
       },
     },
     components: {
+      MuiPaper: {
+        styleOverrides: {
+          outlined: { border: "none" },
+        },
+      },
       MuiCard: {
         styleOverrides: {
           root: {

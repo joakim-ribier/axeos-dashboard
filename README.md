@@ -18,7 +18,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 > **Easy to use** — one line, everything else configured from the UI:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | bash
+> curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=latest bash
 > ```
 
 - [Prerequisites](#prerequisites)

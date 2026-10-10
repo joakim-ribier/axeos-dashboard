@@ -17,6 +17,7 @@ import { SearchProvider } from "@/contexts/SearchContext";
 import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
 import i18n from "@/i18n";
 import { Alerts } from "@/pages/Alerts";
+import { Audit } from "@/pages/Audit";
 import { Backups } from "@/pages/Backups";
 import { Home } from "@/pages/Home";
 import { Settings } from "@/pages/Settings";
@@ -110,6 +111,14 @@ export const App: React.FC = () => {
                     element={
                       <RequirePageEnabled page="backups">
                         <Backups />
+                      </RequirePageEnabled>
+                    }
+                  />
+                  <Route
+                    path="audit"
+                    element={
+                      <RequirePageEnabled page="audit">
+                        <Audit />
                       </RequirePageEnabled>
                     }
                   />
