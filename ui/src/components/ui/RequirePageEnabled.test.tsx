@@ -34,20 +34,23 @@ function renderGate(page: UIFeatures["page"], isLoading = false) {
 
 describe("RequirePageEnabled", () => {
   it("renders the page when its flag is enabled", () => {
-    renderGate({ settings: "hidden", backups: "enabled" });
+    renderGate({ settings: "hidden", backups: "enabled", audit: "enabled" });
 
     expect(screen.getByText("backups content")).toBeInTheDocument();
   });
 
   it("renders a not-found page when its flag is hidden", () => {
-    renderGate({ settings: "enabled", backups: "hidden" });
+    renderGate({ settings: "enabled", backups: "hidden", audit: "enabled" });
 
     expect(screen.queryByText("backups content")).not.toBeInTheDocument();
     expect(screen.getByText("Page not found")).toBeInTheDocument();
   });
 
   it("waits for the flags instead of flashing the page", () => {
-    renderGate({ settings: "enabled", backups: "hidden" }, true);
+    renderGate(
+      { settings: "enabled", backups: "hidden", audit: "enabled" },
+      true,
+    );
 
     expect(screen.queryByText("backups content")).not.toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toBeInTheDocument();

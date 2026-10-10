@@ -301,6 +301,7 @@ const (
 	BitaxesRelDir = "data/bitaxes"
 	BackupsRelDir = "data/backups"
 	BoardsRelDir  = "data/boards"
+	AuditRelDir   = "data/audit"
 	// BoardBitaxesDirName is each board's miners directory, under
 	// BoardsRelDir/{boardId}.
 	BoardBitaxesDirName = "bitaxes"
@@ -314,6 +315,11 @@ func (s StorageConfig) BitaxesDir() string {
 // BackupsDir returns the directory that holds the monthly backup archives.
 func (s StorageConfig) BackupsDir() string {
 	return filepath.Join(s.DataDir, filepath.FromSlash(BackupsRelDir))
+}
+
+// AuditDir returns the directory that holds the daily audit logs.
+func (s StorageConfig) AuditDir() string {
+	return filepath.Join(s.DataDir, filepath.FromSlash(AuditRelDir))
 }
 
 // ResolveBoardsDir returns the boards root directory: {dataDir}/data/boards,
@@ -509,6 +515,11 @@ type UIPageConfig struct {
 	// the archives either way. remote-dashboard-api serves no backups, so
 	// remote-dashboard.yml sets it to hidden.
 	Backups UIVisibility `yaml:"backups"`
+	// Audit controls the /audit page: "enabled" (default) shows it,
+	// "hidden" hides the page and its nav entry. dashboard-api keeps
+	// recording either way. remote-dashboard-api serves no audit log, so
+	// remote-dashboard.yml sets it to hidden.
+	Audit UIVisibility `yaml:"audit"`
 }
 
 type UIActionConfig struct {

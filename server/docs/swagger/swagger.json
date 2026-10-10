@@ -9,6 +9,134 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/audit": {
+            "get": {
+                "description": "Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed 7 days. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List audit entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "range start, RFC 3339 (default: to minus 24h)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "range end, RFC 3339 (default: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "only this miner's entries (its IP) -- a pool switch applied to every miner included",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "page number, 1-based (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "entries per page (default 50, max 200)",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuditResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "from/to malformed, from not before to, or range over 7 days",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "the audit log couldn't be read",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/audit/export": {
+            "get": {
+                "description": "Same range and defaults as GET /api/audit (last 24 hours, at most 7 days), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Export audit entries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "range start, RFC 3339 (default: to minus 24h)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "range end, RFC 3339 (default: now)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "only this miner's entries (its IP) -- a pool switch applied to every miner included",
+                        "name": "ip",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuditExport"
+                        }
+                    },
+                    "400": {
+                        "description": "from/to malformed, from not before to, or range over 7 days",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "the audit log couldn't be read",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/backups": {
             "get": {
                 "description": "Returns the monthly backup archives, most recent first. The feeder adds each completed (UTC) day to its month's archive, so the current month's archive is complete up to yesterday.",
@@ -813,6 +941,63 @@
         }
     },
     "definitions": {
+        "audit.Entry": {
+            "type": "object",
+            "properties": {
+                "cron": {
+                    "type": "string"
+                },
+                "error": {
+                    "description": "Why it failed, whatever its source.",
+                    "type": "string"
+                },
+                "ip": {
+                    "description": "API only: there's no authentication, so the client's IP and\nUser-Agent are the closest thing to \"who\" this tool can record.",
+                    "type": "string"
+                },
+                "query": {
+                    "description": "The request's query string, unescaped -- what was asked for (the\nmonths downloaded, the exported range, the miner a pool switch\ntargeted...).",
+                    "type": "string"
+                },
+                "requestId": {
+                    "type": "string"
+                },
+                "service": {
+                    "description": "System only.",
+                    "type": "string"
+                },
+                "source": {
+                    "$ref": "#/definitions/audit.Source"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "target": {
+                    "description": "Target is the IP of the miner acted on -- empty for a config save,\nor a pool switch applied to every miner.",
+                    "type": "string"
+                },
+                "ts": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "userAgent": {
+                    "type": "string"
+                }
+            }
+        },
+        "audit.Source": {
+            "type": "string",
+            "enum": [
+                "api",
+                "system"
+            ],
+            "x-enum-varnames": [
+                "SourceAPI",
+                "SourceSystem"
+            ]
+        },
         "backup.Info": {
             "type": "object",
             "properties": {
@@ -1059,6 +1244,55 @@
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/handler.AlertEpisode"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.AuditExport": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/audit.Entry"
+                    }
+                },
+                "exportedAt": {
+                    "type": "string"
+                },
+                "from": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.AuditResponse": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/audit.Entry"
                     }
                 },
                 "page": {
@@ -1510,6 +1744,10 @@
         "model.UIPageFeatures": {
             "type": "object",
             "properties": {
+                "audit": {
+                    "description": "Audit: \"enabled\" | \"hidden\" -- see config.UIPageConfig.",
+                    "type": "string"
+                },
                 "backups": {
                     "description": "Backups: \"enabled\" | \"hidden\" -- see config.UIPageConfig.",
                     "type": "string"

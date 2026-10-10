@@ -162,6 +162,8 @@ type UIPageFeatures struct {
 	Settings string `json:"settings"`
 	// Backups: "enabled" | "hidden" -- see config.UIPageConfig.
 	Backups string `json:"backups"`
+	// Audit: "enabled" | "hidden" -- see config.UIPageConfig.
+	Audit string `json:"audit"`
 }
 
 type UIActionFeatures struct {

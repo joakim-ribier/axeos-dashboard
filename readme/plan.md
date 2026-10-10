@@ -88,6 +88,13 @@ every commit.
   panel per miner replace the old cards.
 - ✅ **Page title in a sticky top bar**: every page's title now sits in a
   top bar that stays on screen, with a compact layout on a phone.
+- ✅ **Audit log**: every restart, pool switch, config save, audit export,
+  backups download and network scan -- from the dashboard (with the
+  client's IP, browser and request parameters) or by the scheduler -- is
+  recorded, success or failure, and browsable on a new `/audit` page
+  (last 24 h by default, filters by miner/type/day, copy an entry, JSON
+  export). Alerts and Audit now share one filter bar with removable
+  chips.
 
 ## To do
 
@@ -112,6 +119,29 @@ every commit.
   the miners list. Extra benefit of dropping the `useMiners()` dependency:
   the IP filter would no longer offer miners with no alert that day
   (options that today filter nothing once selected).
+
+### Audit
+
+- **"Security" menu group**: once a second security feature exists (e.g.
+  the new-IP alert below), group it with `/audit` under a "Security"
+  section of the sidebar. A group holding only Audit isn't worth it.
+- **Config diff (v2)**: `save_miners`/`save_settings` entries only record
+  that a save happened -- every Settings action (discovery save, enable/
+  disable, disable all, alias, pools, scheduler; rate, other devices, pool
+  dashboards, remote) ends up as the same two labels. First step: compare
+  before/after server-side and record one entry per changed miner (target
+  = its IP) with a `changes` list (added, enabled/disabled, alias, pools,
+  schedule, discovery info), and the changed sections for settings. Then
+  the values themselves (e.g. "miner X: pool url A → B").
+- **New-IP security email**: when an API action comes from an IP never
+  seen before (kept in a known-IPs list), send an email along the lines of
+  "we detected a new IP address, was it you?". Needs email sending, which
+  the project doesn't have yet.
+- **Audit on remote boards**: push audit entries to hashboard (feeder
+  reads the day's audit file and pushes new lines; hashboard stores them),
+  then serve them read-only from `remote-dashboard-api` and enable
+  `ui.page.audit` in `remote-dashboard.yml`. Decide first whether the
+  client IP/User-Agent are shown on a public board.
 
 ### Settings
 
@@ -144,7 +174,11 @@ every commit.
 
 ## Known bugs
 
-None open right now.
+- **Miner drawer copy button fails on the Pi**: `MinerPools.tsx` copies
+  the pool user with `navigator.clipboard`, which only exists in a secure
+  context (HTTPS or localhost) -- over plain `http://<LAN IP>` the button
+  does nothing. Switch it to `ui/src/utils/clipboard.ts` (execCommand
+  fallback), as the audit page does.
 
 ## Cross-cutting guardrails
 

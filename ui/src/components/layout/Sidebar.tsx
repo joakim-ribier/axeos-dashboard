@@ -6,6 +6,7 @@ import BackupIcon from "@mui/icons-material/Backup";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import LockIcon from "@mui/icons-material/Lock";
+import ManageHistoryIcon from "@mui/icons-material/ManageHistory";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PublicIcon from "@mui/icons-material/Public";
@@ -391,6 +392,15 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             selected={location.pathname === "/backups"}
             icon={<BackupIcon sx={{ fontSize: 18 }} />}
             label={t("nav.backups")}
+            onClick={onItemClick}
+          />
+        )}
+        {ui.page.audit !== "hidden" && (
+          <NavItem
+            to="/audit"
+            selected={location.pathname === "/audit"}
+            icon={<ManageHistoryIcon sx={{ fontSize: 18 }} />}
+            label={t("nav.audit")}
             onClick={onItemClick}
           />
         )}

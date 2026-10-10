@@ -150,6 +150,7 @@
     "alerts": "Alerts",
     "settings": "Settings",
     "backups": "Backups",
+    "audit": "Audit",
     "autoRefresh": "Auto-refresh"
   },
   "sidebar": {
@@ -186,8 +187,7 @@
       "allIps": "All miners",
       "typeLabel": "Type",
       "allTypes": "All alert types",
-      "date": "Date",
-      "reset": "Reset filters"
+      "date": "Date"
     },
     "types": {
       "tempHigh": "Temperature",
@@ -224,6 +224,49 @@
     "empty": "No backups yet: the first one will be created tonight.",
     "loadError": "Failed to load backups."
   },
+  "auditPage": {
+    "header": {
+      "title": "Audit",
+      "description": "History of changes, exports and network scans, from the dashboard or by the scheduler"
+    },
+    "filters": {
+      "day": "Day",
+      "last24h": "Last 24 h",
+      "miner": "Miner",
+      "allMiners": "All miners",
+      "type": "Type",
+      "allTypes": "All types"
+    },
+    "types": {
+      "restart": "Restart",
+      "switch_primary": "Switch to primary pool",
+      "switch_fallback": "Switch to fallback pool",
+      "save_miners": "Miners saved",
+      "save_settings": "Settings saved",
+      "export_audit": "Audit export",
+      "download_backups": "Backups download",
+      "discover": "Network discovery"
+    },
+    "allMiners": "all miners",
+    "sources": {
+      "api": "Dashboard",
+      "system": "System"
+    },
+    "services": {
+      "scheduler": "Scheduler"
+    },
+    "failed": "Failed",
+    "empty": "No events in this period.",
+    "summary": "{{from}}–{{to}} of {{total}}",
+    "pagination": {
+      "rowsPerPage": "Rows per page:"
+    },
+    "count_one": "{{count}} event",
+    "count_other": "{{count}} events",
+    "copy": "Copy entry",
+    "copied": "Copied!",
+    "export": "Export"
+  },
   "search": {
     "helpTitle": "Search tips",
     "helpPlain": "Plain text matches hostname, IP, model, pool, and version.",
@@ -242,6 +285,11 @@
   "common": {
     "on": "on",
     "off": "off"
+  },
+  "filterBar": {
+    "filters": "Filters",
+    "clearAll": "Clear all",
+    "chip": "{{label}}: {{value}}"
   },
   "topBar": {
     "autoRefreshOn": "Auto-refresh is on",

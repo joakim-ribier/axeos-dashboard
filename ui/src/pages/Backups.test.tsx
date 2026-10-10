@@ -7,6 +7,11 @@ import i18n from "@/i18n";
 
 import { Backups } from "./Backups";
 
+const mockDownloadFile = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/utils/download", () => ({
+  downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
+}));
+
 const mockUseBackups = vi.fn();
 vi.mock("@/hooks/useBackups", async () => ({
   ...(await vi.importActual<typeof import("@/hooks/useBackups")>(
@@ -52,7 +57,7 @@ function renderBackups() {
 }
 
 const downloadSelectionButton = () =>
-  screen.getByText("Download").closest("a")!;
+  screen.getByText("Download").closest("button")!;
 
 describe("Backups page", () => {
   beforeEach(() => {
@@ -85,7 +90,7 @@ describe("Backups page", () => {
     expect(screen.getByText("Failed to load backups.")).toBeInTheDocument();
   });
 
-  it("shows the current year by default, with the current month flagged in progress", () => {
+  it("shows the current year by default, with the current month flagged in progress", async () => {
     renderBackups();
 
     const rows = screen.getAllByRole("row").slice(1);
@@ -95,10 +100,14 @@ describe("Backups page", () => {
     ).toBeInTheDocument();
     expect(within(rows[0]).getByText("in progress")).toBeInTheDocument();
     expect(within(rows[0]).getByText(/\b(00|12):30\b/)).toBeInTheDocument();
-    expect(
-      within(rows[0]).getByRole("link", { name: "Download" }),
-    ).toHaveAttribute("href", `/api/backups/download?months=${currentMonth}`);
     expect(screen.getByText(currentYear)).toBeInTheDocument();
+
+    await userEvent.click(
+      within(rows[0]).getByRole("button", { name: "Download" }),
+    );
+    expect(mockDownloadFile).toHaveBeenCalledWith(
+      `/api/backups/download?months=${currentMonth}`,
+    );
   });
 
   it("shows the checksum of final months only", async () => {
@@ -136,7 +145,7 @@ describe("Backups page", () => {
   it("keeps the selection across years and downloads it as one archive", async () => {
     renderBackups();
 
-    expect(downloadSelectionButton()).toHaveAttribute("aria-disabled", "true");
+    expect(downloadSelectionButton()).toBeDisabled();
 
     await userEvent.click(
       screen.getByRole("checkbox", { name: monthLabel(currentMonth) }),
@@ -149,9 +158,10 @@ describe("Backups page", () => {
     );
 
     expect(screen.getByText("Selected: 2 · ≈ 3 MB")).toBeInTheDocument();
-    expect(downloadSelectionButton()).not.toHaveAttribute("aria-disabled");
-    expect(downloadSelectionButton()).toHaveAttribute(
-      "href",
+    expect(downloadSelectionButton()).toBeEnabled();
+
+    await userEvent.click(downloadSelectionButton());
+    expect(mockDownloadFile).toHaveBeenCalledWith(
       `/api/backups/download?months=${currentMonth},${lastYear}-11`,
     );
   });
