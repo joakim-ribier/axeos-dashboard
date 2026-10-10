@@ -27,8 +27,9 @@ An episode ends once the alert has been gone longer than the feeder's
 polling interval — under that delay, a new occurrence extends the same
 episode instead of starting a new one.
 
-Filterable by miner and by type (dropdowns), with a button to reset the
-filters.
+Filterable by miner, by type and by day. Each active filter shows up as
+a chip below the bar: its cross removes it, **Clear all** removes them
+all.
 
 ## ⚠️ Alert types
 {: #types }

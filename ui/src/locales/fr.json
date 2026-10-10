@@ -150,6 +150,7 @@
     "alerts": "Alertes",
     "settings": "Configuration",
     "backups": "Sauvegardes",
+    "audit": "Audit",
     "autoRefresh": "Actualisation auto"
   },
   "sidebar": {
@@ -186,8 +187,7 @@
       "allIps": "Tous les mineurs",
       "typeLabel": "Type",
       "allTypes": "Tous les types",
-      "date": "Date",
-      "reset": "Réinitialiser les filtres"
+      "date": "Date"
     },
     "types": {
       "tempHigh": "Température",
@@ -224,6 +224,49 @@
     "empty": "Aucune sauvegarde pour l'instant : la première sera créée cette nuit.",
     "loadError": "Impossible de charger les sauvegardes."
   },
+  "auditPage": {
+    "header": {
+      "title": "Audit",
+      "description": "Historique des modifications, exports et détections réseau, depuis le dashboard ou par le planificateur"
+    },
+    "filters": {
+      "day": "Jour",
+      "last24h": "Dernières 24 h",
+      "miner": "Mineur",
+      "allMiners": "Tous les mineurs",
+      "type": "Type",
+      "allTypes": "Tous les types"
+    },
+    "types": {
+      "restart": "Redémarrage",
+      "switch_primary": "Bascule vers le pool principal",
+      "switch_fallback": "Bascule vers le pool de secours",
+      "save_miners": "Enregistrement des mineurs",
+      "save_settings": "Enregistrement des paramètres",
+      "export_audit": "Export de l'audit",
+      "download_backups": "Téléchargement de sauvegardes",
+      "discover": "Détection réseau"
+    },
+    "allMiners": "tous les mineurs",
+    "sources": {
+      "api": "Dashboard",
+      "system": "Système"
+    },
+    "services": {
+      "scheduler": "Planificateur"
+    },
+    "failed": "Échec",
+    "empty": "Aucun événement sur cette période.",
+    "summary": "{{from}}–{{to}} sur {{total}}",
+    "pagination": {
+      "rowsPerPage": "Lignes par page :"
+    },
+    "count_one": "{{count}} événement",
+    "count_other": "{{count}} événements",
+    "copy": "Copier l'entrée",
+    "copied": "Copié !",
+    "export": "Exporter"
+  },
   "search": {
     "helpTitle": "Astuces de recherche",
     "helpPlain": "Le texte simple cherche dans le nom, l'IP, le modèle, le pool et la version.",
@@ -242,6 +285,11 @@
   "common": {
     "on": "activé",
     "off": "désactivé"
+  },
+  "filterBar": {
+    "filters": "Filtres",
+    "clearAll": "Tout effacer",
+    "chip": "{{label}} : {{value}}"
   },
   "topBar": {
     "autoRefreshOn": "Actualisation auto activée",

@@ -25,6 +25,8 @@ ui:
     # Backups are archived by the local feeder and served by dashboard-api
     # only -- remote-dashboard-api has no backup endpoints.
     backups: hidden
+    # The audit log is recorded and served by dashboard-api only.
+    audit: hidden
   # remote-dashboard-api is read-only by design (no restart/pool-switch
   # endpoints exist here at all) -- hidden so the dashboard doesn't show
   # buttons that would just 404.

@@ -28,8 +28,9 @@ Un épisode se termine si l'alerte disparaît pendant plus longtemps que
 l'intervalle de sondage du feeder — en dessous de ce délai, une nouvelle
 occurrence prolonge le même épisode plutôt que d'en créer un nouveau.
 
-Filtrable par mineur et par type (menus déroulants), avec un bouton pour
-réinitialiser les filtres.
+Filtrable par mineur, par type et par jour. Chaque filtre actif apparaît
+en étiquette sous la barre : la croix le retire, **Tout effacer** les
+retire tous.
 
 ## ⚠️ Types d'alertes
 {: #types }

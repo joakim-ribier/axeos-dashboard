@@ -23,6 +23,7 @@ import {
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { backupsDownloadUrl, useBackups } from "@/hooks/useBackups";
+import { downloadFile } from "@/utils/download";
 import { formatTimestamp } from "@/utils/format";
 
 const formatMonth = (month: string, locale: string) =>
@@ -86,7 +87,7 @@ export const Backups: React.FC = () => {
 
       <Box
         sx={{
-          mx: { xs: 2, md: 3 },
+          mx: { xs: 0, md: 3 },
           display: "flex",
           flexDirection: "column",
           gap: 2,
@@ -128,9 +129,7 @@ export const Backups: React.FC = () => {
                 size="small"
                 startIcon={<DownloadIcon />}
                 disabled={!selected.length}
-                component="a"
-                href={backupsDownloadUrl(selected)}
-                download
+                onClick={() => void downloadFile(backupsDownloadUrl(selected))}
               >
                 {t("backupsPage.download")}
               </Button>
@@ -236,9 +235,11 @@ export const Backups: React.FC = () => {
                       <Tooltip title={t("backupsPage.download")} arrow>
                         <IconButton
                           size="small"
-                          component="a"
-                          href={backupsDownloadUrl([backup.month])}
-                          download
+                          onClick={() =>
+                            void downloadFile(
+                              backupsDownloadUrl([backup.month]),
+                            )
+                          }
                           aria-label={t("backupsPage.download")}
                         >
                           <DownloadIcon fontSize="small" />
