@@ -235,7 +235,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
 			f.goPush(func() {
-				f.pushToRemote("", now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
+				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -317,6 +317,16 @@ func extractDeviceMac(payload []byte) string {
 	return m.MacAddr
 }
 
+// Where each push goes, appended to remote.pushURL (hashboard's
+// .../api/push) -- one route per file hashboard writes, verbatim.
+const (
+	pushSamplePath         = ""                 // a successful poll: the day's JSONL + latest.json
+	pushHistoryPath        = "/history"         // an alert-only line: the day's JSONL only
+	pushTotalsPath         = "/totals"          // totals.json
+	pushMinersConfigPath   = "/config/miners"   // config/miners.json
+	pushSettingsConfigPath = "/config/settings" // config/settings.json
+)
+
 type pushSample struct {
 	Timestamp time.Time `json:"ts"`
 	IP        string    `json:"ip"`
@@ -355,7 +365,7 @@ func (f *Feeder) pushAlertOnly(now time.Time, key, addr string, bitaxe config.Bi
 		return
 	}
 	f.goPush(func() {
-		f.pushToRemote("/history", now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), "", nil, alerts)
+		f.pushToRemote(pushHistoryPath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), "", nil, alerts)
 	})
 }
 
@@ -397,7 +407,7 @@ func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
 		f.logger.Error("push: totals marshal error", "mac", storageKey, "error", err)
 		return
 	}
-	_ = f.postToRemote("/totals", body, "totals "+storageKey)
+	_ = f.postToRemote(pushTotalsPath, body, "totals "+storageKey)
 }
 
 // configMinersPush is the body sent to hashboard's miners-config endpoint --
@@ -414,7 +424,7 @@ func (f *Feeder) pushMinersConfigToRemote(bitaxes []config.Bitaxe) {
 		f.logger.Error("push: miners config marshal error", "error", err)
 		return
 	}
-	f.recordPushStatus(remotepush.KindMinersConfig, f.postToRemote("/config/miners", body, "config/miners"))
+	f.recordPushStatus(remotepush.KindMinersConfig, f.postToRemote(pushMinersConfigPath, body, "config/miners"))
 }
 
 // configSettingsPush mirrors AppSettingsFile minus Remote -- the push
@@ -451,7 +461,7 @@ func (f *Feeder) pushSettingsConfigToRemote(settings config.AppSettingsFile, fir
 		f.logger.Error("push: settings config marshal error", "error", err)
 		return
 	}
-	f.recordPushStatus(remotepush.KindSettingsConfig, f.postToRemote("/config/settings", body, "config/settings"))
+	f.recordPushStatus(remotepush.KindSettingsConfig, f.postToRemote(pushSettingsConfigPath, body, "config/settings"))
 }
 
 // postToRemote sends body as an authenticated JSON POST to hashboard and
