@@ -223,6 +223,65 @@ func TestFeeder_runOnce_pushesTheSameNormalizedStorageKeyUsedLocally(t *testing.
 	}
 }
 
+func TestFeeder_runOnce_pushesAnOfflinePollToo(t *testing.T) {
+	dir := t.TempDir()
+
+	// Unreachable from here on: the poll fails, as for a miner that's down.
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	minerAddr := serverAddr(bitaxeServer)
+	bitaxeServer.Close()
+
+	type pushed struct {
+		path string
+		body map[string]any
+	}
+	pushCh := make(chan pushed, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+		if isNonSamplePushPath(r.URL.Path) {
+			return
+		}
+		var decoded map[string]any
+		_ = json.Unmarshal(body, &decoded)
+		pushCh <- pushed{path: r.URL.Path, body: decoded}
+	}))
+	defer remoteServer.Close()
+
+	cfg := config.Config{
+		Bitaxes:   []config.Bitaxe{{Ip: minerAddr, Mac: "aa:bb:cc:dd:ee:ff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true}},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+
+	feeder := NewFeeder(testLogger(), cfg)
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes()
+
+	// A remote board mirrors the local history: the missed poll is pushed
+	// too, to /history (appended there, latest.json left alone, like
+	// storage.AppendAlertOnly does locally), as an alert with no payload.
+	select {
+	case p := <-pushCh:
+		body := p.body
+		if p.path != "/history" {
+			t.Errorf("pushed to %q, want /history", p.path)
+		}
+		alerts, _ := body["alerts"].([]any)
+		first, _ := alerts[0].(map[string]any)
+		if body["storageKey"] != "aabbccddeeff" || first["type"] != "offline" {
+			t.Errorf("push body = %v, want this miner's offline alert", body)
+		}
+		if _, ok := body["payload"]; ok {
+			t.Errorf("push body has a payload %v, want none on an offline poll", body["payload"])
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected the offline poll to be pushed, none received")
+	}
+}
+
 func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 	dir := t.TempDir()
 	var logBuf bytes.Buffer
@@ -237,7 +296,10 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 	}))
 	defer bitaxeServer.Close()
 
-	type pushedRequest struct{ body map[string]any }
+	type pushedRequest struct {
+		path string
+		body map[string]any
+	}
 	pushCh := make(chan pushedRequest, 1)
 	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
@@ -246,12 +308,11 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		// The miners/settings config pushes fire every cycle regardless of
 		// any single miner's poll outcome -- see isNonSamplePushPath. Only
-		// the per-miner sample push is under test here (it must NOT fire
-		// for a mismatched device).
+		// the per-miner push is under test here.
 		if isNonSamplePushPath(r.URL.Path) {
 			return
 		}
-		pushCh <- pushedRequest{body: decoded}
+		pushCh <- pushedRequest{path: r.URL.Path, body: decoded}
 	}))
 	defer remoteServer.Close()
 
@@ -305,11 +366,15 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		t.Errorf("expected an error to be logged about the mac mismatch, got log: %s", logBuf.String())
 	}
 
+	// The wrong device's reading is never pushed -- only the mismatch
+	// alert, to /history, mirroring the jsonl-only line stored above.
 	select {
-	case <-pushCh:
-		t.Error("must not push to the remote server when the mac mismatches")
-	case <-time.After(200 * time.Millisecond):
-		// expected: no push happened
+	case p := <-pushCh:
+		if _, hasPayload := p.body["payload"]; p.path != "/history" || hasPayload {
+			t.Errorf("pushed %v to %q, want the alert alone, to /history", p.body, p.path)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected the mismatch alert to be pushed to /history, none received")
 	}
 }
 

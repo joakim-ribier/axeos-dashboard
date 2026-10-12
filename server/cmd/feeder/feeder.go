@@ -199,6 +199,8 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			offline := []model.Alert{{Type: model.AlertOffline, Message: err.Error()}}
 			if err := store.AppendAlertOnly(now, key, offline); err != nil {
 				f.logger.Error("storage error (offline alert)", "ip", addr, "mac", key, "error", err)
+			} else {
+				f.pushAlertOnly(now, key, addr, bitaxe, offline)
 			}
 			continue
 		}
@@ -215,6 +217,8 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			}}
 			if err := store.AppendAlertOnly(now, key, mismatch); err != nil {
 				f.logger.Error("storage error (mismatch alert)", "ip", addr, "mac", key, "error", err)
+			} else {
+				f.pushAlertOnly(now, key, addr, bitaxe, mismatch)
 			}
 			continue
 		}
@@ -231,7 +235,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// need for it to know anything about MAC address formatting at
 			// all (single source of truth for that logic, here).
 			f.goPush(func() {
-				f.pushToRemote(now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
+				f.pushToRemote("", now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -319,13 +323,14 @@ type pushSample struct {
 	// StorageKey is the already-normalized directory-name key (see
 	// config.Bitaxe.StorageKey) -- hashboard just uses it verbatim, it
 	// never needs to know this is derived from a MAC address at all.
-	StorageKey      string          `json:"storageKey"`
-	Hostname        string          `json:"hostname"`
-	Alias           string          `json:"alias,omitempty"`
-	Model           string          `json:"model"`
-	ElectricityRate float64         `json:"electricityRatePerKwh,omitempty"`
-	LatestFirmware  string          `json:"latestFirmware,omitempty"`
-	Payload         json.RawMessage `json:"payload"`
+	StorageKey      string  `json:"storageKey"`
+	Hostname        string  `json:"hostname"`
+	Alias           string  `json:"alias,omitempty"`
+	Model           string  `json:"model"`
+	ElectricityRate float64 `json:"electricityRatePerKwh,omitempty"`
+	LatestFirmware  string  `json:"latestFirmware,omitempty"`
+	// Payload is absent on an alert-only line (see pushAlertOnly).
+	Payload json.RawMessage `json:"payload,omitempty"`
 	// Alerts is opaque to hashboard -- it stores it verbatim, same principle
 	// as StorageKey.
 	Alerts []model.Alert `json:"alerts,omitempty"`
@@ -339,7 +344,22 @@ type pushSample struct {
 	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
 }
 
-func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, alias, model, latestFirmware string, payload []byte, alerts []model.Alert) {
+// pushAlertOnly sends hashboard the same alert-only line just stored
+// locally (an offline poll, a MAC mismatch), so a remote board's history
+// and alerts mirror the local ones -- a missed poll is a dip in its 24h
+// chart there too. It goes to /history, which only appends it to the day's
+// history: the miner's latest.json there keeps its last reading, as
+// storage.AppendAlertOnly leaves it here.
+func (f *Feeder) pushAlertOnly(now time.Time, key, addr string, bitaxe config.Bitaxe, alerts []model.Alert) {
+	if !f.config.Remote.Enabled() {
+		return
+	}
+	f.goPush(func() {
+		f.pushToRemote("/history", now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), "", nil, alerts)
+	})
+}
+
+func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip, hostname, alias, model, latestFirmware string, payload []byte, alerts []model.Alert) {
 	sample := pushSample{
 		Timestamp:             now.UTC().Truncate(time.Second),
 		IP:                    ip,
@@ -359,7 +379,7 @@ func (f *Feeder) pushToRemote(now time.Time, storageKey, ip, hostname, alias, mo
 		f.logger.Error("push: marshal error", "ip", ip, "error", err)
 		return
 	}
-	_ = f.postToRemote("", body, "sample "+ip)
+	_ = f.postToRemote(path, body, "sample "+ip)
 }
 
 // pushTotals is the body sent to hashboard's totals endpoint -- the storage
