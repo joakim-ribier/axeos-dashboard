@@ -59,7 +59,10 @@ feeder → writes resources/data/bitaxes/{mac}/YYYY-MM-DD.jsonl  (append)
                                           {mac}/latest.json     (overwrite)
          optionally pushes to hashboard via POST /api/push (includes the
          already-computed storageKey -- hashboard just uses it verbatim,
-         with no notion of MAC address formatting at all)
+         with no notion of MAC address formatting at all); an offline poll
+         or MAC mismatch goes to POST /api/push/history instead (appended
+         to the day there, latest.json untouched -- same as locally), so a
+         remote board's history mirrors the local one
     ↓  reads latest.json
 dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
                 config's mac: resolves the storage dir)
