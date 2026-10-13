@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 
 import { type Miner } from "@/schemas/minerSchema";
+import { copyToClipboard } from "@/utils/clipboard";
 import { poolHostname } from "@/utils/minerDisplay";
 
 import { PoolLink } from "../PoolLink";
@@ -110,8 +111,7 @@ const PoolUser = ({ user }: { user?: string }) => {
   const [copied, setCopied] = useState(false);
 
   const copy = () =>
-    navigator.clipboard
-      .writeText(user ?? "")
+    copyToClipboard(user ?? "")
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
