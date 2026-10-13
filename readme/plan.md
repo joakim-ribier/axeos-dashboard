@@ -174,11 +174,7 @@ every commit.
 
 ## Known bugs
 
-- **Miner drawer copy button fails on the Pi**: `MinerPools.tsx` copies
-  the pool user with `navigator.clipboard`, which only exists in a secure
-  context (HTTPS or localhost) -- over plain `http://<LAN IP>` the button
-  does nothing. Switch it to `ui/src/utils/clipboard.ts` (execCommand
-  fallback), as the audit page does.
+None open right now.
 
 ## Cross-cutting guardrails
 
