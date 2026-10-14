@@ -95,6 +95,23 @@ describe("poolMismatches", () => {
     ]);
   });
 
+  it("treats a non-Bitaxe running its pools swapped as switched, not drifted", () => {
+    const swapped: Miner = {
+      ...baseLive,
+      stratumURL: "solo.example.com",
+      stratumPort: 4444,
+      stratumUser: "wallet.worker.fallback",
+      fallbackStratumURL: "stratum.example.com",
+      fallbackStratumPort: 3333,
+      fallbackStratumUser: "wallet.worker",
+    };
+    expect(
+      poolMismatches({ ...configured, model: "nerdaxe" }, swapped),
+    ).toEqual([]);
+    // A Bitaxe switches with useFallbackStratum, never by swapping slots.
+    expect(poolMismatches(configured, swapped)).toHaveLength(6);
+  });
+
   it("never treats an unpolled device (port 0 / empty url) as a mismatch", () => {
     const live: Miner = {
       ...baseLive,
