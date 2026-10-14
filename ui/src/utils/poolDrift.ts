@@ -31,7 +31,31 @@ export const poolMismatches = (
   live: Miner | undefined,
 ): PoolMismatch[] => {
   if (!live) return [];
+  const mismatches = compare(configured, live);
+  // A non-Bitaxe applies a switch to its fallback pool by swapping its two
+  // slots (server-side config.Bitaxe.GetPoolsSettings): running the
+  // configured pools swapped is then the switch, not a drift.
+  if (
+    mismatches.length > 0 &&
+    configured.model !== "bitaxe" &&
+    compare(swapSlots(configured), live).length === 0
+  ) {
+    return [];
+  }
+  return mismatches;
+};
 
+const swapSlots = (c: MinerConfig): MinerConfig => ({
+  ...c,
+  url: c.fallbackUrl,
+  port: c.fallbackPort,
+  user: c.fallbackUser,
+  fallbackUrl: c.url,
+  fallbackPort: c.port,
+  fallbackUser: c.user,
+});
+
+const compare = (configured: MinerConfig, live: Miner): PoolMismatch[] => {
   const mismatches: PoolMismatch[] = [];
   const checkString = (
     field: PoolField,
