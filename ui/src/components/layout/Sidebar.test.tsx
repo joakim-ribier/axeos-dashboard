@@ -24,11 +24,17 @@ vi.mock("@/hooks/useMiners", () => ({
 // ModeProvider itself now fetches GET /api/info (for isRemoteBackend) --
 // mocked at the source rather than via axios, so this stays a one-line
 // constant instead of duplicating the URL-routing every other axios mock
-// in this suite would need. Every Sidebar test here exercises a board that
-// IS reachable (remote-dashboard-api) -- the "typo'd against dashboard-api"
-// case lives in App.smoke.test.tsx, which mounts the real ModeProvider tree.
+// in this suite would need. Remote-dashboard-api by default (a board that
+// IS reachable) -- the "typo'd against dashboard-api" case lives in
+// App.smoke.test.tsx, which mounts the real ModeProvider tree.
+const mockFetchInfo = vi.fn();
 vi.mock("@/api/info", () => ({
-  fetchInfo: () => Promise.resolve({ remote: true }),
+  fetchInfo: () => mockFetchInfo(),
+}));
+
+const mockUseRemoteBoard = vi.fn();
+vi.mock("@/hooks/useRemoteBoard", () => ({
+  useRemoteBoard: () => mockUseRemoteBoard(),
 }));
 
 function sidebarProviders(mobileOpen: boolean, onClose: () => void) {
@@ -83,6 +89,8 @@ function renderSidebar(
 describe("Sidebar", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    mockFetchInfo.mockResolvedValue({ remote: true });
+    mockUseRemoteBoard.mockReturnValue({ data: undefined });
     mockUseAppInfo.mockReturnValue({
       buildSHA: undefined,
       versionStatus: "unknown",
@@ -282,6 +290,83 @@ describe("Sidebar", () => {
     renderSidebar("/");
 
     expect(screen.queryByText("demo")).not.toBeInTheDocument();
+  });
+
+  it("links the board id chip to the board's home page in remote mode", async () => {
+    renderSidebar("/demo/alerts", "remote");
+
+    expect(await screen.findByRole("link", { name: "demo" })).toHaveAttribute(
+      "href",
+      "/demo",
+    );
+  });
+
+  describe("local board line (the hashboard board this instance pushes to)", () => {
+    beforeEach(() => {
+      mockFetchInfo.mockResolvedValue({ remote: false });
+    });
+
+    it("shows the board id, its visibility and the hashboard account link", async () => {
+      mockUseRemoteBoard.mockReturnValue({
+        data: {
+          boardId: "abc123",
+          public: true,
+          hashboardURL: "https://hb.example",
+          dashboardURL: "https://d.example/abc123",
+        },
+      });
+      renderSidebar("/");
+
+      const chip = await screen.findByRole("link", { name: "abc123" });
+      expect(chip).toHaveAttribute("href", "https://d.example/abc123");
+      expect(chip).toHaveAttribute("target", "_blank");
+      expect(
+        screen.getAllByLabelText("board is public").length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getAllByLabelText("open hashboard account")[0],
+      ).toHaveAttribute("href", "https://hb.example/me");
+    });
+
+    it("shows the private icon for a private board", async () => {
+      mockUseRemoteBoard.mockReturnValue({
+        data: {
+          boardId: "abc123",
+          public: false,
+          dashboardURL: "https://d.example/abc123",
+        },
+      });
+      renderSidebar("/");
+
+      expect(
+        (await screen.findAllByLabelText("board is private")).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it("shows nothing when remote push isn't configured", async () => {
+      mockUseRemoteBoard.mockReturnValue({ data: { public: false } });
+      renderSidebar("/");
+
+      await waitFor(() => expect(mockFetchInfo).toHaveBeenCalled());
+      expect(screen.queryByLabelText(/board is/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the nav links board-free", async () => {
+      mockUseRemoteBoard.mockReturnValue({
+        data: {
+          boardId: "abc123",
+          public: true,
+          dashboardURL: "https://d.example/abc123",
+        },
+      });
+      renderSidebar("/");
+
+      await screen.findByRole("link", { name: "abc123" });
+      expect(screen.getByRole("link", { name: "nav.alerts" })).toHaveAttribute(
+        "href",
+        "/alerts",
+      );
+    });
   });
 
   it("shows the build SHA when available", () => {

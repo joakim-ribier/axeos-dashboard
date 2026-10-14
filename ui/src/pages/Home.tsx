@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import { Box, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { Box, Link, Typography, useMediaQuery, useTheme } from "@mui/material";
 
 import { MinerDrawer } from "@/components/dashboard/drawer/MinerDrawer";
 import {
@@ -27,8 +27,10 @@ import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
 import { useMinersHistory } from "@/hooks/useMinersHistory";
 import { sortMiners, useMinerSort } from "@/hooks/useMinerSort";
 import { useMinerStatus } from "@/hooks/useMinerStatus";
+import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { useStoredChoice } from "@/hooks/useStoredChoice";
 import { type Miner } from "@/schemas/minerSchema";
+import { formatTimestamp } from "@/utils/format";
 import {
   matchesQuickFilters,
   NO_QUICK_FILTERS,
@@ -53,6 +55,7 @@ export const Home = () => {
   const { data: history } = useMinersHistory();
   const { hashboardUrl } = useAppInfo();
   const { boardId, isRemoteBackend } = useMode();
+  const { data: remoteBoard } = useRemoteBoard();
   const { query } = useSearch();
   const [sort, setSort] = useMinerSort();
   const { statusOf, isStale } = useMinerStatus();
@@ -117,7 +120,25 @@ export const Home = () => {
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
         title={t("dashboard.header.title")}
-        description={t("dashboard.header.description")}
+        description={
+          remoteBoard?.dashboardURL ? (
+            <>
+              <Link
+                href={remoteBoard.dashboardURL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {t("dashboard.header.remoteBoard")}
+              </Link>
+              {remoteBoard.lastSampleAt &&
+                ` · ${t("dashboard.header.lastSample", {
+                  time: formatTimestamp(remoteBoard.lastSampleAt),
+                })}`}
+            </>
+          ) : (
+            t("dashboard.header.description")
+          )
+        }
         icon={<DashboardIcon />}
       />
 

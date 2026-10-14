@@ -158,6 +158,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/config/settings` | `GetAppSettings()` | Read `settings.yml` (merged with defaults) |
 | `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
+| `GET` | `/api/remote/board` | `RemoteBoard()` | The hashboard board this instance pushes to (boardId, public, links, last sample received) -- relays hashboard's `GET /api/board/info`, cached one feeder interval (`remotepush.BoardCache`); empty when remote isn't configured or hashboard is unreachable |
 | `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max 7 days): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file; `/api/audit/types`, the list of types -- `audit.Types`, the one source the UI's filter reads) |
 | `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
 | `GET` | `/api/backups/download?months=` | `DownloadBackups()` | One or several months in one zip |

@@ -110,3 +110,12 @@ consulter vos mineurs depuis n'importe où, sans VPN — il suffit de coller
 l'URL de push et votre clé API.
 
 ![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
+
+Une fois le push configuré, votre board hashboard apparaît dans le
+dashboard lui-même :
+
+- **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
+  ouvrir le board), s'il est public ou privé, et un lien vers votre compte
+  hashboard.
+- **Accueil** — sous le titre de la page, un lien *Ouvrir le board
+  distant* et l'heure des dernières données reçues par hashboard.

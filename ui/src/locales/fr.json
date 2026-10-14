@@ -3,6 +3,8 @@
     "error": "Échec du chargement des données",
     "header": {
       "description": "Vue d’ensemble de tous les mineurs AxeOs connectés.",
+      "lastSample": "dernières données reçues par hashboard : {{time}}",
+      "remoteBoard": "Ouvrir le board distant",
       "title": "Tableau de bord"
     },
     "noData": "Aucune donnée pour le moment. Le relevé initial des mineurs configurés n'a pas encore eu lieu — réessaie dans quelques instants.",

@@ -16,6 +16,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/handler"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 )
 
 type contextKey string
@@ -37,6 +38,7 @@ type Router struct {
 	watcher          *healtcheck.Watcher
 	versionChecker   *appversion.Checker
 	auditLog         *audit.Log
+	remoteBoard      remotepush.BoardCache
 
 	// saveMu runs config saves one at a time: each diffs what it wrote
 	// against what was there just before, which a concurrent save would
@@ -198,6 +200,9 @@ func (f *Router) Handler() http.Handler {
 	})
 	router.With(f.audited(audit.TypeDiscover)).Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)
+	})
+	router.Get("/api/remote/board", func(w http.ResponseWriter, r *http.Request) {
+		handler.RemoteBoard(f.snapshotConfig(), &f.remoteBoard, f.logger, w, r)
 	})
 	router.Get("/api/audit", handler.ListAudit(f.auditLog))
 	router.Get("/api/audit/types", handler.ListAuditTypes)
