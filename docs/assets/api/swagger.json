@@ -681,6 +681,26 @@
                 }
             }
         },
+        "/api/remote/board": {
+            "get": {
+                "description": "Returns what hashboard knows about the board this instance pushes to: the link to its remote dashboard, and when hashboard last received a sample for it. Empty when remote push isn't configured, or hashboard can't be reached. Cached for one feeder interval.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Remote board info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/remotepush.Board"
+                        }
+                    }
+                }
+            }
+        },
         "/api/{boardId}/config/miners": {
             "get": {
                 "description": "Returns the managed miners list last pushed to hashboard for this board.",
@@ -1823,6 +1843,26 @@
                 "settings": {
                     "description": "Settings: \"enabled\" | \"readonly\" | \"hidden\" -- see config.UIPageConfig.",
                     "type": "string"
+                }
+            }
+        },
+        "remotepush.Board": {
+            "type": "object",
+            "properties": {
+                "boardId": {
+                    "type": "string"
+                },
+                "dashboardURL": {
+                    "type": "string"
+                },
+                "hashboardURL": {
+                    "type": "string"
+                },
+                "lastSampleAt": {
+                    "type": "string"
+                },
+                "public": {
+                    "type": "boolean"
                 }
             }
         }

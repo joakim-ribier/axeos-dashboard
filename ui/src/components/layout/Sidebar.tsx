@@ -30,6 +30,7 @@ import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
+import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
@@ -164,6 +165,21 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const { boardId: rawBoardId, isRemoteBackend } = useMode();
   const boardId = isRemoteBackend ? rawBoardId : undefined;
   const { ui } = useUiFeatures();
+  const { data: remoteBoard } = useRemoteBoard();
+  // The board line under the brand: this remote board, or -- in local
+  // mode -- the hashboard board this instance pushes to.
+  const board = isRemoteBackend
+    ? boardId && !boardNotFound
+      ? { id: boardId, url: `/${boardId}`, isPublic, hashboardUrl }
+      : null
+    : remoteBoard?.boardId && remoteBoard.dashboardURL
+      ? {
+          id: remoteBoard.boardId,
+          url: remoteBoard.dashboardURL,
+          isPublic: remoteBoard.public,
+          hashboardUrl: remoteBoard.hashboardURL ?? null,
+        }
+      : null;
   const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
   const { addNotifications } = useNotifications();
 
@@ -261,7 +277,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         </Typography>
       </Box>
 
-      {boardId && isRemoteBackend && !boardNotFound && (
+      {board && (
         <Box
           sx={{
             display: "flex",
@@ -272,14 +288,22 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             mt: -1,
           }}
         >
-          <Tooltip title={boardId} arrow>
+          <Tooltip title={board.id} arrow>
             <Chip
               size="small"
-              label={boardId}
+              label={board.id}
+              component="a"
+              href={board.url}
+              clickable
+              {...(!isRemoteBackend && {
+                target: "_blank",
+                rel: "noopener noreferrer",
+              })}
               sx={{
                 fontFamily: "monospace",
                 fontSize: "0.7rem",
                 height: 22,
+                borderRadius: 1,
                 maxWidth: SIDEBAR_WIDTH - 32,
                 color: "text.disabled",
                 bgcolor: "rgba(255,255,255,0.06)",
@@ -292,7 +316,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           </Tooltip>
           <Tooltip
             title={
-              isPublic
+              board.isPublic
                 ? t("sidebar.boardPublicHint")
                 : t("sidebar.boardPrivateHint")
             }
@@ -300,23 +324,25 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           >
             <Box
               component="span"
-              aria-label={isPublic ? "board is public" : "board is private"}
+              aria-label={
+                board.isPublic ? "board is public" : "board is private"
+              }
               sx={{
                 display: "flex",
-                color: isPublic ? "success.main" : "warning.main",
+                color: board.isPublic ? "success.main" : "warning.main",
               }}
             >
-              {isPublic ? (
+              {board.isPublic ? (
                 <PublicIcon sx={{ fontSize: 14 }} />
               ) : (
                 <LockIcon sx={{ fontSize: 14 }} />
               )}
             </Box>
           </Tooltip>
-          {hashboardUrl && (
+          {board.hashboardUrl && (
             <Tooltip title={t("sidebar.openHashboardAccount")} arrow>
               <Link
-                href={`${hashboardUrl}/me`}
+                href={`${board.hashboardUrl}/me`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="open hashboard account"

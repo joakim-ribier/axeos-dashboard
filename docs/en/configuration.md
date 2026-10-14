@@ -108,3 +108,12 @@ check on your miners from anywhere, no VPN needed — just paste the push
 URL and your API key.
 
 ![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
+
+Once the push is set up, your hashboard board shows in the dashboard
+itself:
+
+- **Menu** — under *AxeOS · D#hashboard*, the board ID (click to open the
+  board), whether it's public or private, and a link to your hashboard
+  account.
+- **Home** — under the page title, an *Open the remote board* link and
+  when hashboard last received data.

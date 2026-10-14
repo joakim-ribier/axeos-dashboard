@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PageTitleSlotContext } from "@/components/layout/pageTitleSlot";
 import { ModeProvider } from "@/contexts/ModeContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import i18n from "@/i18n";
@@ -38,6 +39,11 @@ vi.mock("@/hooks/useAppSettings", () => ({
   useAppSettings: () => ({ data: undefined }),
 }));
 
+const mockUseRemoteBoard = vi.fn();
+vi.mock("@/hooks/useRemoteBoard", () => ({
+  useRemoteBoard: () => mockUseRemoteBoard(),
+}));
+
 const showMiners = (miners: Miner[]) =>
   mockUseMiners.mockReturnValue({
     data: miners,
@@ -57,7 +63,10 @@ function renderHome() {
         <MemoryRouter initialEntries={["/"]}>
           <ModeProvider mode="local">
             <SearchProvider>
-              <Home />
+              {/* Where the TopBar would host the PageHeader. */}
+              <PageTitleSlotContext.Provider value={document.body}>
+                <Home />
+              </PageTitleSlotContext.Provider>
             </SearchProvider>
           </ModeProvider>
         </MemoryRouter>
@@ -75,6 +84,44 @@ describe("Home page", () => {
   beforeEach(() => {
     window.localStorage.clear();
     void i18n.changeLanguage("en");
+    mockUseRemoteBoard.mockReturnValue({ data: undefined });
+  });
+
+  describe("header", () => {
+    it("shows the page description when remote push isn't configured", () => {
+      showMiners([]);
+      renderHome();
+
+      expect(
+        screen.getByText("Overview of all connected AxeOs miners."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("link", { name: "Open the remote board" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("links to the remote board, with when hashboard last received data", () => {
+      mockUseRemoteBoard.mockReturnValue({
+        data: {
+          boardId: "abc123",
+          public: true,
+          dashboardURL: "https://d.example/abc123",
+          lastSampleAt: "2026-10-14T07:00:00Z",
+        },
+      });
+      showMiners([]);
+      renderHome();
+
+      const link = screen.getByRole("link", { name: "Open the remote board" });
+      expect(link).toHaveAttribute("href", "https://d.example/abc123");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(
+        screen.getByText(/last data received by hashboard:/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Overview of all connected AxeOs miners."),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("says every miner is fine when they are", () => {

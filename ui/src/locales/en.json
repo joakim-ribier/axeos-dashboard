@@ -3,6 +3,8 @@
     "error": "Failed to load data",
     "header": {
       "description": "Overview of all connected AxeOs miners.",
+      "lastSample": "last data received by hashboard: {{time}}",
+      "remoteBoard": "Open the remote board",
       "title": "Dashboard"
     },
     "noData": "No data yet. The configured miners haven't been polled for the first time yet -- try again in a moment.",
