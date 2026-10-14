@@ -1,7 +1,35 @@
 basePath: /
 definitions:
+  audit.Change:
+    properties:
+      after:
+        type: string
+      before:
+        type: string
+      field:
+        type: string
+      kind:
+        $ref: '#/definitions/audit.ChangeKind'
+    type: object
+  audit.ChangeKind:
+    enum:
+    - changed
+    - added
+    - removed
+    type: string
+    x-enum-varnames:
+    - ChangeChanged
+    - ChangeAdded
+    - ChangeRemoved
   audit.Entry:
     properties:
+      changes:
+        description: |-
+          What changed, before and after -- for the security-relevant types
+          (see changes.go).
+        items:
+          $ref: '#/definitions/audit.Change'
+        type: array
       cron:
         type: string
       error:
@@ -273,6 +301,13 @@ definitions:
         type: integer
       total:
         type: integer
+    type: object
+  handler.AuditTypesResponse:
+    properties:
+      types:
+        items:
+          type: string
+        type: array
     type: object
   handler.BackupsResponse:
     properties:
@@ -882,8 +917,7 @@ paths:
         in: query
         name: ip
         type: string
-      - description: only this type (restart, switch_primary, switch_fallback, save_miners,
-          save_settings, export_audit, download_backups, discover)
+      - description: only this type -- one of GET /api/audit/types
         in: query
         name: type
         type: string
@@ -932,8 +966,7 @@ paths:
         in: query
         name: ip
         type: string
-      - description: only this type (restart, switch_primary, switch_fallback, save_miners,
-          save_settings, export_audit, download_backups, discover)
+      - description: only this type -- one of GET /api/audit/types
         in: query
         name: type
         type: string
@@ -953,6 +986,20 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Export audit entries
+      tags:
+      - dashboard-api
+  /api/audit/types:
+    get:
+      description: Every type an audit entry can have, in the order the dashboard
+        offers them -- the values GET /api/audit and /api/audit/export accept as type.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuditTypesResponse'
+      summary: List audit entry types
       tags:
       - dashboard-api
   /api/backups:

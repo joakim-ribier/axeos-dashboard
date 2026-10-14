@@ -235,7 +235,8 @@
       "miner": "Mineur",
       "allMiners": "Tous les mineurs",
       "type": "Type",
-      "allTypes": "Tous les types"
+      "allTypes": "Tous les types",
+      "typesUnavailable": "Tous les types (liste indisponible)"
     },
     "types": {
       "restart": "Redémarrage",
@@ -245,7 +246,14 @@
       "save_settings": "Enregistrement des paramètres",
       "export_audit": "Export de l'audit",
       "download_backups": "Téléchargement de sauvegardes",
-      "discover": "Détection réseau"
+      "discover": "Détection réseau",
+      "miner_pool": "Pool du mineur modifié",
+      "miner_schedule": "Planification modifiée",
+      "miner_identity": "IP du mineur modifiée",
+      "miner_disabled": "Mineur désactivé",
+      "miner_enabled": "Mineur activé",
+      "miner_added": "Mineur ajouté",
+      "remote_push": "Accès distant modifié"
     },
     "allMiners": "tous les mineurs",
     "sources": {
@@ -265,7 +273,32 @@
     "count_other": "{{count}} événements",
     "copy": "Copier l'entrée",
     "copied": "Copié !",
-    "export": "Exporter"
+    "export": "Exporter",
+    "fields": {
+      "url": "URL principale",
+      "port": "Port principal",
+      "user": "Utilisateur principal",
+      "fallbackUrl": "URL de secours",
+      "fallbackPort": "Port de secours",
+      "fallbackUser": "Utilisateur de secours",
+      "ip": "IP",
+      "pushURL": "URL de push",
+      "apiKey": "Clé API",
+      "scheduleAdded": "Tâche ajoutée",
+      "scheduleRemoved": "Tâche supprimée",
+      "alias": "Alias",
+      "hostname": "Nom d'hôte",
+      "model": "Modèle",
+      "ratePerKwh": "Tarif (€/kWh)",
+      "deviceAdded": "Appareil ajouté",
+      "deviceRemoved": "Appareil supprimé",
+      "poolDashboardAdded": "Dashboard de pool ajouté",
+      "poolDashboardRemoved": "Dashboard de pool supprimé",
+      "firmwareRepoAdded": "Dépôt firmware ajouté",
+      "firmwareRepoRemoved": "Dépôt firmware supprimé"
+    },
+    "change": "{{field}} : {{change}}",
+    "changed": "modifiée"
   },
   "search": {
     "helpTitle": "Astuces de recherche",

@@ -19,11 +19,17 @@ import { enUS, fr } from "date-fns/locale";
 
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { auditExportUrl, type AuditRange, useAudit } from "@/hooks/useAudit";
+import {
+  auditExportUrl,
+  type AuditRange,
+  useAudit,
+  useAuditTypes,
+} from "@/hooks/useAudit";
 import { useMiners } from "@/hooks/useMiners";
 import type { AuditEntry } from "@/schemas/auditSchema";
 import type { Miner } from "@/schemas/minerSchema";
 import { copyToClipboard } from "@/utils/clipboard";
+import { describeCron } from "@/utils/cron";
 import { downloadFile } from "@/utils/download";
 import { formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
@@ -32,15 +38,9 @@ import { summarizeUserAgent } from "@/utils/userAgent";
 const DEFAULT_PAGE_SIZE = 50;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 const POOL_SWITCH_TYPES = ["switch_primary", "switch_fallback"];
-const AUDIT_TYPES = [
-  "restart",
-  ...POOL_SWITCH_TYPES,
-  "save_miners",
-  "save_settings",
-  "export_audit",
-  "download_backups",
-  "discover",
-];
+
+// A scheduled job's value is "<cron> <action>", read out (see describeJob).
+const SCHEDULE_FIELDS = ["scheduleAdded", "scheduleRemoved"];
 
 const isFailure = (entry: AuditEntry) =>
   !!entry.error || (entry.status ?? 0) >= 400;
@@ -50,8 +50,19 @@ const AuditRow: React.FC<{ entry: AuditEntry; miners: Miner[] }> = ({
   entry,
   miners,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const failed = isFailure(entry);
+
+  // A scheduled job ("<cron> <action>") reads as its action and its cron
+  // spelled out, as the schedule editor shows it -- the raw expression kept
+  // alongside for precision.
+  const describeJob = (job: string) => {
+    const split = job.lastIndexOf(" ");
+    const cron = job.slice(0, split);
+    const action = job.slice(split + 1);
+    const when = describeCron(cron, i18n.language) ?? cron;
+    return `${t(`auditPage.types.${action}`, { defaultValue: action })} · ${when} (${cron})`;
+  };
   const [copied, setCopied] = useState(false);
 
   // The raw entry, as stored -- full User-Agent, requestId and all.
@@ -138,18 +149,41 @@ const AuditRow: React.FC<{ entry: AuditEntry; miners: Miner[] }> = ({
         >
           {caption}
         </Typography>
-        {[entry.query, entry.error].filter(Boolean).map((detail) => (
-          <Typography
-            key={detail}
-            variant="caption"
-            color="text.disabled"
-            noWrap
-            title={detail}
-            sx={{ display: "block" }}
-          >
-            {detail}
-          </Typography>
-        ))}
+        {[
+          ...(entry.changes ?? []).map((c) =>
+            t("auditPage.change", {
+              field: t(`auditPage.fields.${c.field}`, {
+                defaultValue: c.field,
+              }),
+              change: SCHEDULE_FIELDS.includes(c.field)
+                ? describeJob(c.after ?? c.before ?? "")
+                : // A list item added or removed: the item itself, no
+                  // before → after.
+                  c.kind === "added" || c.kind === "removed"
+                  ? (c.after ?? c.before)
+                  : c.before || c.after
+                    ? `${c.before || "—"} → ${c.after || "—"}`
+                    : t("auditPage.changed"),
+            }),
+          ),
+          entry.query,
+          entry.error,
+        ]
+          .filter(Boolean)
+          .map((detail, i) => (
+            <Typography
+              // Two identical items (the same device added twice) are
+              // still two lines.
+              key={i}
+              variant="caption"
+              color="text.disabled"
+              noWrap
+              title={detail}
+              sx={{ display: "block" }}
+            >
+              {detail}
+            </Typography>
+          ))}
       </Box>
       <Tooltip title={copied ? t("auditPage.copied") : t("auditPage.copy")}>
         <IconButton
@@ -198,6 +232,7 @@ const RowsSkeleton: React.FC = () => (
 export const Audit = () => {
   const { t, i18n } = useTranslation();
   const { data: miners } = useMiners();
+  const { data: types, isError: typesFailed } = useAuditTypes();
   const dateLocale = i18n.language.startsWith("fr") ? fr : enUS;
 
   const [page, setPage] = useState(1);
@@ -268,10 +303,12 @@ export const Audit = () => {
               label: t("auditPage.filters.type"),
               value: type,
               onChange: setType,
-              allLabel: t("auditPage.filters.allTypes"),
-              options: AUDIT_TYPES.map((a) => ({
+              allLabel: typesFailed
+                ? t("auditPage.filters.typesUnavailable")
+                : t("auditPage.filters.allTypes"),
+              options: (types ?? []).map((a) => ({
                 value: a,
-                label: t(`auditPage.types.${a}`),
+                label: t(`auditPage.types.${a}`, { defaultValue: a }),
               })),
             },
             {

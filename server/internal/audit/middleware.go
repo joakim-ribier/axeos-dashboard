@@ -2,6 +2,7 @@ package audit
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net"
@@ -16,7 +17,9 @@ import (
 
 // Middleware records every call to the route it's set on as an entryType
 // API entry, once the route has answered -- whatever the outcome, so a
-// failed attempt shows up too, with its status and error message.
+// failed attempt shows up too, with its status and error message. Unless
+// the route recorded the call in detail itself (see RecordChanges): one
+// fact, one entry.
 //
 // resolveTarget turns the miner a request addresses (by IP or hostname)
 // into its IP, so API entries filter by miner like the scheduler's.
@@ -26,7 +29,11 @@ func (l *Log) Middleware(entryType string, resolveTarget func(string) string, lo
 			// The entry needs the response's outcome, so the route answers
 			// first -- through rw, which notes it on the way out.
 			rw := &errorBody{ResponseWriter: w}
-			next.ServeHTTP(rw, r)
+			detailed := new(bool)
+			next.ServeHTTP(rw, r.WithContext(context.WithValue(r.Context(), detailedKey{}, detailed)))
+			if *detailed {
+				return
+			}
 
 			if err := l.Record(apiEntry(entryType, r, rw, resolveTarget)); err != nil {
 				logger.Error("failed to record audit entry", "type", entryType, "error", err)
@@ -36,17 +43,27 @@ func (l *Log) Middleware(entryType string, resolveTarget func(string) string, lo
 }
 
 func apiEntry(entryType string, r *http.Request, rw *errorBody, resolveTarget func(string) string) Entry {
+	e := requestEntry(entryType, r)
+	e.Target = target(r, resolveTarget)
+	e.Status = rw.statusCode()
+	e.Query = query(r)
+	e.Error = rw.errorMessage()
+	return e
+}
+
+// detailedKey carries, through a request, whether its route already
+// recorded it in detail -- see Middleware and RecordChanges.
+type detailedKey struct{}
+
+// requestEntry is who made r: what every API entry starts from.
+func requestEntry(entryType string, r *http.Request) Entry {
 	return Entry{
 		Timestamp: time.Now(),
 		Source:    SourceAPI,
 		Type:      entryType,
-		Target:    target(r, resolveTarget),
 		IP:        clientIP(r),
 		UserAgent: r.UserAgent(),
 		RequestID: middleware.GetReqID(r.Context()),
-		Status:    rw.statusCode(),
-		Query:     query(r),
-		Error:     rw.errorMessage(),
 	}
 }
 

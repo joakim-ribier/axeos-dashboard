@@ -91,7 +91,10 @@ every commit.
 - ✅ **Audit log**: every restart, pool switch, config save, audit export,
   backups download and network scan -- from the dashboard (with the
   client's IP, browser and request parameters) or by the scheduler -- is
-  recorded, success or failure, and browsable on a new `/audit` page
+  recorded, success or failure; a config save says what it changed (its
+  own searchable type, before → after, for a pool, a scheduled job, an IP,
+  enable/disable, an added miner or the remote push; the rest under the
+  save's type), one entry per fact, and browsable on a new `/audit` page
   (last 24 h by default, filters by miner/type/day, copy an entry, JSON
   export). Alerts and Audit now share one filter bar with removable
   chips.
@@ -106,6 +109,12 @@ every commit.
   to see the actual occurrences that make it up. Listing them would make
   the frequency of the underlying condition visible (e.g. a fan alert that
   flapped ten times in an hour vs. one that just stayed up continuously).
+- **Pool drift alert**: warn (bell, Alerts page) when a miner's live
+  pools stop matching `miners.yml` -- e.g. a pool or user changed straight
+  in its own AxeOS UI. An alert, not an audit entry: the audit only traces
+  what was done through the dashboard. Same rule as the Settings page's
+  drift badge (`poolMismatches`): a non-Bitaxe running its configured
+  pools swapped is a switch, not a drift.
 - **Daily alerts email**: send an email each evening summarizing the
   day's alerts.
 - **Alerts page filters are poorly designed**: `Alerts.tsx` calls
@@ -125,14 +134,6 @@ every commit.
 - **"Security" menu group**: once a second security feature exists (e.g.
   the new-IP alert below), group it with `/audit` under a "Security"
   section of the sidebar. A group holding only Audit isn't worth it.
-- **Config diff (v2)**: `save_miners`/`save_settings` entries only record
-  that a save happened -- every Settings action (discovery save, enable/
-  disable, disable all, alias, pools, scheduler; rate, other devices, pool
-  dashboards, remote) ends up as the same two labels. First step: compare
-  before/after server-side and record one entry per changed miner (target
-  = its IP) with a `changes` list (added, enabled/disabled, alias, pools,
-  schedule, discovery info), and the changed sections for settings. Then
-  the values themselves (e.g. "miner X: pool url A → B").
 - **New-IP security email**: when an API action comes from an IP never
   seen before (kept in a known-IPs list), send an email along the lines of
   "we detected a new IP address, was it you?". Needs email sending, which
@@ -145,6 +146,12 @@ every commit.
 
 ### Settings
 
+- **Same "saved" confirmation for every save**: the snackbar shows after
+  saving discovered miners, "disable all" and every App settings section,
+  but not after a miner's own edits -- alias (`AliasEditor`), pools
+  (`PoolEditor`, only its button spinner), schedule add/remove
+  (`ScheduleEditor`), or the enable/disable toggle. Every successful save
+  should confirm the same way.
 - **Assisted cron builder in the scheduler editor**: `ScheduleEditor`
   today only accepts a raw 6-field cron string (seconds included), typed
   by hand -- easy to get subtly wrong (e.g. `* */5 * * * *`, which fires

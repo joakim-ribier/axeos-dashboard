@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -36,6 +37,11 @@ type Router struct {
 	watcher          *healtcheck.Watcher
 	versionChecker   *appversion.Checker
 	auditLog         *audit.Log
+
+	// saveMu runs config saves one at a time: each diffs what it wrote
+	// against what was there just before, which a concurrent save would
+	// otherwise change in between.
+	saveMu sync.Mutex
 }
 
 func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Watcher, versionChecker *appversion.Checker) *Router {
@@ -162,22 +168,39 @@ func (f *Router) Handler() http.Handler {
 		handler.ListMinersConfig(f.snapshotConfig(), w, r)
 	})
 	router.With(f.audited(audit.TypeSaveMiners)).Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
-		if merged, ok := handler.SaveMinersConfig(f.snapshotConfig(), w, r); ok && f.minersStore != nil {
+		f.saveMu.Lock()
+		defer f.saveMu.Unlock()
+		cfg := f.snapshotConfig()
+		merged, ok := handler.SaveMinersConfig(cfg, w, r)
+		if !ok {
+			return
+		}
+		if f.minersStore != nil {
 			f.minersStore.Set(merged)
 		}
+		f.auditLog.RecordChanges(r, audit.MinerChanges(cfg.Bitaxes, merged), f.logger)
 	})
 	router.Get("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
 		handler.GetAppSettings(f.snapshotConfig(), f.currentAppSettings(), w, r)
 	})
 	router.With(f.audited(audit.TypeSaveSettings)).Post("/api/config/settings", func(w http.ResponseWriter, r *http.Request) {
-		if saved, ok := handler.SaveAppSettings(f.snapshotConfig(), w, r); ok && f.appSettingsStore != nil {
+		f.saveMu.Lock()
+		defer f.saveMu.Unlock()
+		before := f.currentAppSettings()
+		saved, ok := handler.SaveAppSettings(f.snapshotConfig(), w, r)
+		if !ok {
+			return
+		}
+		if f.appSettingsStore != nil {
 			f.appSettingsStore.Set(saved)
 		}
+		f.auditLog.RecordChanges(r, audit.SettingsChanges(before, saved), f.logger)
 	})
 	router.With(f.audited(audit.TypeDiscover)).Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)
 	})
 	router.Get("/api/audit", handler.ListAudit(f.auditLog))
+	router.Get("/api/audit/types", handler.ListAuditTypes)
 	router.With(f.audited(audit.TypeExportAudit)).Get("/api/audit/export", handler.ExportAudit(f.auditLog))
 	router.Get("/api/backups", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListBackups(f.config, w, r)

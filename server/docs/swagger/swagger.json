@@ -40,7 +40,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)",
+                        "description": "only this type -- one of GET /api/audit/types",
                         "name": "type",
                         "in": "query"
                     },
@@ -110,7 +110,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)",
+                        "description": "only this type -- one of GET /api/audit/types",
                         "name": "type",
                         "in": "query"
                     }
@@ -132,6 +132,26 @@
                         "description": "the audit log couldn't be read",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/audit/types": {
+            "get": {
+                "description": "Every type an audit entry can have, in the order the dashboard offers them -- the values GET /api/audit and /api/audit/export accept as type.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "List audit entry types",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuditTypesResponse"
                         }
                     }
                 }
@@ -941,9 +961,46 @@
         }
     },
     "definitions": {
+        "audit.Change": {
+            "type": "object",
+            "properties": {
+                "after": {
+                    "type": "string"
+                },
+                "before": {
+                    "type": "string"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "kind": {
+                    "$ref": "#/definitions/audit.ChangeKind"
+                }
+            }
+        },
+        "audit.ChangeKind": {
+            "type": "string",
+            "enum": [
+                "changed",
+                "added",
+                "removed"
+            ],
+            "x-enum-varnames": [
+                "ChangeChanged",
+                "ChangeAdded",
+                "ChangeRemoved"
+            ]
+        },
         "audit.Entry": {
             "type": "object",
             "properties": {
+                "changes": {
+                    "description": "What changed, before and after -- for the security-relevant types\n(see changes.go).",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/audit.Change"
+                    }
+                },
                 "cron": {
                     "type": "string"
                 },
@@ -1303,6 +1360,17 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.AuditTypesResponse": {
+            "type": "object",
+            "properties": {
+                "types": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

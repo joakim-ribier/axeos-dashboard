@@ -2,7 +2,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-import { type AuditResponse, auditResponseSchema } from "@/schemas/auditSchema";
+import {
+  type AuditResponse,
+  auditResponseSchema,
+  auditTypesResponseSchema,
+} from "@/schemas/auditSchema";
 
 const AUDIT_URL = "/api/audit";
 
@@ -46,4 +50,17 @@ export const useAudit = (filters: AuditFilters) =>
     refetchOnWindowFocus: false,
     retry: false,
     placeholderData: keepPreviousData,
+  });
+
+// Every audit entry type, in display order -- the API's own list, so the
+// filter never falls behind a new type. They don't change while it runs.
+export const useAuditTypes = () =>
+  useQuery<string[], Error>({
+    queryKey: ["auditTypes"],
+    queryFn: async () => {
+      const { data } = await axios.get<unknown>(`${AUDIT_URL}/types`);
+      return auditTypesResponseSchema.parse(data).types;
+    },
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
