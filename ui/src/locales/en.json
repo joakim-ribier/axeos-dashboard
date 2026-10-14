@@ -235,7 +235,8 @@
       "miner": "Miner",
       "allMiners": "All miners",
       "type": "Type",
-      "allTypes": "All types"
+      "allTypes": "All types",
+      "typesUnavailable": "All types (list unavailable)"
     },
     "types": {
       "restart": "Restart",
@@ -245,7 +246,14 @@
       "save_settings": "Settings saved",
       "export_audit": "Audit export",
       "download_backups": "Backups download",
-      "discover": "Network discovery"
+      "discover": "Network discovery",
+      "miner_pool": "Miner pool changed",
+      "miner_schedule": "Schedule changed",
+      "miner_identity": "Miner IP changed",
+      "miner_disabled": "Miner disabled",
+      "miner_enabled": "Miner enabled",
+      "miner_added": "Miner added",
+      "remote_push": "Remote push changed"
     },
     "allMiners": "all miners",
     "sources": {
@@ -265,7 +273,32 @@
     "count_other": "{{count}} events",
     "copy": "Copy entry",
     "copied": "Copied!",
-    "export": "Export"
+    "export": "Export",
+    "fields": {
+      "url": "Primary URL",
+      "port": "Primary port",
+      "user": "Primary user",
+      "fallbackUrl": "Fallback URL",
+      "fallbackPort": "Fallback port",
+      "fallbackUser": "Fallback user",
+      "ip": "IP",
+      "pushURL": "Push URL",
+      "apiKey": "API key",
+      "scheduleAdded": "Job added",
+      "scheduleRemoved": "Job removed",
+      "alias": "Alias",
+      "hostname": "Hostname",
+      "model": "Model",
+      "ratePerKwh": "Rate (€/kWh)",
+      "deviceAdded": "Device added",
+      "deviceRemoved": "Device removed",
+      "poolDashboardAdded": "Pool dashboard added",
+      "poolDashboardRemoved": "Pool dashboard removed",
+      "firmwareRepoAdded": "Firmware repo added",
+      "firmwareRepoRemoved": "Firmware repo removed"
+    },
+    "change": "{{field}}: {{change}}",
+    "changed": "changed"
   },
   "search": {
     "helpTitle": "Search tips",

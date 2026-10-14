@@ -10,11 +10,13 @@ import type { AuditEntry } from "@/schemas/auditSchema";
 import { Audit } from "./Audit";
 
 const mockUseAudit = vi.fn();
+const mockUseAuditTypes = vi.fn();
 vi.mock("@/hooks/useAudit", async () => ({
   ...(await vi.importActual<typeof import("@/hooks/useAudit")>(
     "@/hooks/useAudit",
   )),
   useAudit: (...args: unknown[]) => mockUseAudit(...args),
+  useAuditTypes: () => mockUseAuditTypes(),
 }));
 
 const mockDownloadFile = vi.fn().mockResolvedValue(undefined);
@@ -72,6 +74,10 @@ function renderAudit() {
 describe("Audit page", () => {
   beforeEach(() => {
     mockUseAudit.mockReset();
+    // The API's list (GET /api/audit/types) -- the filter's only source.
+    mockUseAuditTypes.mockReturnValue({
+      data: ["restart", "switch_primary", "switch_fallback", "miner_pool"],
+    });
     mockUseMiners.mockReturnValue({
       data: [
         { ip: "10.0.0.1", hostname: "bitaxe-office" },
@@ -197,6 +203,120 @@ describe("Audit page", () => {
     const row = screen.getByTestId("audit-row");
     expect(within(row).getByText("Backups download")).toBeInTheDocument();
     expect(within(row).getByText("months=2026-09,2026-10")).toBeInTheDocument();
+  });
+
+  it("shows what a security-relevant change changed, before and after", () => {
+    withEntries([
+      {
+        ts: "2026-10-13T09:00:00Z",
+        source: "api",
+        type: "remote_push",
+        ip: "192.168.1.20",
+        changes: [
+          {
+            field: "pushURL",
+            before: "https://hashboard.live/api/push",
+            after: "https://elsewhere.example/api/push",
+          },
+          { field: "apiKey" },
+        ],
+      },
+    ]);
+    renderAudit();
+
+    const push = screen.getByTestId("audit-row");
+    expect(within(push).getByText("Remote push changed")).toBeInTheDocument();
+    expect(
+      within(push).getByText(
+        "Push URL: https://hashboard.live/api/push → https://elsewhere.example/api/push",
+      ),
+    ).toBeInTheDocument();
+    // The key itself is never written down -- only that it changed.
+    expect(within(push).getByText("API key: changed")).toBeInTheDocument();
+  });
+
+  it("shows a scheduled job added or removed, spelled out, with no before/after", () => {
+    withEntries([
+      {
+        ts: "2026-10-13T09:00:00Z",
+        source: "api",
+        type: "miner_schedule",
+        target: "10.0.0.1",
+        changes: [
+          { field: "scheduleRemoved", before: "0 0 2 * * * switch_fallback" },
+          { field: "scheduleAdded", after: "0 0 0 * * WED restart" },
+        ],
+      },
+    ]);
+    renderAudit();
+
+    const row = screen.getByTestId("audit-row");
+    expect(
+      within(row).getByText(
+        /^Job removed: Switch to fallback pool · .+ \(0 0 2 \* \* \*\)$/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByText(/^Job added: Restart · .+ \(0 0 0 \* \* WED\)$/),
+    ).toBeInTheDocument();
+    expect(within(row).queryByText(/→/)).not.toBeInTheDocument();
+  });
+
+  it("says what a non-sensitive save changed", () => {
+    withEntries([
+      {
+        ts: "2026-10-13T10:00:00Z",
+        source: "api",
+        type: "save_settings",
+        changes: [
+          {
+            field: "ratePerKwh",
+            kind: "changed",
+            before: "0.1915",
+            after: "0.2",
+          },
+          {
+            field: "deviceAdded",
+            kind: "added",
+            after: "Extractor fan (30 W)",
+          },
+        ],
+      },
+    ]);
+    renderAudit();
+
+    const row = screen.getByTestId("audit-row");
+    expect(
+      within(row).getByText("Rate (€/kWh): 0.1915 → 0.2"),
+    ).toBeInTheDocument();
+    expect(
+      within(row).getByText("Device added: Extractor fan (30 W)"),
+    ).toBeInTheDocument();
+  });
+
+  it("offers the types the API lists, a not-yet-translated one by its name", async () => {
+    mockUseAuditTypes.mockReturnValue({ data: ["restart", "brand_new_type"] });
+    const user = userEvent.setup();
+    renderAudit();
+
+    await user.click(screen.getByText("All types"));
+    const options = within(await screen.findByRole("listbox")).getAllByRole(
+      "option",
+    );
+    expect(options.map((o) => o.textContent)).toEqual([
+      "All types",
+      "Restart",
+      "brand_new_type",
+    ]);
+  });
+
+  it("says when the API couldn't list the types", () => {
+    mockUseAuditTypes.mockReturnValue({ data: undefined, isError: true });
+    renderAudit();
+
+    expect(
+      screen.getByText("All types (list unavailable)"),
+    ).toBeInTheDocument();
   });
 
   it("copies the raw entry as JSON", async () => {

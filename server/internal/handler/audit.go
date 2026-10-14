@@ -35,6 +35,25 @@ type AuditResponse struct {
 	PageSize int           `json:"pageSize"`
 }
 
+type AuditTypesResponse struct {
+	Types []string `json:"types"`
+}
+
+// ListAuditTypes returns every audit entry type, in display order.
+//
+// @Summary List audit entry types
+// @Description Every type an audit entry can have, in the order the dashboard offers them -- the values GET /api/audit and /api/audit/export accept as type.
+// @Tags dashboard-api
+// @Produce json
+// @Success 200 {object} handler.AuditTypesResponse
+// @Router /api/audit/types [get]
+func ListAuditTypes(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(AuditTypesResponse{Types: audit.Types}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 // ListAudit returns the audit entries between from and to, newest first,
 // paginated.
 //
@@ -45,7 +64,7 @@ type AuditResponse struct {
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
 // @Param to query string false "range end, RFC 3339 (default: now)"
 // @Param ip query string false "only this miner's entries (its IP) -- a pool switch applied to every miner included"
-// @Param type query string false "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)"
+// @Param type query string false "only this type -- one of GET /api/audit/types"
 // @Param page query int false "page number, 1-based (default 1)"
 // @Param pageSize query int false "entries per page (default 50, max 200)"
 // @Success 200 {object} handler.AuditResponse
@@ -87,7 +106,7 @@ func ListAudit(log *audit.Log) http.HandlerFunc {
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
 // @Param to query string false "range end, RFC 3339 (default: now)"
 // @Param ip query string false "only this miner's entries (its IP) -- a pool switch applied to every miner included"
-// @Param type query string false "only this type (restart, switch_primary, switch_fallback, save_miners, save_settings, export_audit, download_backups, discover)"
+// @Param type query string false "only this type -- one of GET /api/audit/types"
 // @Success 200 {object} handler.AuditExport
 // @Failure 400 {object} handler.ErrorResponse "from/to malformed, from not before to, or range over 7 days"
 // @Failure 500 {object} handler.ErrorResponse "the audit log couldn't be read"

@@ -66,75 +66,169 @@ plus ancien. Le calendrier affiche une autre journée, de minuit à minuit
 ## 📋 Événements enregistrés
 {: #evenements }
 
-Seules les actions déclenchées depuis le dashboard ou par le planificateur
-sont enregistrées, qu'elles réussissent ou échouent : les modifications,
-les données qui sortent du Pi (exports, sauvegardes) et les scans du
-réseau.
+L'audit trace ce qui a été fait **depuis l'outil** : par quelqu'un dans le
+dashboard, ou par son planificateur. Chaque entrée dit **quoi** (le type),
+**quand**, **qui** (l'IP et le navigateur de l'appareil, ou le
+planificateur et sa tâche), **sur quoi** (le mineur) et **avec quel
+résultat** (réussite, ou échec avec le message d'erreur). Une action qui
+échoue est enregistrée aussi.
+
+### ⚙️ Actions sur les mineurs
 
 <table class="data-table">
   <thead>
     <tr>
       <th>Type</th>
       <th>Libellé</th>
-      <th>Depuis le dashboard</th>
-      <th>Par le planificateur</th>
+      <th>D'où</th>
+      <th>Ce que l'entrée contient</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><code>restart</code></td>
       <td>Redémarrage</td>
-      <td><code>POST /api/miners/{hostnameOrIp}/restart</code></td>
-      <td>✅</td>
+      <td>panneau d'un mineur › Redémarrer ; ou une tâche du planificateur</td>
+      <td>le mineur redémarré</td>
     </tr>
     <tr>
       <td><code>switch_primary</code></td>
       <td>Bascule vers le pool principal</td>
-      <td><code>PUT /api/miners/pool/primary/enable</code></td>
-      <td>✅</td>
+      <td>panneau d'un mineur › Changer de pool ; ou une tâche du planificateur</td>
+      <td>le mineur basculé — <strong>tous les mineurs</strong> si la bascule les vise tous (appel direct à l'API)</td>
     </tr>
     <tr>
       <td><code>switch_fallback</code></td>
       <td>Bascule vers le pool de secours</td>
-      <td><code>PUT /api/miners/pool/fallback/enable</code></td>
-      <td>✅</td>
-    </tr>
-    <tr>
-      <td><code>save_miners</code></td>
-      <td>Enregistrement des mineurs</td>
-      <td><code>POST /api/config/miners</code></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><code>save_settings</code></td>
-      <td>Enregistrement des paramètres</td>
-      <td><code>POST /api/config/settings</code></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><code>export_audit</code></td>
-      <td>Export de l'audit</td>
-      <td><code>GET /api/audit/export</code></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><code>download_backups</code></td>
-      <td>Téléchargement de sauvegardes</td>
-      <td><code>GET /api/backups/download</code></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><code>discover</code></td>
-      <td>Détection réseau</td>
-      <td><code>GET /api/config/discover</code></td>
-      <td></td>
+      <td>idem</td>
+      <td>idem</td>
     </tr>
   </tbody>
 </table>
 
-Une bascule de pool appliquée à tous les mineurs à la fois est
-enregistrée une seule fois, avec **tous les mineurs** comme cible. Elle
-apparaît aussi quand on filtre sur un mineur précis.
+### 🛠️ Configuration
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Libellé</th>
+      <th>D'où</th>
+      <th>Ce que l'entrée contient</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>save_miners</code></td>
+      <td>Enregistrement des mineurs</td>
+      <td>page Configuration : enregistrer la détection, activer / désactiver, tout désactiver, alias, pools, planification</td>
+      <td>par mineur modifié, ce qui a changé hors changements sensibles : alias, nom d'hôte, modèle (avant → après). En cas d'échec : une seule entrée, sans mineur</td>
+    </tr>
+    <tr>
+      <td><code>save_settings</code></td>
+      <td>Enregistrement des paramètres</td>
+      <td>page Configuration › Réglages de l'application : tarif, autres appareils, dashboards de pool, accès distant</td>
+      <td>ce qui a changé hors changements sensibles : le tarif (avant → après), les appareils, les dashboards de pool et les dépôts firmware ajoutés ou supprimés. En cas d'échec : une seule entrée</td>
+    </tr>
+  </tbody>
+</table>
+
+### 📤 Données et réseau
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Libellé</th>
+      <th>D'où</th>
+      <th>Ce que l'entrée contient</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>export_audit</code></td>
+      <td>Export de l'audit</td>
+      <td>page Audit › Exporter</td>
+      <td>la période et les filtres exportés</td>
+    </tr>
+    <tr>
+      <td><code>download_backups</code></td>
+      <td>Téléchargement de sauvegardes</td>
+      <td>page Sauvegardes › Télécharger</td>
+      <td>les mois téléchargés</td>
+    </tr>
+    <tr>
+      <td><code>discover</code></td>
+      <td>Détection réseau</td>
+      <td>page Configuration › Détection automatique (scan du réseau, ou ajout par IP)</td>
+      <td>la plage scannée ou l'IP sondée</td>
+    </tr>
+  </tbody>
+</table>
+
+### 🔐 Changements sensibles
+
+Un enregistrement de la configuration qui contient des changements
+sensibles produit, **à la place** de <code>save_miners</code> ou
+<code>save_settings</code>, une entrée dédiée par changement sensible :
+une seule écriture par fait, aucune ligne en double. Chaque entrée a son
+détail (valeurs **avant → après**, ou la tâche ajoutée ou supprimée), pour
+pouvoir la rechercher directement. Un seul enregistrement peut en produire
+plusieurs (par exemple le pool **et** la planification d'un mineur).
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Libellé</th>
+      <th>Quand</th>
+      <th>Détail</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>miner_pool</code></td>
+      <td>Pool du mineur modifié</td>
+      <td>l'URL, le port ou l'utilisateur du pool principal ou de secours d'un mineur change</td>
+      <td>chaque champ modifié — ex. <em>Utilisateur de secours : bc1q…abc.w1 → bc1q…xyz.w1</em></td>
+    </tr>
+    <tr>
+      <td><code>miner_schedule</code></td>
+      <td>Planification modifiée</td>
+      <td>une tâche planifiée est ajoutée ou supprimée (une tâche n'est jamais modifiée : changer une tâche, c'est en supprimer une et en ajouter une autre)</td>
+      <td>chaque tâche ajoutée ou supprimée, écrite en clair — ex. <em>Tâche ajoutée : Redémarrage · À 00:00, uniquement le mercredi (0 0 0 * * WED)</em></td>
+    </tr>
+    <tr>
+      <td><code>miner_identity</code></td>
+      <td>IP du mineur modifiée</td>
+      <td>l'IP d'un mineur déjà configuré change (le mineur est reconnu par sa MAC)</td>
+      <td>l'ancienne et la nouvelle IP</td>
+    </tr>
+    <tr>
+      <td><code>miner_disabled</code> / <code>miner_enabled</code></td>
+      <td>Mineur désactivé / activé</td>
+      <td>un mineur est désactivé (il n'est plus surveillé ni planifié) ou réactivé</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>miner_added</code></td>
+      <td>Mineur ajouté</td>
+      <td>un mineur entre dans la configuration</td>
+      <td>ses pools (URL, port, utilisateur) et ses tâches planifiées</td>
+    </tr>
+    <tr>
+      <td><code>remote_push</code></td>
+      <td>Accès distant modifié</td>
+      <td>l'URL de push ou la clé API hashboard change</td>
+      <td>l'URL avant et après ; la clé API n'est jamais écrite, seulement « modifiée »</td>
+    </tr>
+  </tbody>
+</table>
+
+Le reste d'un enregistrement (alias, nom d'hôte, modèle, tarif, appareils,
+dashboards de pool, dépôts firmware) est détaillé sous <code>save_miners</code> /
+<code>save_settings</code> : chaque fait n'est écrit qu'une fois, sous un
+seul type. Un enregistrement qui ne change rien n'est pas tracé.
 
 ---
 
@@ -190,6 +284,7 @@ Une opération du planificateur, ici en échec :
     <tr><td><code>service</code></td><td><code>system</code> — la partie de l'application qui a agi : <code>scheduler</code></td></tr>
     <tr><td><code>cron</code></td><td><code>system</code> — l'expression cron qui a déclenché l'opération</td></tr>
     <tr><td><code>error</code></td><td>Le message d'erreur, en cas d'échec</td></tr>
+    <tr><td><code>changes</code></td><td>Ce qui a changé — chaque champ avec sa nature (<code>kind</code>) : <code>changed</code> (valeur avant <code>before</code> → après <code>after</code>), ou un élément de liste <code>added</code> (<code>after</code>) ou <code>removed</code> (<code>before</code>)</td></tr>
   </tbody>
 </table>
 
@@ -202,11 +297,13 @@ Les entrées sont ajoutées dans un fichier par jour (UTC) :
 `{dataDir}/data/audit/AAAA-MM-JJ.jsonl` (`./storage/data/audit/` avec
 Docker), une entrée JSON par ligne.
 
-Deux routes de l'API les exposent :
+Trois routes de l'API les exposent :
 
 - `GET /api/audit` — les entrées entre `from` et `to` (dates RFC 3339,
   les dernières 24 heures par défaut, 7 jours au maximum), filtrables par
   `ip` (mineur) et `type`, paginées avec `page` et `pageSize`.
+- `GET /api/audit/types` — la liste de tous les types, dans l'ordre où le
+  dashboard les propose : la valeur attendue par `type`.
 - `GET /api/audit/export` — mêmes paramètres, sans pagination : le
   fichier JSON du bouton **Exporter**, qui reprend la période et les
   filtres avant la liste des entrées.
@@ -219,6 +316,31 @@ Deux routes de l'API les exposent :
   "exportedAt": "2026-10-10T08:00:00Z",
   "total": 6,
   "entries": [ … ]
+}
+```
+
+La réponse de `GET /api/audit/types` — chaque type est expliqué dans
+[Événements enregistrés](#evenements) :
+
+```json
+{
+  "types": [
+    "restart",
+    "switch_primary",
+    "switch_fallback",
+    "save_miners",
+    "save_settings",
+    "export_audit",
+    "download_backups",
+    "discover",
+    "miner_pool",
+    "miner_schedule",
+    "miner_identity",
+    "miner_disabled",
+    "miner_enabled",
+    "miner_added",
+    "remote_push"
+  ]
 }
 ```
 

@@ -44,6 +44,17 @@ const (
 	TypeDiscover        = "discover"
 )
 
+// Types is every entry type, in the order the dashboard offers them --
+// the one list GET /api/audit/types serves, so nothing else keeps its own
+// copy.
+var Types = []string{
+	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback,
+	TypeSaveMiners, TypeSaveSettings,
+	TypeExportAudit, TypeDownloadBackups, TypeDiscover,
+	TypeMinerPool, TypeMinerSchedule, TypeMinerIdentity,
+	TypeMinerDisabled, TypeMinerEnabled, TypeMinerAdded, TypeRemotePush,
+}
+
 type Entry struct {
 	Timestamp time.Time `json:"ts"`
 	Source    Source    `json:"source"`
@@ -69,6 +80,10 @@ type Entry struct {
 
 	// Why it failed, whatever its source.
 	Error string `json:"error,omitempty"`
+
+	// What changed, before and after -- for the security-relevant types
+	// (see changes.go).
+	Changes []Change `json:"changes,omitempty"`
 }
 
 type Log struct {
