@@ -402,10 +402,9 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         {ui.page.settings !== "hidden" && (
           <NavItem
             to={boardId ? `/${boardId}/settings` : "/settings"}
-            selected={
-              location.pathname ===
-              (boardId ? `/${boardId}/settings` : "/settings")
-            }
+            selected={location.pathname.startsWith(
+              boardId ? `/${boardId}/settings` : "/settings",
+            )}
             icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
