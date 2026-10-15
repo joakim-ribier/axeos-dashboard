@@ -1,5 +1,5 @@
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -13,7 +13,11 @@ vi.mock("@/hooks/useMiners", () => ({
   useUiFeatures: () => mockUseUiFeatures(),
 }));
 
-function renderGate(page: UIFeatures["page"], isLoading = false) {
+function renderGate(
+  page: UIFeatures["page"],
+  isLoading = false,
+  path = "/backups",
+) {
   mockUseUiFeatures.mockReturnValue({
     ui: {
       page,
@@ -21,12 +25,20 @@ function renderGate(page: UIFeatures["page"], isLoading = false) {
     },
     isLoading,
   });
+  const gated = (
+    <RequirePageEnabled page="backups">
+      <p>backups content</p>
+    </RequirePageEnabled>
+  );
   return render(
     <I18nextProvider i18n={i18n}>
-      <MemoryRouter>
-        <RequirePageEnabled page="backups">
-          <p>backups content</p>
-        </RequirePageEnabled>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/" element={<p>local home</p>} />
+          <Route path="/backups" element={gated} />
+          <Route path="/:boardId" element={<p>board home</p>} />
+          <Route path="/:boardId/backups" element={gated} />
+        </Routes>
       </MemoryRouter>
     </I18nextProvider>,
   );
@@ -39,11 +51,22 @@ describe("RequirePageEnabled", () => {
     expect(screen.getByText("backups content")).toBeInTheDocument();
   });
 
-  it("renders a not-found page when its flag is hidden", () => {
+  it("redirects to the local home when its flag is hidden", () => {
     renderGate({ settings: "enabled", backups: "hidden", audit: "enabled" });
 
     expect(screen.queryByText("backups content")).not.toBeInTheDocument();
-    expect(screen.getByText("Page not found")).toBeInTheDocument();
+    expect(screen.getByText("local home")).toBeInTheDocument();
+  });
+
+  it("redirects to the board's home when its flag is hidden under a board", () => {
+    renderGate(
+      { settings: "enabled", backups: "hidden", audit: "enabled" },
+      false,
+      "/demo/backups",
+    );
+
+    expect(screen.queryByText("backups content")).not.toBeInTheDocument();
+    expect(screen.getByText("board home")).toBeInTheDocument();
   });
 
   it("waits for the flags instead of flashing the page", () => {

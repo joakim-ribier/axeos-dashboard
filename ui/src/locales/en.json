@@ -314,10 +314,6 @@
     "helpCombine": "Combine terms with a space — all must match."
   },
   "oops": {
-    "notFound": {
-      "title": "Page not found",
-      "message": "This page does not exist."
-    },
     "retry": "Retry"
   },
   "common": {

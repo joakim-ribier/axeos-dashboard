@@ -1,8 +1,10 @@
 // src/components/layout/AppLayout.tsx
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
+import { useQuery } from "@tanstack/react-query";
 
+import { fetchInfo } from "@/api/info";
 import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 
@@ -29,6 +31,31 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ mode }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
+
+  // Each backend only serves one of the two branches: dashboard-api has no
+  // boards, so a board-shaped path there ("/typo") is just a dead link and
+  // lands on the local home; remote-dashboard-api has no local pages, so
+  // "/", "/alerts"... send the visitor to hashboard's own account page
+  // (which itself falls back to its landing page without a session).
+  // Nothing renders until /api/info has answered, so the wrong branch never
+  // flashes before leaving.
+  const infoQuery = useQuery({
+    queryKey: ["info"],
+    queryFn: fetchInfo,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const hashboardUrl = infoQuery.data?.hashboardUrl;
+  const leaveForHashboard =
+    mode === "local" && infoQuery.data?.remote === true && !!hashboardUrl;
+  useEffect(() => {
+    if (leaveForHashboard) window.location.replace(`${hashboardUrl}/me`);
+  }, [leaveForHashboard, hashboardUrl]);
+  if (infoQuery.isLoading || leaveForHashboard) return null;
+  if (mode === "remote" && infoQuery.data?.remote === false) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <ModeProvider mode={mode}>

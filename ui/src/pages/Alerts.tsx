@@ -1,13 +1,13 @@
 // src/pages/Alerts.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router-dom";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import { Box, Skeleton, TablePagination, Typography } from "@mui/material";
 import { format, parseISO } from "date-fns";
 
 import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
 import { FilterBar } from "@/components/ui/FilterBar";
-import { OopsPage } from "@/components/ui/OopsPage";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useMode } from "@/contexts/ModeContext";
 import { useAlertsHistory } from "@/hooks/useAlertsHistory";
@@ -167,13 +167,10 @@ export const Alerts = () => {
     return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
   }
 
-  if (error instanceof ApiError && error.status === 404) {
-    return (
-      <OopsPage
-        titleKey="oops.notFound.title"
-        messageKey="oops.notFound.message"
-      />
-    );
+  // Same as Home: a board with nothing behind it yet leaves for this
+  // backend's own home (see AppLayout).
+  if (error instanceof ApiError && error.status === 404 && boardId) {
+    return <Navigate to="/" replace />;
   }
 
   return (
