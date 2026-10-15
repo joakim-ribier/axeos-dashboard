@@ -1,6 +1,7 @@
 // src/pages/Audit.tsx
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import CheckIcon from "@mui/icons-material/Check";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -14,7 +15,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { addDays, format, startOfDay } from "date-fns";
+import { format, type Locale } from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 
 import { FilterBar } from "@/components/ui/FilterBar";
@@ -51,6 +52,12 @@ const AuditRow: React.FC<{ entry: AuditEntry; miners: Miner[] }> = ({
   miners,
 }) => {
   const { t, i18n } = useTranslation();
+  // A stored value the dashboard words its own way (on/off, a frequency,
+  // a security mode...) -- as is otherwise.
+  const showValue = (field: string, value?: string) =>
+    value
+      ? t(`auditPage.values.${field}.${value}`, { defaultValue: value })
+      : "—";
   const failed = isFailure(entry);
 
   // A scheduled job ("<cron> <action>") reads as its action and its cron
@@ -101,7 +108,9 @@ const AuditRow: React.FC<{ entry: AuditEntry; miners: Miner[] }> = ({
           entry.cron,
         ];
   const caption = [
-    formatTimestamp(entry.ts),
+    // UTC, like the audit's own days, the backups and the report mails --
+    // the summary says so once for the whole list.
+    formatTimestamp(entry.ts, "UTC"),
     ...who,
     failed &&
       (entry.status
@@ -160,9 +169,9 @@ const AuditRow: React.FC<{ entry: AuditEntry; miners: Miner[] }> = ({
                 : // A list item added or removed: the item itself, no
                   // before → after.
                   c.kind === "added" || c.kind === "removed"
-                  ? (c.after ?? c.before)
+                  ? showValue(c.field, c.after ?? c.before)
                   : c.before || c.after
-                    ? `${c.before || "—"} → ${c.after || "—"}`
+                    ? `${showValue(c.field, c.before)} → ${showValue(c.field, c.after)}`
                     : t("auditPage.changed"),
             }),
           ),
@@ -229,6 +238,29 @@ const RowsSkeleton: React.FC = () => (
 );
 
 /* ── Audit page ──────────────────────────────────────────────── */
+// The ?from=&to= period, when both are valid dates.
+const periodFromParams = (params: URLSearchParams) => {
+  const from = params.get("from");
+  const to = params.get("to");
+  if (
+    !from ||
+    !to ||
+    Number.isNaN(Date.parse(from)) ||
+    Number.isNaN(Date.parse(to))
+  ) {
+    return null;
+  }
+  return { from, to };
+};
+
+// The day before a period's end -- `to` is excluded.
+const lastDayOf = (to: string) => new Date(Date.parse(to) - 1).toISOString();
+
+// A UTC day, shown as a date in the dashboard's language -- noon, so no
+// browser time zone tips it onto the day before or after.
+const showUtcDay = (iso: string, locale: Locale) =>
+  format(new Date(`${iso.slice(0, 10)}T12:00:00`), "P", { locale });
+
 export const Audit = () => {
   const { t, i18n } = useTranslation();
   const { data: miners } = useMiners();
@@ -237,16 +269,40 @@ export const Audit = () => {
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  // null is the default view: the last 24 hours. A picked day is the local
-  // calendar day, sent as its UTC bounds -- the server stores in UTC.
+  // null is the default view: the last 24 hours. A picked day is that date's
+  // UTC day -- one of the server's daily audit files, one daily report.
   const [day, setDay] = useState<Date | null>(null);
   const [ip, setIp] = useState("");
   const [type, setType] = useState("");
 
-  const dayStart = day ? startOfDay(day) : null;
+  // A period handed in by the URL -- the audit report mail's link
+  // (?from=&to=, UTC, to excluded), shown in the filter bar's summary. It
+  // stands until a day is picked.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlPeriod = periodFromParams(searchParams);
+  // A single day reads as that day, several as "from ... to ...".
+  const periodLabel = ({ from, to }: { from: string; to: string }) => {
+    const first = showUtcDay(from, dateLocale);
+    const last = showUtcDay(lastDayOf(to), dateLocale);
+    return first === last
+      ? first
+      : t("auditPage.period.short", { from: first, to: last });
+  };
+  const pickDay = (d: Date | null) => {
+    setDay(d);
+    if (urlPeriod) setSearchParams({}, { replace: true });
+  };
+
+  const dayStart = day
+    ? new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate()))
+    : null;
   const range: AuditRange = {
-    from: dayStart?.toISOString(),
-    to: dayStart ? addDays(dayStart, 1).toISOString() : undefined,
+    from: urlPeriod?.from ?? dayStart?.toISOString(),
+    to:
+      urlPeriod?.to ??
+      (dayStart
+        ? new Date(dayStart.getTime() + 24 * 3600 * 1000).toISOString()
+        : undefined),
     ip: ip || undefined,
     type: type || undefined,
   };
@@ -266,7 +322,7 @@ export const Audit = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [day, ip, type, pageSize]);
+  }, [day, ip, type, pageSize, urlPeriod?.from, urlPeriod?.to]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -316,7 +372,7 @@ export const Audit = () => {
               id: "day",
               label: t("auditPage.filters.day"),
               value: day,
-              onChange: setDay,
+              onChange: pickDay,
               defaultValue: null,
             },
           ]}
@@ -324,9 +380,12 @@ export const Audit = () => {
             data && (
               <Typography variant="caption" color="text.secondary">
                 {t("auditPage.count", { count: data.total })} ·{" "}
-                {day
-                  ? format(day, "PPPP", { locale: dateLocale })
-                  : t("auditPage.filters.last24h").toLowerCase()}
+                {urlPeriod
+                  ? periodLabel(urlPeriod)
+                  : day
+                    ? format(day, "PPPP", { locale: dateLocale })
+                    : t("auditPage.filters.last24h").toLowerCase()}{" "}
+                · {t("auditPage.utc")}
               </Typography>
             )
           }

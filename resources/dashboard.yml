@@ -2,6 +2,8 @@ global:
   env: dev
 server:
   port: "8080"
+mailer:
+  port: "8082" # the mailer's API, on the loopback only -- dashboard-api relays to it
 storage:
   dataDir: resources
   retentionDays: 30 # not used!

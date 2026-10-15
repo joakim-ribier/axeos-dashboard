@@ -23,6 +23,20 @@ export const getTheme = (mode: "light" | "dark") => {
           outlined: { border: "none" },
         },
       },
+      // A toast in the app's own colors, not MUI's inverted grey: a card's
+      // surface and corners, the accent on its edge.
+      MuiSnackbarContent: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            borderRadius: 12,
+            borderLeft: `3px solid ${theme.palette.primary.main}`,
+            boxShadow: theme.shadows[8],
+            fontSize: "0.875rem",
+          }),
+        },
+      },
       MuiCard: {
         styleOverrides: {
           root: {

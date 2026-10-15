@@ -164,6 +164,22 @@ every commit.
   "Remote" section of `/settings` should link straight to
   `hashboard.live/me` instead of only exposing the push URL/API key
   fields.
+- **The operator decides what their board gets and shows, in
+  Configuration › Remote**: today the feeder pushes a fixed set, with no
+  say from the operator -- each poll (snapshots, offline polls via
+  `/api/push/history`), the miners config (`/api/push/config/miners`) and
+  part of `settings.yml` (electricity, pool dashboards, firmware repos via
+  `/api/push/config/settings`). A configurable part of the Remote section
+  should let them choose:
+  - **what** is pushed: each part of their data and configuration,
+    notifications included, turned on or off;
+  - **how**: fields left out or masked within what's pushed -- e.g. never
+    send the pools' BTC user;
+  - **what the board shows**: override its pages and sections -- e.g.
+    hide the Configuration page altogether, or only some of its sections
+    -- on top of what `remote-dashboard.yml`'s `ui:` sets for every board.
+
+  Applied from the next push cycle.
 - **Onboarding banner on first connection with no miners configured**: on
   `/settings`, when there's no miner in the managed config yet, show an
   orange banner pointing the user to the "auto detection" section

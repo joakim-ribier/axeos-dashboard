@@ -11,9 +11,10 @@ import (
 
 const (
 	defaultAuditRange = 24 * time.Hour
-	// maxAuditRange bounds how many daily files one request can make the
-	// server read.
-	maxAuditRange = 7 * 24 * time.Hour
+	// maxAuditRange is only a guard against a range typed by mistake (one
+	// daily file read per day in it) -- a year covers every report period
+	// and any real look back.
+	maxAuditRange = 366 * 24 * time.Hour
 )
 
 // AuditExport is the file GET /api/audit/export downloads -- the range it
@@ -58,7 +59,7 @@ func ListAuditTypes(w http.ResponseWriter, _ *http.Request) {
 // paginated.
 //
 // @Summary List audit entries
-// @Description Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed 7 days. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).
+// @Description Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed a year. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).
 // @Tags dashboard-api
 // @Produce json
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
@@ -68,7 +69,7 @@ func ListAuditTypes(w http.ResponseWriter, _ *http.Request) {
 // @Param page query int false "page number, 1-based (default 1)"
 // @Param pageSize query int false "entries per page (default 50, max 200)"
 // @Success 200 {object} handler.AuditResponse
-// @Failure 400 {object} handler.ErrorResponse "from/to malformed, from not before to, or range over 7 days"
+// @Failure 400 {object} handler.ErrorResponse "from/to malformed, from not before to, or range over a year"
 // @Failure 500 {object} handler.ErrorResponse "the audit log couldn't be read"
 // @Router /api/audit [get]
 func ListAudit(log *audit.Log) http.HandlerFunc {
@@ -100,7 +101,7 @@ func ListAudit(log *audit.Log) http.HandlerFunc {
 // as a downloadable JSON file -- the whole range, not one page of it.
 //
 // @Summary Export audit entries
-// @Description Same range and defaults as GET /api/audit (last 24 hours, at most 7 days), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.
+// @Description Same range and defaults as GET /api/audit (last 24 hours, at most a year), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.
 // @Tags dashboard-api
 // @Produce json
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
@@ -108,7 +109,7 @@ func ListAudit(log *audit.Log) http.HandlerFunc {
 // @Param ip query string false "only this miner's entries (its IP) -- a pool switch applied to every miner included"
 // @Param type query string false "only this type -- one of GET /api/audit/types"
 // @Success 200 {object} handler.AuditExport
-// @Failure 400 {object} handler.ErrorResponse "from/to malformed, from not before to, or range over 7 days"
+// @Failure 400 {object} handler.ErrorResponse "from/to malformed, from not before to, or range over a year"
 // @Failure 500 {object} handler.ErrorResponse "the audit log couldn't be read"
 // @Router /api/audit/export [get]
 func ExportAudit(log *audit.Log) http.HandlerFunc {
@@ -165,7 +166,7 @@ func readAuditRange(log *audit.Log, w http.ResponseWriter, r *http.Request) (fro
 		from = t
 	}
 	if !from.Before(to) || to.Sub(from) > maxAuditRange {
-		writeErrorResponse(w, "from must be before to, at most 7 days apart", http.StatusBadRequest)
+		writeErrorResponse(w, "from must be before to, at most a year apart", http.StatusBadRequest)
 		return from, to, nil, false
 	}
 

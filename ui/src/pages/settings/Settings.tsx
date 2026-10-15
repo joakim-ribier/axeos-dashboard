@@ -5,6 +5,7 @@ import { Link as RouterLink, Navigate, useParams } from "react-router-dom";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
@@ -33,16 +34,22 @@ import { poolMismatches } from "@/utils/poolDrift";
 import { ElectricitySettings } from "./ElectricitySettings";
 import { isStale, latestTimestamp, useNow } from "./lastRun";
 import { MinersSettings } from "./MinersSettings";
+import { NotificationsSettings } from "./NotificationsSettings";
 import { RemoteSettings } from "./RemoteSettings";
 import { SystemSettings } from "./SystemSettings";
 
 const SECTIONS = {
   miners: { icon: WifiFindIcon, Component: MinersSettings },
   electricity: { icon: BoltIcon, Component: ElectricitySettings },
+  notifications: { icon: MailOutlineIcon, Component: NotificationsSettings },
   remote: { icon: CloudUploadIcon, Component: RemoteSettings },
   system: { icon: SettingsSuggestIcon, Component: SystemSettings },
 } as const;
 type SectionKey = keyof typeof SECTIONS;
+
+// Sections with nothing to show read-only: a board never receives the push
+// credentials nor the mail settings.
+const EDIT_ONLY: SectionKey[] = ["notifications", "remote"];
 
 interface SectionSummary {
   summary: string;
@@ -67,6 +74,8 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
   const driftCount = miners.filter(
     (m) => poolMismatches(m, liveByMac.get(normalizeMac(m.mac))).length > 0,
   ).length;
+
+  const notif = settings?.notifications;
 
   const pushStatuses = settings
     ? [
@@ -105,6 +114,21 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
         ),
         count: settings?.electricity.devices?.length ?? 0,
       }),
+    },
+    notifications: {
+      summary: notif?.mail.smtp.host
+        ? t("settingsPage.toc.notifications.summary", {
+            host: notif.mail.smtp.host,
+            count: notif.mail.to.length,
+          })
+        : t("settingsPage.toc.notifications.off"),
+      issue:
+        notif?.mail.smtp.host && notif.mail.to.length === 0
+          ? t("settingsPage.toc.notifications.noRecipient")
+          : notif?.auditReport.enabled &&
+              settings?.readOnly.auditReport.lastError
+            ? t("settingsPage.toc.notifications.reportFailed")
+            : undefined,
     },
     remote: {
       summary: !settings?.remote.pushURL
@@ -314,7 +338,7 @@ export const Settings = () => {
   });
 
   const keys = (Object.keys(SECTIONS) as SectionKey[]).filter(
-    (k) => k !== "remote" || !readOnly,
+    (k) => !readOnly || !EDIT_ONLY.includes(k),
   );
   const current = keys.find((k) => k === section);
   if (!current) return <Navigate to="../miners" relative="path" replace />;

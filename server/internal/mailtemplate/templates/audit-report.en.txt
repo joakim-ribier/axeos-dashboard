@@ -1,0 +1,25 @@
+# Audit report -- sent by the mailer around 1 a.m. UTC, as often as set in
+# Configuration › Notifications.
+#
+# The "Subject:" line is the mail's subject; after the blank line, its text.
+# Lines starting with # are ignored. A line with an empty variable doesn't
+# show in the mail. The file is read again on every send.
+#
+# Variables:
+#   {{title}}        "Audit for Thursday, October 15, 2026", or "Audit from 2026-10-12 to 2026-10-18"
+#   {{count}}        "3 events", "no event"
+#   {{events}}       the events, grouped by type
+#   {{periodStart}}  the first day covered
+#   {{periodEnd}}    the last day covered
+#   {{link}}         the dashboard's Audit page on the period (empty without the dashboard's address)
+#   {{date}}         when it's sent (UTC)
+#   {{sentTo}}       the recipients
+Subject: AxeOS Dashboard — {{title}}: {{count}}
+
+{{title}} — {{count}}
+
+{{events}}
+
+Days and times in UTC.
+
+Open in the dashboard: {{link}}

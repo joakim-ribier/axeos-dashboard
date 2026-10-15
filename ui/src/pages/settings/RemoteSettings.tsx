@@ -6,13 +6,9 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SaveIcon from "@mui/icons-material/Save";
 import SyncIcon from "@mui/icons-material/Sync";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   Box,
   Chip,
-  IconButton,
-  InputAdornment,
   Link,
   Stack,
   TableBody,
@@ -25,6 +21,7 @@ import {
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
+import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { formatTimestamp } from "@/utils/format";
@@ -86,7 +83,6 @@ const RemoteSection = ({
   const { data: board } = useRemoteBoard();
   const [pushURL, setPushURL] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     if (!data) return;
@@ -94,11 +90,25 @@ const RemoteSection = ({
     setApiKey(data.remote.apiKey);
   }, [data]);
 
-  const handleSaveRemote = () =>
-    persist({
+  // Checked before sending, as the server would refuse it: blank (push
+  // off) or an http(s) address.
+  const pushURLInvalid = (() => {
+    const value = pushURL.trim();
+    if (!value) return false;
+    try {
+      return !["http:", "https:"].includes(new URL(value).protocol);
+    } catch {
+      return true;
+    }
+  })();
+
+  const handleSaveRemote = () => {
+    if (pushURLInvalid) return;
+    return persist({
       ...serverBasePayload(),
       remote: { pushURL: pushURL.trim(), apiKey: apiKey.trim() },
     });
+  };
 
   const pushStateOf = (status: {
     lastError?: string;
@@ -309,46 +319,28 @@ const RemoteSection = ({
             placeholder="https://hashboard.live/api/push"
             value={pushURL}
             onChange={(e) => setPushURL(e.target.value)}
+            error={pushURLInvalid}
+            helperText={
+              pushURLInvalid
+                ? t("settingsPage.appSettings.remote.invalidPushUrl")
+                : undefined
+            }
             slotProps={{ inputLabel: { shrink: true } }}
             fullWidth
           />
-          <TextField
+          <SecretField
             size="small"
-            type={showApiKey ? "text" : "password"}
             label={t("settingsPage.appSettings.remote.apiKeyLabel")}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            slotProps={{
-              inputLabel: { shrink: true },
-              input: {
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      size="small"
-                      edge="end"
-                      onClick={() => setShowApiKey((v) => !v)}
-                      aria-label={t(
-                        showApiKey
-                          ? "settingsPage.appSettings.remote.hideApiKey"
-                          : "settingsPage.appSettings.remote.showApiKey",
-                      )}
-                    >
-                      {showApiKey ? (
-                        <VisibilityOffIcon fontSize="small" />
-                      ) : (
-                        <VisibilityIcon fontSize="small" />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
+            slotProps={{ inputLabel: { shrink: true } }}
             fullWidth
           />
           <Box>
             <ActionButton
               icon={<SaveIcon fontSize="small" />}
               loading={isSaving}
+              disabled={pushURLInvalid}
               onClick={() => void handleSaveRemote()}
             >
               {isSaving

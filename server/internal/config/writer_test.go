@@ -231,3 +231,29 @@ func TestSaveAppSettings_devicesRoundTripThroughStore(t *testing.T) {
 		t.Errorf("round-tripped devices = %+v, want %+v", devices, saved.Electricity.Devices)
 	}
 }
+
+// settings.yml holds the hashboard API key and the SMTP password: owner-only,
+// its backup too -- even one left world-readable by an older version.
+func TestSaveAppSettings_ownerOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.yml")
+	if err := os.WriteFile(path+".bak", []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("# old\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SaveAppSettings(path, AppSettingsFile{Notifications: NotificationsConfig{Mail: MailConfig{SMTP: SMTPConfig{Password: "s3cret"}}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range []string{path, path + ".bak"} {
+		info, err := os.Stat(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode := info.Mode().Perm(); mode != 0o600 {
+			t.Errorf("%s mode = %o, want 600", filepath.Base(p), mode)
+		}
+	}
+}

@@ -42,7 +42,8 @@ par l'application elle-même (planificateur, sauvegarde de chaque nuit).
 
 La page affiche les **dernières 24 heures** par défaut, du plus récent au
 plus ancien. Le calendrier affiche une autre journée, de minuit à minuit
-à l'heure locale.
+UTC. Les heures sont en UTC, comme les Sauvegardes et le rapport d'audit
+par mail : un même événement porte la même heure partout.
 
 - **Filtres** — par mineur, par type d'événement et par jour. Chaque
   filtre actif apparaît en étiquette sous la barre : la croix le retire,
@@ -171,6 +172,12 @@ résultat** (réussite, ou échec avec le message d'erreur). Une action qui
       <td>chaque nuit, par l'application : la journée terminée est ajoutée à l'archive de son mois (voir <a href="{{ '/backups.html' | relative_url }}">Sauvegardes</a>)</td>
       <td>le ou les mois dont l'archive a été mise à jour</td>
     </tr>
+    <tr>
+      <td><code>audit_report</code></td>
+      <td>Rapport d'audit envoyé</td>
+      <td>la nuit, par le mailer, selon la fréquence choisie dans Configuration › Notifications</td>
+      <td>la période couverte et les destinataires ; l'erreur en cas d'échec</td>
+    </tr>
   </tbody>
 </table>
 
@@ -229,6 +236,12 @@ plusieurs (par exemple le pool **et** la planification d'un mineur).
       <td>Accès distant modifié</td>
       <td>l'URL de push ou la clé API hashboard change</td>
       <td>l'URL avant et après ; la clé API n'est jamais écrite, seulement « modifiée »</td>
+    </tr>
+    <tr>
+      <td><code>mail_settings</code></td>
+      <td>Notifications modifiées</td>
+      <td>le serveur SMTP ou les destinataires des mails changent</td>
+      <td>chaque champ du serveur avant et après, les destinataires ajoutés ou retirés ; le mot de passe n'est jamais écrit, seulement « modifié »</td>
     </tr>
   </tbody>
 </table>
@@ -289,7 +302,7 @@ Une opération du planificateur, ici en échec :
     <tr><td><code>requestId</code></td><td><code>api</code> — l'identifiant de la requête, le même que dans les logs du dashboard</td></tr>
     <tr><td><code>status</code></td><td><code>api</code> — le code HTTP de la réponse (400 ou plus : échec)</td></tr>
     <tr><td><code>query</code></td><td><code>api</code> — les paramètres de la demande : les mois téléchargés, la période et les filtres exportés, le mineur ciblé…</td></tr>
-    <tr><td><code>service</code></td><td><code>system</code> — la partie de l'application qui a agi : <code>scheduler</code> (planificateur) ou <code>backup</code> (sauvegarde de chaque nuit)</td></tr>
+    <tr><td><code>service</code></td><td><code>system</code> — la partie de l'application qui a agi : <code>scheduler</code> (planificateur), <code>backup</code> (sauvegarde de chaque nuit) ou <code>mailer</code> (notifications)</td></tr>
     <tr><td><code>cron</code></td><td><code>system</code> — l'expression cron qui a déclenché l'opération</td></tr>
     <tr><td><code>error</code></td><td>Le message d'erreur, en cas d'échec</td></tr>
     <tr><td><code>changes</code></td><td>Ce qui a changé — chaque champ avec sa nature (<code>kind</code>) : <code>changed</code> (valeur avant <code>before</code> → après <code>after</code>), ou un élément de liste <code>added</code> (<code>after</code>) ou <code>removed</code> (<code>before</code>)</td></tr>
@@ -308,7 +321,7 @@ Docker), une entrée JSON par ligne.
 Trois routes de l'API les exposent :
 
 - `GET /api/audit` — les entrées entre `from` et `to` (dates RFC 3339,
-  les dernières 24 heures par défaut, 7 jours au maximum), filtrables par
+  les dernières 24 heures par défaut, un an au maximum), filtrables par
   `ip` (mineur) et `type`, paginées avec `page` et `pageSize`.
 - `GET /api/audit/types` — la liste de tous les types, dans l'ordre où le
   dashboard les propose : la valeur attendue par `type`.
@@ -342,13 +355,15 @@ La réponse de `GET /api/audit/types` — chaque type est expliqué dans
     "download_backups",
     "discover",
     "backup",
+    "audit_report",
     "miner_pool",
     "miner_schedule",
     "miner_identity",
     "miner_disabled",
     "miner_enabled",
     "miner_added",
-    "remote_push"
+    "remote_push",
+    "mail_settings"
   ]
 }
 ```

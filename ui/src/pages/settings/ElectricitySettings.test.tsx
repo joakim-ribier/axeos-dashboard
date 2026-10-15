@@ -2,7 +2,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AppSettings, PowerDevice } from "@/schemas/appSettingsSchema";
+import {
+  type AppSettings,
+  EMPTY_NOTIFICATIONS,
+  type PowerDevice,
+} from "@/schemas/appSettingsSchema";
 
 import { ElectricitySettings } from "./ElectricitySettings";
 
@@ -51,7 +55,9 @@ const buildSettings = (devices: PowerDevice[]): AppSettings => ({
     firmwareCacheTTL: "24h0m0s",
     remotePushMinersConfig: {},
     remotePushSettingsConfig: {},
+    auditReport: {},
   },
+  notifications: EMPTY_NOTIFICATIONS,
 });
 
 const key = "settingsPage.appSettings.electricity.devices";

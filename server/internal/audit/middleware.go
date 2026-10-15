@@ -19,7 +19,7 @@ import (
 // API entry, once the route has answered -- whatever the outcome, so a
 // failed attempt shows up too, with its status and error message. Unless
 // the route recorded the call in detail itself (see RecordChanges): one
-// fact, one entry.
+// fact, one entry. Nor a form's refused input (see formTypes).
 //
 // resolveTarget turns the miner a request addresses (by IP or hostname)
 // into its IP, so API entries filter by miner like the scheduler's.
@@ -34,12 +34,24 @@ func (l *Log) Middleware(entryType string, resolveTarget func(string) string, lo
 			if *detailed {
 				return
 			}
+			if formTypes[entryType] && rw.statusCode() == http.StatusBadRequest {
+				return
+			}
 
 			if err := l.Record(apiEntry(entryType, r, rw, resolveTarget)); err != nil {
 				logger.Error("failed to record audit entry", "type", entryType, "error", err)
 			}
 		})
 	}
+}
+
+// formTypes are the routes behind a form: a 400 there is a field the form
+// let through and the server refused -- nothing was changed nor done, and
+// it would only bury the real failures. Data leaving the Pi and network
+// scans keep their 400s: what was asked for is worth knowing there.
+var formTypes = map[string]bool{
+	TypeSaveMiners:   true,
+	TypeSaveSettings: true,
 }
 
 func apiEntry(entryType string, r *http.Request, rw *errorBody, resolveTarget func(string) string) Entry {

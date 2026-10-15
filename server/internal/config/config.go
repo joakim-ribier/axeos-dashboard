@@ -29,6 +29,7 @@ const (
 type Config struct {
 	Global      GlobalConfig      `yaml:"global"`
 	Server      ServerConfig      `yaml:"server"`
+	Mailer      MailerConfig      `yaml:"mailer"`
 	Feeder      FeederConfig      `yaml:"feeder"`
 	HealthCheck HealthCheckConfig `yaml:"healthCheck"`
 	Bitaxes     []Bitaxe          `yaml:"bitaxes"`
@@ -44,7 +45,10 @@ type Config struct {
 	Pools       PoolsConfig       `yaml:"-"`
 	Electricity ElectricityConfig `yaml:"electricity"`
 	Remote      RemoteConfig      `yaml:"remote"`
-	UI          UIConfig          `yaml:"ui"`
+	// Notifications only ever come from settings.yml (see AppSettingsFile)
+	// -- never read from dashboard.yml.
+	Notifications NotificationsConfig `yaml:"-"`
+	UI            UIConfig            `yaml:"ui"`
 
 	// HashboardURL is the base URL of the hashboard instance backing this
 	// remote-dashboard-api (remote-dashboard-api only): where the "private
@@ -58,6 +62,11 @@ type Config struct {
 	// loaded (see LoadConfig). Always set after a successful load; a
 	// runtime detail, never itself read from or written to dashboard.yml.
 	MinersFilePath string `yaml:"-"`
+
+	// MailTemplatesDir is where the mailer's editable templates live, a
+	// "mail-templates" folder next to the config file -- "" without one
+	// loaded, the built-in templates then used as they are.
+	MailTemplatesDir string `yaml:"-"`
 
 	// AppSettingsFile optionally overrides where the managed app-settings
 	// config lives (see the /settings page's "app settings" section).
@@ -283,6 +292,22 @@ type ServerConfig struct {
 	Port string `yaml:"port"`
 }
 
+// MailerConfig is where the mailer's own API listens -- on the loopback
+// only, so dashboard-api (same host, same container) is its one caller and
+// every test mail goes through its audited route.
+type MailerConfig struct {
+	Port string `yaml:"port"`
+}
+
+// Address is the mailer API's host:port, default port 8082.
+func (m MailerConfig) Address() string {
+	port := m.Port
+	if port == "" {
+		port = "8082"
+	}
+	return "127.0.0.1:" + port
+}
+
 type FeederConfig struct {
 	Interval time.Duration `yaml:"interval"`
 }
@@ -302,6 +327,7 @@ const (
 	BackupsRelDir = "data/backups"
 	BoardsRelDir  = "data/boards"
 	AuditRelDir   = "data/audit"
+	MailRelDir    = "data/mail"
 	// BoardBitaxesDirName is each board's miners directory, under
 	// BoardsRelDir/{boardId}.
 	BoardBitaxesDirName = "bitaxes"
@@ -320,6 +346,12 @@ func (s StorageConfig) BackupsDir() string {
 // AuditDir returns the directory that holds the daily audit logs.
 func (s StorageConfig) AuditDir() string {
 	return filepath.Join(s.DataDir, filepath.FromSlash(AuditRelDir))
+}
+
+// MailDir returns the directory that holds the state of the scheduled mails
+// (when each last went out).
+func (s StorageConfig) MailDir() string {
+	return filepath.Join(s.DataDir, filepath.FromSlash(MailRelDir))
 }
 
 // ResolveBoardsDir returns the boards root directory: {dataDir}/data/boards,
@@ -408,6 +440,82 @@ func (r RemoteConfig) Enabled() bool {
 	return r.PushURL != "" && r.APIKey != ""
 }
 
+// NotificationsConfig is everything the dashboard sends on its own: how
+// its messages read (language, links), the channels they go through (mail
+// for now), and what goes out (the audit report; alerts next).
+type NotificationsConfig struct {
+	// Language is the messages' language: "fr" or "en" (the default).
+	Language string `yaml:"language,omitempty" json:"language"`
+	// DashboardURL is the dashboard's own address as reached from where the
+	// messages are read (e.g. http://192.168.1.60) -- for their links.
+	DashboardURL string            `yaml:"dashboardURL,omitempty" json:"dashboardURL"`
+	Mail         MailConfig        `yaml:"mail,omitempty" json:"mail"`
+	AuditReport  AuditReportConfig `yaml:"auditReport,omitempty" json:"auditReport"`
+}
+
+// MailConfig is the mail channel: where mails go out from, and to whom.
+type MailConfig struct {
+	SMTP SMTPConfig `yaml:"smtp" json:"smtp"`
+	To   []string   `yaml:"to,omitempty" json:"to"`
+}
+
+// AuditReportConfig is the mail summing up the audit since the previous
+// one, sent at night (UTC, like the audit's own days) at the chosen
+// frequency. Turning it off keeps the
+// rest as it was.
+type AuditReportConfig struct {
+	Enabled   bool            `yaml:"enabled,omitempty" json:"enabled"`
+	Frequency ReportFrequency `yaml:"frequency,omitempty" json:"frequency"`
+	// Types narrows it to these audit entry types -- all of them when empty.
+	Types []string `yaml:"types,omitempty" json:"types"`
+	// SkipIfEmpty sends nothing for a period nothing was recorded in.
+	SkipIfEmpty bool `yaml:"skipIfEmpty,omitempty" json:"skipIfEmpty"`
+}
+
+// ReportFrequency is how often the audit report goes out -- each covering
+// the period since the previous one.
+type ReportFrequency string
+
+const (
+	ReportDaily      ReportFrequency = "daily"      // every night: the day before
+	ReportEvery2Days ReportFrequency = "every2days" // every other night: the 2 days before
+	ReportWeekly     ReportFrequency = "weekly"     // Sunday to Monday night: Monday to Sunday
+	ReportMonthly    ReportFrequency = "monthly"    // the night of the 1st: the month before
+)
+
+// ReportFrequencies is every frequency, in the order the dashboard offers
+// them.
+var ReportFrequencies = []ReportFrequency{ReportDaily, ReportEvery2Days, ReportWeekly, ReportMonthly}
+
+// SMTPSecurity is how the connection to the SMTP server is protected.
+type SMTPSecurity string
+
+const (
+	// SMTPStartTLS upgrades a plain connection (usually port 587).
+	SMTPStartTLS SMTPSecurity = "starttls"
+	// SMTPTLS is TLS from the first byte (usually port 465).
+	SMTPTLS SMTPSecurity = "tls"
+	// SMTPNone is a plain connection -- a relay on the local network only.
+	SMTPNone SMTPSecurity = "none"
+)
+
+type SMTPConfig struct {
+	Host     string       `yaml:"host,omitempty" json:"host"`
+	Port     int          `yaml:"port,omitempty" json:"port"`
+	Security SMTPSecurity `yaml:"security,omitempty" json:"security"`
+	Username string       `yaml:"username,omitempty" json:"username"`
+	// Password is write-only through the API: it's stored here, but GET
+	// /api/config/settings only ever says whether one is set (see
+	// handler.appSettingsResponse).
+	Password string `yaml:"password,omitempty" json:"password,omitempty"`
+	From     string `yaml:"from,omitempty" json:"from"`
+}
+
+// Configured reports whether there's enough to send a mail at all.
+func (s SMTPConfig) Configured() bool {
+	return s.Host != "" && s.Port > 0 && s.From != ""
+}
+
 // AppSettingsFile is the shape of the managed settings.yml file --
 // the operational subset of dashboard.yml's config that's editable from
 // the /settings page. Everything else
@@ -417,10 +525,11 @@ func (r RemoteConfig) Enabled() bool {
 // deployment-topology decision, not something an operator needs to
 // change without a restart.
 type AppSettingsFile struct {
-	Electricity ElectricityConfig   `yaml:"electricity" json:"electricity"`
-	Pools       PoolsConfig         `yaml:"pools" json:"pools"`
-	Remote      RemoteConfig        `yaml:"remote" json:"remote"`
-	Firmware    AppSettingsFirmware `yaml:"firmware" json:"firmware"`
+	Electricity   ElectricityConfig   `yaml:"electricity" json:"electricity"`
+	Pools         PoolsConfig         `yaml:"pools" json:"pools"`
+	Remote        RemoteConfig        `yaml:"remote" json:"remote"`
+	Firmware      AppSettingsFirmware `yaml:"firmware" json:"firmware"`
+	Notifications NotificationsConfig `yaml:"notifications,omitempty" json:"notifications"`
 }
 
 // AppSettingsFirmware only ever carries Repos -- CacheTTL is process-launch
@@ -446,6 +555,7 @@ type AppSettingsFirmware struct {
 func (a AppSettingsFile) ApplyTo(cfg *Config) {
 	cfg.Electricity = a.Electricity
 	cfg.Remote = a.Remote
+	cfg.Notifications = a.Notifications
 	cfg.Pools.Dashboards = mergePoolDashboards(a.Pools.Dashboards)
 	cfg.Firmware.Repos = mergeFirmwareRepos(a.Firmware.Repos)
 }

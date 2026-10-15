@@ -39,6 +39,7 @@ resources/miners.yml
 resources/miners.yml.bak
 resources/settings.yml
 resources/settings.yml.bak
+resources/mail-templates/
 # Docker local-testing bind mounts (docker-compose.yml's ./config, ./data)
 /config/
 /storage/
