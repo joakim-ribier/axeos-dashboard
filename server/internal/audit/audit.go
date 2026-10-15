@@ -1,7 +1,8 @@
 // Package audit records every user-triggered action that matters -- a
 // change on a miner (restart, pool switch) or in the managed config files,
 // data leaving the Pi (audit export, backups download), a network scan --
-// whether it came through the API or from the app itself (the scheduler),
+// whether it came through the API or from the app itself (the scheduler,
+// the feeder's nightly backup),
 // as one append-only JSONL file per day under {dataDir}/data/audit.
 // Automatic reads (the dashboard's polling) are deliberately not recorded.
 package audit
@@ -25,7 +26,10 @@ const (
 
 // Service names which part of the app acted on its own, for a
 // SourceSystem entry -- the counterpart of IP for a SourceAPI one.
-const ServiceScheduler = "scheduler"
+const (
+	ServiceScheduler = "scheduler"
+	ServiceBackup    = "backup"
+)
 
 // Type values deliberately reuse config.ScheduleAction's strings for the
 // three actions a schedule can also trigger, so a restart reads the same in
@@ -42,6 +46,9 @@ const (
 	TypeExportAudit     = "export_audit"
 	TypeDownloadBackups = "download_backups"
 	TypeDiscover        = "discover"
+
+	// The feeder's nightly update of the monthly backup archives.
+	TypeBackup = "backup"
 )
 
 // Types is every entry type, in the order the dashboard offers them --
@@ -50,7 +57,7 @@ const (
 var Types = []string{
 	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback,
 	TypeSaveMiners, TypeSaveSettings,
-	TypeExportAudit, TypeDownloadBackups, TypeDiscover,
+	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup,
 	TypeMinerPool, TypeMinerSchedule, TypeMinerIdentity,
 	TypeMinerDisabled, TypeMinerEnabled, TypeMinerAdded, TypeRemotePush,
 }

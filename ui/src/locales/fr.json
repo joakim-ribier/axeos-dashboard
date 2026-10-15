@@ -229,7 +229,7 @@
   "auditPage": {
     "header": {
       "title": "Audit",
-      "description": "Historique des modifications, exports et détections réseau, depuis le dashboard ou par le planificateur"
+      "description": "Historique des modifications, exports et détections réseau, depuis le dashboard ou par l'application (planificateur, sauvegarde)"
     },
     "filters": {
       "day": "Jour",
@@ -249,6 +249,7 @@
       "export_audit": "Export de l'audit",
       "download_backups": "Téléchargement de sauvegardes",
       "discover": "Détection réseau",
+      "backup": "Sauvegarde mise à jour",
       "miner_pool": "Pool du mineur modifié",
       "miner_schedule": "Planification modifiée",
       "miner_identity": "IP du mineur modifiée",
@@ -263,7 +264,8 @@
       "system": "Système"
     },
     "services": {
-      "scheduler": "Planificateur"
+      "scheduler": "Planificateur",
+      "backup": "Sauvegarde de chaque nuit"
     },
     "failed": "Échec",
     "empty": "Aucun événement sur cette période.",
@@ -297,7 +299,8 @@
       "poolDashboardAdded": "Dashboard de pool ajouté",
       "poolDashboardRemoved": "Dashboard de pool supprimé",
       "firmwareRepoAdded": "Dépôt firmware ajouté",
-      "firmwareRepoRemoved": "Dépôt firmware supprimé"
+      "firmwareRepoRemoved": "Dépôt firmware supprimé",
+      "backupMonth": "Mois sauvegardé"
     },
     "change": "{{field}} : {{change}}",
     "changed": "modifiée"
