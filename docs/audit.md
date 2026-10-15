@@ -36,7 +36,7 @@ subnav:
 
 L'historique de tout ce qui modifie un mineur ou la configuration, sort
 des données du Pi ou scanne le réseau, que ce soit depuis le dashboard ou
-par le planificateur.
+par l'application elle-même (planificateur, sauvegarde de chaque nuit).
 
 ![Page Audit]({{ '/assets/images/audit.png' | relative_url }})
 
@@ -55,6 +55,7 @@ plus ancien. Le calendrier affiche une autre journée, de minuit à minuit
     et le navigateur de l'appareil (le détail complet au survol) ;
   - pour une opération du planificateur : l'heure et l'expression cron qui
     l'a déclenchée ;
+  - pour la sauvegarde de chaque nuit : l'heure et le mois mis à jour ;
   - en cas d'échec, le code d'erreur et le message.
 - **Copier** — l'icône en bout de ligne copie l'entrée complète, au
   format JSON.
@@ -67,7 +68,8 @@ plus ancien. Le calendrier affiche une autre journée, de minuit à minuit
 {: #evenements }
 
 L'audit trace ce qui a été fait **depuis l'outil** : par quelqu'un dans le
-dashboard, ou par son planificateur. Chaque entrée dit **quoi** (le type),
+dashboard, ou par l'application elle-même (son planificateur, sa
+sauvegarde de chaque nuit). Chaque entrée dit **quoi** (le type),
 **quand**, **qui** (l'IP et le navigateur de l'appareil, ou le
 planificateur et sa tâche), **sur quoi** (le mineur) et **avec quel
 résultat** (réussite, ou échec avec le message d'erreur). Une action qui
@@ -162,6 +164,12 @@ résultat** (réussite, ou échec avec le message d'erreur). Une action qui
       <td>Détection réseau</td>
       <td>page Configuration › Détection automatique (scan du réseau, ou ajout par IP)</td>
       <td>la plage scannée ou l'IP sondée</td>
+    </tr>
+    <tr>
+      <td><code>backup</code></td>
+      <td>Sauvegarde mise à jour</td>
+      <td>chaque nuit, par l'application : la journée terminée est ajoutée à l'archive de son mois (voir <a href="{{ '/backups.html' | relative_url }}">Sauvegardes</a>)</td>
+      <td>le ou les mois dont l'archive a été mise à jour</td>
     </tr>
   </tbody>
 </table>
@@ -281,7 +289,7 @@ Une opération du planificateur, ici en échec :
     <tr><td><code>requestId</code></td><td><code>api</code> — l'identifiant de la requête, le même que dans les logs du dashboard</td></tr>
     <tr><td><code>status</code></td><td><code>api</code> — le code HTTP de la réponse (400 ou plus : échec)</td></tr>
     <tr><td><code>query</code></td><td><code>api</code> — les paramètres de la demande : les mois téléchargés, la période et les filtres exportés, le mineur ciblé…</td></tr>
-    <tr><td><code>service</code></td><td><code>system</code> — la partie de l'application qui a agi : <code>scheduler</code></td></tr>
+    <tr><td><code>service</code></td><td><code>system</code> — la partie de l'application qui a agi : <code>scheduler</code> (planificateur) ou <code>backup</code> (sauvegarde de chaque nuit)</td></tr>
     <tr><td><code>cron</code></td><td><code>system</code> — l'expression cron qui a déclenché l'opération</td></tr>
     <tr><td><code>error</code></td><td>Le message d'erreur, en cas d'échec</td></tr>
     <tr><td><code>changes</code></td><td>Ce qui a changé — chaque champ avec sa nature (<code>kind</code>) : <code>changed</code> (valeur avant <code>before</code> → après <code>after</code>), ou un élément de liste <code>added</code> (<code>after</code>) ou <code>removed</code> (<code>before</code>)</td></tr>
@@ -333,6 +341,7 @@ La réponse de `GET /api/audit/types` — chaque type est expliqué dans
     "export_audit",
     "download_backups",
     "discover",
+    "backup",
     "miner_pool",
     "miner_schedule",
     "miner_identity",

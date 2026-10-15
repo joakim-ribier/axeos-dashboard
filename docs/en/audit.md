@@ -37,7 +37,7 @@ subnav:
 
 The history of everything that changes a miner or the configuration,
 takes data off the Pi or scans the network, whether from the dashboard or
-by the scheduler.
+by the app itself (scheduler, nightly backup).
 
 ![Audit page]({{ '/assets/images/audit.png' | relative_url }})
 
@@ -53,6 +53,7 @@ calendar shows another day, from midnight to midnight in local time.
     address and browser (full details on hover);
   - for a scheduler operation: the time and the cron expression that
     triggered it;
+  - for the nightly backup: the time and the month updated;
   - on failure, the error code and message.
 - **Copy** — the icon at the end of the row copies the full entry, as
   JSON.
@@ -65,7 +66,8 @@ calendar shows another day, from midnight to midnight in local time.
 {: #events }
 
 The audit traces what was done **through the tool**: by someone in the
-dashboard, or by its scheduler. Each entry says **what** (the type),
+dashboard, or by the app itself (its scheduler, its nightly backup).
+Each entry says **what** (the type),
 **when**, **who** (the device's IP and browser, or the scheduler and its
 job), **on what** (the miner) and **with which result** (success, or
 failure with its error message). A failed action is recorded too.
@@ -159,6 +161,12 @@ failure with its error message). A failed action is recorded too.
       <td>Network discovery</td>
       <td>Settings page › Automatic detection (network scan, or add by IP)</td>
       <td>the scanned range or the probed IP</td>
+    </tr>
+    <tr>
+      <td><code>backup</code></td>
+      <td>Backup updated</td>
+      <td>every night, by the app: the completed day is added to its month's archive (see <a href="{{ '/en/backups.html' | relative_url }}">Backups</a>)</td>
+      <td>the month(s) whose archive was updated</td>
     </tr>
   </tbody>
 </table>
@@ -277,7 +285,7 @@ A scheduler operation, here a failed one:
     <tr><td><code>requestId</code></td><td><code>api</code> — the request's ID, the same as in the dashboard's logs</td></tr>
     <tr><td><code>status</code></td><td><code>api</code> — the response's HTTP code (400 or more: failure)</td></tr>
     <tr><td><code>query</code></td><td><code>api</code> — the request's parameters: the months downloaded, the exported period and filters, the targeted miner…</td></tr>
-    <tr><td><code>service</code></td><td><code>system</code> — the part of the app that acted: <code>scheduler</code></td></tr>
+    <tr><td><code>service</code></td><td><code>system</code> — the part of the app that acted: <code>scheduler</code> or <code>backup</code> (nightly backup)</td></tr>
     <tr><td><code>cron</code></td><td><code>system</code> — the cron expression that triggered the operation</td></tr>
     <tr><td><code>error</code></td><td>The error message, on failure</td></tr>
     <tr><td><code>changes</code></td><td>What changed — each field with its kind (<code>kind</code>): <code>changed</code> (value <code>before</code> → <code>after</code>), or a list item <code>added</code> (<code>after</code>) or <code>removed</code> (<code>before</code>)</td></tr>
@@ -329,6 +337,7 @@ The response of `GET /api/audit/types` — each type is explained in
     "export_audit",
     "download_backups",
     "discover",
+    "backup",
     "miner_pool",
     "miner_schedule",
     "miner_identity",

@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/backup"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/bitaxe"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
@@ -28,6 +29,7 @@ type Feeder struct {
 	logger *slog.Logger
 
 	config           config.Config
+	auditLog         *audit.Log
 	minersStore      *config.MinersStore
 	appSettingsStore *config.AppSettingsStore
 
@@ -64,8 +66,9 @@ func (f *Feeder) WaitForPushes() {
 
 func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
 	return &Feeder{
-		logger: logger.With("namespace", "feeder"),
-		config: config,
+		logger:   logger.With("namespace", "feeder"),
+		config:   config,
+		auditLog: audit.NewLog(config.Storage.AuditDir()),
 	}
 }
 
@@ -124,19 +127,41 @@ func (f *Feeder) backupLoop(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		months, err := backup.ArchiveCompletedDays(f.config.Storage.BitaxesDir(), f.config.Storage.BackupsDir(), time.Now())
-		for _, month := range months {
-			f.logger.Info("Monthly backup updated", "month", month)
-		}
-		if err != nil {
-			f.logger.Error("failed to update monthly backup", "error", err)
-		}
+		f.runBackup(time.Now())
 
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
+	}
+}
+
+// runBackup records the run in the audit only when it did something -- a
+// day archived, a month made final -- or failed: the hourly checks that
+// find nothing new would otherwise bury everything else.
+func (f *Feeder) runBackup(now time.Time) {
+	months, err := backup.ArchiveCompletedDays(f.config.Storage.BitaxesDir(), f.config.Storage.BackupsDir(), now)
+	if len(months) == 0 && err == nil {
+		return
+	}
+
+	entry := audit.Entry{
+		Timestamp: now,
+		Source:    audit.SourceSystem,
+		Service:   audit.ServiceBackup,
+		Type:      audit.TypeBackup,
+	}
+	for _, month := range months {
+		f.logger.Info("Monthly backup updated", "month", month)
+		entry.Changes = append(entry.Changes, audit.Change{Field: "backupMonth", Kind: audit.ChangeAdded, After: month})
+	}
+	if err != nil {
+		f.logger.Error("failed to update monthly backup", "error", err)
+		entry.Error = err.Error()
+	}
+	if err := f.auditLog.Record(entry); err != nil {
+		f.logger.Error("failed to record audit entry", "type", audit.TypeBackup, "error", err)
 	}
 }
 

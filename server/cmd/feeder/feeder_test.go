@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
@@ -553,5 +554,38 @@ func TestFeeder_pushSettingsConfigToRemote_includesDevices(t *testing.T) {
 	}
 	if len(pushed.Electricity.Devices) != 1 || pushed.Electricity.Devices[0] != devices[0] {
 		t.Errorf("pushed devices = %+v, want %+v", pushed.Electricity.Devices, devices)
+	}
+}
+
+func TestFeeder_runBackup_recordsOnlyRunsThatDidSomething(t *testing.T) {
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: t.TempDir()}}
+	minerDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddee01")
+	if err := os.MkdirAll(minerDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(minerDir, "2026-10-14.jsonl"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	feeder := NewFeeder(testLogger(), cfg)
+	now := time.Date(2026, 10, 15, 0, 30, 0, 0, time.UTC)
+	feeder.runBackup(now)
+	// Nothing new to archive an hour later: not recorded.
+	feeder.runBackup(now.Add(time.Hour))
+
+	entries, err := audit.NewLog(cfg.Storage.AuditDir()).ReadRange(now.Add(-time.Hour), now.Add(2*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("got %d entries, want 1: %+v", len(entries), entries)
+	}
+	e := entries[0]
+	if e.Source != audit.SourceSystem || e.Service != audit.ServiceBackup || e.Type != audit.TypeBackup || e.Error != "" {
+		t.Errorf("entry = %+v, want a successful system backup entry", e)
+	}
+	want := []audit.Change{{Field: "backupMonth", Kind: audit.ChangeAdded, After: "2026-10"}}
+	if len(e.Changes) != 1 || e.Changes[0] != want[0] {
+		t.Errorf("changes = %+v, want %+v", e.Changes, want)
 	}
 }
