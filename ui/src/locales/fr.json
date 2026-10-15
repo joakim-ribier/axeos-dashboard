@@ -342,17 +342,42 @@
   },
   "settingsPage": {
     "header": {
-      "title": "Configuration des mineurs",
-      "description": "Détecte automatiquement tes mineurs AxeOS sur le réseau, ou ajoute-les manuellement par IP."
+      "title": "Configuration",
+      "description": "Mineurs, électricité, envoi vers hashboard et réglages du service."
+    },
+    "toc": {
+      "miners": {
+        "title": "Mineurs",
+        "summary_one": "{{count}} mineur · {{enabled}} actif",
+        "summary_other": "{{count}} mineurs · {{enabled}} actifs",
+        "empty": "Aucun mineur configuré",
+        "poolDrift_one": "{{count}} config pool différente",
+        "poolDrift_other": "{{count}} configs pool différentes"
+      },
+      "electricity": {
+        "title": "Électricité",
+        "summary_one": "{{rate}} €/kWh · {{count}} autre appareil",
+        "summary_other": "{{rate}} €/kWh · {{count}} autres appareils"
+      },
+      "remote": {
+        "title": "Distant",
+        "off": "Non configuré",
+        "never": "Aucun envoi pour l'instant",
+        "lastPush": "Dernier envoi : {{date}}",
+        "failing": "Envoi vers hashboard en échec"
+      },
+      "system": {
+        "title": "Système",
+        "lastFeeder": "Dernier feeder : {{date}}",
+        "neverFed": "Feeder : aucun passage",
+        "feederLate": "Feeder en retard"
+      }
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
-    "issues": {
-      "poolDrift": "{{count}} mineur(s) : la config pool enregistrée ne correspond pas à ce que le mineur reporte",
-      "pushFailed": "Le push vers hashboard échoue — voir Remote plus bas"
-    },
     "configured": {
       "title": "Mineurs configurés",
-      "description": "{{count}} mineur(s) configuré(s)",
+      "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
+      "description_other": "{{count}} mineurs — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
       "hostname": "Nom",
       "ip": "IP",
       "mac": "MAC",
@@ -369,7 +394,7 @@
       "disableAllConfirm": "Tout désactiver",
       "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
       "lastUpdated": "Dernière modification : {{date}}",
-      "emptyAlert": "Aucun mineur configuré pour le moment. Lance une détection automatique ci-dessous pour en ajouter.",
+      "emptyAlert": "Aucun mineur configuré pour le moment : lance une détection ci-dessous pour en ajouter.",
       "alias": {
         "title": "Nom affiché",
         "label": "Alias",
@@ -419,12 +444,14 @@
       }
     },
     "appSettings": {
-      "title": "Réglages de l'application",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saveSuccess": "Réglages enregistrés.",
       "electricity": {
-        "title": "Électricité",
+        "rate": {
+          "title": "Tarif",
+          "description": "Prix du kWh, utilisé pour le coût des mineurs et des autres appareils."
+        },
         "rateLabel": "Tarif (€/kWh)",
         "devices": {
           "title": "Autres appareils",
@@ -434,7 +461,11 @@
           "powerLabel": "Puissance (W)",
           "empty": "Aucun appareil déclaré",
           "add": "Ajouter",
-          "remove": "Supprimer"
+          "remove": "Supprimer",
+          "perDay": "kWh / jour",
+          "costPerDay": "Coût / jour",
+          "total": "Total",
+          "preview": "≈ {{kwh}} kWh / jour · {{cost}} / jour"
         }
       },
       "pools": {
@@ -448,28 +479,54 @@
         "remove": "Supprimer"
       },
       "remote": {
-        "title": "Remote (hashboard)",
         "pushUrlLabel": "URL de push",
         "apiKeyLabel": "Clé API",
         "showApiKey": "Afficher la clé API",
         "hideApiKey": "Masquer la clé API",
         "pushStatus": {
-          "error": "Le dernier push vers hashboard a échoué ({{date}}) : {{error}}",
-          "lastSuccess": "Dernier push réussi vers hashboard : {{date}}",
-          "neverAttempted": "Aucun push tenté pour l'instant.",
+          "title": "État des envois",
+          "description": "Ce que le feeder envoie à hashboard en plus des données des mineurs.",
+          "endpointLabel": "Envoi",
+          "stateLabel": "État",
+          "lastSuccessLabel": "Dernier succès",
+          "lastAttemptLabel": "Dernière tentative",
+          "state": {
+            "ok": "OK",
+            "late": "En retard",
+            "failing": "En échec",
+            "never": "Jamais"
+          },
           "endpoint": {
             "minersConfig": "Liste des mineurs",
             "settingsConfig": "Réglages"
           }
+        },
+        "board": {
+          "title": "Ton board",
+          "description": "Le board hashboard qui reçoit les données de tes mineurs.",
+          "id": "Board",
+          "visibility": "Visibilité",
+          "public": "Public",
+          "private": "Privé",
+          "lastSample": "Dernières données reçues par hashboard",
+          "noSample": "Aucune pour l'instant",
+          "account": "Compte",
+          "manage": "Gérer ton compte hashboard"
+        },
+        "connection": {
+          "title": "Connexion",
+          "description": "Adresse de push et clé API de ton compte hashboard."
         }
       },
       "firmware": {
         "title": "Repos firmware",
+        "description": "Où le dashboard vérifie la dernière version firmware de chaque modèle.",
         "modelLabel": "Modèle",
         "urlLabel": "URL du repo"
       },
       "readOnly": {
         "title": "Réglages process",
+        "description": "Réglages du service, fixés au démarrage, et leur dernier passage.",
         "settingLabel": "Réglage",
         "valueLabel": "Valeur",
         "lastRunLabel": "Dernière itération",
@@ -486,21 +543,25 @@
       "searching": "Recherche en cours…",
       "isolatedLabel": "Environnement cloisonné",
       "cidrPlaceholder": "192.168.1.0/24",
-      "cidrHelp": "Modifie si le réseau de tes mineurs n'est pas en 192.168.1.x."
+      "cidrHelp": "Modifie si le réseau de tes mineurs n'est pas en 192.168.1.x.",
+      "cidrLabel": "Réseau à scanner"
     },
     "manual": {
       "title": "Ajouter par IP",
       "description": "Pour un mineur que le scan ne trouve pas (autre sous-réseau, pare-feu…).",
-      "action": "Rechercher"
+      "action": "Rechercher",
+      "ipLabel": "Adresse IP"
     },
     "discovery": {
+      "title": "Mineurs trouvés",
       "unknownHostname": "Mineur sans nom",
       "pool": "Pool : {{url}}:{{port}}",
       "fallbackPool": "Secours : {{url}}:{{port}}",
       "noPool": "Aucun pool configuré sur ce mineur",
       "noneFound": "Aucun mineur détecté.",
       "retryLonger": "Réessayer avec un délai plus long",
-      "resultsCount": "{{count}} mineur(s) trouvé(s)",
+      "resultsCount_one": "{{count}} mineur trouvé — sélectionne ceux à enregistrer.",
+      "resultsCount_other": "{{count}} mineurs trouvés — sélectionne ceux à enregistrer.",
       "selectAll": "Tout sélectionner",
       "deselectAll": "Tout désélectionner",
       "selectedCount": "{{count}} mineur(s) sélectionné(s)",

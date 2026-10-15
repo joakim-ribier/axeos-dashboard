@@ -172,4 +172,23 @@ describe("ScheduleEditor", () => {
 
     expect(await screen.findByText("save failed")).toBeInTheDocument();
   });
+
+  it("lists the entries without any way to add or remove one when read-only", () => {
+    const miner: MinerConfig = {
+      ...baseMiner,
+      schedule: [{ cron: "59 59 23 * * FRI", action: "switch_fallback" }],
+    };
+    render(<ScheduleEditor miner={miner} saveMiners={vi.fn()} readOnly />);
+
+    expect(screen.getByText("59 59 23 * * FRI")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("settingsPage.configured.schedule.removing"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("settingsPage.configured.schedule.cronLabel"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /schedule\.add$/ }),
+    ).not.toBeInTheDocument();
+  });
 });
