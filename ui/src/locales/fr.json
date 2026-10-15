@@ -314,10 +314,6 @@
     "helpCombine": "Combinez plusieurs termes avec un espace — tous doivent correspondre."
   },
   "oops": {
-    "notFound": {
-      "title": "Page introuvable",
-      "message": "Cette page n'existe pas."
-    },
     "retry": "Réessayer"
   },
   "common": {

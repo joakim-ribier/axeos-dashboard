@@ -1,20 +1,16 @@
 // src/App.tsx
 import { useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { AppLayout } from "@/components/layout/AppLayout";
-import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
-import { OopsPage } from "@/components/ui/OopsPage";
 import { RequireMinersConfigured } from "@/components/ui/RequireMinersConfigured";
 import { RequirePageEnabled } from "@/components/ui/RequirePageEnabled";
-import { useMode } from "@/contexts/ModeContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import { SearchProvider } from "@/contexts/SearchContext";
-import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
 import i18n from "@/i18n";
 import { Alerts } from "@/pages/Alerts";
 import { Audit } from "@/pages/Audit";
@@ -24,35 +20,14 @@ import { Settings } from "@/pages/Settings";
 import { getTheme } from "@/theme";
 
 /**
- * The remote branch's own catch-all (an unknown sub-path under a real
- * :boardId, e.g. "/demo/typo") -- mirrors Home/Alerts' own 403/404
- * handling exactly, rather than always showing a generic "not found"
- * regardless of why: a private board should still show its own
- * request-access page here, not a plain "page not found" that hides the
- * fact the board does exist. useMiners() shares its query with the
- * Sidebar's own board-status check (useAppInfo), so this costs no extra
- * request.
+ * An unknown sub-path under a board (e.g. "/demo/typo") lands on that
+ * board's home rather than a dead end -- Home then decides what the visitor
+ * actually gets to see (the board, or the same request-access page a
+ * private or nonexistent board shows).
  */
-const RemoteCatchAll: React.FC = () => {
-  const { boardId, isRemoteBackend } = useMode();
-  const { hashboardUrl } = useAppInfo();
-  const { error } = useMiners();
-
-  if (
-    error instanceof ApiError &&
-    error.status === 403 &&
-    boardId &&
-    isRemoteBackend
-  ) {
-    return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
-  }
-
-  return (
-    <OopsPage
-      titleKey="oops.notFound.title"
-      messageKey="oops.notFound.message"
-    />
-  );
+const BoardHomeRedirect: React.FC = () => {
+  const { boardId } = useParams();
+  return <Navigate to={`/${boardId}`} replace />;
 };
 
 export const App: React.FC = () => {
@@ -144,7 +119,7 @@ export const App: React.FC = () => {
                       </RequirePageEnabled>
                     }
                   />
-                  <Route path="*" element={<RemoteCatchAll />} />
+                  <Route path="*" element={<BoardHomeRedirect />} />
                 </Route>
               </Routes>
             </SearchProvider>

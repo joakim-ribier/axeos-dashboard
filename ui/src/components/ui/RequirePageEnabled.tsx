@@ -1,19 +1,19 @@
 // src/components/ui/RequirePageEnabled.tsx
+import { Navigate, useParams } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 
 import { useUiFeatures } from "@/hooks/useMiners";
 import type { UIFeatures } from "@/types/uiFeatures";
-
-import { OopsPage } from "./OopsPage";
 
 /**
  * Gates a page behind its ui.page.* flag (see config.UIPageConfig) instead
  * of the frontend hardcoding what each mode shows -- an operator flips it to
  * "hidden" in dashboard.yml/remote-dashboard.yml to pull the page out of a
  * deployment entirely ("readonly" is left to the page itself, e.g. Settings
- * without any write action). Renders as a plain 404 when hidden: from the
- * outside "hidden" should be indistinguishable from "this route doesn't
- * exist".
+ * without any write action). Redirects to the current board's (or the
+ * local) home when hidden: from the outside "hidden" should be
+ * indistinguishable from "this route doesn't exist", which redirects the
+ * same way (see App.tsx's BoardHomeRedirect).
  *
  * Waits for the flag to actually resolve (spinner, like
  * RequireMinersConfigured) instead of rendering the "enabled" fallback
@@ -25,6 +25,7 @@ export const RequirePageEnabled: React.FC<{
   children: React.ReactNode;
 }> = ({ page, children }) => {
   const { ui, isLoading } = useUiFeatures();
+  const { boardId } = useParams();
 
   if (isLoading) {
     return (
@@ -35,12 +36,7 @@ export const RequirePageEnabled: React.FC<{
   }
 
   if (ui.page[page] === "hidden") {
-    return (
-      <OopsPage
-        titleKey="oops.notFound.title"
-        messageKey="oops.notFound.message"
-      />
-    );
+    return <Navigate to={boardId ? `/${boardId}` : "/"} replace />;
   }
 
   return <>{children}</>;
