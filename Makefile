@@ -60,7 +60,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build docs-serve
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build docs-serve
 
 # ==============================================================================
 # Main Commands
@@ -77,6 +77,10 @@ build:
 	# Build FEEDER binary
 	@echo "   - Building feeder..."
 	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+
+	# Build MAILER binary
+	@echo "   - Building mailer..."
+	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/mailer ./cmd/mailer
 
 	# Build DASHBOARD-API binary
 	@echo "   - Building dashboard-api..."
@@ -143,6 +147,12 @@ run-feeder:
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
 	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)
 
+# Run mailer (scheduled mails: the audit report) with the specified configuration file
+run-mailer:
+	@echo ">>> Starting mailer with config: $(CONFIG_FILE)..."
+	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
+	@$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)
+
 # Reconstruct totals.json (persistent, reboot-surviving uptime/shares/
 # electricity-cost counters) from each miner's full JSONL history. Safe by
 # default: DRY_RUN=1 unless overridden, and the tool itself backs up any
@@ -184,7 +194,7 @@ run-remote-dashboard-ui:
 # Display help message
 help:
 	@echo "Available commands:"
-	@echo "  make build                     - Compile feeder, dashboard-api and remote-dashboard-api"
+	@echo "  make build                     - Compile feeder, mailer, dashboard-api and remote-dashboard-api"
 	@echo "  make lintAll                   - Run linter on all packages"
 	@echo "  make swagger                   - Regenerate the OpenAPI spec (server/docs/swagger/)"
 	@echo "  make docs-serve                - Serve the docs site locally (cd docs && jekyll serve)"
@@ -192,11 +202,12 @@ help:
 	@echo "  make docker-build               - Build the Docker images locally with the real git SHA baked in (docker compose build)"
 	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
 	@echo "  make run-feeder                - Start feeder with resources/dashboard.yml"
+	@echo "  make run-mailer                - Start mailer (scheduled mails) with resources/dashboard.yml"
 	@echo "  make rebuild-totals           - Reconstruct totals.json from JSONL history (dry-run by default; DRY_RUN= to write, MINER= to target one miner)"
 	@echo "  make run-remote-dashboard-api  - Start remote-dashboard-api with resources/remote-dashboard.yml"
 	@echo "  make run-dashboard-ui          - Start UI dev server → dashboard-api (:$(DASHBOARD_API_PORT))"
 	@echo "  make run-remote-dashboard-ui   - Start UI dev server → remote-dashboard-api (:$(REMOTE_DASHBOARD_API_PORT))"
-	@echo "  make dev-up                    - Start full dev environment (UI + dashboard-api + feeder)"
+	@echo "  make dev-up                    - Start full dev environment (UI + dashboard-api + feeder + mailer)"
 	@echo "  make dev-down                  - Stop dev environment"
 	@echo "  make dev-attach                - Attach to existing dev screen session"
 	@echo "  make dev-status                - List all screen sessions"
@@ -205,9 +216,9 @@ help:
 	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
 	@echo "  make latest-remote-up          - Start remote-dashboard-api from the latest release (VPS use, no local build)"
 	@echo "  make latest-remote-down        - Stop remote-dashboard-api"
-	@echo "  make build-linux               - Cross-compile dashboard-api/feeder/rebuild-totals (linux/arm64) and build the UI"
+	@echo "  make build-linux               - Cross-compile dashboard-api/feeder/mailer/rebuild-totals (linux/arm64) and build the UI"
 	@echo "  make deploy                    - build-linux, then copy the result to $(DEPLOY_HOST) (test without pushing to main)"
-	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder from what's on disk, no GitHub fetch"
+	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder + mailer from what's on disk, no GitHub fetch"
 	@echo "  make help                      - Show this help message"
 
 # ==============================================================================
@@ -244,6 +255,11 @@ dev-up: build
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
+	# --- MAILER ---
+	screen -S $(SCREEN_NAME) -X screen -t mailer bash -c "\
+		cd $(ROOT_DIR) && \
+		$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)"
+
 	@echo "✅ Dev environment started. Use 'make dev-attach' to connect."
 
 # Stop development environment and all associated processes
@@ -259,6 +275,7 @@ dev-down:
 	-pkill -9 -f "npm run preview" 2>/dev/null || true
 	-pkill -9 -f "dashboard-api" 2>/dev/null || true
 	-pkill -9 -f "feeder" 2>/dev/null || true
+	-pkill -9 -f "mailer" 2>/dev/null || true
 
 	# 3. Clean up zombie screen sessions
 	-screen -wipe > /dev/null 2>&1 || true
@@ -299,6 +316,15 @@ latest-fetch:
 		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/$$bin; \
 		chmod +x $(SERVER_BUILD_DIR)/$$bin; \
 	done
+	@asset="mailer-$(RELEASE_ARCH)"; \
+	url=$$(jq -r ".assets[] | select(.name==\"$$asset\") | .browser_download_url" /tmp/axeos-release.json); \
+	if [ -n "$$url" ] && [ "$$url" != "null" ]; then \
+		echo "   - $$asset -> $(SERVER_BUILD_DIR)/mailer"; \
+		curl -sfL "$$url" -o $(SERVER_BUILD_DIR)/mailer; \
+		chmod +x $(SERVER_BUILD_DIR)/mailer; \
+	else \
+		echo "   - $$asset not in this release yet, skipping (scheduled mails stay off)"; \
+	fi
 	@asset="rebuild-totals-$(RELEASE_ARCH)"; \
 	url=$$(jq -r ".assets[] | select(.name==\"$$asset\") | .browser_download_url" /tmp/axeos-release.json); \
 	if [ -n "$$url" ] && [ "$$url" != "null" ]; then \
@@ -312,7 +338,7 @@ latest-fetch:
 	echo "   - ui-dist.tar.gz"; \
 	rm -rf $(UI_DIR)/dist && mkdir -p $(UI_DIR)/dist; \
 	curl -sfL "$$ui_url" | tar -xz -C $(UI_DIR)/dist
-	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,dashboard-api,remote-dashboard-api,rebuild-totals}, $(UI_DIR)/dist/"
+	@echo ">>> Fetched: $(SERVER_BUILD_DIR)/{feeder,mailer,dashboard-api,remote-dashboard-api,rebuild-totals}, $(UI_DIR)/dist/"
 
 # Start the full stack from the latest CI-built release — no local build/toolchain
 # needed. The UI (fetched static files in ui/dist) is served by nginx, configured
@@ -335,7 +361,17 @@ latest-up: latest-fetch
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
-	@echo "✅ Latest environment started (dashboard-api + feeder). nginx serves the UI separately."
+	# --- MAILER --- (only once a release or a deploy brought its binary:
+	# an older release has none, and that must not stop the rest)
+	@if [ -x "$(SERVER_BUILD_DIR)/mailer" ]; then \
+		screen -S $(SCREEN_NAME) -X screen -t mailer bash -c "\
+			cd $(ROOT_DIR) && \
+			$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)"; \
+	else \
+		echo "   - no mailer binary in $(SERVER_BUILD_DIR), skipped (scheduled mails stay off)"; \
+	fi
+
+	@echo "✅ Latest environment started (dashboard-api + feeder + mailer). nginx serves the UI separately."
 	@echo "   Use 'make dev-attach' to connect to the screen session."
 
 # Stop the latest environment — identical teardown to dev-down (same screen session name).
@@ -361,19 +397,21 @@ latest-remote-down:
 	@echo ">>> Stopped."
 
 # ==============================================================================
-# Deploy (local build → $(DEPLOY_HOST) — dashboard-api + feeder only, no
-# remote-dashboard-api, for trying out a change on the real Pi without
+# Deploy (local build → $(DEPLOY_HOST) — dashboard-api + feeder + mailer and
+# this Makefile only, no remote-dashboard-api, for trying out a change on the
+# real Pi without
 # pushing to main or waiting on CI/`make latest-*`. Run `make restart` on the
 # server afterwards to pick it up — `make latest-up` won't do, it always
 # re-fetches from GitHub first and would overwrite what was just copied.)
 # ==============================================================================
 
-# Cross-compile dashboard-api + feeder for the Pi (linux/arm64) and build the UI.
+# Cross-compile dashboard-api + feeder + mailer for the Pi (linux/arm64) and build the UI.
 build-linux:
-	@echo ">>> Cross-compiling dashboard-api + feeder + rebuild-totals for linux/arm64..."
+	@echo ">>> Cross-compiling dashboard-api + feeder + mailer + rebuild-totals for linux/arm64..."
 	@mkdir -p $(SERVER_BUILD_DIR)
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/mailer ./cmd/mailer
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
 	@echo ">>> Building UI..."
 	cd $(UI_DIR) && npm run build
@@ -384,13 +422,16 @@ deploy: build-linux
 		echo "Error: DEPLOY_DIR is not set -- export DEPLOY_DIR=/path/to/axeos-dashboard/on/your/server, or pass it inline: make deploy DEPLOY_DIR=/path/to/axeos-dashboard"; \
 		exit 1; \
 	fi
-	@echo ">>> Copying dashboard-api + feeder + rebuild-totals + UI to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
+	@echo ">>> Copying dashboard-api + feeder + mailer + rebuild-totals + UI + Makefile to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
 	ssh $(DEPLOY_HOST) "mkdir -p $(DEPLOY_DIR)/$(SERVER_BUILD_DIR) $(DEPLOY_DIR)/ui/dist"
-	rsync -avz $(SERVER_BUILD_DIR)/dashboard-api $(SERVER_BUILD_DIR)/feeder $(SERVER_BUILD_DIR)/rebuild-totals $(DEPLOY_HOST):$(DEPLOY_DIR)/$(SERVER_BUILD_DIR)/
+	rsync -avz $(SERVER_BUILD_DIR)/dashboard-api $(SERVER_BUILD_DIR)/feeder $(SERVER_BUILD_DIR)/mailer $(SERVER_BUILD_DIR)/rebuild-totals $(DEPLOY_HOST):$(DEPLOY_DIR)/$(SERVER_BUILD_DIR)/
 	rsync -avz --delete $(UI_DIR)/dist/ $(DEPLOY_HOST):$(DEPLOY_DIR)/ui/dist/
+	# The Makefile too: the server's `make restart` must start exactly the
+	# processes these binaries are (a new one, like the mailer, included).
+	rsync -avz Makefile $(DEPLOY_HOST):$(DEPLOY_DIR)/Makefile
 	@echo ">>> Done."
 
-# Restart dashboard-api + feeder from whatever's already on disk in
+# Restart dashboard-api + feeder + mailer from whatever's already on disk in
 # $(SERVER_BUILD_DIR) -- i.e. what `make deploy` just copied here. Unlike
 # `latest-up`, this never touches GitHub, so it's the one to run ON
 # $(DEPLOY_HOST) itself after `make deploy` to actually pick up the change.
@@ -401,7 +442,7 @@ restart:
 		echo "Error: CONFIG_FILE '$(CONFIG_FILE)' not found -- pass the real path on this server, e.g. CONFIG_FILE=/path/to/config.yml"; \
 		exit 1; \
 	fi
-	@echo "🚀 Restarting dashboard-api + feeder from the binaries already on disk..."
+	@echo "🚀 Restarting dashboard-api + feeder + mailer from the binaries already on disk..."
 
 	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
 	@sleep 1
@@ -418,4 +459,14 @@ restart:
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
 
-	@echo "✅ Restarted (dashboard-api + feeder). nginx serves the UI separately."
+	# --- MAILER --- (only once a release or a deploy brought its binary:
+	# an older release has none, and that must not stop the rest)
+	@if [ -x "$(SERVER_BUILD_DIR)/mailer" ]; then \
+		screen -S $(SCREEN_NAME) -X screen -t mailer bash -c "\
+			cd $(ROOT_DIR) && \
+			$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)"; \
+	else \
+		echo "   - no mailer binary in $(SERVER_BUILD_DIR), skipped (scheduled mails stay off)"; \
+	fi
+
+	@echo "✅ Restarted (dashboard-api + feeder + mailer). nginx serves the UI separately."

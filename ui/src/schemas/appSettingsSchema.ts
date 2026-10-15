@@ -56,6 +56,17 @@ export const appSettingsReadOnlySchema = z.object({
   // one endpoint succeeding must never hide the other currently failing.
   remotePushMinersConfig: remotePushEndpointStatusSchema,
   remotePushSettingsConfig: remotePushEndpointStatusSchema,
+  // The feeder's record of the daily audit mail -- absent fields until it
+  // first ran.
+  auditReport: z
+    .object({
+      lastFrom: z.string().optional(),
+      lastTo: z.string().optional(),
+      lastSentAt: z.string().optional(),
+      lastAttemptAt: z.string().optional(),
+      lastError: z.string().optional(),
+    })
+    .default({}),
 });
 
 // The built-in registry (server/internal/config/defaults.go) shown
@@ -67,6 +78,82 @@ export const appSettingsDefaultsSchema = z.object({
   firmware: firmwareReposSchema,
 });
 
+export const smtpSecuritySchema = z.enum(["starttls", "tls", "none"]);
+
+// The SMTP server as GET /api/config/settings shows it: the password itself
+// never comes back, only whether one is set.
+export const smtpSettingsSchema = z.object({
+  host: z.string(),
+  port: z.number(),
+  security: z.union([smtpSecuritySchema, z.literal("")]),
+  username: z.string(),
+  from: z.string(),
+  passwordSet: z.boolean(),
+});
+
+export const reportFrequencySchema = z.enum([
+  "daily",
+  "every2days",
+  "weekly",
+  "monthly",
+]);
+
+export const auditReportSettingsSchema = z.object({
+  enabled: z.boolean(),
+  // "" until first set -- daily then.
+  frequency: z.union([reportFrequencySchema, z.literal("")]),
+  // Empty = every type.
+  types: z.array(z.string()),
+  skipIfEmpty: z.boolean(),
+});
+
+// The mail channel: the SMTP server and the recipients.
+export const mailSettingsSchema = z.object({
+  smtp: smtpSettingsSchema,
+  to: z.array(z.string()),
+});
+
+// Everything the dashboard sends on its own (config.NotificationsConfig):
+// how its messages read, the channels they go through, and what goes out.
+export const notificationsSettingsSchema = z.object({
+  // "fr" | "en" -- "" until first set.
+  language: z.string().default(""),
+  // The dashboard's address, for the messages' links -- "" until set.
+  dashboardURL: z.string().default(""),
+  mail: mailSettingsSchema,
+  auditReport: auditReportSettingsSchema.default({
+    enabled: false,
+    frequency: "",
+    types: [],
+    skipIfEmpty: false,
+  }),
+});
+
+// A board's pushed settings never carry notifications at all -- empty ones
+// then.
+export const EMPTY_NOTIFICATIONS: z.infer<typeof notificationsSettingsSchema> =
+  {
+    language: "",
+    dashboardURL: "",
+    mail: {
+      smtp: {
+        host: "",
+        port: 0,
+        security: "",
+        username: "",
+        from: "",
+        passwordSet: false,
+      },
+      to: [],
+    },
+    auditReport: {
+      enabled: false,
+      frequency: "",
+      types: [],
+      skipIfEmpty: false,
+    },
+  };
+
 export const appSettingsSchema = z.object({
   electricity: electricitySchema,
   // pools/firmware here carry override entries only -- the effective
@@ -77,6 +164,7 @@ export const appSettingsSchema = z.object({
   firmware: firmwareReposSchema,
   defaults: appSettingsDefaultsSchema,
   readOnly: appSettingsReadOnlySchema,
+  notifications: notificationsSettingsSchema.default(EMPTY_NOTIFICATIONS),
   lastUpdated: z.string().optional(),
 });
 
@@ -88,4 +176,40 @@ export type AppSettings = z.infer<typeof appSettingsSchema>;
 export type AppSettingsInput = Pick<
   AppSettings,
   "electricity" | "pools" | "remote" | "firmware"
->;
+> & {
+  notifications: Omit<AppSettings["notifications"], "mail"> & {
+    mail: {
+      // An empty password keeps the stored one (see
+      // handler.keepMailSecrets).
+      smtp: Omit<
+        AppSettings["notifications"]["mail"]["smtp"],
+        "passwordSet"
+      > & {
+        password: string;
+      };
+      to: string[];
+    };
+  };
+};
+
+export type SmtpSecurity = z.infer<typeof smtpSecuritySchema>;
+export type ReportFrequency = z.infer<typeof reportFrequencySchema>;
+
+// The notifications part of a save, from what the server last confirmed:
+// no SMTP password, so the stored one is kept.
+export const toNotificationsInput = (
+  n: AppSettings["notifications"],
+): AppSettingsInput["notifications"] => ({
+  ...n,
+  mail: {
+    smtp: {
+      host: n.mail.smtp.host,
+      port: n.mail.smtp.port,
+      security: n.mail.smtp.security,
+      username: n.mail.smtp.username,
+      from: n.mail.smtp.from,
+      password: "",
+    },
+    to: n.mail.to,
+  },
+});

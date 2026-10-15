@@ -252,13 +252,15 @@
       "download_backups": "Backups download",
       "discover": "Network discovery",
       "backup": "Backup updated",
+      "audit_report": "Audit report sent",
       "miner_pool": "Miner pool changed",
       "miner_schedule": "Schedule changed",
       "miner_identity": "Miner IP changed",
       "miner_disabled": "Miner disabled",
       "miner_enabled": "Miner enabled",
       "miner_added": "Miner added",
-      "remote_push": "Remote push changed"
+      "remote_push": "Remote push changed",
+      "mail_settings": "Notifications changed"
     },
     "allMiners": "all miners",
     "sources": {
@@ -267,7 +269,8 @@
     },
     "services": {
       "scheduler": "Scheduler",
-      "backup": "Nightly backup"
+      "backup": "Nightly backup",
+      "mailer": "Notifications"
     },
     "failed": "Failed",
     "empty": "No events in this period.",
@@ -302,10 +305,55 @@
       "poolDashboardRemoved": "Pool dashboard removed",
       "firmwareRepoAdded": "Firmware repo added",
       "firmwareRepoRemoved": "Firmware repo removed",
-      "backupMonth": "Month backed up"
+      "backupMonth": "Month backed up",
+      "smtpHost": "SMTP server",
+      "smtpPort": "SMTP port",
+      "smtpSecurity": "SMTP security",
+      "smtpUsername": "SMTP username",
+      "smtpFrom": "Sender",
+      "smtpPassword": "SMTP password",
+      "recipientAdded": "Recipient added",
+      "recipientRemoved": "Recipient removed",
+      "mailLanguage": "Mail language",
+      "auditReportEnabled": "Audit report",
+      "auditReportSkipIfEmpty": "Report skipped when empty",
+      "auditReportTypeAdded": "Type added to the report",
+      "auditReportTypeRemoved": "Type removed from the report",
+      "auditReportFrequency": "Audit report frequency",
+      "reportPeriod": "Report period",
+      "sentTo": "Sent to",
+      "mailDashboardURL": "Dashboard address"
+    },
+    "values": {
+      "auditReportEnabled": {
+        "on": "on",
+        "off": "off"
+      },
+      "auditReportSkipIfEmpty": {
+        "on": "on",
+        "off": "off"
+      },
+      "auditReportFrequency": {
+        "daily": "Every day",
+        "every2days": "Every 2 days",
+        "weekly": "Every week",
+        "monthly": "Every month"
+      },
+      "smtpSecurity": {
+        "starttls": "STARTTLS",
+        "tls": "TLS",
+        "none": "None"
+      },
+      "mailLanguage": {
+        "fr": "Français",
+        "en": "English"
+      }
     },
     "change": "{{field}}: {{change}}",
-    "changed": "changed"
+    "changed": "value changed",
+    "period": {
+      "short": "{{from}} to {{to}} (UTC)"
+    }
   },
   "search": {
     "helpTitle": "Search tips",
@@ -320,7 +368,12 @@
   },
   "common": {
     "on": "on",
-    "off": "off"
+    "off": "off",
+    "showSecret": "Show",
+    "hideSecret": "Hide",
+    "copyError": "Copy the error",
+    "copied": "Copied!",
+    "close": "Close"
   },
   "filterBar": {
     "filters": "Filters",
@@ -360,6 +413,14 @@
         "title": "Electricity",
         "summary_one": "{{rate}} €/kWh · {{count}} other device",
         "summary_other": "{{rate}} €/kWh · {{count}} other devices"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "off": "Mail not configured",
+        "summary_one": "{{host}} · {{count}} recipient",
+        "summary_other": "{{host}} · {{count}} recipients",
+        "noRecipient": "No recipient",
+        "reportFailed": "Audit report sending failed"
       },
       "remote": {
         "title": "Remote",
@@ -483,8 +544,6 @@
       "remote": {
         "pushUrlLabel": "Push URL",
         "apiKeyLabel": "API key",
-        "showApiKey": "Show API key",
-        "hideApiKey": "Hide API key",
         "pushStatus": {
           "title": "Push status",
           "description": "What the feeder sends to hashboard on top of the miners' data.",
@@ -518,7 +577,8 @@
         "connection": {
           "title": "Connection",
           "description": "Push address and API key of your hashboard account."
-        }
+        },
+        "invalidPushUrl": "The address must start with http:// or https://."
       },
       "firmware": {
         "title": "Firmware repos",
@@ -536,6 +596,71 @@
         "healthCheckIntervalLabel": "Health check interval",
         "firmwareCacheTTLLabel": "Firmware cache TTL",
         "never": "Never"
+      },
+      "mail": {
+        "smtp": {
+          "title": "SMTP server",
+          "description": "The server the dashboard's mails go out through.",
+          "hostLabel": "Server",
+          "portLabel": "Port",
+          "securityLabel": "Security",
+          "security": {
+            "starttls": "STARTTLS",
+            "tls": "TLS",
+            "none": "None"
+          },
+          "usernameLabel": "Username",
+          "passwordLabel": "Password",
+          "passwordKept": "Set — leave blank to keep it",
+          "fromLabel": "Sender",
+          "invalidPort": "The port must be between 1 and 65535.",
+          "invalidFrom": "The sender address isn't valid."
+        },
+        "recipients": {
+          "title": "Recipients",
+          "description": "The addresses that receive the dashboard's mails.",
+          "emailLabel": "Email address",
+          "empty": "No recipient",
+          "add": "Add",
+          "remove": "Remove"
+        },
+        "test": {
+          "title": "Test mail",
+          "description": "Sends a mail to the recipients through the saved server, to check everything works.",
+          "send": "Send a test mail",
+          "sending": "Sending…",
+          "needsSmtp": "Save an SMTP server first.",
+          "needsRecipient": "Add a recipient first.",
+          "sent": "Test mail sent.",
+          "failed": "Sending failed: {{error}}",
+          "unknownError": "unknown error"
+        },
+        "languageLabel": "Mail language",
+        "languages": {
+          "fr": "Français",
+          "en": "English"
+        },
+        "report": {
+          "title": "Audit report",
+          "description": "The audit since the previous report, summed up and sent to the recipients at night.",
+          "enabledLabel": "Send the audit report",
+          "typesLabel": "Event types included",
+          "allTypes": "All types",
+          "skipIfEmptyLabel": "Send nothing if nothing happened",
+          "lastSent": "Last report: {{period}}, sent on {{date}}.",
+          "lastFailed": "The last sending failed ({{date}}): {{error}} — retrying within the hour.",
+          "neverSent": "No report sent yet.",
+          "frequencyLabel": "Frequency",
+          "frequencies": {
+            "daily": "Every day (the day before)",
+            "every2days": "Every 2 days",
+            "weekly": "Every week (Monday → Sunday)",
+            "monthly": "Every month (the month gone by)"
+          },
+          "utc": "Sent every night around 1 a.m. UTC; the report's days and times are UTC, like the audit's."
+        },
+        "dashboardUrlLabel": "Dashboard address (for the links)",
+        "invalidDashboardUrl": "The address must start with http:// or https://."
       }
     },
     "scan": {

@@ -252,13 +252,15 @@
       "download_backups": "Téléchargement de sauvegardes",
       "discover": "Détection réseau",
       "backup": "Sauvegarde mise à jour",
+      "audit_report": "Rapport d'audit envoyé",
       "miner_pool": "Pool du mineur modifié",
       "miner_schedule": "Planification modifiée",
       "miner_identity": "IP du mineur modifiée",
       "miner_disabled": "Mineur désactivé",
       "miner_enabled": "Mineur activé",
       "miner_added": "Mineur ajouté",
-      "remote_push": "Accès distant modifié"
+      "remote_push": "Accès distant modifié",
+      "mail_settings": "Notifications modifiées"
     },
     "allMiners": "tous les mineurs",
     "sources": {
@@ -267,7 +269,8 @@
     },
     "services": {
       "scheduler": "Planificateur",
-      "backup": "Sauvegarde de chaque nuit"
+      "backup": "Sauvegarde de chaque nuit",
+      "mailer": "Notifications"
     },
     "failed": "Échec",
     "empty": "Aucun événement sur cette période.",
@@ -302,10 +305,55 @@
       "poolDashboardRemoved": "Dashboard de pool supprimé",
       "firmwareRepoAdded": "Dépôt firmware ajouté",
       "firmwareRepoRemoved": "Dépôt firmware supprimé",
-      "backupMonth": "Mois sauvegardé"
+      "backupMonth": "Mois sauvegardé",
+      "smtpHost": "Serveur SMTP",
+      "smtpPort": "Port SMTP",
+      "smtpSecurity": "Sécurité SMTP",
+      "smtpUsername": "Identifiant SMTP",
+      "smtpFrom": "Expéditeur",
+      "smtpPassword": "Mot de passe SMTP",
+      "recipientAdded": "Destinataire ajouté",
+      "recipientRemoved": "Destinataire retiré",
+      "mailLanguage": "Langue des mails",
+      "auditReportEnabled": "Rapport d'audit",
+      "auditReportSkipIfEmpty": "Rapport sauté si vide",
+      "auditReportTypeAdded": "Type ajouté au rapport",
+      "auditReportTypeRemoved": "Type retiré du rapport",
+      "auditReportFrequency": "Fréquence du rapport d'audit",
+      "reportPeriod": "Période du rapport",
+      "sentTo": "Envoyé à",
+      "mailDashboardURL": "Adresse du dashboard"
+    },
+    "values": {
+      "auditReportEnabled": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "auditReportSkipIfEmpty": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "auditReportFrequency": {
+        "daily": "Tous les jours",
+        "every2days": "Tous les 2 jours",
+        "weekly": "Chaque semaine",
+        "monthly": "Chaque mois"
+      },
+      "smtpSecurity": {
+        "starttls": "STARTTLS",
+        "tls": "TLS",
+        "none": "Aucune"
+      },
+      "mailLanguage": {
+        "fr": "Français",
+        "en": "English"
+      }
     },
     "change": "{{field}} : {{change}}",
-    "changed": "modifiée"
+    "changed": "valeur modifiée",
+    "period": {
+      "short": "du {{from}} au {{to}} (UTC)"
+    }
   },
   "search": {
     "helpTitle": "Astuces de recherche",
@@ -320,7 +368,12 @@
   },
   "common": {
     "on": "activé",
-    "off": "désactivé"
+    "off": "désactivé",
+    "showSecret": "Afficher",
+    "hideSecret": "Masquer",
+    "copyError": "Copier l'erreur",
+    "copied": "Copié !",
+    "close": "Fermer"
   },
   "filterBar": {
     "filters": "Filtres",
@@ -360,6 +413,14 @@
         "title": "Électricité",
         "summary_one": "{{rate}} €/kWh · {{count}} autre appareil",
         "summary_other": "{{rate}} €/kWh · {{count}} autres appareils"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "off": "Mail non configuré",
+        "summary_one": "{{host}} · {{count}} destinataire",
+        "summary_other": "{{host}} · {{count}} destinataires",
+        "noRecipient": "Aucun destinataire",
+        "reportFailed": "Échec de l'envoi du rapport d'audit"
       },
       "remote": {
         "title": "Distant",
@@ -483,8 +544,6 @@
       "remote": {
         "pushUrlLabel": "URL de push",
         "apiKeyLabel": "Clé API",
-        "showApiKey": "Afficher la clé API",
-        "hideApiKey": "Masquer la clé API",
         "pushStatus": {
           "title": "État des envois",
           "description": "Ce que le feeder envoie à hashboard en plus des données des mineurs.",
@@ -518,7 +577,8 @@
         "connection": {
           "title": "Connexion",
           "description": "Adresse de push et clé API de ton compte hashboard."
-        }
+        },
+        "invalidPushUrl": "L'adresse doit commencer par http:// ou https://."
       },
       "firmware": {
         "title": "Repos firmware",
@@ -536,6 +596,71 @@
         "healthCheckIntervalLabel": "Intervalle de health check",
         "firmwareCacheTTLLabel": "Cache firmware (TTL)",
         "never": "Jamais"
+      },
+      "mail": {
+        "smtp": {
+          "title": "Serveur SMTP",
+          "description": "Le serveur par lequel partent les mails du dashboard.",
+          "hostLabel": "Serveur",
+          "portLabel": "Port",
+          "securityLabel": "Sécurité",
+          "security": {
+            "starttls": "STARTTLS",
+            "tls": "TLS",
+            "none": "Aucune"
+          },
+          "usernameLabel": "Identifiant",
+          "passwordLabel": "Mot de passe",
+          "passwordKept": "Défini — laisser vide pour le garder",
+          "fromLabel": "Expéditeur",
+          "invalidPort": "Le port doit être compris entre 1 et 65535.",
+          "invalidFrom": "L'adresse de l'expéditeur n'est pas valide."
+        },
+        "recipients": {
+          "title": "Destinataires",
+          "description": "Les adresses qui reçoivent les mails du dashboard.",
+          "emailLabel": "Adresse e-mail",
+          "empty": "Aucun destinataire",
+          "add": "Ajouter",
+          "remove": "Retirer"
+        },
+        "test": {
+          "title": "Mail de test",
+          "description": "Envoie un mail aux destinataires avec le serveur enregistré, pour vérifier que tout fonctionne.",
+          "send": "Envoyer un mail de test",
+          "sending": "Envoi…",
+          "needsSmtp": "Enregistre d'abord un serveur SMTP.",
+          "needsRecipient": "Ajoute d'abord un destinataire.",
+          "sent": "Mail de test envoyé.",
+          "failed": "L'envoi a échoué : {{error}}",
+          "unknownError": "erreur inconnue"
+        },
+        "languageLabel": "Langue des mails",
+        "languages": {
+          "fr": "Français",
+          "en": "English"
+        },
+        "report": {
+          "title": "Rapport d'audit",
+          "description": "Le récapitulatif de l'audit depuis le précédent rapport, envoyé la nuit aux destinataires.",
+          "enabledLabel": "Envoyer le rapport d'audit",
+          "typesLabel": "Types d'événements inclus",
+          "allTypes": "Tous les types",
+          "skipIfEmptyLabel": "Ne rien envoyer si rien ne s'est passé",
+          "lastSent": "Dernier rapport : {{period}}, envoyé le {{date}}.",
+          "lastFailed": "Le dernier envoi a échoué ({{date}}) : {{error}} — nouvel essai dans l'heure.",
+          "neverSent": "Aucun rapport envoyé pour l'instant.",
+          "frequencyLabel": "Fréquence",
+          "frequencies": {
+            "daily": "Tous les jours (la veille)",
+            "every2days": "Tous les 2 jours",
+            "weekly": "Chaque semaine (lundi → dimanche)",
+            "monthly": "Chaque mois (le mois écoulé)"
+          },
+          "utc": "Envoyé chaque nuit vers 1 h UTC ; jours et heures du rapport en UTC, comme l'audit."
+        },
+        "dashboardUrlLabel": "Adresse du dashboard (pour les liens)",
+        "invalidDashboardUrl": "L'adresse doit commencer par http:// ou https://."
       }
     },
     "scan": {

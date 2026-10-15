@@ -189,7 +189,7 @@ func (f *Router) Handler() http.Handler {
 		f.saveMu.Lock()
 		defer f.saveMu.Unlock()
 		before := f.currentAppSettings()
-		saved, ok := handler.SaveAppSettings(f.snapshotConfig(), w, r)
+		saved, ok := handler.SaveAppSettings(f.snapshotConfig(), before, w, r)
 		if !ok {
 			return
 		}
@@ -197,6 +197,14 @@ func (f *Router) Handler() http.Handler {
 			f.appSettingsStore.Set(saved)
 		}
 		f.auditLog.RecordChanges(r, audit.SettingsChanges(before, saved), f.logger)
+	})
+	// Not audited: it changes nothing, and can only reach the recipients
+	// already saved -- a change to those is (mail_settings).
+	router.Post("/api/config/mail/test", func(w http.ResponseWriter, r *http.Request) {
+		handler.SendTestMail(f.config, w, r)
+	})
+	router.Get("/api/mailer/status", func(w http.ResponseWriter, r *http.Request) {
+		handler.MailerStatus(f.config, w, r)
 	})
 	router.With(f.audited(audit.TypeDiscover)).Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)

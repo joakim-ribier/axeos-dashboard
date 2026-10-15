@@ -6,7 +6,11 @@ import axios from "axios";
 import { describe, expect, it, vi } from "vitest";
 
 import { ModeProvider } from "@/contexts/ModeContext";
-import type { AppSettings } from "@/schemas/appSettingsSchema";
+import {
+  type AppSettings,
+  EMPTY_NOTIFICATIONS,
+  toNotificationsInput,
+} from "@/schemas/appSettingsSchema";
 
 import { useAppSettings } from "./useAppSettings";
 
@@ -25,7 +29,9 @@ const settings: AppSettings = {
     firmwareCacheTTL: "24h0m0s",
     remotePushMinersConfig: {},
     remotePushSettingsConfig: {},
+    auditReport: {},
   },
+  notifications: EMPTY_NOTIFICATIONS,
 };
 
 describe("useAppSettings", () => {
@@ -54,7 +60,10 @@ describe("useAppSettings", () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     await act(async () => {
-      await result.current.saveSettings(settings);
+      await result.current.saveSettings({
+        ...settings,
+        notifications: toNotificationsInput(settings.notifications),
+      });
     });
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["miners"] });

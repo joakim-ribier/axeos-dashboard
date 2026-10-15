@@ -1,4 +1,5 @@
 import { I18nextProvider } from "react-i18next";
+import { MemoryRouter } from "react-router-dom";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { addDays, startOfDay } from "date-fns";
@@ -63,10 +64,12 @@ const withEntries = (entries: AuditEntry[]) =>
 
 const lastFilters = () => mockUseAudit.mock.lastCall?.[0];
 
-function renderAudit() {
+function renderAudit(url = "/audit") {
   return render(
     <I18nextProvider i18n={i18n}>
-      <Audit />
+      <MemoryRouter initialEntries={[url]}>
+        <Audit />
+      </MemoryRouter>
     </I18nextProvider>,
   );
 }
@@ -232,7 +235,9 @@ describe("Audit page", () => {
       ),
     ).toBeInTheDocument();
     // The key itself is never written down -- only that it changed.
-    expect(within(push).getByText("API key: changed")).toBeInTheDocument();
+    expect(
+      within(push).getByText("API key: value changed"),
+    ).toBeInTheDocument();
   });
 
   it("shows a scheduled job added or removed, spelled out, with no before/after", () => {
@@ -331,5 +336,38 @@ describe("Audit page", () => {
     await user.click(screen.getAllByRole("button", { name: "Copy entry" })[0]);
 
     expect(writeText).toHaveBeenCalledWith(JSON.stringify(apiRestart, null, 2));
+  });
+
+  // The audit report mail links its period: ?from=&to= (UTC, to excluded).
+  describe("a period handed in the URL", () => {
+    const URL_PERIOD =
+      "/audit?from=2026-10-06T00:00:00Z&to=2026-10-16T00:00:00Z";
+
+    it("asks for exactly that period", () => {
+      withEntries([]);
+      renderAudit(URL_PERIOD);
+
+      expect(lastFilters()).toMatchObject({
+        from: "2026-10-06T00:00:00Z",
+        to: "2026-10-16T00:00:00Z",
+      });
+    });
+
+    it("says it's showing that period, not the last 24 hours", () => {
+      withEntries([apiRestart]);
+      renderAudit(URL_PERIOD);
+
+      expect(
+        screen.getByText(/1 event · 10\/06\/2026 to 10\/15\/2026 \(UTC\)/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/last 24 h/i)).not.toBeInTheDocument();
+    });
+
+    it("ignores a malformed period", () => {
+      withEntries([]);
+      renderAudit("/audit?from=nope&to=2026-10-16T00:00:00Z");
+
+      expect(lastFilters()).toMatchObject({ from: undefined, to: undefined });
+    });
   });
 });

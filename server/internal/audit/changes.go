@@ -20,7 +20,8 @@ const (
 	TypeMinerEnabled  = "miner_enabled"
 	TypeMinerDisabled = "miner_disabled" // no longer polled nor scheduled
 	TypeMinerAdded    = "miner_added"
-	TypeRemotePush    = "remote_push" // where (and with which key) the data is pushed
+	TypeRemotePush    = "remote_push"   // where (and with which key) the data is pushed
+	TypeMailSettings  = "mail_settings" // the SMTP server mails go out through, and their recipients
 )
 
 // Change is one field's value before and after -- or, for a list (the
@@ -191,6 +192,10 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 		entries = append(entries, Entry{Type: TypeRemotePush, Changes: remote})
 	}
 
+	if notif := notificationsChanges(before.Notifications, after.Notifications); notif != nil {
+		entries = append(entries, Entry{Type: TypeMailSettings, Changes: notif})
+	}
+
 	var details []Change
 	if b, a := before.Electricity.RatePerKwh, after.Electricity.RatePerKwh; b != a {
 		details = append(details, Change{Field: "ratePerKwh", Kind: ChangeChanged, Before: number(b), After: number(a)})
@@ -208,6 +213,41 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 		entries = append(entries, Entry{Type: TypeSaveSettings, Changes: details})
 	}
 	return entries
+}
+
+// notificationsChanges is what changed in the notifications: the SMTP
+// server's fields (the password only ever as "changed"), the recipients
+// added or removed, how the messages read, and the audit report.
+func notificationsChanges(before, after config.NotificationsConfig) []Change {
+	b, a := before.Mail.SMTP, after.Mail.SMTP
+	changes := compareFields([][3]string{
+		{"smtpHost", b.Host, a.Host},
+		{"smtpPort", portString(b.Port), portString(a.Port)},
+		{"smtpSecurity", string(b.Security), string(a.Security)},
+		{"smtpUsername", b.Username, a.Username},
+		{"smtpFrom", b.From, a.From},
+	})
+	if b.Password != a.Password {
+		changes = append(changes, Change{Field: "smtpPassword", Kind: ChangeChanged})
+	}
+	changes = append(changes, listChanges(before.Mail.To, after.Mail.To, "recipientAdded", "recipientRemoved")...)
+
+	br, ar := before.AuditReport, after.AuditReport
+	changes = append(changes, compareFields([][3]string{
+		{"mailLanguage", before.Language, after.Language},
+		{"mailDashboardURL", before.DashboardURL, after.DashboardURL},
+		{"auditReportEnabled", onOff(br.Enabled), onOff(ar.Enabled)},
+		{"auditReportFrequency", string(br.Frequency), string(ar.Frequency)},
+		{"auditReportSkipIfEmpty", onOff(br.SkipIfEmpty), onOff(ar.SkipIfEmpty)},
+	})...)
+	return append(changes, listChanges(br.Types, ar.Types, "auditReportTypeAdded", "auditReportTypeRemoved")...)
+}
+
+func onOff(b bool) string {
+	if b {
+		return "on"
+	}
+	return "off"
 }
 
 func number(v float64) string {

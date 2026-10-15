@@ -102,10 +102,10 @@ func TestListAudit(t *testing.T) {
 	})
 
 	for name, query := range map[string]string{
-		"malformed from":        "from=yesterday",
-		"malformed to":          "to=now",
-		"from after to":         "from=2026-10-10T00:00:00Z&to=2026-10-09T00:00:00Z",
-		"range over seven days": "from=2026-10-01T00:00:00Z&to=2026-10-09T00:00:00Z",
+		"malformed from":    "from=yesterday",
+		"malformed to":      "to=now",
+		"from after to":     "from=2026-10-10T00:00:00Z&to=2026-10-09T00:00:00Z",
+		"range over a year": "from=2025-01-01T00:00:00Z&to=2026-10-09T00:00:00Z",
 	} {
 		t.Run(name+" is rejected", func(t *testing.T) {
 			if w, _ := getAudit(t, h, query); w.Code != http.StatusBadRequest {

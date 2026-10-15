@@ -1,0 +1,22 @@
+# Test mail -- sent from Configuration › Notifications.
+#
+# The "Subject:" line is the mail's subject; after the blank line, its text.
+# Lines starting with # are ignored. A line with an empty variable doesn't
+# show in the mail. The file is read again on every send.
+#
+# Variables:
+#   {{server}}        the SMTP server (host:port)
+#   {{security}}      its security: starttls, tls or none
+#   {{from}}          the sender
+#   {{to}}            the recipients
+#   {{date}}          when it's sent (UTC)
+#   {{dashboardURL}}  the dashboard's address (empty when not set)
+Subject: AxeOS Dashboard — test mail
+
+This mail confirms AxeOS Dashboard can send mails.
+
+Server: {{server}} ({{security}})
+Sender: {{from}}
+Sent on {{date}} (UTC).
+
+Dashboard: {{dashboardURL}}
