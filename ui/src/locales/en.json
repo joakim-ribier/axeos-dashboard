@@ -162,7 +162,9 @@
     "openHashboardAccount": "Manage your hashboard account",
     "boardPublicHint": "This board is public — anyone with the link can view it",
     "boardPrivateHint": "This board is private — only you can view it",
-    "versionLabel": "Version · {{sha}}"
+    "versionLabel": "Version {{sha}}",
+    "collapse": "Collapse the menu",
+    "expand": "Expand the menu"
   },
   "notifications": {
     "title": "Notifications",
