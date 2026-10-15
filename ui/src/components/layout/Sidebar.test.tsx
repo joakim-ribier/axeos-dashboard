@@ -502,6 +502,47 @@ describe("Sidebar", () => {
       );
     });
 
+    describe("in the folded rail", () => {
+      const RELEASE =
+        "https://github.com/joakim-ribier/axeos-dashboard/releases/tag/latest";
+      const fold = (versionStatus: string, releaseUrl: string | null) => {
+        mockUseAppInfo.mockReturnValue({
+          buildSHA: "abc1234",
+          versionStatus,
+          releaseUrl,
+        });
+        window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+        renderSidebar("/");
+      };
+
+      it("keeps the up-to-date status as an icon", () => {
+        fold("upToDate", null);
+
+        expect(
+          screen.getByRole("button", { name: "sidebar.versionUpToDate" }),
+        ).toBeInTheDocument();
+      });
+
+      it("keeps the update link to the release", () => {
+        fold("updateAvailable", RELEASE);
+
+        expect(
+          screen.getByRole("link", { name: "app update available" }),
+        ).toHaveAttribute("href", RELEASE);
+      });
+
+      it("shows no status when it's unknown", () => {
+        fold("unknown", null);
+
+        expect(
+          screen.queryByRole("button", { name: "sidebar.versionUpToDate" }),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole("link", { name: "app update available" }),
+        ).not.toBeInTheDocument();
+      });
+    });
+
     it("fires a one-shot notification when the status transitions to updateAvailable", () => {
       mockUseAppInfo.mockReturnValue({
         buildSHA: "abc1234",
@@ -550,6 +591,105 @@ describe("Sidebar", () => {
         window.localStorage.getItem("axeos.notifications.local") ?? "[]",
       );
       expect(stored).toHaveLength(1);
+    });
+  });
+
+  describe("collapsed rail (desktop)", () => {
+    // queryAllByRole only sees accessible elements: the closed mobile
+    // drawer stays mounted but hidden, so these are the desktop entries.
+    const links = (name: string) => screen.queryAllByRole("link", { name });
+
+    it("folds into icons only, keeping every entry reachable by name", async () => {
+      const user = userEvent.setup();
+      renderSidebar("/");
+
+      expect(screen.getAllByText("nav.alerts").length).toBeGreaterThan(0);
+      await user.click(
+        screen.getByRole("button", { name: "sidebar.collapse" }),
+      );
+
+      expect(
+        screen.getByRole("button", { name: "sidebar.expand" }),
+      ).toBeInTheDocument();
+      // Labels move to tooltips: no visible text left in the desktop rail,
+      // but every link is still named.
+      expect(links("nav.alerts")).toHaveLength(1);
+      expect(links("nav.home")).toHaveLength(1);
+      expect(window.localStorage.getItem("axeos.sidebarCollapsed")).toBe(
+        "true",
+      );
+    });
+
+    it("unfolds back, and remembers that too", async () => {
+      const user = userEvent.setup();
+      window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+      renderSidebar("/");
+
+      await user.click(screen.getByRole("button", { name: "sidebar.expand" }));
+
+      expect(
+        screen.getByRole("button", { name: "sidebar.collapse" }),
+      ).toBeInTheDocument();
+      expect(window.localStorage.getItem("axeos.sidebarCollapsed")).toBe(
+        "false",
+      );
+    });
+
+    it("comes back folded after a reload", () => {
+      window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+      renderSidebar("/");
+
+      expect(
+        screen.getByRole("button", { name: "sidebar.expand" }),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the current page highlighted", async () => {
+      window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+      renderSidebar("/alerts");
+
+      expect(links("nav.alerts")[0]).toHaveClass("Mui-selected");
+      expect(links("nav.home")[0]).not.toHaveClass("Mui-selected");
+    });
+
+    // Same gates as unfolded, entry by entry: folding must never bring
+    // back a hidden page nor drop an enabled one.
+    describe.each([
+      { page: "settings", label: "nav.settings" },
+      { page: "backups", label: "nav.backups" },
+      { page: "audit", label: "nav.audit" },
+    ])("the $page entry", ({ page, label }) => {
+      const withPage = (state: "enabled" | "readonly" | "hidden") => {
+        mockUseUiFeatures.mockReturnValue({
+          ui: {
+            page: {
+              settings: "enabled",
+              backups: "enabled",
+              audit: "enabled",
+              [page]: state,
+            },
+            action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
+          },
+          isLoading: false,
+        });
+        window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+        renderSidebar("/");
+      };
+
+      it("is in the folded rail when enabled", () => {
+        withPage("enabled");
+        expect(links(label)).toHaveLength(1);
+      });
+
+      it("is in the folded rail when read-only", () => {
+        withPage("readonly");
+        expect(links(label)).toHaveLength(1);
+      });
+
+      it("is not in the folded rail when hidden", () => {
+        withPage("hidden");
+        expect(links(label)).toHaveLength(0);
+      });
     });
   });
 });
