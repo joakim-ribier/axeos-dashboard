@@ -342,17 +342,42 @@
   },
   "settingsPage": {
     "header": {
-      "title": "Miner setup",
-      "description": "Automatically detect your AxeOS miners on the network, or add them manually by IP."
+      "title": "Settings",
+      "description": "Miners, electricity, push to hashboard and service settings."
+    },
+    "toc": {
+      "miners": {
+        "title": "Miners",
+        "summary_one": "{{count}} miner · {{enabled}} enabled",
+        "summary_other": "{{count}} miners · {{enabled}} enabled",
+        "empty": "No miner configured",
+        "poolDrift_one": "{{count}} pool config differs",
+        "poolDrift_other": "{{count}} pool configs differ"
+      },
+      "electricity": {
+        "title": "Electricity",
+        "summary_one": "{{rate}} €/kWh · {{count}} other device",
+        "summary_other": "{{rate}} €/kWh · {{count}} other devices"
+      },
+      "remote": {
+        "title": "Remote",
+        "off": "Not configured",
+        "never": "Nothing sent yet",
+        "lastPush": "Last push: {{date}}",
+        "failing": "Push to hashboard failing"
+      },
+      "system": {
+        "title": "System",
+        "lastFeeder": "Last feeder run: {{date}}",
+        "neverFed": "Feeder: no run yet",
+        "feederLate": "Feeder late"
+      }
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
-    "issues": {
-      "poolDrift": "{{count}} miner(s): saved pool config doesn't match what the miner reports",
-      "pushFailed": "Push to hashboard is failing — see Remote below"
-    },
     "configured": {
       "title": "Configured miners",
-      "description": "{{count}} miner(s) configured",
+      "description_one": "{{count}} miner — click a row to edit its alias, pools and scheduled tasks.",
+      "description_other": "{{count}} miners — click a row to edit its alias, pools and scheduled tasks.",
       "hostname": "Name",
       "ip": "IP",
       "mac": "MAC",
@@ -369,7 +394,7 @@
       "disableAllConfirm": "Disable all",
       "disableAllSuccess": "{{count}} miner(s) disabled.",
       "lastUpdated": "Last modified: {{date}}",
-      "emptyAlert": "No miners configured yet. Run an automatic scan below to add some.",
+      "emptyAlert": "No miner configured yet: run a scan below to add some.",
       "alias": {
         "title": "Display name",
         "label": "Alias",
@@ -419,12 +444,14 @@
       }
     },
     "appSettings": {
-      "title": "App settings",
       "save": "Save",
       "saving": "Saving…",
       "saveSuccess": "App settings saved.",
       "electricity": {
-        "title": "Electricity",
+        "rate": {
+          "title": "Rate",
+          "description": "Price per kWh, used for the cost of the miners and the other devices."
+        },
         "rateLabel": "Rate (€/kWh)",
         "devices": {
           "title": "Other devices",
@@ -434,7 +461,11 @@
           "powerLabel": "Power (W)",
           "empty": "No device declared",
           "add": "Add",
-          "remove": "Remove"
+          "remove": "Remove",
+          "perDay": "kWh / day",
+          "costPerDay": "Cost / day",
+          "total": "Total",
+          "preview": "≈ {{kwh}} kWh / day · {{cost}} / day"
         }
       },
       "pools": {
@@ -448,28 +479,54 @@
         "remove": "Remove"
       },
       "remote": {
-        "title": "Remote (hashboard)",
         "pushUrlLabel": "Push URL",
         "apiKeyLabel": "API key",
         "showApiKey": "Show API key",
         "hideApiKey": "Hide API key",
         "pushStatus": {
-          "error": "Last push to hashboard failed ({{date}}): {{error}}",
-          "lastSuccess": "Last successful push to hashboard: {{date}}",
-          "neverAttempted": "No push attempted yet.",
+          "title": "Push status",
+          "description": "What the feeder sends to hashboard on top of the miners' data.",
+          "endpointLabel": "Push",
+          "stateLabel": "Status",
+          "lastSuccessLabel": "Last success",
+          "lastAttemptLabel": "Last attempt",
+          "state": {
+            "ok": "OK",
+            "late": "Late",
+            "failing": "Failing",
+            "never": "Never"
+          },
           "endpoint": {
             "minersConfig": "Miners list",
             "settingsConfig": "Settings"
           }
+        },
+        "board": {
+          "title": "Your board",
+          "description": "The hashboard board receiving your miners' data.",
+          "id": "Board",
+          "visibility": "Visibility",
+          "public": "Public",
+          "private": "Private",
+          "lastSample": "Last data received by hashboard",
+          "noSample": "None yet",
+          "account": "Account",
+          "manage": "Manage your hashboard account"
+        },
+        "connection": {
+          "title": "Connection",
+          "description": "Push address and API key of your hashboard account."
         }
       },
       "firmware": {
         "title": "Firmware repos",
+        "description": "Where the dashboard checks each model's latest firmware version.",
         "modelLabel": "Model",
         "urlLabel": "Repository URL"
       },
       "readOnly": {
         "title": "Process settings",
+        "description": "Service settings, fixed at startup, and when each last ran.",
         "settingLabel": "Setting",
         "valueLabel": "Value",
         "lastRunLabel": "Last run",
@@ -486,21 +543,25 @@
       "searching": "Searching…",
       "isolatedLabel": "Isolated environment",
       "cidrPlaceholder": "192.168.1.0/24",
-      "cidrHelp": "Edit if your miners' network isn't 192.168.1.x."
+      "cidrHelp": "Edit if your miners' network isn't 192.168.1.x.",
+      "cidrLabel": "Network to scan"
     },
     "manual": {
       "title": "Add by IP",
       "description": "For a miner the scan doesn't find (different subnet, firewall…).",
-      "action": "Search"
+      "action": "Search",
+      "ipLabel": "IP address"
     },
     "discovery": {
+      "title": "Miners found",
       "unknownHostname": "Unnamed miner",
       "pool": "Pool: {{url}}:{{port}}",
       "fallbackPool": "Fallback: {{url}}:{{port}}",
       "noPool": "No pool configured on this miner",
       "noneFound": "No miners found.",
       "retryLonger": "Retry with a longer timeout",
-      "resultsCount": "{{count}} miner(s) found",
+      "resultsCount_one": "{{count}} miner found — select the ones to save.",
+      "resultsCount_other": "{{count}} miners found — select the ones to save.",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
       "selectedCount": "{{count}} miner(s) selected",
