@@ -589,3 +589,43 @@ func TestFeeder_runBackup_recordsOnlyRunsThatDidSomething(t *testing.T) {
 		t.Errorf("changes = %+v, want %+v", e.Changes, want)
 	}
 }
+
+// A remote board is read by anyone the board owner lets in -- the
+// notifications settings, SMTP password first, must never reach it.
+func TestFeeder_pushSettingsConfigToRemote_neverSendsMail(t *testing.T) {
+	bodyCh := make(chan []byte, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusNoContent)
+		if r.URL.Path == "/config/settings" {
+			bodyCh <- body
+		}
+	}))
+	defer remoteServer.Close()
+
+	cfg := config.Config{
+		Storage: config.StorageConfig{DataDir: t.TempDir()},
+		Remote:  config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+
+	NewFeeder(testLogger(), cfg).pushSettingsConfigToRemote(config.AppSettingsFile{
+		Notifications: config.NotificationsConfig{
+			DashboardURL: "http://192.168.1.60",
+			Mail: config.MailConfig{
+				SMTP: config.SMTPConfig{Host: "smtp.example.com", Port: 587, Security: config.SMTPStartTLS, Username: "axeos", Password: "s3cret", From: "axeos@example.com"},
+				To:   []string{"me@example.com"},
+			},
+		},
+	}, time.Time{})
+
+	select {
+	case body := <-bodyCh:
+		for _, leak := range []string{`"notifications"`, `"mail"`, "s3cret", "smtp.example.com", "me@example.com", "192.168.1.60"} {
+			if strings.Contains(string(body), leak) {
+				t.Errorf("pushed settings carry %s: %s", leak, body)
+			}
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected a push to /config/settings, none received")
+	}
+}

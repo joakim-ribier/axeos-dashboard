@@ -128,6 +128,8 @@ export const MinerActions = ({ miner }: { miner: Miner }) => {
         autoHideDuration={5000}
         onClose={clearError}
         message={error ?? ""}
+        // An error: the red edge, not the accent of a plain toast.
+        slotProps={{ content: { sx: { borderLeftColor: "error.main" } } }}
       />
     </Box>
   );

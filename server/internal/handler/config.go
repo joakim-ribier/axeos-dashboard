@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/auditreport"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/discovery"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
@@ -321,9 +325,71 @@ func writeBitaxesResponse(w http.ResponseWriter, bitaxes []config.Bitaxe, lastUp
 // this endpoint existed.
 type appSettingsResponse struct {
 	config.AppSettingsFile
-	Defaults    appSettingsDefaults `json:"defaults"`
-	ReadOnly    appSettingsReadOnly `json:"readOnly"`
-	LastUpdated string              `json:"lastUpdated,omitempty"`
+	// Notifications shadows the embedded AppSettingsFile.Notifications: same
+	// JSON key, but a shape with no SMTP password field at all -- it never
+	// leaves the server.
+	Notifications notificationsResponse `json:"notifications"`
+	Defaults      appSettingsDefaults   `json:"defaults"`
+	ReadOnly      appSettingsReadOnly   `json:"readOnly"`
+	LastUpdated   string                `json:"lastUpdated,omitempty"`
+}
+
+type notificationsResponse struct {
+	Language     string                      `json:"language"`
+	DashboardURL string                      `json:"dashboardURL"`
+	Mail         mailSettingsResponse        `json:"mail"`
+	AuditReport  auditReportSettingsResponse `json:"auditReport"`
+}
+
+type mailSettingsResponse struct {
+	SMTP smtpSettingsResponse `json:"smtp"`
+	To   []string             `json:"to"`
+}
+
+type auditReportSettingsResponse struct {
+	config.AuditReportConfig
+	// Types is never null, unlike the config's (empty = every type).
+	Types []string `json:"types"`
+}
+
+type smtpSettingsResponse struct {
+	Host     string              `json:"host"`
+	Port     int                 `json:"port"`
+	Security config.SMTPSecurity `json:"security"`
+	Username string              `json:"username"`
+	From     string              `json:"from"`
+	// PasswordSet is all that's ever said about the password.
+	PasswordSet bool `json:"passwordSet"`
+}
+
+func toNotificationsResponse(n config.NotificationsConfig) notificationsResponse {
+	smtp := n.Mail.SMTP
+	return notificationsResponse{
+		Language:     n.Language,
+		DashboardURL: n.DashboardURL,
+		Mail: mailSettingsResponse{
+			SMTP: smtpSettingsResponse{
+				Host:        smtp.Host,
+				Port:        smtp.Port,
+				Security:    smtp.Security,
+				Username:    smtp.Username,
+				From:        smtp.From,
+				PasswordSet: smtp.Password != "",
+			},
+			To: nonNil(n.Mail.To),
+		},
+		AuditReport: auditReportSettingsResponse{
+			AuditReportConfig: n.AuditReport,
+			Types:             nonNil(n.AuditReport.Types),
+		},
+	}
+}
+
+func nonNil(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 // appSettingsDefaults is the built-in registry (config.DefaultPoolDashboards/
@@ -364,6 +430,30 @@ type appSettingsReadOnly struct {
 	// endpoint has never been attempted (no status file yet).
 	RemotePushMinersConfig   remotePushEndpointStatus `json:"remotePushMinersConfig"`
 	RemotePushSettingsConfig remotePushEndpointStatus `json:"remotePushSettingsConfig"`
+	// AuditReport is the feeder's record of the daily audit mail (see
+	// auditreport.State), read back from disk -- the feeder sends it.
+	AuditReport auditReportStatus `json:"auditReport"`
+}
+
+type auditReportStatus struct {
+	// LastFrom/LastTo is the period last mailed ("2006-01-02", To
+	// excluded).
+	LastFrom      string `json:"lastFrom,omitempty"`
+	LastTo        string `json:"lastTo,omitempty"`
+	LastSentAt    string `json:"lastSentAt,omitempty"`
+	LastAttemptAt string `json:"lastAttemptAt,omitempty"`
+	LastError     string `json:"lastError,omitempty"`
+}
+
+func toAuditReportStatus(s auditreport.State) auditReportStatus {
+	status := auditReportStatus{LastFrom: s.LastFrom, LastTo: s.LastTo, LastError: s.LastError}
+	if !s.LastSentAt.IsZero() {
+		status.LastSentAt = s.LastSentAt.UTC().Format(time.RFC3339)
+	}
+	if !s.LastAttemptAt.IsZero() {
+		status.LastAttemptAt = s.LastAttemptAt.UTC().Format(time.RFC3339)
+	}
+	return status
 }
 
 type remotePushEndpointStatus struct {
@@ -421,7 +511,11 @@ func GetAppSettings(cfg config.Config, current config.AppSettingsFile, w http.Re
 // Returns the saved settings and true on success -- the router uses this
 // to update its own in-memory store immediately (see
 // config.AppSettingsStore.Set), same contract as SaveMinersConfig.
-func SaveAppSettings(cfg config.Config, w http.ResponseWriter, r *http.Request) (config.AppSettingsFile, bool) {
+//
+// before is settings.yml as it stood: the SMTP password is never sent back
+// to the client, so a save that comes without one -- any section's save,
+// since each one sends the whole file -- keeps the stored one.
+func SaveAppSettings(cfg config.Config, before config.AppSettingsFile, w http.ResponseWriter, r *http.Request) (config.AppSettingsFile, bool) {
 	if cfg.AppSettingsFilePath == "" {
 		writeErrorResponse(w, "dashboard-api has no resolvable config path -- there's no managed file to write to", http.StatusConflict)
 		return config.AppSettingsFile{}, false
@@ -432,6 +526,8 @@ func SaveAppSettings(cfg config.Config, w http.ResponseWriter, r *http.Request) 
 		writeErrorResponse(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
 		return config.AppSettingsFile{}, false
 	}
+
+	settings.Notifications.Mail = keepMailSecrets(settings.Notifications.Mail, before.Notifications.Mail)
 
 	if err := validateAppSettings(settings); err != nil {
 		writeErrorResponse(w, err.Error(), http.StatusBadRequest)
@@ -445,6 +541,21 @@ func SaveAppSettings(cfg config.Config, w http.ResponseWriter, r *http.Request) 
 
 	writeAppSettingsResponse(w, cfg, settings)
 	return settings, true
+}
+
+// keepMailSecrets fills in what the client never gets to see: an SMTP
+// password left blank keeps the stored one -- unless the SMTP server itself
+// was cleared, which drops the whole of it, password included.
+func keepMailSecrets(next, prev config.MailConfig) config.MailConfig {
+	next.SMTP.Host = strings.TrimSpace(next.SMTP.Host)
+	if next.SMTP.Host == "" {
+		next.SMTP = config.SMTPConfig{}
+		return next
+	}
+	if next.SMTP.Password == "" {
+		next.SMTP.Password = prev.SMTP.Password
+	}
+	return next
 }
 
 // validateAppSettings checks the handful of things a saved entry can't do
@@ -475,6 +586,9 @@ func validateAppSettings(s config.AppSettingsFile) error {
 			return fmt.Errorf("remote.pushURL %q is not a valid URL: %w", s.Remote.PushURL, err)
 		}
 	}
+	if err := validateNotifications(s.Notifications); err != nil {
+		return err
+	}
 	for model, repo := range s.Firmware.Repos {
 		if model != config.ModelBitaxe && model != config.ModelNerdaxe {
 			return fmt.Errorf("firmware.repos: unknown model %q (must be %q or %q)", model, config.ModelBitaxe, config.ModelNerdaxe)
@@ -484,6 +598,48 @@ func validateAppSettings(s config.AppSettingsFile) error {
 		}
 		if _, err := url.ParseRequestURI(repo); err != nil {
 			return fmt.Errorf("firmware.repos[%s] %q is not a valid URL: %w", model, repo, err)
+		}
+	}
+	return nil
+}
+
+// validateNotifications only checks the SMTP server once one is set -- an
+// empty one means mail is simply off.
+func validateNotifications(n config.NotificationsConfig) error {
+	smtp := n.Mail.SMTP
+	if smtp.Host != "" {
+		if smtp.Port < 1 || smtp.Port > 65535 {
+			return fmt.Errorf("notifications.mail.smtp.port must be between 1 and 65535")
+		}
+		switch smtp.Security {
+		case config.SMTPStartTLS, config.SMTPTLS, config.SMTPNone:
+		default:
+			return fmt.Errorf("notifications.mail.smtp.security %q is not one of %q, %q, %q", smtp.Security, config.SMTPStartTLS, config.SMTPTLS, config.SMTPNone)
+		}
+		if _, err := mail.ParseAddress(smtp.From); err != nil {
+			return fmt.Errorf("notifications.mail.smtp.from %q is not a valid address", smtp.From)
+		}
+	}
+	for i, to := range n.Mail.To {
+		if _, err := mail.ParseAddress(to); err != nil {
+			return fmt.Errorf("notifications.mail.to[%d] %q is not a valid address", i, to)
+		}
+	}
+	if n.DashboardURL != "" {
+		if u, err := url.ParseRequestURI(n.DashboardURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return fmt.Errorf("notifications.dashboardURL %q is not an http(s) address", n.DashboardURL)
+		}
+	}
+	if n.Language != "" && n.Language != "fr" && n.Language != "en" {
+		return fmt.Errorf("notifications.language %q is not \"fr\" or \"en\"", n.Language)
+	}
+	report := n.AuditReport
+	if report.Frequency != "" && !slices.Contains(config.ReportFrequencies, report.Frequency) {
+		return fmt.Errorf("notifications.auditReport.frequency %q is not one of %v", report.Frequency, config.ReportFrequencies)
+	}
+	for _, t := range report.Types {
+		if !slices.Contains(audit.Types, t) {
+			return fmt.Errorf("notifications.auditReport.types: unknown audit type %q", t)
 		}
 	}
 	return nil
@@ -511,8 +667,10 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 	pushStatus := remotepush.Load(getDataRoot(cfg.Storage))
 	readOnly.RemotePushMinersConfig = toRemotePushEndpointStatus(pushStatus.MinersConfig)
 	readOnly.RemotePushSettingsConfig = toRemotePushEndpointStatus(pushStatus.SettingsConfig)
+	readOnly.AuditReport = toAuditReportStatus(auditreport.Load(cfg.Storage.MailDir()))
 	resp := appSettingsResponse{
 		AppSettingsFile: settings,
+		Notifications:   toNotificationsResponse(settings.Notifications),
 		Defaults:        defaultAppSettings(),
 		ReadOnly:        readOnly,
 		LastUpdated:     managedFileLastUpdated(cfg.AppSettingsFilePath),

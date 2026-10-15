@@ -49,6 +49,7 @@ func (cfg LoadConfig) LoadConfig() (Config, error) {
 	}
 	config.Bitaxes = miners
 	config.MinersFilePath = minersPath
+	config.MailTemplatesDir = filepath.Join(filepath.Dir(minersPath), "mail-templates")
 
 	appSettingsPath, err := cfg.resolveSiblingPath(config.AppSettingsFile, "settings.yml")
 	if err != nil {

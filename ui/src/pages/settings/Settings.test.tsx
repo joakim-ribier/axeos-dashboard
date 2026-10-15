@@ -309,29 +309,39 @@ describe("Configuration elements controlled by ui.page.settings", () => {
     });
   });
 
-  describe("the Remote section", () => {
-    const remoteLink = () => {
+  // Sections with nothing to show read-only (a board never receives the
+  // push credentials nor the mail settings): gone from the menu and from
+  // the URL, not just emptied.
+  describe.each([
+    {
+      section: "notifications",
+      menu: /^Notifications/,
+      content: "SMTP server",
+    },
+    { section: "remote", menu: /^Remote/, content: "Connection" },
+  ])("the $section section", ({ section, menu, content }) => {
+    const menuLink = () => {
       const nav = screen
         .getAllByRole("navigation")
         .find((n) => within(n).queryByRole("link", { name: /^Miners/ }));
-      return nav ? within(nav).queryByRole("link", { name: /^Remote/ }) : null;
+      return nav ? within(nav).queryByRole("link", { name: menu }) : null;
     };
 
     it("is listed and opens when settings are enabled", async () => {
       mockBackend("enabled");
-      renderAt("/settings/remote");
+      renderAt(`/settings/${section}`);
 
-      expect(await screen.findByText("Connection")).toBeInTheDocument();
-      expect(remoteLink()).toBeInTheDocument();
+      expect(await screen.findByText(content)).toBeInTheDocument();
+      expect(menuLink()).toBeInTheDocument();
     });
 
     it("is neither listed nor reachable when settings are read-only", async () => {
       mockBackend("readonly");
-      renderAt("/settings/remote");
+      renderAt(`/settings/${section}`);
 
       await minersReady();
-      expect(screen.queryByText("Connection")).not.toBeInTheDocument();
-      expect(remoteLink()).not.toBeInTheDocument();
+      expect(screen.queryByText(content)).not.toBeInTheDocument();
+      expect(menuLink()).not.toBeInTheDocument();
     });
   });
 });

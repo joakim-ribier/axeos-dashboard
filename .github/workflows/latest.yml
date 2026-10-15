@@ -89,6 +89,7 @@ jobs:
           sha=$(echo "${{ needs.guard.outputs.sha }}" | cut -c1-7)
           ldflags="-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$sha"
           go build -ldflags "$ldflags" -o ../dist/feeder-${{ matrix.arch }} ./cmd/feeder
+          go build -ldflags "$ldflags" -o ../dist/mailer-${{ matrix.arch }} ./cmd/mailer
           go build -ldflags "$ldflags" -o ../dist/dashboard-api-${{ matrix.arch }} ./cmd/dashboard-api
           go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api-${{ matrix.arch }} ./cmd/remote-dashboard-api
           go build -ldflags "$ldflags" -o ../dist/rebuild-totals-${{ matrix.arch }} ./cmd/rebuild-totals
@@ -201,12 +202,14 @@ jobs:
           body: |
             Built from commit ${{ needs.guard.outputs.sha }} on `main`.
             Binaries for linux/arm64 (Raspberry Pi) and linux/amd64 (typical VPS).
-            Fetch with `make latest-up` (Pi, dashboard-api + feeder) or
+            Fetch with `make latest-up` (Pi, dashboard-api + feeder + mailer) or
             `make latest-remote-up` (VPS, remote-dashboard-api) — both auto-detect
             the local architecture.
           files: |
             dist/feeder-arm64
             dist/feeder-amd64
+            dist/mailer-arm64
+            dist/mailer-amd64
             dist/dashboard-api-arm64
             dist/dashboard-api-amd64
             dist/remote-dashboard-api-arm64

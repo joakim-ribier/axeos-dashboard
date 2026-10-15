@@ -1,0 +1,25 @@
+# Rapport d'audit -- envoyé par le mailer vers 1 h UTC, selon la fréquence
+# choisie dans Configuration › Notifications.
+#
+# La ligne « Subject: » est l'objet du mail ; après la ligne vide, le texte.
+# Les lignes qui commencent par # sont ignorées. Une ligne dont une variable
+# est vide n'apparaît pas dans le mail. Le fichier est relu à chaque envoi.
+#
+# Variables :
+#   {{title}}        « Audit du jeudi 15 octobre 2026 », ou « Audit du 12/10/2026 au 18/10/2026 »
+#   {{count}}        « 3 événements », « aucun événement »
+#   {{events}}       les événements, groupés par type
+#   {{periodStart}}  le premier jour couvert
+#   {{periodEnd}}    le dernier jour couvert
+#   {{link}}         la page Audit du dashboard sur la période (vide sans adresse du dashboard)
+#   {{date}}         la date et l'heure de l'envoi (UTC)
+#   {{sentTo}}       les destinataires
+Subject: AxeOS Dashboard — {{title}} : {{count}}
+
+{{title}} — {{count}}
+
+{{events}}
+
+Jours et heures en UTC.
+
+Voir dans le dashboard : {{link}}

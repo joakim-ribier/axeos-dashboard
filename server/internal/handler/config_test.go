@@ -355,7 +355,7 @@ func postSaveAppSettings(t *testing.T, settings config.AppSettingsFile) (*httpte
 
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodPost, "/api/config/settings", bytes.NewReader(payload))
-	saved, ok := SaveAppSettings(cfg, w, r)
+	saved, ok := SaveAppSettings(cfg, config.AppSettingsFile{}, w, r)
 	return w, saved, ok
 }
 

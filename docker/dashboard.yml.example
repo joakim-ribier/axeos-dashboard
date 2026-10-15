@@ -2,6 +2,8 @@ global:
   env: prod
 server:
   port: "8080"
+mailer:
+  port: "8082"
 storage:
   dataDir: /data
 feeder:

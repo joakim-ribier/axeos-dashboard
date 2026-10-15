@@ -42,7 +42,9 @@ by the app itself (scheduler, nightly backup).
 ![Audit page]({{ '/assets/images/audit.png' | relative_url }})
 
 The page shows the **last 24 hours** by default, newest first. The
-calendar shows another day, from midnight to midnight in local time.
+calendar shows another day, from midnight to midnight UTC. Times are in
+UTC, like Backups and the audit report mail: an event carries the same
+time everywhere.
 
 - **Filters** — by miner, by event type and by day. Each active filter
   shows up as a chip below the bar: its cross removes it, **Clear all**
@@ -168,6 +170,12 @@ failure with its error message). A failed action is recorded too.
       <td>every night, by the app: the completed day is added to its month's archive (see <a href="{{ '/en/backups.html' | relative_url }}">Backups</a>)</td>
       <td>the month(s) whose archive was updated</td>
     </tr>
+    <tr>
+      <td><code>audit_report</code></td>
+      <td>Audit report sent</td>
+      <td>at night, by the mailer, at the frequency chosen in Settings › Notifications</td>
+      <td>the period covered and the recipients; the error if it failed</td>
+    </tr>
   </tbody>
 </table>
 
@@ -225,6 +233,12 @@ removed), so it can be searched for directly. One save can produce several
       <td>Remote push changed</td>
       <td>the hashboard push URL or API key changes</td>
       <td>the URL before and after; the API key is never written down, only "changed"</td>
+    </tr>
+    <tr>
+      <td><code>mail_settings</code></td>
+      <td>Notifications changed</td>
+      <td>the SMTP server or the mail recipients change</td>
+      <td>each server field before and after, the recipients added or removed; the password is never written down, only "changed"</td>
     </tr>
   </tbody>
 </table>
@@ -285,7 +299,7 @@ A scheduler operation, here a failed one:
     <tr><td><code>requestId</code></td><td><code>api</code> — the request's ID, the same as in the dashboard's logs</td></tr>
     <tr><td><code>status</code></td><td><code>api</code> — the response's HTTP code (400 or more: failure)</td></tr>
     <tr><td><code>query</code></td><td><code>api</code> — the request's parameters: the months downloaded, the exported period and filters, the targeted miner…</td></tr>
-    <tr><td><code>service</code></td><td><code>system</code> — the part of the app that acted: <code>scheduler</code> or <code>backup</code> (nightly backup)</td></tr>
+    <tr><td><code>service</code></td><td><code>system</code> — the part of the app that acted: <code>scheduler</code>, <code>backup</code> (nightly backup) or <code>mailer</code></td></tr>
     <tr><td><code>cron</code></td><td><code>system</code> — the cron expression that triggered the operation</td></tr>
     <tr><td><code>error</code></td><td>The error message, on failure</td></tr>
     <tr><td><code>changes</code></td><td>What changed — each field with its kind (<code>kind</code>): <code>changed</code> (value <code>before</code> → <code>after</code>), or a list item <code>added</code> (<code>after</code>) or <code>removed</code> (<code>before</code>)</td></tr>
@@ -304,7 +318,7 @@ Docker), one JSON entry per line.
 Three API routes expose them:
 
 - `GET /api/audit` — the entries between `from` and `to` (RFC 3339 dates,
-  the last 24 hours by default, 7 days at most), filterable by `ip`
+  the last 24 hours by default, a year at most), filterable by `ip`
   (miner) and `type`, paginated with `page` and `pageSize`.
 - `GET /api/audit/types` — every type, in the order the dashboard offers
   them: the values `type` accepts.
@@ -338,13 +352,15 @@ The response of `GET /api/audit/types` — each type is explained in
     "download_backups",
     "discover",
     "backup",
+    "audit_report",
     "miner_pool",
     "miner_schedule",
     "miner_identity",
     "miner_disabled",
     "miner_enabled",
     "miner_added",
-    "remote_push"
+    "remote_push",
+    "mail_settings"
   ]
 }
 ```
