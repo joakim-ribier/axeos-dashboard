@@ -97,16 +97,20 @@ axeos-dashboard/
 ├── docker-compose.yml
 ├── .env
 ├── config/
-│   └── dashboard.yml
-└── storage/            # rempli une fois le feeder lancé
+│   ├── dashboard.yml
+│   └── mail-templates/  # textes des mails, créés par le mailer
+└── storage/            # rempli une fois les services lancés
     ├── logs/
     │   ├── dashboard-api.log
-    │   └── feeder.log
+    │   ├── feeder.log
+    │   └── mailer.log
     └── data/
         ├── bitaxes/
         │   └── <mac>/
         │       ├── latest.json
         │       └── AAAA-MM-JJ.jsonl
+        ├── audit/
+        ├── mail/
         └── firmware_cache.json
 ```
 
@@ -161,6 +165,9 @@ binaires pour être prise en compte.
 server:
   port: "8080"
 
+mailer:
+  port: "8082"
+
 storage:
   dataDir: resources
 
@@ -183,6 +190,8 @@ firmware:
 - **global.env** — `dev` affiche les logs uniquement sur la console ;
   toute autre valeur écrit aussi des fichiers de log.
 - **server.port** — port d'écoute de dashboard-api.
+- **mailer.port** — port du mailer, le service qui envoie les mails ;
+  joint par dashboard-api sur la machine elle-même uniquement.
 - **storage.dataDir** — dossier racine des données (mineurs, historique,
   cache firmware).
 - **feeder.interval** — fréquence de sondage de chaque mineur.
@@ -194,8 +203,8 @@ firmware:
   "dernière version".
 
 {: .note }
-> Le tarif électrique, les pools et la liste des mineurs se gèrent
-> directement depuis l'app (page **Configuration**) — pas besoin
-> d'éditer de fichier à la main pour ça.
+> La liste des mineurs, le tarif électrique, les notifications et les
+> pools se gèrent directement depuis l'app (page **Configuration**) —
+> pas besoin d'éditer de fichier à la main pour ça.
 
-[Aller à Configuration →]({{ '/configuration.html#electricite-pools' | relative_url }}){: .btn .btn-primary }
+[Aller à Configuration →]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }

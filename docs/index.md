@@ -58,6 +58,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
   automatiquement
 - Réglage du tarif électrique et des autres appareils (ventilateur,
   routeur...) pour estimer le coût journalier de l'installation complète
+- Notifications par mail : serveur SMTP, destinataires, rapport d'audit
+  quotidien, hebdomadaire ou mensuel, mail de test, textes modifiables
 
 [Voir le détail de Configuration]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
 
@@ -88,7 +90,7 @@ local. Aucune authentification requise — usage réseau local uniquement.
 ## Architecture
 
 <div class="arch-diagram">
-<svg viewBox="0 0 860 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schéma d'architecture : Feeder et Dashboard API (Go) et UI (React) tournant sur un Raspberry Pi, communiquant avec les mineurs et un stockage local, accessible depuis un navigateur">
+<svg viewBox="0 0 860 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schéma d'architecture : Feeder, Dashboard API et Mailer (Go) et UI (React) tournant sur un Raspberry Pi, communiquant avec les mineurs et un stockage local, accessible depuis un navigateur">
   <defs>
     <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#5a6472"></path>
@@ -112,9 +114,14 @@ local. Aucune authentification requise — usage réseau local uniquement.
   <text x="268" y="248" text-anchor="middle" fill="#8892a4" font-size="12">Stockage local (disque)</text>
 
   <!-- Dashboard API -->
-  <rect x="68" y="296" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="268" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
-  <text x="268" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
+  <rect x="218" y="296" width="250" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="343" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
+  <text x="343" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
+
+  <!-- Mailer -->
+  <rect x="68" y="296" width="134" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="135" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Mailer</text>
+  <text x="135" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
 
   <!-- UI -->
   <rect x="68" y="388" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
@@ -155,8 +162,12 @@ local. Aucune authentification requise — usage réseau local uniquement.
   <text x="300" y="194" fill="#8892a4" font-size="11">écriture</text>
 
   <!-- Dashboard API -> Storage (lecture) -->
-  <path d="M268,296 L268,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="300" y="286" fill="#8892a4" font-size="11">lecture</text>
+  <path d="M343,296 L343,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="355" y="286" fill="#8892a4" font-size="11">lecture</text>
+
+  <!-- Mailer -> Storage -->
+  <path d="M135,296 L135,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="147" y="286" fill="#8892a4" font-size="11">lecture</text>
 
   <!-- UI -> Dashboard API -->
   <path d="M320,388 L320,360" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
@@ -182,7 +193,15 @@ Le dashboard comprend une API et une interface web. Il ne parle pas
 directement aux mineurs — son rôle est principalement de restituer les
 informations déjà stockées par le feeder (`latest.json` et l'historique
 des mineurs), et de proxyfier les quelques actions de contrôle (switch de
-pool, redémarrage) vers les mineurs.
+pool, redémarrage) vers les mineurs. Il donne aussi l'état de chaque
+service, affiché en bas du menu (*État plateforme*).
+
+### Mailer
+
+Le service qui envoie tous les mails, par le serveur SMTP réglé dans
+Configuration › Notifications : le rapport d'audit, à partir de l'audit
+et des réglages enregistrés sur le disque, et le mail de test, demandé
+par le dashboard.
 
 ---
 

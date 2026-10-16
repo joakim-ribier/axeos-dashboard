@@ -65,13 +65,15 @@ subnav:
 2. **Home** — overview of all your miners.
 3. **Alerts** — alert history (temperature, fan, offline...).
    [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }
-4. **Settings** — automatic detection, configured miners, remote.
+4. **Settings** — miners, electricity, notifications, remote, system.
    [Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
 5. **Backups** — monthly archives of the miners' history, to download.
    [Go to Backups →]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }
 6. **Audit** — history of restarts, pool switches, configuration changes, exports and network scans.
    [Go to Audit →]({{ '/en/audit.html' | relative_url }}){: .btn .btn-primary }
-7. **Auto-refresh** — toggles automatic data refresh.
+7. **Platform status** — green when everything runs, orange when a
+   service missed a run, red when a service doesn't answer; click for the
+   details ([see below](#platform-status)).
 8. **Version** — the currently deployed build's SHA.
 9. **Update available** — only shows up if a newer dashboard version is
    available on GitHub; click to open the release.
@@ -79,6 +81,21 @@ subnav:
 </div>
 
 On a phone, the sidebar opens from the top bar's ☰ button.
+
+### Platform status
+{: #platform-status }
+
+A click on the *Platform status* card opens the state of every service of
+the installation, asked again on every opening:
+
+- **Dashboard (API)** — when it started, and its version.
+- **Feeder** — its interval and its last poll of the miners.
+- **Health check** — its interval and its last check.
+- **Mailer** — its last run (it looks every minute for a mail to send).
+- **Firmware cache** — its last check for a new version.
+
+Each one is **Running**, **Late** (nothing within twice its interval),
+**Unreachable** (doesn't answer) or **No run yet**.
 
 ---
 
@@ -91,8 +108,8 @@ Always on screen, even while scrolling the page.
 
 1. **Page** — the current page's icon, title and description.
 2. **Documentation** — opens this documentation.
-3. **Auto-refresh** — shows whether auto-refresh is on (blue) or off
-   (grey).
+3. **Auto-refresh** — turns the automatic data refresh on (blue) or off
+   (grey) in one click; the browser keeps the choice.
 4. **Notifications** — ongoing alerts and recent events (alert resolved,
    update available...); the red badge counts the unread ones.
 5. **Language** — switches between French and English.
@@ -136,7 +153,7 @@ On a phone, the bar keeps what matters most:
    worst ↑ miner.
 8. **Electricity** — estimated cost over a day at the current draw and
    the configured rate, for the whole setup: the miners plus the
-   [other devices]({{ '/en/configuration.html#electricity-pools' | relative_url }})
+   [other devices]({{ '/en/configuration.html#electricity' | relative_url }})
    declared (fan, router...). Below, the total actually spent since each
    miner started being tracked — a later rate change never alters that
    past total.
@@ -209,7 +226,7 @@ filter.
 5. **Power** — draw (W) and efficiency (J/TH).
 6. **Pool** — the active pool, linking to its dashboard when a link is
    known for it (see
-   [Configuration]({{ '/en/configuration.html#electricity-pools' | relative_url }})),
+   [Configuration]({{ '/en/configuration.html#system' | relative_url }})),
    and whether it's the **Primary** or **Fallback** one.
 7. **Firmware** — installed version; below, in blue, the newer version
    available if there is one.
