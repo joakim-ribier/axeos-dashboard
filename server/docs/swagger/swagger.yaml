@@ -93,6 +93,8 @@ definitions:
         $ref: '#/definitions/config.ElectricityConfig'
       firmware:
         $ref: '#/definitions/config.AppSettingsFirmware'
+      notifications:
+        $ref: '#/definitions/config.NotificationsConfig'
       pools:
         $ref: '#/definitions/config.PoolsConfig'
       remote:
@@ -104,6 +106,22 @@ definitions:
         additionalProperties:
           type: string
         type: object
+    type: object
+  config.AuditReportConfig:
+    properties:
+      enabled:
+        type: boolean
+      frequency:
+        $ref: '#/definitions/config.ReportFrequency'
+      skipIfEmpty:
+        description: SkipIfEmpty sends nothing for a period nothing was recorded in.
+        type: boolean
+      types:
+        description: Types narrows it to these audit entry types -- all of them when
+          empty.
+        items:
+          type: string
+        type: array
     type: object
   config.Bitaxe:
     properties:
@@ -174,6 +192,15 @@ definitions:
           (e.g. 0.1915 for 19.15 cts/kWh).
         type: number
     type: object
+  config.MailConfig:
+    properties:
+      smtp:
+        $ref: '#/definitions/config.SMTPConfig'
+      to:
+        items:
+          type: string
+        type: array
+    type: object
   config.Model:
     enum:
     - bitaxe
@@ -182,6 +209,21 @@ definitions:
     x-enum-varnames:
     - ModelBitaxe
     - ModelNerdaxe
+  config.NotificationsConfig:
+    properties:
+      auditReport:
+        $ref: '#/definitions/config.AuditReportConfig'
+      dashboardURL:
+        description: |-
+          DashboardURL is the dashboard's own address as reached from where the
+          messages are read (e.g. http://192.168.1.60) -- for their links.
+        type: string
+      language:
+        description: 'Language is the messages'' language: "fr" or "en" (the default).'
+        type: string
+      mail:
+        $ref: '#/definitions/config.MailConfig'
+    type: object
   config.PoolsConfig:
     properties:
       dashboards:
@@ -209,6 +251,57 @@ definitions:
       pushURL:
         type: string
     type: object
+  config.ReportFrequency:
+    enum:
+    - daily
+    - every2days
+    - weekly
+    - monthly
+    type: string
+    x-enum-comments:
+      ReportDaily: 'every night: the day before'
+      ReportEvery2Days: 'every other night: the 2 days before'
+      ReportMonthly: 'the night of the 1st: the month before'
+      ReportWeekly: 'Sunday to Monday night: Monday to Sunday'
+    x-enum-descriptions:
+    - 'every night: the day before'
+    - 'every other night: the 2 days before'
+    - 'Sunday to Monday night: Monday to Sunday'
+    - 'the night of the 1st: the month before'
+    x-enum-varnames:
+    - ReportDaily
+    - ReportEvery2Days
+    - ReportWeekly
+    - ReportMonthly
+  config.SMTPConfig:
+    properties:
+      from:
+        type: string
+      host:
+        type: string
+      password:
+        description: |-
+          Password is write-only through the API: it's stored here, but GET
+          /api/config/settings only ever says whether one is set (see
+          handler.appSettingsResponse).
+        type: string
+      port:
+        type: integer
+      security:
+        $ref: '#/definitions/config.SMTPSecurity'
+      username:
+        type: string
+    type: object
+  config.SMTPSecurity:
+    enum:
+    - starttls
+    - tls
+    - none
+    type: string
+    x-enum-varnames:
+    - SMTPStartTLS
+    - SMTPTLS
+    - SMTPNone
   config.ScheduleAction:
     enum:
     - switch_primary
@@ -346,6 +439,36 @@ definitions:
       ip:
         type: string
     type: object
+  handler.ServiceStatus:
+    properties:
+      interval:
+        type: string
+      lastRunAt:
+        type: string
+      startedAt:
+        type: string
+      state:
+        type: string
+      version:
+        type: string
+    type: object
+  handler.ServicesStatus:
+    properties:
+      dashboardApi:
+        $ref: '#/definitions/handler.ServiceStatus'
+      feeder:
+        $ref: '#/definitions/handler.ServiceStatus'
+      firmwareCache:
+        allOf:
+        - $ref: '#/definitions/handler.ServiceStatus'
+        description: |-
+          FirmwareCache is the feeder's check for new firmware releases, once
+          per its TTL.
+      healthCheck:
+        $ref: '#/definitions/handler.ServiceStatus'
+      mailer:
+        $ref: '#/definitions/handler.ServiceStatus'
+    type: object
   handler.StatsResponse:
     properties:
       data:
@@ -354,6 +477,13 @@ definitions:
         type: array
       total:
         type: integer
+    type: object
+  handler.StatusResponse:
+    properties:
+      checkedAt:
+        type: string
+      services:
+        $ref: '#/definitions/handler.ServicesStatus'
     type: object
   handler.appSettingsDefaults:
     properties:
@@ -364,6 +494,12 @@ definitions:
     type: object
   handler.appSettingsReadOnly:
     properties:
+      auditReport:
+        allOf:
+        - $ref: '#/definitions/handler.auditReportStatus'
+        description: |-
+          AuditReport is the feeder's record of the daily audit mail (see
+          auditreport.State), read back from disk -- the feeder sends it.
       feederInterval:
         type: string
       firmwareCacheCheckedAt:
@@ -404,12 +540,50 @@ definitions:
         $ref: '#/definitions/config.AppSettingsFirmware'
       lastUpdated:
         type: string
+      notifications:
+        allOf:
+        - $ref: '#/definitions/handler.notificationsResponse'
+        description: |-
+          Notifications shadows the embedded AppSettingsFile.Notifications: same
+          JSON key, but a shape with no SMTP password field at all -- it never
+          leaves the server.
       pools:
         $ref: '#/definitions/config.PoolsConfig'
       readOnly:
         $ref: '#/definitions/handler.appSettingsReadOnly'
       remote:
         $ref: '#/definitions/config.RemoteConfig'
+    type: object
+  handler.auditReportSettingsResponse:
+    properties:
+      enabled:
+        type: boolean
+      frequency:
+        $ref: '#/definitions/config.ReportFrequency'
+      skipIfEmpty:
+        description: SkipIfEmpty sends nothing for a period nothing was recorded in.
+        type: boolean
+      types:
+        description: Types is never null, unlike the config's (empty = every type).
+        items:
+          type: string
+        type: array
+    type: object
+  handler.auditReportStatus:
+    properties:
+      lastAttemptAt:
+        type: string
+      lastError:
+        type: string
+      lastFrom:
+        description: |-
+          LastFrom/LastTo is the period last mailed ("2006-01-02", To
+          excluded).
+        type: string
+      lastSentAt:
+        type: string
+      lastTo:
+        type: string
     type: object
   handler.bitaxesResponse:
     properties:
@@ -420,6 +594,26 @@ definitions:
       lastUpdated:
         type: string
     type: object
+  handler.mailSettingsResponse:
+    properties:
+      smtp:
+        $ref: '#/definitions/handler.smtpSettingsResponse'
+      to:
+        items:
+          type: string
+        type: array
+    type: object
+  handler.notificationsResponse:
+    properties:
+      auditReport:
+        $ref: '#/definitions/handler.auditReportSettingsResponse'
+      dashboardURL:
+        type: string
+      language:
+        type: string
+      mail:
+        $ref: '#/definitions/handler.mailSettingsResponse'
+    type: object
   handler.remotePushEndpointStatus:
     properties:
       lastAttemptAt:
@@ -427,6 +621,22 @@ definitions:
       lastError:
         type: string
       lastSuccessAt:
+        type: string
+    type: object
+  handler.smtpSettingsResponse:
+    properties:
+      from:
+        type: string
+      host:
+        type: string
+      passwordSet:
+        description: PasswordSet is all that's ever said about the password.
+        type: boolean
+      port:
+        type: integer
+      security:
+        $ref: '#/definitions/config.SMTPSecurity'
+      username:
         type: string
     type: object
   model.Alert:
@@ -914,7 +1124,7 @@ paths:
       description: Every user-triggered action that matters (miner restart, pool switch,
         config save, audit export, backups download, network scan) between from (inclusive)
         and to (exclusive) -- newest first. Both default to the last 24 hours; the
-        range can't exceed 7 days. API entries carry the client's IP and User-Agent,
+        range can't exceed a year. API entries carry the client's IP and User-Agent,
         system entries the service that acted (e.g. the scheduler).
       parameters:
       - description: 'range start, RFC 3339 (default: to minus 24h)'
@@ -950,7 +1160,7 @@ paths:
           schema:
             $ref: '#/definitions/handler.AuditResponse'
         "400":
-          description: from/to malformed, from not before to, or range over 7 days
+          description: from/to malformed, from not before to, or range over a year
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
@@ -963,7 +1173,7 @@ paths:
   /api/audit/export:
     get:
       description: 'Same range and defaults as GET /api/audit (last 24 hours, at most
-        7 days), unpaginated, as a JSON file attachment: the resolved range, the export
+        a year), unpaginated, as a JSON file attachment: the resolved range, the export
         time and the entry count, then every entry.'
       parameters:
       - description: 'range start, RFC 3339 (default: to minus 24h)'
@@ -991,7 +1201,7 @@ paths:
           schema:
             $ref: '#/definitions/handler.AuditExport'
         "400":
-          description: from/to malformed, from not before to, or range over 7 days
+          description: from/to malformed, from not before to, or range over a year
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
@@ -1097,6 +1307,48 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Discover AxeOS devices on the network
+      tags:
+      - dashboard-api
+  /api/config/mail/test:
+    post:
+      consumes:
+      - application/json
+      description: Has the mailer service send a test mail to every configured recipient
+        through the saved SMTP server.
+      parameters:
+      - description: Mail language (fr or en, default en)
+        in: body
+        name: request
+        schema:
+          properties:
+            lang:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            properties:
+              sentTo:
+                items:
+                  type: string
+                type: array
+            type: object
+        "400":
+          description: SMTP server or recipients not configured
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "502":
+          description: the SMTP server refused or couldn't be reached
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "503":
+          description: the mailer service isn't running
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Send a test mail
       tags:
       - dashboard-api
   /api/config/miners:
@@ -1402,6 +1654,21 @@ paths:
           schema:
             $ref: '#/definitions/remotepush.Board'
       summary: Remote board info
+      tags:
+      - dashboard-api
+  /api/status:
+    get:
+      description: 'How each process is doing -- dashboard-api, the feeder (its last
+        poll), the health check, the mailer, the firmware cache: ok, late (nothing
+        within twice its interval), offline (didn''t answer) or unknown (no run yet).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StatusResponse'
+      summary: Services status
       tags:
       - dashboard-api
 swagger: "2.0"

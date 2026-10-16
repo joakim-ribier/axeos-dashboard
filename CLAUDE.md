@@ -13,7 +13,7 @@ Supported device models: **bitaxe** and **nerdaxe** (model-specific response par
 ### Full Dev Stack
 
 ```bash
-make dev-up        # start all 3 services in GNU screen session (axeos-dashboard)
+make dev-up        # start all 4 services (UI, dashboard-api, feeder, mailer) in GNU screen session (axeos-dashboard)
 make dev-down      # stop all
 make dev-attach    # attach to screen session
 make dev-logs      # tail logs
@@ -25,6 +25,7 @@ make dev-status    # check screen session status
 ```bash
 make run-dashboard-api CONFIG=resources/dashboard.yml   # HTTP API on :8080
 make run-feeder        CONFIG=resources/dashboard.yml   # polling daemon
+make run-mailer        CONFIG=resources/dashboard.yml   # scheduled mails (audit report)
 make run-dashboard-ui                                    # Vite dev server → :8080
 make run-remote-dashboard-ui                                    # Vite dev server → :8081 (remote)
 ```
@@ -117,16 +118,20 @@ resources/data/audit/
 
 ### Go Backend (`server/`)
 
-Three separate `cmd/` binaries sharing `internal/` packages:
+Separate `cmd/` binaries sharing `internal/` packages:
 
 | Package | Role |
 |---|---|
 | `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
+| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk; its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/status`, `POST /api/mail/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
+| `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
+| `internal/mailtemplate/` | The mails' wording, as editable text files: built-in ones embedded (`templates/*.txt`, one per mail and language), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
+| `internal/mail/` | SMTP sending, standard library only (`Send`: STARTTLS / TLS / plain, optional auth, 15s timeout, UTF-8 headers); `mailtest` is a fake SMTP server for tests |
 | `internal/backup/` | Monthly zip archives (`ArchiveCompletedDays`, `List`, `Merge`); a past month becomes final once its MD5 is in `checksums.md5` |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
@@ -158,8 +163,10 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/config/settings` | `GetAppSettings()` | Read `settings.yml` (merged with defaults) |
 | `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
+| `POST` | `/api/config/mail/test` | `SendTestMail()` | Has the mailer send a test mail to the recipients through the **saved** SMTP server (`lang`: fr/en); 503 when the mailer isn't running |
+| `GET` | `/api/status` | `Status()` | How every process is doing, in one answer: dashboard-api, feeder (its last poll, from `latest.json`), health check, mailer (asked on the loopback), firmware cache -- each `ok` / `late` (nothing within twice its interval) / `offline` (didn't answer) / `unknown` (no run yet); the sidebar's services dots |
 | `GET` | `/api/remote/board` | `RemoteBoard()` | The hashboard board this instance pushes to (boardId, public, links, last sample received) -- relays hashboard's `GET /api/board/info`, cached one feeder interval (`remotepush.BoardCache`); empty when remote isn't configured or hashboard is unreachable |
-| `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max 7 days): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file; `/api/audit/types`, the list of types -- `audit.Types`, the one source the UI's filter reads) |
+| `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max a year): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file; `/api/audit/types`, the list of types -- `audit.Types`, the one source the UI's filter reads) |
 | `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
 | `GET` | `/api/backups/download?months=` | `DownloadBackups()` | One or several months in one zip |
 
@@ -201,7 +208,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 |---|---|
 | `src/App.tsx` | MUI theme, i18next, React Query provider, routing |
 | `src/pages/Home.tsx` | Dashboard: `FleetSummary` + status/pool `BreakdownStrip`s (also quick filters) + `MinerToolbar` + `MinerList`/`MinerTiles` + `MinerDrawer` |
-| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`) |
+| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`; its sync icon is the auto-refresh switch), `ServicesStatus` (the sidebar's "Platform status" card -- green / orange when a service missed a run / red when one doesn't answer -- and its details window, from `GET /api/status`, local mode only) |
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
@@ -289,6 +296,24 @@ firmware:
 remote:
   pushURL: ""
   apiKey: ""
+notifications:                  # Configuration > Notifications; never pushed to hashboard
+  language: fr                  # fr | en -- the messages' language
+  dashboardURL: http://192.168.1.60   # the dashboard's own address, for the messages' links
+  mail:                         # the mail channel
+    smtp:
+      host: smtp.example.com    # empty = mail off (clearing it drops the whole smtp block)
+      port: 587
+      security: starttls        # starttls | tls | none
+      username: axeos
+      password: ""              # write-only: GET /api/config/settings only says passwordSet;
+                                # a save without one keeps the stored one
+      from: axeos@example.com
+    to: [me@example.com]
+  auditReport:                  # sent by the mailer around 1 a.m. UTC; UTC days, like the audit's
+    enabled: true
+    frequency: weekly           # daily | every2days | weekly | monthly
+    types: []                   # empty = every audit type
+    skipIfEmpty: true
 ```
 
 ```yaml
@@ -318,6 +343,7 @@ bitaxes:
 ```
 
 Override dashboard-api/remote-dashboard-api port: `server.port` in the config YAML (default `8080`/`8081`) — no env var for this.
+The mailer's API port: `mailer.port` (default `8082`, loopback only) -- read by both the mailer and dashboard-api, which reaches it on `127.0.0.1`.
 Override dashboard-api's data dir: `BITAXE_DATA_ROOT` env var (default from config's `storage.dataDir`).
 remote-dashboard-api's data dir has no override of its own -- always `{storage.dataDir}/data/boards`; point `dataDir` itself at hashboard's data root (same machine, or a sibling checkout in local dev).
 

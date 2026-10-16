@@ -1,7 +1,7 @@
 // src/App.tsx
 import { useMemo } from "react";
 import { I18nextProvider } from "react-i18next";
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -16,7 +16,7 @@ import { Alerts } from "@/pages/Alerts";
 import { Audit } from "@/pages/Audit";
 import { Backups } from "@/pages/Backups";
 import { Home } from "@/pages/Home";
-import { Settings } from "@/pages/Settings";
+import { Settings } from "@/pages/settings/Settings";
 import { getTheme } from "@/theme";
 
 /**
@@ -29,6 +29,25 @@ const BoardHomeRedirect: React.FC = () => {
   const { boardId } = useParams();
   return <Navigate to={`/${boardId}`} replace />;
 };
+
+/**
+ * Configuration, under "/settings" locally and "/{boardId}/settings" on a
+ * remote board: "/settings" itself lands on the Miners section, and
+ * Settings sends any unknown section there too.
+ */
+const settingsRoute = (
+  <Route
+    path="settings"
+    element={
+      <RequirePageEnabled page="settings">
+        <Outlet />
+      </RequirePageEnabled>
+    }
+  >
+    <Route index element={<Navigate to="miners" replace />} />
+    <Route path=":section" element={<Settings />} />
+  </Route>
+);
 
 export const App: React.FC = () => {
   const theme = useMemo(() => getTheme("dark"), []);
@@ -45,13 +64,14 @@ export const App: React.FC = () => {
             <SearchProvider>
               <Routes>
                 {/* Local mode: this server's own configured miners --
-                    exactly these four exact-depth paths, nothing else. A
+                    exactly these paths (plus Configuration's sections,
+                    see settingsRoute), nothing else. A
                     static route always outranks the remote branch's dynamic
                     :boardId below (see AppLayout's doc comment for why
                     mode/boardId live one level up), so e.g. plain "/alerts"
                     stays local even though "alerts" could in principle be a
-                    boardId too. Anything that isn't one of these four
-                    exact paths -- including "/alerts/foo" -- falls to the
+                    boardId too. Anything that isn't one of these
+                    paths -- including "/alerts/foo" -- falls to the
                     remote branch's own catch-all instead of a local one:
                     there's no such thing as a bare local 404 here, only
                     "board X wasn't found" for whatever the first path
@@ -73,14 +93,7 @@ export const App: React.FC = () => {
                       </RequireMinersConfigured>
                     }
                   />
-                  <Route
-                    path="settings"
-                    element={
-                      <RequirePageEnabled page="settings">
-                        <Settings />
-                      </RequirePageEnabled>
-                    }
-                  />
+                  {settingsRoute}
                   <Route
                     path="backups"
                     element={
@@ -99,8 +112,8 @@ export const App: React.FC = () => {
                   />
                 </Route>
 
-                {/* Remote mode: any path that isn't one of the three exact
-                    local ones above resolves here, :boardId capturing its
+                {/* Remote mode: any path that isn't one of the local ones
+                    above resolves here, :boardId capturing its
                     first segment -- including a deeper unknown sub-path
                     (its own "*" below), so the Sidebar's board chrome and
                     boardBlocked-driven nav lockout (see useAppInfo) stay
@@ -111,14 +124,7 @@ export const App: React.FC = () => {
                 <Route path=":boardId" element={<AppLayout mode="remote" />}>
                   <Route index element={<Home />} />
                   <Route path="alerts" element={<Alerts />} />
-                  <Route
-                    path="settings"
-                    element={
-                      <RequirePageEnabled page="settings">
-                        <Settings />
-                      </RequirePageEnabled>
-                    }
-                  />
+                  {settingsRoute}
                   <Route path="*" element={<BoardHomeRedirect />} />
                 </Route>
               </Routes>

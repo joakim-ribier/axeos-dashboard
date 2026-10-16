@@ -3,38 +3,54 @@ title: Configuration
 nav_order: 5
 group: Pages
 subnav:
-  - title: Détection automatique
-    anchor: detection-automatique
-  - title: Mineurs configurés
-    anchor: mineurs-configures
-  - title: Électricité & pools
-    anchor: electricite-pools
-  - title: Remote (hashboard.live)
-    anchor: remote-hashboardlive
+  - title: Mineurs
+    anchor: mineurs
+  - title: Électricité
+    anchor: electricite
+  - title: Notifications
+    anchor: notifications
+  - title: Distant (hashboard.live)
+    anchor: distant
+  - title: Système
+    anchor: systeme
 ---
 
 # Configuration
 
 <div class="toc-grid">
-  <a href="#detection-automatique" class="toc-card">
-    <span class="toc-card-icon">🔍</span>
-    <span class="toc-card-title">Détection automatique</span>
-  </a>
-  <a href="#mineurs-configures" class="toc-card">
+  <a href="#mineurs" class="toc-card">
     <span class="toc-card-icon">🖥️</span>
-    <span class="toc-card-title">Mineurs configurés</span>
+    <span class="toc-card-title">Mineurs</span>
   </a>
-  <a href="#electricite-pools" class="toc-card">
+  <a href="#electricite" class="toc-card">
     <span class="toc-card-icon">⚡</span>
-    <span class="toc-card-title">Électricité & pools</span>
+    <span class="toc-card-title">Électricité</span>
   </a>
-  <a href="#remote-hashboardlive" class="toc-card">
+  <a href="#notifications" class="toc-card">
+    <span class="toc-card-icon">✉️</span>
+    <span class="toc-card-title">Notifications</span>
+  </a>
+  <a href="#distant" class="toc-card">
     <span class="toc-card-icon">☁️</span>
-    <span class="toc-card-title">Remote (hashboard.live)</span>
+    <span class="toc-card-title">Distant (hashboard.live)</span>
+  </a>
+  <a href="#systeme" class="toc-card">
+    <span class="toc-card-icon">⚙️</span>
+    <span class="toc-card-title">Système</span>
   </a>
 </div>
 
-## 🔍 Détection automatique
+Une seule page, une section à la fois : chaque section se choisit dans un
+menu qui la résume en une ligne, et signale d'un point orange ce qui
+demande un coup d'œil (aucun destinataire, rapport d'audit en échec, pool
+différent de la configuration...).
+
+---
+
+## 🖥️ Mineurs
+{: #mineurs }
+
+### Détection automatique
 {: #detection-automatique }
 
 Scanne le réseau local à la recherche de mineurs AxeOS (bitaxe,
@@ -48,9 +64,7 @@ configuration.
 
 ![Résultats de la détection]({{ '/assets/images/settings-scan-results.png' | relative_url }})
 
----
-
-## 🖥️ Mineurs configurés
+### Mineurs configurés
 {: #mineurs-configures }
 
 La liste des mineurs déjà configurés, avec leur IP, MAC, modèle et état
@@ -58,14 +72,14 @@ La liste des mineurs déjà configurés, avec leur IP, MAC, modèle et état
 
 ![Mineurs configurés]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
 
-### Nom et pools
+#### Nom et pools
 
 Cliquer sur un mineur déplie son éditeur : nom affiché, et pool primaire
 / secours (URL, port, utilisateur).
 
 ![Nom et pools]({{ '/assets/images/settings-alias-pools.png' | relative_url }})
 
-### Planificateur
+#### Planificateur
 
 Programme un changement de pool ou un redémarrage selon un planning cron.
 
@@ -73,10 +87,8 @@ Programme un changement de pool ou un redémarrage selon un planning cron.
 
 ---
 
-## ⚡ Électricité & pools
-{: #electricite-pools }
-
-### Électricité
+## ⚡ Électricité
+{: #electricite }
 
 Le tarif électrique (€/kWh) sert à estimer le coût journalier affiché
 sur l'accueil.
@@ -89,6 +101,120 @@ qu'il est ajouté ou supprimé.
 
 ![Électricité]({{ '/assets/images/settings-electricity.png' | relative_url }})
 
+---
+
+## ✉️ Notifications
+{: #notifications }
+
+L'envoi de mails : le serveur qui les envoie, à qui, et le rapport
+d'audit. Tous les mails partent du **mailer**, un service à part qui
+tourne à côté du feeder (voir [Installation]({{ '/installation.html#parametrage' | relative_url }})).
+
+### Serveur SMTP
+
+Le serveur par lequel partent les mails : hôte, port, sécurité
+(**STARTTLS**, **TLS** ou **aucune** — le port usuel est proposé à chaque
+changement), identifiant et mot de passe s'il en faut, et l'adresse
+d'expédition.
+
+Le mot de passe n'est jamais réaffiché : un champ vide à l'enregistrement
+garde celui déjà enregistré.
+
+### Destinataires
+
+Les adresses qui reçoivent les mails, ajoutées sous la liste et
+enregistrées aussitôt.
+
+Juste en dessous, la **langue des mails** (français ou anglais) et
+l'**adresse du dashboard**, utilisée pour les liens dans les mails —
+préremplie avec l'adresse à laquelle la page est ouverte.
+
+### Rapport d'audit
+
+Un mail qui résume l'[audit]({{ '/audit.html' | relative_url }}) depuis le
+précédent, groupé par type :
+
+- **Fréquence** — tous les jours, tous les 2 jours, chaque semaine (du
+  lundi au dimanche) ou chaque mois ; envoyé vers 1 h (UTC), la période
+  couverte venant de se terminer.
+- **Types** — tous par défaut, ou seulement ceux choisis.
+- **Ne rien envoyer si rien ne s'est passé** — saute une période vide.
+
+Sous le réglage, la date du dernier envoi, ou du dernier échec avec son
+motif — un échec est réessayé chaque heure. Chaque rapport envoyé, ou en
+échec, apparaît aussi dans l'audit.
+
+### Mail de test
+
+Envoie un mail aux destinataires avec le serveur **enregistré**, pour
+vérifier que tout fonctionne — le mailer compris. Une petite notification
+confirme l'envoi ; en cas d'échec, elle donne le motif du serveur SMTP,
+avec un bouton pour le copier.
+
+### Textes des mails
+
+{% raw %}
+L'objet et le texte de chaque mail sont dans des fichiers modifiables,
+dans le dossier `mail-templates/` à côté de `dashboard.yml` — un fichier
+par mail et par langue :
+
+```text
+mail-templates/
+├── audit-report.fr.txt
+├── audit-report.en.txt
+├── test-mail.fr.txt
+└── test-mail.en.txt
+```
+
+Le mailer crée ceux qui manquent à son démarrage et ne touche jamais à un
+fichier existant ; il les relit à chaque envoi, sans redémarrage.
+
+```text
+# Les lignes qui commencent par # sont des commentaires
+Subject: AxeOS Dashboard — {{title}} : {{count}}
+
+{{title}} — {{count}}
+
+{{events}}
+
+Voir dans le dashboard : {{link}}
+```
+
+- La ligne `Subject:` est l'objet du mail ; après la ligne vide, le texte.
+- Chaque `{{variable}}` est remplacée à l'envoi — la liste des variables
+  de chaque mail est en commentaire en tête de son fichier (`{{date}}`,
+  `{{events}}`, `{{link}}`...).
+- Une ligne dont la variable est vide disparaît (le lien, sans adresse du
+  dashboard).
+- Pour revenir au texte d'origine, supprimer le fichier : il est recréé
+  au prochain démarrage du mailer.
+{% endraw %}
+
+---
+
+## ☁️ Distant (hashboard.live)
+{: #distant }
+
+Envoie vos données vers [hashboard.live](https://hashboard.live) pour
+consulter vos mineurs depuis n'importe où, sans VPN — il suffit de coller
+l'URL de push et votre clé API.
+
+![Distant (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
+
+Une fois le push configuré, votre board hashboard apparaît dans le
+dashboard lui-même :
+
+- **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
+  ouvrir le board), s'il est public ou privé, et un lien vers votre compte
+  hashboard.
+- **Accueil** — sous le titre de la page, un lien *Ouvrir le board
+  distant* et l'heure des dernières données reçues par hashboard.
+
+---
+
+## ⚙️ Système
+{: #systeme }
+
 ### Dashboards des pools
 
 Certains pools ont déjà un lien cliquable intégré (Braiins, Atlas...).
@@ -100,22 +226,8 @@ le détail des mineurs qui utilisent ce pool.
 
 ![Dashboards des pools]({{ '/assets/images/settings-pools.png' | relative_url }})
 
----
+### Dépôts firmware
 
-## ☁️ Remote (hashboard.live)
-{: #remote-hashboardlive }
-
-Envoie vos données vers [hashboard.live](https://hashboard.live) pour
-consulter vos mineurs depuis n'importe où, sans VPN — il suffit de coller
-l'URL de push et votre clé API.
-
-![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
-
-Une fois le push configuré, votre board hashboard apparaît dans le
-dashboard lui-même :
-
-- **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
-  ouvrir le board), s'il est public ou privé, et un lien vers votre compte
-  hashboard.
-- **Accueil** — sous le titre de la page, un lien *Ouvrir le board
-  distant* et l'heure des dernières données reçues par hashboard.
+Où le dashboard vérifie la dernière version du firmware de chaque modèle
+(une release GitHub) — intégrés à l'application, affichés en lecture
+seule.

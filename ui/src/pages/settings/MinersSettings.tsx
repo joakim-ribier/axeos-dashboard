@@ -1,4 +1,4 @@
-// src/pages/Settings.tsx
+// src/pages/settings/MinersSettings.tsx
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoltIcon from "@mui/icons-material/Bolt";
@@ -37,25 +37,23 @@ import {
   Typography,
 } from "@mui/material";
 
-import { AlertList } from "@/components/ui/AlertList";
+import { ActionButton } from "@/components/ui/ActionButton";
 import { AliasEditor } from "@/components/ui/AliasEditor";
-import { AppSettingsSection } from "@/components/ui/AppSettingsSection";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { PoolEditor } from "@/components/ui/PoolEditor";
 import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
-import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
-import { formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
 import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
+
+import { SectionTitle } from "./SectionTitle";
 
 // Prefilled by the quick-fill button next to the CIDR field -- the default
 // subnet on the vast majority of home routers, useful when this server's
@@ -67,7 +65,6 @@ const COMMON_HOME_CIDR = "192.168.1.0/24";
 const ConfiguredMinersTable = ({
   miners,
   liveMinersByMac,
-  lastUpdated,
   togglingMac,
   onToggleEnabled,
   onDisableAllClick,
@@ -76,7 +73,6 @@ const ConfiguredMinersTable = ({
 }: {
   miners: MinerConfig[];
   liveMinersByMac: Map<string, Miner>;
-  lastUpdated: string | undefined;
   togglingMac: string | null;
   onToggleEnabled: (miner: MinerConfig) => void;
   onDisableAllClick: () => void;
@@ -89,53 +85,38 @@ const ConfiguredMinersTable = ({
   const isEmpty = miners.length === 0;
 
   return (
-    <Paper variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
+    <Box>
       <Box
         sx={{
-          px: 3,
-          pt: 2.5,
-          pb: isEmpty ? 2.5 : 1.5,
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
           gap: 2,
-          flexWrap: "wrap",
+          flexWrap: { xs: "wrap", sm: "nowrap" },
         }}
       >
-        <Box>
-          <Typography variant="subtitle1" fontWeight={700}>
-            {t("settingsPage.configured.title")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t("settingsPage.configured.description", {
-              count: miners.length,
-            })}
-          </Typography>
-          {lastUpdated && (
-            <Typography
-              variant="caption"
-              color="text.disabled"
-              sx={{ display: "block", mt: 0.5 }}
-            >
-              {t("settingsPage.configured.lastUpdated", {
-                date: formatTimestamp(lastUpdated),
-              })}
-            </Typography>
-          )}
-        </Box>
+        <SectionTitle
+          icon={<DeveloperBoardIcon fontSize="small" />}
+          title={t("settingsPage.configured.title")}
+          description={
+            isEmpty
+              ? t("settingsPage.configured.emptyAlert")
+              : t("settingsPage.configured.description", {
+                  count: miners.length,
+                })
+          }
+        />
         {!isEmpty && (
           <Writable readOnly={readOnly}>
-            <Button
-              size="small"
+            <ActionButton
               color="error"
-              variant="outlined"
+              icon={<PauseIcon fontSize="small" />}
               disabled={enabledCount === 0}
               onClick={onDisableAllClick}
-              startIcon={<PauseIcon fontSize="small" />}
-              sx={{ flexShrink: 0 }}
+              sx={{ mb: 2 }}
             >
               {t("settingsPage.configured.disableAll")}
-            </Button>
+            </ActionButton>
           </Writable>
         )}
       </Box>
@@ -343,7 +324,7 @@ const ConfiguredMinersTable = ({
           </TableBody>
         </DataTable>
       )}
-    </Paper>
+    </Box>
   );
 };
 
@@ -492,14 +473,13 @@ const NoResultsState = ({ onRetry }: { onRetry: () => void }) => {
   );
 };
 
-/* ── Settings page ───────────────────────────────────────────────── */
-export const Settings = () => {
+/* ── Miners settings page ────────────────────────────────────────── */
+export const MinersSettings = () => {
   const { t } = useTranslation();
   const { ui } = useUiFeatures();
   const readOnly = ui.page.settings === "readonly";
   const {
     data: configuredMiners,
-    lastUpdated,
     isLoading: configuredLoading,
     saveMiners,
     isSaving,
@@ -509,10 +489,6 @@ export const Settings = () => {
   // lets PoolEditor flag when the saved pool config drifts from what the
   // device is actually reporting right now (see poolMismatches).
   const { data: liveMiners } = useMiners();
-  // For the top-of-page issues summary only -- same query AppSettingsSection
-  // itself makes, so this doesn't cost a second request once both are on
-  // screen (shared React Query cache, see useAppSettings' own queryKey).
-  const { data: appSettings } = useAppSettings();
   const {
     results,
     isSearching,
@@ -539,20 +515,6 @@ export const Settings = () => {
     (liveMiners ?? []).map((m) => [normalizeMac(m.macAddr), m]),
   );
   const enabledMiners = (configuredMiners ?? []).filter((m) => m.enabled);
-
-  // Top-of-page summary so a config problem is visible without scrolling
-  // down into the miners table or the App settings section below.
-  const noMinersConfigured =
-    !configuredLoading && configuredMiners?.length === 0;
-  const poolDriftCount = (configuredMiners ?? []).filter(
-    (m) =>
-      poolMismatches(m, liveMinersByMac.get(normalizeMac(m.mac))).length > 0,
-  ).length;
-  const pushFailed = Boolean(
-    appSettings?.remote.pushURL &&
-    (appSettings.readOnly.remotePushMinersConfig.lastError ||
-      appSettings.readOnly.remotePushSettingsConfig.lastError),
-  );
 
   const handleToggleEnabled = async (miner: MinerConfig) => {
     const key = normalizeMac(miner.mac);
@@ -664,74 +626,48 @@ export const Settings = () => {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <PageHeader
-        title={t("settingsPage.header.title")}
-        description={t("settingsPage.header.description")}
-        icon={<WifiFindIcon />}
-      />
+    <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, borderRadius: 3 }}>
+      <Stack spacing={4}>
+        {configuredLoading ? (
+          <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
+        ) : (
+          configuredMiners && (
+            <ConfiguredMinersTable
+              miners={configuredMiners}
+              liveMinersByMac={liveMinersByMac}
+              togglingMac={togglingMac}
+              onToggleEnabled={(m) => void handleToggleEnabled(m)}
+              onDisableAllClick={() => setDisableAllOpen(true)}
+              saveMiners={saveMiners}
+              readOnly={readOnly}
+            />
+          )
+        )}
 
-      <AlertList
-        severity="warning"
-        items={[
-          ...(noMinersConfigured
-            ? [t("settingsPage.configured.emptyAlert")]
-            : []),
-          ...(poolDriftCount > 0
-            ? [t("settingsPage.issues.poolDrift", { count: poolDriftCount })]
-            : []),
-          ...(pushFailed ? [t("settingsPage.issues.pushFailed")] : []),
-        ]}
-      />
+        <Writable readOnly={readOnly}>
+          <SectionDivider />
 
-      {readOnly && (
-        <Alert severity="info">{t("settingsPage.readOnlyBanner")}</Alert>
-      )}
-
-      {configuredLoading ? (
-        <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
-      ) : (
-        configuredMiners && (
-          <ConfiguredMinersTable
-            miners={configuredMiners}
-            liveMinersByMac={liveMinersByMac}
-            lastUpdated={lastUpdated}
-            togglingMac={togglingMac}
-            onToggleEnabled={(m) => void handleToggleEnabled(m)}
-            onDisableAllClick={() => setDisableAllOpen(true)}
-            saveMiners={saveMiners}
-            readOnly={readOnly}
-          />
-        )
-      )}
-
-      <AppSettingsSection readOnly={readOnly} />
-
-      <Writable readOnly={readOnly}>
-        <Paper variant="outlined" sx={{ p: 3, borderRadius: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", sm: "row" },
-              alignItems: { xs: "stretch", sm: "center" },
-              justifyContent: "space-between",
-              gap: 2,
-            }}
-          >
-            <Box>
-              <Typography variant="subtitle1" fontWeight={700}>
-                {t("settingsPage.scan.title")}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {t("settingsPage.scan.description")}
-              </Typography>
-            </Box>
+          {/* Network scan */}
+          <Box>
+            <SectionTitle
+              icon={<TravelExploreIcon fontSize="small" />}
+              title={t("settingsPage.scan.title")}
+              description={t("settingsPage.scan.description")}
+            />
             <Stack
               direction={{ xs: "column", sm: "row" }}
-              spacing={1.5}
+              spacing={2}
               alignItems={{ xs: "stretch", sm: "center" }}
-              sx={{ flexShrink: 0 }}
             >
+              <ActionButton
+                icon={<TravelExploreIcon fontSize="small" />}
+                loading={isSearching}
+                onClick={handleScan}
+              >
+                {isSearching
+                  ? t("settingsPage.scan.searching")
+                  : t("settingsPage.scan.action")}
+              </ActionButton>
               <FormControlLabel
                 sx={{ mr: 0 }}
                 control={
@@ -749,104 +685,108 @@ export const Settings = () => {
                   </Typography>
                 }
               />
-              <Button
-                variant="contained"
-                disabled={isSearching}
-                onClick={handleScan}
-                startIcon={
-                  isSearching ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <TravelExploreIcon />
-                  )
-                }
-                sx={{ flexShrink: 0 }}
-              >
-                {isSearching
-                  ? t("settingsPage.scan.searching")
-                  : t("settingsPage.scan.action")}
-              </Button>
             </Stack>
-          </Box>
-
-          {customCidr && (
-            <TextField
-              size="small"
-              fullWidth
-              placeholder={t("settingsPage.scan.cidrPlaceholder")}
-              helperText={t("settingsPage.scan.cidrHelp")}
-              value={customCidr}
-              onChange={(e) => setCustomCidr(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleScan();
-              }}
-              sx={{ mt: 2 }}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <TravelExploreIcon
-                      fontSize="small"
-                      sx={{ color: "text.secondary", mr: 1 }}
-                    />
-                  ),
-                },
-              }}
-            />
-          )}
-
-          <SectionDivider sx={{ my: 2 }} />
-
-          <Box>
-            <Typography variant="subtitle1" fontWeight={700}>
-              {t("settingsPage.manual.title")}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {t("settingsPage.manual.description")}
-            </Typography>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+            {customCidr && (
               <TextField
                 size="small"
                 fullWidth
+                label={t("settingsPage.scan.cidrLabel")}
+                placeholder={t("settingsPage.scan.cidrPlaceholder")}
+                helperText={t("settingsPage.scan.cidrHelp")}
+                value={customCidr}
+                onChange={(e) => setCustomCidr(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleScan();
+                }}
+                sx={{ mt: 2, maxWidth: { sm: 360 } }}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            )}
+          </Box>
+
+          <SectionDivider />
+
+          {/* Single IP */}
+          <Box>
+            <SectionTitle
+              icon={<RouterIcon fontSize="small" />}
+              title={t("settingsPage.manual.title")}
+              description={t("settingsPage.manual.description")}
+            />
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              alignItems={{ xs: "stretch", sm: "center" }}
+            >
+              <TextField
+                size="small"
+                label={t("settingsPage.manual.ipLabel")}
                 placeholder="192.168.1.42"
                 value={manualIp}
                 onChange={(e) => setManualIp(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleProbeIp();
                 }}
-                slotProps={{
-                  input: {
-                    startAdornment: (
-                      <RouterIcon
-                        fontSize="small"
-                        sx={{ color: "text.secondary", mr: 1 }}
-                      />
-                    ),
-                  },
-                }}
+                slotProps={{ inputLabel: { shrink: true } }}
+                sx={{ width: { sm: 360 } }}
               />
-              <Button
-                variant="outlined"
-                disabled={isSearching || !manualIp.trim()}
+              <ActionButton
+                icon={<SearchIcon fontSize="small" />}
+                loading={isSearching}
+                disabled={!manualIp.trim()}
                 onClick={handleProbeIp}
-                startIcon={
-                  isSearching ? (
-                    <CircularProgress size={16} color="inherit" />
-                  ) : (
-                    <SearchIcon />
-                  )
-                }
-                sx={{ flexShrink: 0 }}
               >
                 {t("settingsPage.manual.action")}
-              </Button>
+              </ActionButton>
             </Stack>
           </Box>
 
           {hasSearched && !isSearching && (
             <>
-              <SectionDivider sx={{ my: 2 }} />
+              <SectionDivider />
 
+              {/* What the scan / probe found */}
               <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 2,
+                    flexWrap: { xs: "wrap", sm: "nowrap" },
+                  }}
+                >
+                  <SectionTitle
+                    icon={<WifiFindIcon fontSize="small" />}
+                    title={t("settingsPage.discovery.title")}
+                    description={
+                      error || results.length === 0
+                        ? t("settingsPage.discovery.noneFound")
+                        : t("settingsPage.discovery.resultsCount", {
+                            count: results.length,
+                          })
+                    }
+                  />
+                  {!error && results.length > 0 && (
+                    <Button
+                      size="small"
+                      onClick={toggleSelectAll}
+                      startIcon={
+                        allSelected ? (
+                          <DeselectIcon fontSize="small" />
+                        ) : (
+                          <SelectAllIcon fontSize="small" />
+                        )
+                      }
+                      sx={{ flexShrink: 0, mb: 2 }}
+                    >
+                      {allSelected
+                        ? t("settingsPage.discovery.deselectAll")
+                        : t("settingsPage.discovery.selectAll")}
+                    </Button>
+                  )}
+                </Box>
+
                 {error ? (
                   <Alert
                     severity="warning"
@@ -867,52 +807,18 @@ export const Settings = () => {
                     onRetry={() => void retryWithLongerTimeout()}
                   />
                 ) : (
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-                  >
-                    {selectableMacs.length > 0 && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          flexWrap: "wrap",
-                          gap: 1,
-                        }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          {t("settingsPage.discovery.resultsCount", {
-                            count: results.length,
-                          })}
-                        </Typography>
-                        <Button
-                          size="small"
-                          onClick={toggleSelectAll}
-                          startIcon={
-                            allSelected ? (
-                              <DeselectIcon fontSize="small" />
-                            ) : (
-                              <SelectAllIcon fontSize="small" />
-                            )
-                          }
-                        >
-                          {allSelected
-                            ? t("settingsPage.discovery.deselectAll")
-                            : t("settingsPage.discovery.selectAll")}
-                        </Button>
-                      </Box>
-                    )}
-
+                  <Stack spacing={2}>
                     {selectedDevices.length > 0 && (
                       <Paper
                         variant="outlined"
                         sx={{
                           p: 2,
-                          borderRadius: 3,
+                          borderRadius: 2,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
                           gap: 2,
+                          flexWrap: "wrap",
                           borderColor: "primary.main",
                         }}
                       >
@@ -921,23 +827,15 @@ export const Settings = () => {
                             count: selectedDevices.length,
                           })}
                         </Typography>
-                        <Button
-                          variant="contained"
-                          size="small"
-                          disabled={isSaving}
+                        <ActionButton
+                          icon={<SaveIcon fontSize="small" />}
+                          loading={isSaving}
                           onClick={() => void handleSaveSelected()}
-                          startIcon={
-                            isSaving ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <SaveIcon fontSize="small" />
-                            )
-                          }
                         >
                           {isSaving
                             ? t("settingsPage.discovery.saving")
                             : t("settingsPage.discovery.saveSelected")}
-                        </Button>
+                        </ActionButton>
                       </Paper>
                     )}
 
@@ -967,13 +865,13 @@ export const Settings = () => {
                         );
                       })}
                     </Box>
-                  </Box>
+                  </Stack>
                 )}
               </Box>
             </>
           )}
-        </Paper>
-      </Writable>
+        </Writable>
+      </Stack>
 
       <ConfirmDialog
         open={disableAllOpen}
@@ -997,6 +895,6 @@ export const Settings = () => {
         onClose={() => setSnackbarMessage(null)}
         message={snackbarMessage ?? ""}
       />
-    </Box>
+    </Paper>
   );
 };

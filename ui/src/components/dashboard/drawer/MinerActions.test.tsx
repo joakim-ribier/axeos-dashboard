@@ -90,6 +90,41 @@ describe("MinerActions", () => {
     expect(screen.getByRole("button", { name: "Switch" })).toBeEnabled();
   });
 
+  // Each action alone, in each state -- the other one stays enabled, so a
+  // flag can never leak onto the wrong button.
+  describe.each([
+    { flag: "minerRestart", name: "Restart", other: "Switch" },
+    { flag: "minerPoolSwitch", name: "Switch", other: "Restart" },
+  ] as const)("the $name action", ({ flag, name, other }) => {
+    const withFlag = (state: "enabled" | "readonly" | "hidden") => {
+      ui = {
+        ...DEFAULT_UI_FEATURES,
+        action: { ...DEFAULT_UI_FEATURES.action, [flag]: state },
+      };
+      renderActions();
+    };
+
+    it("is usable when enabled", () => {
+      withFlag("enabled");
+
+      expect(screen.getByRole("button", { name })).toBeEnabled();
+    });
+
+    it("is shown but disabled when read-only", () => {
+      withFlag("readonly");
+
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+      expect(screen.getByRole("button", { name: other })).toBeEnabled();
+    });
+
+    it("is gone when hidden", () => {
+      withFlag("hidden");
+
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: other })).toBeEnabled();
+    });
+  });
+
   it("shows nothing when both actions are hidden", () => {
     ui = {
       ...DEFAULT_UI_FEATURES,

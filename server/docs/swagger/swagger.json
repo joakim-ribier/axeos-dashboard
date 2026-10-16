@@ -11,7 +11,7 @@
     "paths": {
         "/api/audit": {
             "get": {
-                "description": "Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed 7 days. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).",
+                "description": "Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed a year. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).",
                 "produces": [
                     "application/json"
                 ],
@@ -65,7 +65,7 @@
                         }
                     },
                     "400": {
-                        "description": "from/to malformed, from not before to, or range over 7 days",
+                        "description": "from/to malformed, from not before to, or range over a year",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -81,7 +81,7 @@
         },
         "/api/audit/export": {
             "get": {
-                "description": "Same range and defaults as GET /api/audit (last 24 hours, at most 7 days), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.",
+                "description": "Same range and defaults as GET /api/audit (last 24 hours, at most a year), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.",
                 "produces": [
                     "application/json"
                 ],
@@ -123,7 +123,7 @@
                         }
                     },
                     "400": {
-                        "description": "from/to malformed, from not before to, or range over 7 days",
+                        "description": "from/to malformed, from not before to, or range over a year",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -263,6 +263,70 @@
                     },
                     "404": {
                         "description": "no AxeOS device found at the given ip",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/config/mail/test": {
+            "post": {
+                "description": "Has the mailer service send a test mail to every configured recipient through the saved SMTP server.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Send a test mail",
+                "parameters": [
+                    {
+                        "description": "Mail language (fr or en, default en)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "lang": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "sentTo": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "SMTP server or recipients not configured",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "the SMTP server refused or couldn't be reached",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "the mailer service isn't running",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -701,6 +765,26 @@
                 }
             }
         },
+        "/api/status": {
+            "get": {
+                "description": "How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Services status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StatusResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/{boardId}/config/miners": {
             "get": {
                 "description": "Returns the managed miners list last pushed to hashboard for this board.",
@@ -1102,6 +1186,9 @@
                 "firmware": {
                     "$ref": "#/definitions/config.AppSettingsFirmware"
                 },
+                "notifications": {
+                    "$ref": "#/definitions/config.NotificationsConfig"
+                },
                 "pools": {
                     "$ref": "#/definitions/config.PoolsConfig"
                 },
@@ -1116,6 +1203,28 @@
                 "repos": {
                     "type": "object",
                     "additionalProperties": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "config.AuditReportConfig": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "frequency": {
+                    "$ref": "#/definitions/config.ReportFrequency"
+                },
+                "skipIfEmpty": {
+                    "description": "SkipIfEmpty sends nothing for a period nothing was recorded in.",
+                    "type": "boolean"
+                },
+                "types": {
+                    "description": "Types narrows it to these audit entry types -- all of them when empty.",
+                    "type": "array",
+                    "items": {
                         "type": "string"
                     }
                 }
@@ -1197,6 +1306,20 @@
                 }
             }
         },
+        "config.MailConfig": {
+            "type": "object",
+            "properties": {
+                "smtp": {
+                    "$ref": "#/definitions/config.SMTPConfig"
+                },
+                "to": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "config.Model": {
             "type": "string",
             "enum": [
@@ -1207,6 +1330,25 @@
                 "ModelBitaxe",
                 "ModelNerdaxe"
             ]
+        },
+        "config.NotificationsConfig": {
+            "type": "object",
+            "properties": {
+                "auditReport": {
+                    "$ref": "#/definitions/config.AuditReportConfig"
+                },
+                "dashboardURL": {
+                    "description": "DashboardURL is the dashboard's own address as reached from where the\nmessages are read (e.g. http://192.168.1.60) -- for their links.",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "Language is the messages' language: \"fr\" or \"en\" (the default).",
+                    "type": "string"
+                },
+                "mail": {
+                    "$ref": "#/definitions/config.MailConfig"
+                }
+            }
         },
         "config.PoolsConfig": {
             "type": "object",
@@ -1242,6 +1384,70 @@
                     "type": "string"
                 }
             }
+        },
+        "config.ReportFrequency": {
+            "type": "string",
+            "enum": [
+                "daily",
+                "every2days",
+                "weekly",
+                "monthly"
+            ],
+            "x-enum-comments": {
+                "ReportDaily": "every night: the day before",
+                "ReportEvery2Days": "every other night: the 2 days before",
+                "ReportMonthly": "the night of the 1st: the month before",
+                "ReportWeekly": "Sunday to Monday night: Monday to Sunday"
+            },
+            "x-enum-descriptions": [
+                "every night: the day before",
+                "every other night: the 2 days before",
+                "Sunday to Monday night: Monday to Sunday",
+                "the night of the 1st: the month before"
+            ],
+            "x-enum-varnames": [
+                "ReportDaily",
+                "ReportEvery2Days",
+                "ReportWeekly",
+                "ReportMonthly"
+            ]
+        },
+        "config.SMTPConfig": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "password": {
+                    "description": "Password is write-only through the API: it's stored here, but GET\n/api/config/settings only ever says whether one is set (see\nhandler.appSettingsResponse).",
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "security": {
+                    "$ref": "#/definitions/config.SMTPSecurity"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "config.SMTPSecurity": {
+            "type": "string",
+            "enum": [
+                "starttls",
+                "tls",
+                "none"
+            ],
+            "x-enum-varnames": [
+                "SMTPStartTLS",
+                "SMTPTLS",
+                "SMTPNone"
+            ]
         },
         "config.ScheduleAction": {
             "type": "string",
@@ -1451,6 +1657,51 @@
                 }
             }
         },
+        "handler.ServiceStatus": {
+            "type": "object",
+            "properties": {
+                "interval": {
+                    "type": "string"
+                },
+                "lastRunAt": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ServicesStatus": {
+            "type": "object",
+            "properties": {
+                "dashboardApi": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "feeder": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "firmwareCache": {
+                    "description": "FirmwareCache is the feeder's check for new firmware releases, once\nper its TTL.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.ServiceStatus"
+                        }
+                    ]
+                },
+                "healthCheck": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "mailer": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                }
+            }
+        },
         "handler.StatsResponse": {
             "type": "object",
             "properties": {
@@ -1462,6 +1713,17 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "checkedAt": {
+                    "type": "string"
+                },
+                "services": {
+                    "$ref": "#/definitions/handler.ServicesStatus"
                 }
             }
         },
@@ -1479,6 +1741,14 @@
         "handler.appSettingsReadOnly": {
             "type": "object",
             "properties": {
+                "auditReport": {
+                    "description": "AuditReport is the feeder's record of the daily audit mail (see\nauditreport.State), read back from disk -- the feeder sends it.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.auditReportStatus"
+                        }
+                    ]
+                },
                 "feederInterval": {
                     "type": "string"
                 },
@@ -1520,6 +1790,14 @@
                 "lastUpdated": {
                     "type": "string"
                 },
+                "notifications": {
+                    "description": "Notifications shadows the embedded AppSettingsFile.Notifications: same\nJSON key, but a shape with no SMTP password field at all -- it never\nleaves the server.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.notificationsResponse"
+                        }
+                    ]
+                },
                 "pools": {
                     "$ref": "#/definitions/config.PoolsConfig"
                 },
@@ -1528,6 +1806,49 @@
                 },
                 "remote": {
                     "$ref": "#/definitions/config.RemoteConfig"
+                }
+            }
+        },
+        "handler.auditReportSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "frequency": {
+                    "$ref": "#/definitions/config.ReportFrequency"
+                },
+                "skipIfEmpty": {
+                    "description": "SkipIfEmpty sends nothing for a period nothing was recorded in.",
+                    "type": "boolean"
+                },
+                "types": {
+                    "description": "Types is never null, unlike the config's (empty = every type).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.auditReportStatus": {
+            "type": "object",
+            "properties": {
+                "lastAttemptAt": {
+                    "type": "string"
+                },
+                "lastError": {
+                    "type": "string"
+                },
+                "lastFrom": {
+                    "description": "LastFrom/LastTo is the period last mailed (\"2006-01-02\", To\nexcluded).",
+                    "type": "string"
+                },
+                "lastSentAt": {
+                    "type": "string"
+                },
+                "lastTo": {
+                    "type": "string"
                 }
             }
         },
@@ -1545,6 +1866,37 @@
                 }
             }
         },
+        "handler.mailSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "smtp": {
+                    "$ref": "#/definitions/handler.smtpSettingsResponse"
+                },
+                "to": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.notificationsResponse": {
+            "type": "object",
+            "properties": {
+                "auditReport": {
+                    "$ref": "#/definitions/handler.auditReportSettingsResponse"
+                },
+                "dashboardURL": {
+                    "type": "string"
+                },
+                "language": {
+                    "type": "string"
+                },
+                "mail": {
+                    "$ref": "#/definitions/handler.mailSettingsResponse"
+                }
+            }
+        },
         "handler.remotePushEndpointStatus": {
             "type": "object",
             "properties": {
@@ -1555,6 +1907,30 @@
                     "type": "string"
                 },
                 "lastSuccessAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.smtpSettingsResponse": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "passwordSet": {
+                    "description": "PasswordSet is all that's ever said about the password.",
+                    "type": "boolean"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "security": {
+                    "$ref": "#/definitions/config.SMTPSecurity"
+                },
+                "username": {
                     "type": "string"
                 }
             }

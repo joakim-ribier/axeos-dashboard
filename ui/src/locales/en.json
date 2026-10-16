@@ -152,8 +152,7 @@
     "alerts": "Alerts",
     "settings": "Settings",
     "backups": "Backups",
-    "audit": "Audit",
-    "autoRefresh": "Auto-refresh"
+    "audit": "Audit"
   },
   "sidebar": {
     "versionUpToDate": "Up to date",
@@ -162,7 +161,9 @@
     "openHashboardAccount": "Manage your hashboard account",
     "boardPublicHint": "This board is public — anyone with the link can view it",
     "boardPrivateHint": "This board is private — only you can view it",
-    "versionLabel": "Version · {{sha}}"
+    "versionLabel": "Version {{sha}}",
+    "collapse": "Collapse the menu",
+    "expand": "Expand the menu"
   },
   "notifications": {
     "title": "Notifications",
@@ -250,13 +251,15 @@
       "download_backups": "Backups download",
       "discover": "Network discovery",
       "backup": "Backup updated",
+      "audit_report": "Audit report sent",
       "miner_pool": "Miner pool changed",
       "miner_schedule": "Schedule changed",
       "miner_identity": "Miner IP changed",
       "miner_disabled": "Miner disabled",
       "miner_enabled": "Miner enabled",
       "miner_added": "Miner added",
-      "remote_push": "Remote push changed"
+      "remote_push": "Remote push changed",
+      "mail_settings": "Notifications changed"
     },
     "allMiners": "all miners",
     "sources": {
@@ -265,7 +268,8 @@
     },
     "services": {
       "scheduler": "Scheduler",
-      "backup": "Nightly backup"
+      "backup": "Nightly backup",
+      "mailer": "Notifications"
     },
     "failed": "Failed",
     "empty": "No events in this period.",
@@ -300,10 +304,55 @@
       "poolDashboardRemoved": "Pool dashboard removed",
       "firmwareRepoAdded": "Firmware repo added",
       "firmwareRepoRemoved": "Firmware repo removed",
-      "backupMonth": "Month backed up"
+      "backupMonth": "Month backed up",
+      "smtpHost": "SMTP server",
+      "smtpPort": "SMTP port",
+      "smtpSecurity": "SMTP security",
+      "smtpUsername": "SMTP username",
+      "smtpFrom": "Sender",
+      "smtpPassword": "SMTP password",
+      "recipientAdded": "Recipient added",
+      "recipientRemoved": "Recipient removed",
+      "mailLanguage": "Mail language",
+      "auditReportEnabled": "Audit report",
+      "auditReportSkipIfEmpty": "Report skipped when empty",
+      "auditReportTypeAdded": "Type added to the report",
+      "auditReportTypeRemoved": "Type removed from the report",
+      "auditReportFrequency": "Audit report frequency",
+      "reportPeriod": "Report period",
+      "sentTo": "Sent to",
+      "mailDashboardURL": "Dashboard address"
+    },
+    "values": {
+      "auditReportEnabled": {
+        "on": "on",
+        "off": "off"
+      },
+      "auditReportSkipIfEmpty": {
+        "on": "on",
+        "off": "off"
+      },
+      "auditReportFrequency": {
+        "daily": "Every day",
+        "every2days": "Every 2 days",
+        "weekly": "Every week",
+        "monthly": "Every month"
+      },
+      "smtpSecurity": {
+        "starttls": "STARTTLS",
+        "tls": "TLS",
+        "none": "None"
+      },
+      "mailLanguage": {
+        "fr": "Français",
+        "en": "English"
+      }
     },
     "change": "{{field}}: {{change}}",
-    "changed": "changed"
+    "changed": "value changed",
+    "period": {
+      "short": "{{from}} to {{to}} (UTC)"
+    }
   },
   "search": {
     "helpTitle": "Search tips",
@@ -318,7 +367,12 @@
   },
   "common": {
     "on": "on",
-    "off": "off"
+    "off": "off",
+    "showSecret": "Show",
+    "hideSecret": "Hide",
+    "copyError": "Copy the error",
+    "copied": "Copied!",
+    "close": "Close"
   },
   "filterBar": {
     "filters": "Filters",
@@ -342,17 +396,48 @@
   },
   "settingsPage": {
     "header": {
-      "title": "Miner setup",
-      "description": "Automatically detect your AxeOS miners on the network, or add them manually by IP."
+      "title": "Settings",
+      "description": "Miners, electricity, push to hashboard and service settings."
+    },
+    "toc": {
+      "miners": {
+        "title": "Miners",
+        "summary_one": "{{count}} miner · {{enabled}} enabled",
+        "summary_other": "{{count}} miners · {{enabled}} enabled",
+        "empty": "No miner configured",
+        "poolDrift_one": "{{count}} pool config differs",
+        "poolDrift_other": "{{count}} pool configs differ"
+      },
+      "electricity": {
+        "title": "Electricity",
+        "summary_one": "{{rate}} €/kWh · {{count}} other device",
+        "summary_other": "{{rate}} €/kWh · {{count}} other devices"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "off": "Mail not configured",
+        "summary_one": "{{host}} · {{count}} recipient",
+        "summary_other": "{{host}} · {{count}} recipients",
+        "noRecipient": "No recipient",
+        "reportFailed": "Audit report sending failed"
+      },
+      "remote": {
+        "title": "Remote",
+        "off": "Not configured",
+        "never": "Nothing sent yet",
+        "lastPush": "Last push: {{date}}",
+        "failing": "Push to hashboard failing"
+      },
+      "system": {
+        "title": "System",
+        "summary": "Pool dashboards and firmware"
+      }
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
-    "issues": {
-      "poolDrift": "{{count}} miner(s): saved pool config doesn't match what the miner reports",
-      "pushFailed": "Push to hashboard is failing — see Remote below"
-    },
     "configured": {
       "title": "Configured miners",
-      "description": "{{count}} miner(s) configured",
+      "description_one": "{{count}} miner — click a row to edit its alias, pools and scheduled tasks.",
+      "description_other": "{{count}} miners — click a row to edit its alias, pools and scheduled tasks.",
       "hostname": "Name",
       "ip": "IP",
       "mac": "MAC",
@@ -369,7 +454,7 @@
       "disableAllConfirm": "Disable all",
       "disableAllSuccess": "{{count}} miner(s) disabled.",
       "lastUpdated": "Last modified: {{date}}",
-      "emptyAlert": "No miners configured yet. Run an automatic scan below to add some.",
+      "emptyAlert": "No miner configured yet: run a scan below to add some.",
       "alias": {
         "title": "Display name",
         "label": "Alias",
@@ -419,12 +504,14 @@
       }
     },
     "appSettings": {
-      "title": "App settings",
       "save": "Save",
       "saving": "Saving…",
       "saveSuccess": "App settings saved.",
       "electricity": {
-        "title": "Electricity",
+        "rate": {
+          "title": "Rate",
+          "description": "Price per kWh, used for the cost of the miners and the other devices."
+        },
         "rateLabel": "Rate (€/kWh)",
         "devices": {
           "title": "Other devices",
@@ -434,7 +521,11 @@
           "powerLabel": "Power (W)",
           "empty": "No device declared",
           "add": "Add",
-          "remove": "Remove"
+          "remove": "Remove",
+          "perDay": "kWh / day",
+          "costPerDay": "Cost / day",
+          "total": "Total",
+          "preview": "≈ {{kwh}} kWh / day · {{cost}} / day"
         }
       },
       "pools": {
@@ -448,35 +539,114 @@
         "remove": "Remove"
       },
       "remote": {
-        "title": "Remote (hashboard)",
         "pushUrlLabel": "Push URL",
         "apiKeyLabel": "API key",
-        "showApiKey": "Show API key",
-        "hideApiKey": "Hide API key",
         "pushStatus": {
-          "error": "Last push to hashboard failed ({{date}}): {{error}}",
-          "lastSuccess": "Last successful push to hashboard: {{date}}",
-          "neverAttempted": "No push attempted yet.",
+          "title": "Push status",
+          "description": "What the feeder sends to hashboard on top of the miners' data.",
+          "endpointLabel": "Push",
+          "stateLabel": "Status",
+          "lastSuccessLabel": "Last success",
+          "lastAttemptLabel": "Last attempt",
+          "state": {
+            "ok": "OK",
+            "late": "Late",
+            "failing": "Failing",
+            "never": "Never"
+          },
           "endpoint": {
             "minersConfig": "Miners list",
             "settingsConfig": "Settings"
           }
-        }
+        },
+        "board": {
+          "title": "Your board",
+          "description": "The hashboard board receiving your miners' data.",
+          "id": "Board",
+          "visibility": "Visibility",
+          "public": "Public",
+          "private": "Private",
+          "lastSample": "Last data received by hashboard",
+          "noSample": "None yet",
+          "account": "Account",
+          "manage": "Manage your hashboard account"
+        },
+        "connection": {
+          "title": "Connection",
+          "description": "Push address and API key of your hashboard account."
+        },
+        "invalidPushUrl": "The address must start with http:// or https://."
       },
       "firmware": {
         "title": "Firmware repos",
+        "description": "Where the dashboard checks each model's latest firmware version.",
         "modelLabel": "Model",
         "urlLabel": "Repository URL"
       },
-      "readOnly": {
-        "title": "Process settings",
-        "settingLabel": "Setting",
-        "valueLabel": "Value",
-        "lastRunLabel": "Last run",
-        "feederIntervalLabel": "Feeder poll interval",
-        "healthCheckIntervalLabel": "Health check interval",
-        "firmwareCacheTTLLabel": "Firmware cache TTL",
-        "never": "Never"
+      "mail": {
+        "smtp": {
+          "title": "SMTP server",
+          "description": "The server the dashboard's mails go out through.",
+          "hostLabel": "Server",
+          "portLabel": "Port",
+          "securityLabel": "Security",
+          "security": {
+            "starttls": "STARTTLS",
+            "tls": "TLS",
+            "none": "None"
+          },
+          "usernameLabel": "Username",
+          "passwordLabel": "Password",
+          "passwordKept": "Set — leave blank to keep it",
+          "fromLabel": "Sender",
+          "invalidPort": "The port must be between 1 and 65535.",
+          "invalidFrom": "The sender address isn't valid."
+        },
+        "recipients": {
+          "title": "Recipients",
+          "description": "The addresses that receive the dashboard's mails.",
+          "emailLabel": "Email address",
+          "empty": "No recipient",
+          "add": "Add",
+          "remove": "Remove"
+        },
+        "test": {
+          "title": "Test mail",
+          "description": "Sends a mail to the recipients through the saved server, to check everything works.",
+          "send": "Send a test mail",
+          "sending": "Sending…",
+          "needsSmtp": "Save an SMTP server first.",
+          "needsRecipient": "Add a recipient first.",
+          "sent": "Test mail sent.",
+          "failed": "Sending failed: {{error}}",
+          "unknownError": "unknown error"
+        },
+        "languageLabel": "Mail language",
+        "languages": {
+          "fr": "Français",
+          "en": "English"
+        },
+        "report": {
+          "title": "Audit report",
+          "description": "The audit since the previous report, summed up and sent to the recipients at night.",
+          "enabledLabel": "Send the audit report",
+          "typesLabel": "Event types included",
+          "allTypes": "All types",
+          "skipIfEmptyLabel": "Send nothing if nothing happened",
+          "lastSent": "Last report: {{period}}, sent on {{date}}.",
+          "lastFailed": "The last sending failed ({{date}}): {{error}} — retrying within the hour.",
+          "neverSent": "No report sent yet.",
+          "frequencyLabel": "Frequency",
+          "frequencies": {
+            "daily": "Every day (the day before)",
+            "every2days": "Every 2 days",
+            "weekly": "Every week (Monday → Sunday)",
+            "monthly": "Every month (the month gone by)"
+          },
+          "utc": "Sent every night around 1 a.m. UTC; the report's days and times are UTC, like the audit's."
+        },
+        "dashboardUrlLabel": "Dashboard address (for the links)",
+        "invalidDashboardUrl": "The address must start with http:// or https://."
       }
     },
     "scan": {
@@ -486,27 +656,64 @@
       "searching": "Searching…",
       "isolatedLabel": "Isolated environment",
       "cidrPlaceholder": "192.168.1.0/24",
-      "cidrHelp": "Edit if your miners' network isn't 192.168.1.x."
+      "cidrHelp": "Edit if your miners' network isn't 192.168.1.x.",
+      "cidrLabel": "Network to scan"
     },
     "manual": {
       "title": "Add by IP",
       "description": "For a miner the scan doesn't find (different subnet, firewall…).",
-      "action": "Search"
+      "action": "Search",
+      "ipLabel": "IP address"
     },
     "discovery": {
+      "title": "Miners found",
       "unknownHostname": "Unnamed miner",
       "pool": "Pool: {{url}}:{{port}}",
       "fallbackPool": "Fallback: {{url}}:{{port}}",
       "noPool": "No pool configured on this miner",
       "noneFound": "No miners found.",
       "retryLonger": "Retry with a longer timeout",
-      "resultsCount": "{{count}} miner(s) found",
+      "resultsCount_one": "{{count}} miner found — select the ones to save.",
+      "resultsCount_other": "{{count}} miners found — select the ones to save.",
       "selectAll": "Select all",
       "deselectAll": "Deselect all",
       "selectedCount": "{{count}} miner(s) selected",
       "saveSelected": "Save selection",
       "saving": "Saving…",
       "saveSuccess": "{{count}} miner(s) saved — active within moments."
+    }
+  },
+  "servicesStatus": {
+    "title": "Services state",
+    "services": {
+      "dashboardApi": "Dashboard (API)",
+      "feeder": "Feeder",
+      "healthCheck": "Health check",
+      "mailer": "Mailer",
+      "firmwareCache": "Firmware cache"
+    },
+    "states": {
+      "ok": "Running",
+      "late": "Late",
+      "offline": "Unreachable",
+      "unknown": "No run yet"
+    },
+    "startedAt": "started {{date}}",
+    "checkedAt": "Checked {{date}}",
+    "label": "Platform status",
+    "every": "every {{interval}}",
+    "lastRun": "last run {{date}}",
+    "noRunYet": "no run yet",
+    "summary": {
+      "ok": "Operational",
+      "late": "Degraded",
+      "offline": "Outage"
+    },
+    "version": "version {{version}}",
+    "everyOne": {
+      "s": "every second",
+      "min": "every minute",
+      "h": "every hour"
     }
   }
 }

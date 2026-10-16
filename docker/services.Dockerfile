@@ -7,9 +7,10 @@ ARG GIT_SHA=dev
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=${GIT_SHA} -X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.Version=${VERSION}" -o /out/dashboard-api ./cmd/dashboard-api
 RUN CGO_ENABLED=0 go build -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=${GIT_SHA} -X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.Version=${VERSION}" -o /out/feeder ./cmd/feeder
+RUN CGO_ENABLED=0 go build -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=${GIT_SHA} -X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.Version=${VERSION}" -o /out/mailer ./cmd/mailer
 
 FROM alpine:3.20
-COPY --from=build /out/dashboard-api /out/feeder /usr/local/bin/
+COPY --from=build /out/dashboard-api /out/feeder /out/mailer /usr/local/bin/
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

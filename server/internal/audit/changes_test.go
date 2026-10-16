@@ -124,3 +124,32 @@ func TestSettingsChanges_details(t *testing.T) {
 		t.Errorf("got %+v, want %+v", got, want)
 	}
 }
+
+func TestSettingsChanges_mail(t *testing.T) {
+	var before, after config.AppSettingsFile
+	before.Notifications.Mail = config.MailConfig{
+		SMTP: config.SMTPConfig{Host: "smtp.old.example", Port: 587, Security: config.SMTPStartTLS, Username: "axeos", Password: "secret-1", From: "axeos@example.com"},
+		To:   []string{"me@example.com"},
+	}
+	after.Notifications.Mail = config.MailConfig{
+		SMTP: config.SMTPConfig{Host: "smtp.new.example", Port: 465, Security: config.SMTPTLS, Username: "axeos", Password: "secret-2", From: "axeos@example.com"},
+		To:   []string{"me@example.com", "you@example.com"},
+	}
+
+	got := SettingsChanges(before, after)
+	want := []Entry{{Type: TypeMailSettings, Changes: []Change{
+		{Field: "smtpHost", Kind: ChangeChanged, Before: "smtp.old.example", After: "smtp.new.example"},
+		{Field: "smtpPort", Kind: ChangeChanged, Before: "587", After: "465"},
+		{Field: "smtpSecurity", Kind: ChangeChanged, Before: "starttls", After: "tls"},
+		// Changed, but its value is never written down.
+		{Field: "smtpPassword", Kind: ChangeChanged},
+		{Field: "recipientAdded", Kind: ChangeAdded, After: "you@example.com"},
+	}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+
+	if got := SettingsChanges(after, after); got != nil {
+		t.Errorf("nothing changed: got %+v, want nothing", got)
+	}
+}

@@ -316,3 +316,24 @@ func TestRouter_auditTypes(t *testing.T) {
 		t.Errorf("types = %v, want audit.Types %v", resp.Types, audit.Types)
 	}
 }
+
+// A form's refused input (400) changed nothing and did nothing: it isn't
+// recorded, while the route's real failures still are.
+func TestRouter_auditSkipsAFormsRefusedInput(t *testing.T) {
+	dir := t.TempDir()
+	router, log := newAuditedRouter(t, config.Config{
+		AppSettingsFilePath: filepath.Join(dir, "settings.yml"),
+		Storage:             config.StorageConfig{DataDir: dir},
+	})
+
+	refused := `{"notifications":{"mail":{"smtp":{"host":"smtp.example.com","port":0,"security":"starttls","from":"a@example.com"}}}}`
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/config/settings", strings.NewReader(refused)))
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want the save refused", w.Code)
+	}
+
+	if entries := recordedEntries(t, log); len(entries) != 0 {
+		t.Errorf("got %d entries, want none for refused form input: %+v", len(entries), entries)
+	}
+}

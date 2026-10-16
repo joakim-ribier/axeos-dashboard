@@ -1,10 +1,12 @@
 // src/components/layout/Sidebar.tsx
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import BackupIcon from "@mui/icons-material/Backup";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import LockIcon from "@mui/icons-material/Lock";
 import ManageHistoryIcon from "@mui/icons-material/ManageHistory";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
@@ -16,29 +18,27 @@ import {
   Box,
   Chip,
   Drawer,
+  IconButton,
   Link,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
 
 import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
-import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
 } from "@/utils/appVersion";
-import {
-  createAppUpdateAvailableNotification,
-  createAutoRefreshToggledNotification,
-} from "@/utils/minerNotifications";
+import { createAppUpdateAvailableNotification } from "@/utils/minerNotifications";
+
+import { ServicesStatusBlock } from "./ServicesStatus";
 
 const APP_VERSION_STATUS_STORAGE_KEY = "axeos.appVersionStatus";
 
@@ -62,6 +62,27 @@ const savePreviousAppVersionStatus = (status: AppVersionStatus): void => {
 };
 
 export const SIDEBAR_WIDTH = 240;
+const SIDEBAR_RAIL_WIDTH = 64;
+
+// Whether the desktop sidebar is folded into its icon rail -- a per-browser
+// convenience, so it survives a reload but never leaves this browser.
+const COLLAPSED_STORAGE_KEY = "axeos.sidebarCollapsed";
+
+const loadCollapsed = (): boolean => {
+  try {
+    return localStorage.getItem(COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
+
+const saveCollapsed = (collapsed: boolean): void => {
+  try {
+    localStorage.setItem(COLLAPSED_STORAGE_KEY, String(collapsed));
+  } catch {
+    // best-effort
+  }
+};
 
 interface NavItemProps {
   to: string;
@@ -71,6 +92,8 @@ interface NavItemProps {
   onClick?: () => void;
   disabled?: boolean;
   disabledHint?: string;
+  /** Icon only, its label moving to a tooltip -- the collapsed rail. */
+  collapsed?: boolean;
 }
 
 const NavItem: React.FC<NavItemProps> = ({
@@ -81,6 +104,7 @@ const NavItem: React.FC<NavItemProps> = ({
   onClick,
   disabled = false,
   disabledHint,
+  collapsed = false,
 }) => {
   const button = (
     <ListItemButton
@@ -88,6 +112,7 @@ const NavItem: React.FC<NavItemProps> = ({
       to={to}
       selected={selected}
       disabled={disabled}
+      aria-label={label}
       // A disabled MUI ListItemButton already greys itself out and blocks
       // pointer events via its own styles, but the underlying element is
       // still a react-router <a href> -- tabIndex + swallowing the click
@@ -101,6 +126,7 @@ const NavItem: React.FC<NavItemProps> = ({
         py: 0.75,
         px: 1.25,
         minHeight: 40,
+        justifyContent: collapsed ? "center" : "flex-start",
         color: selected ? "primary.main" : "text.secondary",
         "&.Mui-selected": {
           bgcolor: "rgba(0,180,255,0.12)",
@@ -108,22 +134,31 @@ const NavItem: React.FC<NavItemProps> = ({
         },
       }}
     >
-      <ListItemIcon sx={{ color: "inherit", minWidth: 32 }}>
+      <ListItemIcon
+        sx={{
+          color: "inherit",
+          minWidth: collapsed ? 0 : 32,
+          justifyContent: "center",
+        }}
+      >
         {icon}
       </ListItemIcon>
-      <ListItemText
-        primary={label}
-        primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
-      />
+      {!collapsed && (
+        <ListItemText
+          primary={label}
+          primaryTypographyProps={{ fontSize: "0.875rem", fontWeight: 400 }}
+        />
+      )}
     </ListItemButton>
   );
 
-  if (!disabled || !disabledHint) return button;
+  const hint = disabled && disabledHint ? disabledHint : collapsed ? label : "";
+  if (!hint) return button;
 
   // A disabled element swallows hover/focus events, so the Tooltip needs a
   // non-disabled wrapper to actually anchor to.
   return (
-    <Tooltip title={disabledHint} arrow placement="right">
+    <Tooltip title={hint} arrow placement="right">
       <span>{button}</span>
     </Tooltip>
   );
@@ -143,7 +178,196 @@ interface SidebarContentProps {
   boardNotFound: boolean;
   boardBlocked: boolean;
   onItemClick?: () => void;
+  /** The desktop rail: icons only (see Sidebar). */
+  collapsed?: boolean;
+  /** Only the desktop drawer folds -- the mobile one is already a drawer. */
+  onToggleCollapsed?: () => void;
 }
+
+interface SidebarFooterProps {
+  buildSHA: string | undefined;
+  versionStatus: AppVersionStatus;
+  releaseUrl: string | null;
+  collapsed: boolean;
+  onToggleCollapsed?: () => void;
+}
+
+/**
+ * The sidebar's foot, one row: the running version with its status (a
+ * link to the release when one is newer), and the fold button. Folded,
+ * only the status icon and the unfold button are left.
+ */
+const SidebarFooter: React.FC<SidebarFooterProps> = ({
+  buildSHA,
+  versionStatus,
+  releaseUrl,
+  collapsed,
+  onToggleCollapsed,
+}) => {
+  const { t } = useTranslation();
+  const updateUrl = versionStatus === "updateAvailable" ? releaseUrl : null;
+  const statusText =
+    versionStatus === "upToDate"
+      ? t("sidebar.versionUpToDate")
+      : updateUrl
+        ? t("sidebar.versionUpdateAvailable")
+        : null;
+  const statusColor = updateUrl ? "warning.main" : "success.main";
+  const statusIcon =
+    versionStatus === "upToDate" ? (
+      <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
+    ) : updateUrl ? (
+      <SystemUpdateAltIcon sx={{ fontSize: 18 }} />
+    ) : null;
+  const versionText = buildSHA
+    ? t("sidebar.versionLabel", { sha: buildSHA })
+    : null;
+
+  if (!versionText && !onToggleCollapsed) return null;
+
+  // A link to the release when there's one to get, plain text otherwise.
+  const linkProps = updateUrl
+    ? {
+        component: "a" as const,
+        href: updateUrl,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        "aria-label": "app update available",
+      }
+    : {};
+
+  const toggle = onToggleCollapsed && (
+    <Tooltip
+      title={t(collapsed ? "sidebar.expand" : "sidebar.collapse")}
+      arrow
+      placement="right"
+    >
+      <IconButton
+        size="small"
+        onClick={onToggleCollapsed}
+        aria-label={t(collapsed ? "sidebar.expand" : "sidebar.collapse")}
+        sx={{ color: "text.disabled" }}
+      >
+        {collapsed ? (
+          <KeyboardDoubleArrowRightIcon fontSize="small" />
+        ) : (
+          <KeyboardDoubleArrowLeftIcon fontSize="small" />
+        )}
+      </IconButton>
+    </Tooltip>
+  );
+
+  return (
+    <>
+      <Box
+        sx={{
+          mx: collapsed ? 1 : 2,
+          height: "1px",
+          background:
+            "linear-gradient(to right, transparent, rgba(255,255,255,0.14), transparent)",
+        }}
+      />
+      {collapsed ? (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 0.5,
+            py: 1,
+          }}
+        >
+          {versionText && statusIcon && (
+            <Tooltip
+              title={[versionText, statusText].filter(Boolean).join(" · ")}
+              arrow
+              placement="right"
+            >
+              <IconButton
+                size="small"
+                {...linkProps}
+                aria-label={
+                  updateUrl ? "app update available" : (statusText ?? undefined)
+                }
+                sx={{ color: statusColor }}
+              >
+                {statusIcon}
+              </IconButton>
+            </Tooltip>
+          )}
+          {toggle}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            pl: 2,
+            pr: 1,
+            py: 1.25,
+          }}
+        >
+          {versionText && (
+            <Box
+              {...linkProps}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                minWidth: 0,
+                flexGrow: 1,
+                color: "inherit",
+                textDecoration: "none",
+                borderRadius: 2,
+                ...(updateUrl && {
+                  "&:hover .version-status": { textDecoration: "underline" },
+                }),
+              }}
+            >
+              {statusIcon && (
+                <Box
+                  component="span"
+                  aria-label={statusText ?? undefined}
+                  sx={{ display: "flex", color: statusColor }}
+                >
+                  {statusIcon}
+                </Box>
+              )}
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="caption"
+                  noWrap
+                  component="div"
+                  sx={{ color: "text.secondary", fontFamily: "monospace" }}
+                >
+                  {versionText}
+                </Typography>
+                {statusText && (
+                  <Typography
+                    className="version-status"
+                    variant="caption"
+                    component="div"
+                    sx={{
+                      color: statusColor,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
+                    {statusText}
+                    {updateUrl && <OpenInNewIcon sx={{ fontSize: 12 }} />}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          )}
+          <Box sx={{ ml: "auto", flexShrink: 0 }}>{toggle}</Box>
+        </Box>
+      )}
+    </>
+  );
+};
 
 const SidebarContent: React.FC<SidebarContentProps> = ({
   buildSHA,
@@ -154,6 +378,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   boardNotFound,
   boardBlocked,
   onItemClick,
+  collapsed = false,
+  onToggleCollapsed,
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -180,22 +406,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           hashboardUrl: remoteBoard.hashboardURL ?? null,
         }
       : null;
-  const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
-  const { addNotifications } = useNotifications();
-
-  const handleAutoRefreshChange = (checked: boolean) => {
-    setAutoRefreshEnabled(checked);
-    addNotifications([
-      createAutoRefreshToggledNotification(
-        checked ? t("common.on") : t("common.off"),
-      ),
-    ]);
-  };
 
   return (
     <Box
       sx={{
-        height: "100%",
+        // At least the drawer's height, more when a short screen makes it
+        // scroll: the background must follow the content all the way down.
+        // Never shrunk by the drawer's own flex column, or the overflow
+        // spills over its lighter paper instead of scrolling.
+        minHeight: "100%",
+        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.paper",
@@ -225,59 +445,74 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           "&:hover": boardBlocked ? undefined : { opacity: 0.75 },
         }}
       >
-        <Typography
-          component="span"
-          sx={{
-            color: "text.primary",
-            fontFamily: "'Courier New', 'Courier', monospace",
-            fontWeight: 800,
-            letterSpacing: "-0.02em",
-          }}
-        >
-          AxeOS
-        </Typography>
-
-        <Typography
-          component="span"
-          sx={{ color: "text.secondary", fontWeight: 800 }}
-        >
-          ·
-        </Typography>
-
-        <Typography
-          component="span"
-          sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}
-        >
-          <Box component="span" sx={{ color: "text.primary" }}>
-            D
-          </Box>
-          <Box
+        {collapsed ? (
+          <Typography
             component="span"
             sx={{
               fontFamily: "'Courier New', 'Courier', monospace",
               color: "primary.main",
-              opacity: 0.55,
-              fontWeight: 700,
+              fontWeight: 800,
             }}
           >
             #
-          </Box>
-          <Box
-            component="span"
-            sx={{
-              fontFamily: "'Courier New', 'Courier', monospace",
-              color: "primary.main",
-            }}
-          >
-            hash
-          </Box>
-          <Box component="span" sx={{ color: "text.primary" }}>
-            board
-          </Box>
-        </Typography>
+          </Typography>
+        ) : (
+          <>
+            <Typography
+              component="span"
+              sx={{
+                color: "text.primary",
+                fontFamily: "'Courier New', 'Courier', monospace",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              AxeOS
+            </Typography>
+
+            <Typography
+              component="span"
+              sx={{ color: "text.secondary", fontWeight: 800 }}
+            >
+              ·
+            </Typography>
+
+            <Typography
+              component="span"
+              sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}
+            >
+              <Box component="span" sx={{ color: "text.primary" }}>
+                D
+              </Box>
+              <Box
+                component="span"
+                sx={{
+                  fontFamily: "'Courier New', 'Courier', monospace",
+                  color: "primary.main",
+                  opacity: 0.55,
+                  fontWeight: 700,
+                }}
+              >
+                #
+              </Box>
+              <Box
+                component="span"
+                sx={{
+                  fontFamily: "'Courier New', 'Courier', monospace",
+                  color: "primary.main",
+                }}
+              >
+                hash
+              </Box>
+              <Box component="span" sx={{ color: "text.primary" }}>
+                board
+              </Box>
+            </Typography>
+          </>
+        )}
       </Box>
 
-      {board && (
+      {board && !collapsed && (
         <Box
           sx={{
             display: "flex",
@@ -366,7 +601,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
 
       <List
         sx={{
-          px: 2,
+          px: collapsed ? 1 : 2,
           pt: 2,
           display: "flex",
           flexDirection: "column",
@@ -380,6 +615,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           label={t("nav.home")}
           onClick={onItemClick}
           disabled={boardBlocked}
+          collapsed={collapsed}
         />
         <NavItem
           to={boardId ? `/${boardId}/alerts` : "/alerts"}
@@ -390,6 +626,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           label={t("nav.alerts")}
           onClick={onItemClick}
           disabled={boardBlocked}
+          collapsed={collapsed}
         />
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)
@@ -402,14 +639,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         {ui.page.settings !== "hidden" && (
           <NavItem
             to={boardId ? `/${boardId}/settings` : "/settings"}
-            selected={
-              location.pathname ===
-              (boardId ? `/${boardId}/settings` : "/settings")
-            }
+            selected={location.pathname.startsWith(
+              boardId ? `/${boardId}/settings` : "/settings",
+            )}
             icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
             disabled={boardBlocked}
+            collapsed={collapsed}
           />
         )}
         {ui.page.backups !== "hidden" && (
@@ -419,6 +656,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             icon={<BackupIcon sx={{ fontSize: 18 }} />}
             label={t("nav.backups")}
             onClick={onItemClick}
+            collapsed={collapsed}
           />
         )}
         {ui.page.audit !== "hidden" && (
@@ -428,6 +666,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             icon={<ManageHistoryIcon sx={{ fontSize: 18 }} />}
             label={t("nav.audit")}
             onClick={onItemClick}
+            collapsed={collapsed}
           />
         )}
       </List>
@@ -441,96 +680,17 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         }}
       />
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          px: 2,
-          py: 1.25,
-        }}
-      >
-        <Typography variant="caption" sx={{ color: "text.secondary" }}>
-          {t("nav.autoRefresh")}
-        </Typography>
-        <Switch
-          size="small"
-          checked={autoRefreshEnabled}
-          onChange={(e) => handleAutoRefreshChange(e.target.checked)}
-          slotProps={{ input: { "aria-label": "auto-refresh" } }}
-        />
-      </Box>
+      <ServicesStatusBlock collapsed={collapsed} />
 
       <Box sx={{ flexGrow: 1 }} />
 
-      {buildSHA && (
-        <>
-          <Box
-            sx={{
-              mx: 2,
-              height: "1px",
-              background:
-                "linear-gradient(to right, transparent, rgba(255,255,255,0.14), transparent)",
-            }}
-          />
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 0.75,
-              pt: 1.5,
-              pb: 2,
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.disabled",
-                fontFamily: "monospace",
-                opacity: 0.6,
-              }}
-            >
-              {t("sidebar.versionLabel", { sha: buildSHA })}
-            </Typography>
-
-            {versionStatus === "upToDate" && (
-              <Tooltip title={t("sidebar.versionUpToDate")} arrow>
-                <Chip
-                  icon={
-                    <CheckCircleOutlineIcon
-                      sx={{ fontSize: "16px !important" }}
-                    />
-                  }
-                  label={t("sidebar.versionUpToDate")}
-                  size="small"
-                  color="success"
-                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                />
-              </Tooltip>
-            )}
-            {versionStatus === "updateAvailable" && releaseUrl && (
-              <Tooltip title={t("sidebar.versionUpdateAvailableHint")} arrow>
-                <Chip
-                  icon={
-                    <SystemUpdateAltIcon sx={{ fontSize: "16px !important" }} />
-                  }
-                  label={t("sidebar.versionUpdateAvailable")}
-                  size="small"
-                  color="warning"
-                  clickable
-                  component="a"
-                  href={releaseUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="app update available"
-                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                />
-              </Tooltip>
-            )}
-          </Box>
-        </>
-      )}
+      <SidebarFooter
+        buildSHA={buildSHA}
+        versionStatus={versionStatus}
+        releaseUrl={releaseUrl}
+        collapsed={collapsed}
+        onToggleCollapsed={onToggleCollapsed}
+      />
     </Box>
   );
 };
@@ -572,10 +732,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
     savePreviousAppVersionStatus(versionStatus);
   }, [versionStatus, addNotifications]);
 
+  const [collapsed, setCollapsed] = useState(loadCollapsed);
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      saveCollapsed(!c);
+      return !c;
+    });
+  };
+  const desktopWidth = collapsed ? SIDEBAR_RAIL_WIDTH : SIDEBAR_WIDTH;
+  const widthTransition = "width 0.2s ease";
+
   return (
     <Box
       component="nav"
-      sx={{ width: { sm: SIDEBAR_WIDTH }, flexShrink: { sm: 0 } }}
+      sx={{
+        width: { sm: desktopWidth },
+        flexShrink: { sm: 0 },
+        transition: widthTransition,
+      }}
     >
       {/* Mobile: temporary overlay drawer, toggled from TopBar's hamburger button */}
       <Drawer
@@ -611,7 +785,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           display: { xs: "none", sm: "block" },
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
-            width: SIDEBAR_WIDTH,
+            width: desktopWidth,
+            overflowX: "hidden",
+            transition: widthTransition,
             borderRight: "1px solid rgba(255,255,255,0.08)",
           },
         }}
@@ -624,6 +800,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           isPublic={isPublic}
           boardNotFound={boardNotFound}
           boardBlocked={boardBlocked}
+          collapsed={collapsed}
+          onToggleCollapsed={toggleCollapsed}
         />
       </Drawer>
     </Box>

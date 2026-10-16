@@ -29,6 +29,7 @@ const (
 const (
 	ServiceScheduler = "scheduler"
 	ServiceBackup    = "backup"
+	ServiceMailer    = "mailer"
 )
 
 // Type values deliberately reuse config.ScheduleAction's strings for the
@@ -49,6 +50,8 @@ const (
 
 	// The feeder's nightly update of the monthly backup archives.
 	TypeBackup = "backup"
+	// The mailer's audit report, sent (or failed).
+	TypeAuditReport = "audit_report"
 )
 
 // Types is every entry type, in the order the dashboard offers them --
@@ -57,9 +60,10 @@ const (
 var Types = []string{
 	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback,
 	TypeSaveMiners, TypeSaveSettings,
-	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup,
+	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup, TypeAuditReport,
 	TypeMinerPool, TypeMinerSchedule, TypeMinerIdentity,
 	TypeMinerDisabled, TypeMinerEnabled, TypeMinerAdded, TypeRemotePush,
+	TypeMailSettings,
 }
 
 type Entry struct {

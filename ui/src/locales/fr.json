@@ -152,17 +152,18 @@
     "alerts": "Alertes",
     "settings": "Configuration",
     "backups": "Sauvegardes",
-    "audit": "Audit",
-    "autoRefresh": "Actualisation auto"
+    "audit": "Audit"
   },
   "sidebar": {
     "versionUpToDate": "À jour",
-    "versionUpdateAvailable": "Mise à jour dispo",
+    "versionUpdateAvailable": "Mise à jour disponible",
     "versionUpdateAvailableHint": "Nouvelle version disponible — cliquer pour voir",
     "openHashboardAccount": "Gérer ton compte hashboard",
     "boardPublicHint": "Ce tableau est public — n'importe qui avec le lien peut le voir",
     "boardPrivateHint": "Ce tableau est privé — seul toi peux le voir",
-    "versionLabel": "Version · {{sha}}"
+    "versionLabel": "Version {{sha}}",
+    "collapse": "Réduire le menu",
+    "expand": "Déplier le menu"
   },
   "notifications": {
     "title": "Notifications",
@@ -250,13 +251,15 @@
       "download_backups": "Téléchargement de sauvegardes",
       "discover": "Détection réseau",
       "backup": "Sauvegarde mise à jour",
+      "audit_report": "Rapport d'audit envoyé",
       "miner_pool": "Pool du mineur modifié",
       "miner_schedule": "Planification modifiée",
       "miner_identity": "IP du mineur modifiée",
       "miner_disabled": "Mineur désactivé",
       "miner_enabled": "Mineur activé",
       "miner_added": "Mineur ajouté",
-      "remote_push": "Accès distant modifié"
+      "remote_push": "Accès distant modifié",
+      "mail_settings": "Notifications modifiées"
     },
     "allMiners": "tous les mineurs",
     "sources": {
@@ -265,7 +268,8 @@
     },
     "services": {
       "scheduler": "Planificateur",
-      "backup": "Sauvegarde de chaque nuit"
+      "backup": "Sauvegarde de chaque nuit",
+      "mailer": "Notifications"
     },
     "failed": "Échec",
     "empty": "Aucun événement sur cette période.",
@@ -300,10 +304,55 @@
       "poolDashboardRemoved": "Dashboard de pool supprimé",
       "firmwareRepoAdded": "Dépôt firmware ajouté",
       "firmwareRepoRemoved": "Dépôt firmware supprimé",
-      "backupMonth": "Mois sauvegardé"
+      "backupMonth": "Mois sauvegardé",
+      "smtpHost": "Serveur SMTP",
+      "smtpPort": "Port SMTP",
+      "smtpSecurity": "Sécurité SMTP",
+      "smtpUsername": "Identifiant SMTP",
+      "smtpFrom": "Expéditeur",
+      "smtpPassword": "Mot de passe SMTP",
+      "recipientAdded": "Destinataire ajouté",
+      "recipientRemoved": "Destinataire retiré",
+      "mailLanguage": "Langue des mails",
+      "auditReportEnabled": "Rapport d'audit",
+      "auditReportSkipIfEmpty": "Rapport sauté si vide",
+      "auditReportTypeAdded": "Type ajouté au rapport",
+      "auditReportTypeRemoved": "Type retiré du rapport",
+      "auditReportFrequency": "Fréquence du rapport d'audit",
+      "reportPeriod": "Période du rapport",
+      "sentTo": "Envoyé à",
+      "mailDashboardURL": "Adresse du dashboard"
+    },
+    "values": {
+      "auditReportEnabled": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "auditReportSkipIfEmpty": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "auditReportFrequency": {
+        "daily": "Tous les jours",
+        "every2days": "Tous les 2 jours",
+        "weekly": "Chaque semaine",
+        "monthly": "Chaque mois"
+      },
+      "smtpSecurity": {
+        "starttls": "STARTTLS",
+        "tls": "TLS",
+        "none": "Aucune"
+      },
+      "mailLanguage": {
+        "fr": "Français",
+        "en": "English"
+      }
     },
     "change": "{{field}} : {{change}}",
-    "changed": "modifiée"
+    "changed": "valeur modifiée",
+    "period": {
+      "short": "du {{from}} au {{to}} (UTC)"
+    }
   },
   "search": {
     "helpTitle": "Astuces de recherche",
@@ -318,7 +367,12 @@
   },
   "common": {
     "on": "activé",
-    "off": "désactivé"
+    "off": "désactivé",
+    "showSecret": "Afficher",
+    "hideSecret": "Masquer",
+    "copyError": "Copier l'erreur",
+    "copied": "Copié !",
+    "close": "Fermer"
   },
   "filterBar": {
     "filters": "Filtres",
@@ -342,17 +396,48 @@
   },
   "settingsPage": {
     "header": {
-      "title": "Configuration des mineurs",
-      "description": "Détecte automatiquement tes mineurs AxeOS sur le réseau, ou ajoute-les manuellement par IP."
+      "title": "Configuration",
+      "description": "Mineurs, électricité, envoi vers hashboard et réglages du service."
+    },
+    "toc": {
+      "miners": {
+        "title": "Mineurs",
+        "summary_one": "{{count}} mineur · {{enabled}} actif",
+        "summary_other": "{{count}} mineurs · {{enabled}} actifs",
+        "empty": "Aucun mineur configuré",
+        "poolDrift_one": "{{count}} config pool différente",
+        "poolDrift_other": "{{count}} configs pool différentes"
+      },
+      "electricity": {
+        "title": "Électricité",
+        "summary_one": "{{rate}} €/kWh · {{count}} autre appareil",
+        "summary_other": "{{rate}} €/kWh · {{count}} autres appareils"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "off": "Mail non configuré",
+        "summary_one": "{{host}} · {{count}} destinataire",
+        "summary_other": "{{host}} · {{count}} destinataires",
+        "noRecipient": "Aucun destinataire",
+        "reportFailed": "Échec de l'envoi du rapport d'audit"
+      },
+      "remote": {
+        "title": "Distant",
+        "off": "Non configuré",
+        "never": "Aucun envoi pour l'instant",
+        "lastPush": "Dernier envoi : {{date}}",
+        "failing": "Envoi vers hashboard en échec"
+      },
+      "system": {
+        "title": "Système",
+        "summary": "Dashboards de pool et firmware"
+      }
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
-    "issues": {
-      "poolDrift": "{{count}} mineur(s) : la config pool enregistrée ne correspond pas à ce que le mineur reporte",
-      "pushFailed": "Le push vers hashboard échoue — voir Remote plus bas"
-    },
     "configured": {
       "title": "Mineurs configurés",
-      "description": "{{count}} mineur(s) configuré(s)",
+      "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
+      "description_other": "{{count}} mineurs — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
       "hostname": "Nom",
       "ip": "IP",
       "mac": "MAC",
@@ -369,7 +454,7 @@
       "disableAllConfirm": "Tout désactiver",
       "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
       "lastUpdated": "Dernière modification : {{date}}",
-      "emptyAlert": "Aucun mineur configuré pour le moment. Lance une détection automatique ci-dessous pour en ajouter.",
+      "emptyAlert": "Aucun mineur configuré pour le moment : lance une détection ci-dessous pour en ajouter.",
       "alias": {
         "title": "Nom affiché",
         "label": "Alias",
@@ -419,12 +504,14 @@
       }
     },
     "appSettings": {
-      "title": "Réglages de l'application",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saveSuccess": "Réglages enregistrés.",
       "electricity": {
-        "title": "Électricité",
+        "rate": {
+          "title": "Tarif",
+          "description": "Prix du kWh, utilisé pour le coût des mineurs et des autres appareils."
+        },
         "rateLabel": "Tarif (€/kWh)",
         "devices": {
           "title": "Autres appareils",
@@ -434,7 +521,11 @@
           "powerLabel": "Puissance (W)",
           "empty": "Aucun appareil déclaré",
           "add": "Ajouter",
-          "remove": "Supprimer"
+          "remove": "Supprimer",
+          "perDay": "kWh / jour",
+          "costPerDay": "Coût / jour",
+          "total": "Total",
+          "preview": "≈ {{kwh}} kWh / jour · {{cost}} / jour"
         }
       },
       "pools": {
@@ -448,35 +539,114 @@
         "remove": "Supprimer"
       },
       "remote": {
-        "title": "Remote (hashboard)",
         "pushUrlLabel": "URL de push",
         "apiKeyLabel": "Clé API",
-        "showApiKey": "Afficher la clé API",
-        "hideApiKey": "Masquer la clé API",
         "pushStatus": {
-          "error": "Le dernier push vers hashboard a échoué ({{date}}) : {{error}}",
-          "lastSuccess": "Dernier push réussi vers hashboard : {{date}}",
-          "neverAttempted": "Aucun push tenté pour l'instant.",
+          "title": "État des envois",
+          "description": "Ce que le feeder envoie à hashboard en plus des données des mineurs.",
+          "endpointLabel": "Envoi",
+          "stateLabel": "État",
+          "lastSuccessLabel": "Dernier succès",
+          "lastAttemptLabel": "Dernière tentative",
+          "state": {
+            "ok": "OK",
+            "late": "En retard",
+            "failing": "En échec",
+            "never": "Jamais"
+          },
           "endpoint": {
             "minersConfig": "Liste des mineurs",
             "settingsConfig": "Réglages"
           }
-        }
+        },
+        "board": {
+          "title": "Ton board",
+          "description": "Le board hashboard qui reçoit les données de tes mineurs.",
+          "id": "Board",
+          "visibility": "Visibilité",
+          "public": "Public",
+          "private": "Privé",
+          "lastSample": "Dernières données reçues par hashboard",
+          "noSample": "Aucune pour l'instant",
+          "account": "Compte",
+          "manage": "Gérer ton compte hashboard"
+        },
+        "connection": {
+          "title": "Connexion",
+          "description": "Adresse de push et clé API de ton compte hashboard."
+        },
+        "invalidPushUrl": "L'adresse doit commencer par http:// ou https://."
       },
       "firmware": {
         "title": "Repos firmware",
+        "description": "Où le dashboard vérifie la dernière version firmware de chaque modèle.",
         "modelLabel": "Modèle",
         "urlLabel": "URL du repo"
       },
-      "readOnly": {
-        "title": "Réglages process",
-        "settingLabel": "Réglage",
-        "valueLabel": "Valeur",
-        "lastRunLabel": "Dernière itération",
-        "feederIntervalLabel": "Intervalle de poll du feeder",
-        "healthCheckIntervalLabel": "Intervalle de health check",
-        "firmwareCacheTTLLabel": "Cache firmware (TTL)",
-        "never": "Jamais"
+      "mail": {
+        "smtp": {
+          "title": "Serveur SMTP",
+          "description": "Le serveur par lequel partent les mails du dashboard.",
+          "hostLabel": "Serveur",
+          "portLabel": "Port",
+          "securityLabel": "Sécurité",
+          "security": {
+            "starttls": "STARTTLS",
+            "tls": "TLS",
+            "none": "Aucune"
+          },
+          "usernameLabel": "Identifiant",
+          "passwordLabel": "Mot de passe",
+          "passwordKept": "Défini — laisser vide pour le garder",
+          "fromLabel": "Expéditeur",
+          "invalidPort": "Le port doit être compris entre 1 et 65535.",
+          "invalidFrom": "L'adresse de l'expéditeur n'est pas valide."
+        },
+        "recipients": {
+          "title": "Destinataires",
+          "description": "Les adresses qui reçoivent les mails du dashboard.",
+          "emailLabel": "Adresse e-mail",
+          "empty": "Aucun destinataire",
+          "add": "Ajouter",
+          "remove": "Retirer"
+        },
+        "test": {
+          "title": "Mail de test",
+          "description": "Envoie un mail aux destinataires avec le serveur enregistré, pour vérifier que tout fonctionne.",
+          "send": "Envoyer un mail de test",
+          "sending": "Envoi…",
+          "needsSmtp": "Enregistre d'abord un serveur SMTP.",
+          "needsRecipient": "Ajoute d'abord un destinataire.",
+          "sent": "Mail de test envoyé.",
+          "failed": "L'envoi a échoué : {{error}}",
+          "unknownError": "erreur inconnue"
+        },
+        "languageLabel": "Langue des mails",
+        "languages": {
+          "fr": "Français",
+          "en": "English"
+        },
+        "report": {
+          "title": "Rapport d'audit",
+          "description": "Le récapitulatif de l'audit depuis le précédent rapport, envoyé la nuit aux destinataires.",
+          "enabledLabel": "Envoyer le rapport d'audit",
+          "typesLabel": "Types d'événements inclus",
+          "allTypes": "Tous les types",
+          "skipIfEmptyLabel": "Ne rien envoyer si rien ne s'est passé",
+          "lastSent": "Dernier rapport : {{period}}, envoyé le {{date}}.",
+          "lastFailed": "Le dernier envoi a échoué ({{date}}) : {{error}} — nouvel essai dans l'heure.",
+          "neverSent": "Aucun rapport envoyé pour l'instant.",
+          "frequencyLabel": "Fréquence",
+          "frequencies": {
+            "daily": "Tous les jours (la veille)",
+            "every2days": "Tous les 2 jours",
+            "weekly": "Chaque semaine (lundi → dimanche)",
+            "monthly": "Chaque mois (le mois écoulé)"
+          },
+          "utc": "Envoyé chaque nuit vers 1 h UTC ; jours et heures du rapport en UTC, comme l'audit."
+        },
+        "dashboardUrlLabel": "Adresse du dashboard (pour les liens)",
+        "invalidDashboardUrl": "L'adresse doit commencer par http:// ou https://."
       }
     },
     "scan": {
@@ -486,27 +656,64 @@
       "searching": "Recherche en cours…",
       "isolatedLabel": "Environnement cloisonné",
       "cidrPlaceholder": "192.168.1.0/24",
-      "cidrHelp": "Modifie si le réseau de tes mineurs n'est pas en 192.168.1.x."
+      "cidrHelp": "Modifie si le réseau de tes mineurs n'est pas en 192.168.1.x.",
+      "cidrLabel": "Réseau à scanner"
     },
     "manual": {
       "title": "Ajouter par IP",
       "description": "Pour un mineur que le scan ne trouve pas (autre sous-réseau, pare-feu…).",
-      "action": "Rechercher"
+      "action": "Rechercher",
+      "ipLabel": "Adresse IP"
     },
     "discovery": {
+      "title": "Mineurs trouvés",
       "unknownHostname": "Mineur sans nom",
       "pool": "Pool : {{url}}:{{port}}",
       "fallbackPool": "Secours : {{url}}:{{port}}",
       "noPool": "Aucun pool configuré sur ce mineur",
       "noneFound": "Aucun mineur détecté.",
       "retryLonger": "Réessayer avec un délai plus long",
-      "resultsCount": "{{count}} mineur(s) trouvé(s)",
+      "resultsCount_one": "{{count}} mineur trouvé — sélectionne ceux à enregistrer.",
+      "resultsCount_other": "{{count}} mineurs trouvés — sélectionne ceux à enregistrer.",
       "selectAll": "Tout sélectionner",
       "deselectAll": "Tout désélectionner",
       "selectedCount": "{{count}} mineur(s) sélectionné(s)",
       "saveSelected": "Enregistrer la sélection",
       "saving": "Enregistrement…",
       "saveSuccess": "{{count}} mineur(s) enregistré(s) — actif dans quelques instants."
+    }
+  },
+  "servicesStatus": {
+    "title": "État des services",
+    "services": {
+      "dashboardApi": "Dashboard (API)",
+      "feeder": "Feeder",
+      "healthCheck": "Contrôle de santé",
+      "mailer": "Mailer",
+      "firmwareCache": "Cache firmware"
+    },
+    "states": {
+      "ok": "Actif",
+      "late": "En retard",
+      "offline": "Injoignable",
+      "unknown": "Aucun passage"
+    },
+    "startedAt": "démarré le {{date}}",
+    "checkedAt": "Vérifié le {{date}}",
+    "label": "État plateforme",
+    "every": "toutes les {{interval}}",
+    "lastRun": "dernier passage le {{date}}",
+    "noRunYet": "aucun passage pour l'instant",
+    "summary": {
+      "ok": "Opérationnel",
+      "late": "Dégradé",
+      "offline": "Panne"
+    },
+    "version": "version {{version}}",
+    "everyOne": {
+      "s": "chaque seconde",
+      "min": "chaque minute",
+      "h": "chaque heure"
     }
   }
 }
