@@ -401,44 +401,6 @@ describe("Sidebar", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  describe("auto-refresh toggle", () => {
-    it("is enabled by default", () => {
-      renderSidebar("/");
-
-      const switches = screen.getAllByLabelText("auto-refresh");
-      expect(switches[0]).toBeChecked();
-    });
-
-    it("reflects a previously-disabled setting from storage", () => {
-      window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
-      renderSidebar("/");
-
-      const switches = screen.getAllByLabelText("auto-refresh");
-      expect(switches[0]).not.toBeChecked();
-    });
-
-    it("persists the new value and fires a notification when toggled", async () => {
-      const user = userEvent.setup();
-      renderSidebar("/");
-
-      const switches = screen.getAllByLabelText("auto-refresh");
-      await user.click(switches[0]);
-
-      expect(window.localStorage.getItem("axeos.autoRefreshEnabled")).toBe(
-        "false",
-      );
-
-      const stored = JSON.parse(
-        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
-      );
-      expect(stored).toHaveLength(1);
-      expect(stored[0]).toMatchObject({
-        type: "autoRefreshToggled",
-        detail: "common.off",
-      });
-    });
-  });
-
   describe("logo", () => {
     it("links to the local home page", () => {
       renderSidebar("/");

@@ -164,7 +164,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `POST` | `/api/config/settings` | `SaveAppSettings()` | Write `settings.yml` |
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
 | `POST` | `/api/config/mail/test` | `SendTestMail()` | Has the mailer send a test mail to the recipients through the **saved** SMTP server (`lang`: fr/en); 503 when the mailer isn't running |
-| `GET` | `/api/mailer/status` | `MailerStatus()` | Whether the mailer runs (`online`, `startedAt`, `lastCheckAt`) -- always 200 |
+| `GET` | `/api/status` | `Status()` | How every process is doing, in one answer: dashboard-api, feeder (its last poll, from `latest.json`), health check, mailer (asked on the loopback), firmware cache -- each `ok` / `late` (nothing within twice its interval) / `offline` (didn't answer) / `unknown` (no run yet); the sidebar's services dots |
 | `GET` | `/api/remote/board` | `RemoteBoard()` | The hashboard board this instance pushes to (boardId, public, links, last sample received) -- relays hashboard's `GET /api/board/info`, cached one feeder interval (`remotepush.BoardCache`); empty when remote isn't configured or hashboard is unreachable |
 | `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max a year): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file; `/api/audit/types`, the list of types -- `audit.Types`, the one source the UI's filter reads) |
 | `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
@@ -208,7 +208,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 |---|---|
 | `src/App.tsx` | MUI theme, i18next, React Query provider, routing |
 | `src/pages/Home.tsx` | Dashboard: `FleetSummary` + status/pool `BreakdownStrip`s (also quick filters) + `MinerToolbar` + `MinerList`/`MinerTiles` + `MinerDrawer` |
-| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`) |
+| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`; its sync icon is the auto-refresh switch), `ServicesStatus` (the sidebar's "Platform status" card -- green / orange when a service missed a run / red when one doesn't answer -- and its details window, from `GET /api/status`, local mode only) |
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |

@@ -24,24 +24,21 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  Switch,
   Tooltip,
   Typography,
 } from "@mui/material";
 
 import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
-import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import {
   type AppVersionStatus,
   shouldNotifyForAppUpdate,
 } from "@/utils/appVersion";
-import {
-  createAppUpdateAvailableNotification,
-  createAutoRefreshToggledNotification,
-} from "@/utils/minerNotifications";
+import { createAppUpdateAvailableNotification } from "@/utils/minerNotifications";
+
+import { ServicesStatusBlock } from "./ServicesStatus";
 
 const APP_VERSION_STATUS_STORAGE_KEY = "axeos.appVersionStatus";
 
@@ -409,22 +406,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           hashboardUrl: remoteBoard.hashboardURL ?? null,
         }
       : null;
-  const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
-  const { addNotifications } = useNotifications();
-
-  const handleAutoRefreshChange = (checked: boolean) => {
-    setAutoRefreshEnabled(checked);
-    addNotifications([
-      createAutoRefreshToggledNotification(
-        checked ? t("common.on") : t("common.off"),
-      ),
-    ]);
-  };
 
   return (
     <Box
       sx={{
-        height: "100%",
+        // At least the drawer's height, more when a short screen makes it
+        // scroll: the background must follow the content all the way down.
+        // Never shrunk by the drawer's own flex column, or the overflow
+        // spills over its lighter paper instead of scrolling.
+        minHeight: "100%",
+        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.paper",
@@ -689,33 +680,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         }}
       />
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
-          px: collapsed ? 0 : 2,
-          py: 1.25,
-        }}
-      >
-        {!collapsed && (
-          <Typography variant="caption" sx={{ color: "text.secondary" }}>
-            {t("nav.autoRefresh")}
-          </Typography>
-        )}
-        <Tooltip
-          title={collapsed ? t("nav.autoRefresh") : ""}
-          arrow
-          placement="right"
-        >
-          <Switch
-            size="small"
-            checked={autoRefreshEnabled}
-            onChange={(e) => handleAutoRefreshChange(e.target.checked)}
-            slotProps={{ input: { "aria-label": "auto-refresh" } }}
-          />
-        </Tooltip>
-      </Box>
+      <ServicesStatusBlock collapsed={collapsed} />
 
       <Box sx={{ flexGrow: 1 }} />
 

@@ -152,8 +152,7 @@
     "alerts": "Alertes",
     "settings": "Configuration",
     "backups": "Sauvegardes",
-    "audit": "Audit",
-    "autoRefresh": "Actualisation auto"
+    "audit": "Audit"
   },
   "sidebar": {
     "versionUpToDate": "À jour",
@@ -432,9 +431,7 @@
       },
       "system": {
         "title": "Système",
-        "lastFeeder": "Dernier feeder : {{date}}",
-        "neverFed": "Feeder : aucun passage",
-        "feederLate": "Feeder en retard"
+        "summary": "Dashboards de pool et firmware"
       }
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
@@ -587,17 +584,6 @@
         "modelLabel": "Modèle",
         "urlLabel": "URL du repo"
       },
-      "readOnly": {
-        "title": "Réglages process",
-        "description": "Réglages du service, fixés au démarrage, et leur dernier passage.",
-        "settingLabel": "Réglage",
-        "valueLabel": "Valeur",
-        "lastRunLabel": "Dernière itération",
-        "feederIntervalLabel": "Intervalle de poll du feeder",
-        "healthCheckIntervalLabel": "Intervalle de health check",
-        "firmwareCacheTTLLabel": "Cache firmware (TTL)",
-        "never": "Jamais"
-      },
       "mail": {
         "smtp": {
           "title": "Serveur SMTP",
@@ -696,6 +682,39 @@
       "saveSelected": "Enregistrer la sélection",
       "saving": "Enregistrement…",
       "saveSuccess": "{{count}} mineur(s) enregistré(s) — actif dans quelques instants."
+    }
+  },
+  "servicesStatus": {
+    "title": "État des services",
+    "services": {
+      "dashboardApi": "Dashboard (API)",
+      "feeder": "Feeder",
+      "healthCheck": "Contrôle de santé",
+      "mailer": "Mailer",
+      "firmwareCache": "Cache firmware"
+    },
+    "states": {
+      "ok": "Actif",
+      "late": "En retard",
+      "offline": "Injoignable",
+      "unknown": "Aucun passage"
+    },
+    "startedAt": "démarré le {{date}}",
+    "checkedAt": "Vérifié le {{date}}",
+    "label": "État plateforme",
+    "every": "toutes les {{interval}}",
+    "lastRun": "dernier passage le {{date}}",
+    "noRunYet": "aucun passage pour l'instant",
+    "summary": {
+      "ok": "Opérationnel",
+      "late": "Dégradé",
+      "offline": "Panne"
+    },
+    "version": "version {{version}}",
+    "everyOne": {
+      "s": "chaque seconde",
+      "min": "chaque minute",
+      "h": "chaque heure"
     }
   }
 }

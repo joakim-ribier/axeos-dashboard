@@ -197,7 +197,16 @@ every commit.
 
 ## Known bugs
 
-None open right now.
+- **The hashboard board's info is polled with no push configured**: on the
+  local dashboard, `useRemoteBoard` (sidebar, home page, Configuration ›
+  Remote) calls `GET /api/remote/board` on load and every 60 s whether or
+  not `settings.yml` has a push URL and key -- the server just answers
+  empty when it doesn't. It should only ask once remote push is
+  configured: e.g. `GET /api/status` saying whether it is (a
+  `remotePushConfigured` flag -- not to be confused with the UI's remote
+  mode, a board served by remote-dashboard-api), read by the hook before
+  polling, and refreshed right after a settings save so the board's link
+  follows a push turned on or off.
 
 ## Cross-cutting guardrails
 
