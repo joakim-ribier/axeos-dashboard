@@ -30,6 +30,7 @@ import { formatTimestamp } from "@/utils/format";
 import {
   activeAlertsToNotifications,
   ALERT_TYPE_COLOR,
+  createAutoRefreshToggledNotification,
   type MinerNotification,
 } from "@/utils/minerNotifications";
 
@@ -63,32 +64,42 @@ const DocsLink: React.FC = () => {
   );
 };
 
-// Passive status indicator, not a control -- the actual on/off toggle lives
-// in the Sidebar. Placed next to the bell since it explains whether the
-// bell (and the data behind it) is still being kept live.
-const AutoRefreshIndicator: React.FC = () => {
+// The auto-refresh switch itself: a click turns it on or off. Next to the
+// bell since it says whether the bell (and the data behind it) is still
+// being kept live.
+const AutoRefreshToggle: React.FC = () => {
   const { t } = useTranslation();
-  const { autoRefreshEnabled } = useRefreshSettings();
+  const { autoRefreshEnabled, setAutoRefreshEnabled } = useRefreshSettings();
+  const { addNotifications } = useNotifications();
   const label = autoRefreshEnabled
     ? t("topBar.autoRefreshOn")
     : t("topBar.autoRefreshOff");
 
+  const toggle = () => {
+    const next = !autoRefreshEnabled;
+    setAutoRefreshEnabled(next);
+    addNotifications([
+      createAutoRefreshToggledNotification(
+        next ? t("common.on") : t("common.off"),
+      ),
+    ]);
+  };
+
   return (
     <Tooltip title={label}>
-      <Box
+      <IconButton
+        size="small"
+        onClick={toggle}
         aria-label={label}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          color: autoRefreshEnabled ? "primary.main" : "text.disabled",
-        }}
+        aria-pressed={autoRefreshEnabled}
+        sx={{ color: autoRefreshEnabled ? "primary.main" : "text.disabled" }}
       >
         {autoRefreshEnabled ? (
           <SyncIcon fontSize="small" />
         ) : (
           <SyncDisabledIcon fontSize="small" />
         )}
-      </Box>
+      </IconButton>
     </Tooltip>
   );
 };
@@ -302,7 +313,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {!isMobile && <DocsLink />}
 
-        <AutoRefreshIndicator />
+        <AutoRefreshToggle />
 
         <NotificationBell />
 

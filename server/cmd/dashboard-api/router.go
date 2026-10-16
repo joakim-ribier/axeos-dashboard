@@ -39,6 +39,8 @@ type Router struct {
 	versionChecker   *appversion.Checker
 	auditLog         *audit.Log
 	remoteBoard      remotepush.BoardCache
+	// startedAt is when this process started, for GET /api/status.
+	startedAt time.Time
 
 	// saveMu runs config saves one at a time: each diffs what it wrote
 	// against what was there just before, which a concurrent save would
@@ -52,6 +54,7 @@ func NewRouter(logger *slog.Logger, config config.Config, watcher *healtcheck.Wa
 		config:         config,
 		watcher:        watcher,
 		versionChecker: versionChecker,
+		startedAt:      time.Now(),
 	}
 }
 
@@ -203,8 +206,8 @@ func (f *Router) Handler() http.Handler {
 	router.Post("/api/config/mail/test", func(w http.ResponseWriter, r *http.Request) {
 		handler.SendTestMail(f.config, w, r)
 	})
-	router.Get("/api/mailer/status", func(w http.ResponseWriter, r *http.Request) {
-		handler.MailerStatus(f.config, w, r)
+	router.Get("/api/status", func(w http.ResponseWriter, r *http.Request) {
+		handler.Status(f.snapshotConfig(), f.watcher, f.startedAt, w, r)
 	})
 	router.With(f.audited(audit.TypeDiscover)).Get("/api/config/discover", func(w http.ResponseWriter, r *http.Request) {
 		handler.Discover(f.snapshotConfig(), w, r)
