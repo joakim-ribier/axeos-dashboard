@@ -26,7 +26,7 @@ func stoppedMailer() config.Config {
 func TestSendTestMail_relaysTheMailersAnswer(t *testing.T) {
 	var gotBody string
 	mailer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/api/mail/test" {
+		if r.Method != http.MethodPost || r.URL.Path != "/api/mailer/test" {
 			http.NotFound(w, r)
 			return
 		}

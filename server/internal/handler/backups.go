@@ -22,7 +22,7 @@ type BackupsResponse struct {
 //
 // @Summary List monthly backups
 // @Description Returns the monthly backup archives, most recent first. The feeder adds each completed (UTC) day to its month's archive, so the current month's archive is complete up to yesterday.
-// @Tags dashboard-api
+// @Tags Backups
 // @Produce json
 // @Success 200 {object} handler.BackupsResponse
 // @Router /api/backups [get]
@@ -43,7 +43,7 @@ func ListBackups(cfg config.Config, w http.ResponseWriter, _ *http.Request) {
 //
 // @Summary Download monthly backups
 // @Description Returns one zip holding the given months' archives (up to yesterday for the current month): every miner's daily JSONL files under data/bitaxes/ -- unzip into storage.dataDir to restore.
-// @Tags dashboard-api
+// @Tags Backups
 // @Produce application/zip
 // @Param months query string true "Comma-separated months, YYYY-MM"
 // @Success 200 {file} file

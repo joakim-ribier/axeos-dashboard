@@ -77,7 +77,7 @@ func getStatus(t *testing.T, cfg config.Config, startedAt time.Time) StatusRespo
 func TestStatus_everyServiceRunning(t *testing.T) {
 	lastCheck := time.Now().Add(-20 * time.Second).UTC().Truncate(time.Second)
 	mailer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/status" {
+		if r.URL.Path != "/api/mailer/status" {
 			http.NotFound(w, r)
 			return
 		}

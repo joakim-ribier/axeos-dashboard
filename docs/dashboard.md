@@ -61,22 +61,50 @@ subnav:
 
 1. **AxeOS · D#hashboard** — recharge l'application et revient à l'accueil,
    comme à l'arrivée sur le dashboard.
-2. **Accueil** — vue d'ensemble de tous les mineurs.
-3. **Alertes** — historique des alertes (température, ventilation, hors-ligne...).
+2. **Board hashboard** — quand l'envoi vers hashboard est configuré :
+   l'identifiant du board (clic pour l'ouvrir), public ou privé, et un
+   lien vers votre compte hashboard.
+   [Aller à Distant →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
+3. **Accueil** — vue d'ensemble de tous les mineurs.
+4. **Alertes** — historique des alertes (température, ventilation, hors-ligne...).
    [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }
-4. **Configuration** — détection automatique, mineurs configurés, remote.
+5. **Configuration** — mineurs, électricité, notifications, distant, système.
    [Aller à Configuration →]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
-5. **Sauvegardes** — archives mensuelles de l'historique des mineurs, à télécharger.
+6. **Sauvegardes** — archives mensuelles de l'historique des mineurs, à télécharger.
    [Aller à Sauvegardes →]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
-6. **Audit** — historique des redémarrages, bascules de pool, modifications de la configuration, exports et détections réseau.
+7. **Audit** — historique des redémarrages, bascules de pool, modifications de la configuration, exports et détections réseau.
    [Aller à Audit →]({{ '/audit.html' | relative_url }}){: .btn .btn-primary }
-7. **Actualisation auto** — active/désactive le rafraîchissement automatique des données.
-8. **Version** — SHA du build actuellement déployé.
-9. **Mise à jour dispo** — n'apparaît que si une nouvelle version du dashboard est disponible sur GitHub ; clic pour ouvrir la release.
+8. **État plateforme** — vert quand tout tourne, orange quand un service
+   a manqué un passage, rouge quand un service ne répond pas ; clic pour
+   le détail ([voir plus bas](#etat-plateforme)).
+9. **Version** — SHA du build actuellement déployé.
+10. **Mise à jour disponible** — n'apparaît que si une nouvelle version du
+    dashboard est disponible sur GitHub ; clic pour ouvrir la release.
+11. **Replier** — réduit le menu à une colonne d'icônes, le nom de chaque
+    page en infobulle ; le choix est gardé par le navigateur.
 
 </div>
 
 Sur téléphone, le menu s'ouvre avec le bouton ☰ de la barre du haut.
+
+### État plateforme
+{: #etat-plateforme }
+
+Un clic sur la carte *État plateforme* ouvre l'état de chaque service de
+l'installation, redemandé à chaque ouverture :
+
+![État des services]({{ '/assets/images/services-status.png' | relative_url }}){: width="440" }
+
+
+- **Dashboard (API)** — démarré le, et sa version.
+- **Feeder** — son intervalle et son dernier sondage des mineurs.
+- **Contrôle de santé** — son intervalle et sa dernière vérification.
+- **Mailer** — son dernier passage (il regarde chaque minute si un mail
+  est à envoyer).
+- **Cache firmware** — sa dernière vérification d'une nouvelle version.
+
+Chacun est **Actif**, **En retard** (rien depuis deux intervalles),
+**Injoignable** (ne répond pas) ou **Aucun passage** (pas encore tourné).
 
 ---
 
@@ -89,8 +117,9 @@ Toujours visible en haut de l'écran, même en faisant défiler la page.
 
 1. **Page** — icône, titre et description de la page affichée.
 2. **Documentation** — ouvre cette documentation.
-3. **Actualisation auto** — indique si l'actualisation automatique est
-   active (bleu) ou non (gris).
+3. **Actualisation auto** — active (bleu) ou coupe (gris) l'actualisation
+   automatique des données, d'un clic ; le choix est gardé par le
+   navigateur.
 4. **Notifications** — alertes en cours et événements récents (alerte
    résolue, mise à jour disponible...) ; le badge rouge compte les non
    lues.
@@ -138,7 +167,7 @@ Sur téléphone, la barre garde l'essentiel :
 8. **Électricité** — coût estimé sur une journée à la consommation
    actuelle et au tarif configuré, pour l'installation complète : les
    mineurs plus les
-   [autres appareils]({{ '/configuration.html#electricite-pools' | relative_url }})
+   [autres appareils]({{ '/configuration.html#electricite' | relative_url }})
    déclarés (ventilateur, routeur...). En dessous, le total réellement
    dépensé depuis que chaque mineur est suivi — un changement de tarif
    plus tard ne modifie jamais ce total passé.
@@ -216,7 +245,7 @@ retire le filtre.
 5. **Conso.** — puissance (W) et rendement (J/TH).
 6. **Pool** — le pool actif, cliquable vers son tableau de bord quand un
    lien est connu pour lui (voir
-   [Configuration]({{ '/configuration.html#electricite-pools' | relative_url }})),
+   [Configuration]({{ '/configuration.html#systeme' | relative_url }})),
    et s'il s'agit du pool **Principal** ou de **Secours**.
 7. **Firmware** — version installée ; en dessous, en bleu, la nouvelle
    version disponible s'il y en a une.

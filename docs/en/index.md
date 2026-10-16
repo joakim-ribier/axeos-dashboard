@@ -57,6 +57,8 @@ No authentication required — internal LAN use only.
 - Cron-based scheduler to switch pools or restart automatically
 - Electricity rate and other devices (fan, router...) to estimate the
   whole installation's daily cost
+- Mail notifications: SMTP server, recipients, daily, weekly or monthly
+  audit report, test mail, editable texts
 
 [See Configuration in detail]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
 
@@ -86,7 +88,7 @@ No authentication required — internal LAN use only.
 ## Architecture
 
 <div class="arch-diagram">
-<svg viewBox="0 0 860 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram: Feeder and Dashboard API (Go) and UI (React) running on a Raspberry Pi, talking to the miners and local storage, accessed from a browser">
+<svg viewBox="0 0 860 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram: Feeder, Dashboard API and Mailer (Go) and UI (React) running on a Raspberry Pi, talking to the miners and local storage, accessed from a browser">
   <defs>
     <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#5a6472"></path>
@@ -110,9 +112,14 @@ No authentication required — internal LAN use only.
   <text x="268" y="248" text-anchor="middle" fill="#8892a4" font-size="12">Local storage (disk)</text>
 
   <!-- Dashboard API -->
-  <rect x="68" y="296" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="268" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
-  <text x="268" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
+  <rect x="218" y="296" width="250" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="343" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
+  <text x="343" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
+
+  <!-- Mailer -->
+  <rect x="68" y="296" width="134" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="135" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Mailer</text>
+  <text x="135" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
 
   <!-- UI -->
   <rect x="68" y="388" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
@@ -153,8 +160,12 @@ No authentication required — internal LAN use only.
   <text x="300" y="194" fill="#8892a4" font-size="11">write</text>
 
   <!-- Dashboard API -> Storage (read) -->
-  <path d="M268,296 L268,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="300" y="286" fill="#8892a4" font-size="11">read</text>
+  <path d="M343,296 L343,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="355" y="286" fill="#8892a4" font-size="11">read</text>
+
+  <!-- Mailer -> Storage -->
+  <path d="M135,296 L135,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="147" y="286" fill="#8892a4" font-size="11">read</text>
 
   <!-- UI -> Dashboard API -->
   <path d="M320,388 L320,360" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
@@ -179,7 +190,15 @@ history of every poll, stored per day.
 The dashboard is made of an API and a web interface. It never talks
 directly to the miners — its job is mainly to serve the information
 already stored by the feeder (`latest.json` and the miners' history), and
-to proxy the few control actions (pool switch, restart) to the miners.
+to proxy the few control actions (pool switch, restart) to the miners. It
+also gives each service's state, shown at the bottom of the menu
+(*Platform status*).
+
+### Mailer
+
+The service that sends every mail, through the SMTP server set in
+Configuration › Notifications: the audit report, from the audit and the
+settings saved on disk, and the test mail, asked for by the dashboard.
 
 ---
 

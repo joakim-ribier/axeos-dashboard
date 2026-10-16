@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.\nNo authentication — internal LAN use only.\n\nEndpoints tagged \"dashboard-api\" run on this binary (default :8080).\nEndpoints tagged \"remote-dashboard-api\" run on the separate remote-dashboard-api binary (default :8081),\na read-only API serving miners pushed to hashboard.live — see the project README.",
+        "description": "Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.\nNo authentication — internal LAN use only.\n\nEndpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);\nremote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;\nthe mailer (default :8082, on the loopback only), reached through dashboard-api.",
         "title": "axeos-dashboard API",
         "contact": {},
         "version": "1.0"
@@ -16,7 +16,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Audit"
                 ],
                 "summary": "List audit entries",
                 "parameters": [
@@ -86,7 +86,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Audit"
                 ],
                 "summary": "Export audit entries",
                 "parameters": [
@@ -144,7 +144,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Audit"
                 ],
                 "summary": "List audit entry types",
                 "responses": {
@@ -164,7 +164,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Backups"
                 ],
                 "summary": "List monthly backups",
                 "responses": {
@@ -184,7 +184,7 @@
                     "application/zip"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Backups"
                 ],
                 "summary": "Download monthly backups",
                 "parameters": [
@@ -225,7 +225,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Configuration"
                 ],
                 "summary": "Discover AxeOS devices on the network",
                 "parameters": [
@@ -280,7 +280,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Notifications"
                 ],
                 "summary": "Send a test mail",
                 "parameters": [
@@ -341,7 +341,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Configuration"
                 ],
                 "summary": "List configured miners",
                 "responses": {
@@ -362,7 +362,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Configuration"
                 ],
                 "summary": "Add or update configured miners",
                 "parameters": [
@@ -411,7 +411,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Configuration"
                 ],
                 "summary": "Get app settings",
                 "responses": {
@@ -432,7 +432,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Configuration"
                 ],
                 "summary": "Save app settings",
                 "parameters": [
@@ -481,8 +481,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api",
-                    "remote-dashboard-api"
+                    "Info"
                 ],
                 "summary": "Server build/version info",
                 "responses": {
@@ -495,6 +494,93 @@
                 }
             }
         },
+        "/api/mailer/status": {
+            "get": {
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): since when it runs, and when its loop last looked for a mail to send (once a minute). Read through dashboard-api's GET /api/status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mailer"
+                ],
+                "summary": "Mailer status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.statusResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mailer/test": {
+            "post": {
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server. Reached through dashboard-api's POST /api/config/mail/test.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mailer"
+                ],
+                "summary": "Send a test mail (mailer)",
+                "parameters": [
+                    {
+                        "description": "Mail language (fr or en, default en)",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/main.testMailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.testMailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "SMTP server or recipients not configured",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "the SMTP server refused or couldn't be reached",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/miners": {
             "get": {
                 "description": "Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).",
@@ -502,7 +588,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Miners"
                 ],
                 "summary": "List all configured miners",
                 "responses": {
@@ -522,7 +608,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Alerts"
                 ],
                 "summary": "List the most recent miner alerts",
                 "parameters": [
@@ -553,7 +639,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Alerts"
                 ],
                 "summary": "List a single day's recorded miner alerts, grouped into episodes and paginated",
                 "parameters": [
@@ -606,7 +692,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Miners"
                 ],
                 "summary": "Get the last 24h of every miner, downsampled",
                 "responses": {
@@ -623,7 +709,7 @@
             "put": {
                 "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
                 "tags": [
-                    "dashboard-api"
+                    "Miner actions"
                 ],
                 "summary": "Switch stratum pool",
                 "parameters": [
@@ -651,7 +737,7 @@
             "put": {
                 "description": "Switches miner(s) to the primary or fallback pool and restarts them to apply it.",
                 "tags": [
-                    "dashboard-api"
+                    "Miner actions"
                 ],
                 "summary": "Switch stratum pool",
                 "parameters": [
@@ -679,7 +765,7 @@
             "post": {
                 "description": "Restarts the device via its AxeOs restart endpoint.",
                 "tags": [
-                    "dashboard-api"
+                    "Miner actions"
                 ],
                 "summary": "Restart a miner",
                 "parameters": [
@@ -717,7 +803,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Miners"
                 ],
                 "summary": "Get the last 24h of stats for one miner",
                 "parameters": [
@@ -752,7 +838,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Remote push"
                 ],
                 "summary": "Remote board info",
                 "responses": {
@@ -772,7 +858,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "dashboard-api"
+                    "Status"
                 ],
                 "summary": "Services status",
                 "responses": {
@@ -792,7 +878,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board configuration"
                 ],
                 "summary": "List a remote board's configured miners (read-only)",
                 "parameters": [
@@ -827,7 +913,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board configuration"
                 ],
                 "summary": "Get a remote board's app settings (read-only)",
                 "parameters": [
@@ -862,7 +948,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board miners"
                 ],
                 "summary": "List miners pushed to a hashboard board (read-only)",
                 "parameters": [
@@ -896,7 +982,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board alerts"
                 ],
                 "summary": "List the most recent miner alerts for a hashboard board (read-only)",
                 "parameters": [
@@ -933,7 +1019,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board alerts"
                 ],
                 "summary": "List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)",
                 "parameters": [
@@ -993,7 +1079,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board miners"
                 ],
                 "summary": "Get the last 24h of every remote miner, downsampled (read-only)",
                 "parameters": [
@@ -1028,7 +1114,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "remote-dashboard-api"
+                    "Board miners"
                 ],
                 "summary": "Get the last 24h of stats for one remote miner (read-only)",
                 "parameters": [
@@ -1935,6 +2021,38 @@
                 }
             }
         },
+        "main.statusResponse": {
+            "type": "object",
+            "properties": {
+                "lastCheckAt": {
+                    "description": "LastCheckAt is the last time the mailer looked for a mail to send --\nonce a minute, so an old one means its loop is stuck.",
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "main.testMailRequest": {
+            "type": "object",
+            "properties": {
+                "lang": {
+                    "description": "Lang picks the mail's language, the dashboard's own (\"fr\" or \"en\").",
+                    "type": "string"
+                }
+            }
+        },
+        "main.testMailResponse": {
+            "type": "object",
+            "properties": {
+                "sentTo": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.Alert": {
             "type": "object",
             "properties": {
@@ -2242,5 +2360,94 @@
                 }
             }
         }
-    }
+    },
+    "tags": [
+        {
+            "description": "Build and version, UI feature flags -- served by dashboard-api and remote-dashboard-api alike.",
+            "name": "Info"
+        },
+        {
+            "description": "The configured miners' latest snapshot, history and stats.",
+            "name": "Miners"
+        },
+        {
+            "description": "Restart a miner, switch its pool -- proxied to the device.",
+            "name": "Miner actions"
+        },
+        {
+            "description": "Recent alerts and their history, grouped into episodes.",
+            "name": "Alerts"
+        },
+        {
+            "description": "Every user-triggered action and scheduled run, its types and export.",
+            "name": "Audit"
+        },
+        {
+            "description": "The monthly archives of the miners' history.",
+            "name": "Backups"
+        },
+        {
+            "description": "miners.yml and settings.yml, read and saved; network discovery.",
+            "name": "Configuration"
+        },
+        {
+            "description": "Mail: the test mail, sent by the mailer.",
+            "name": "Notifications"
+        },
+        {
+            "description": "How every process of the dashboard is doing.",
+            "name": "Status"
+        },
+        {
+            "description": "The hashboard board this dashboard pushes to.",
+            "name": "Remote push"
+        },
+        {
+            "description": "A board's miners, their history and stats.",
+            "name": "Board miners"
+        },
+        {
+            "description": "A board's recent alerts and their history.",
+            "name": "Board alerts"
+        },
+        {
+            "description": "A board's miners.yml and settings.yml, read-only.",
+            "name": "Board configuration"
+        },
+        {
+            "description": "The mailer's own API, on the loopback only.",
+            "name": "Mailer"
+        }
+    ],
+    "x-tagGroups": [
+        {
+            "name": "dashboard-api",
+            "tags": [
+                "Info",
+                "Miners",
+                "Miner actions",
+                "Alerts",
+                "Audit",
+                "Backups",
+                "Configuration",
+                "Notifications",
+                "Status",
+                "Remote push"
+            ]
+        },
+        {
+            "name": "remote-dashboard-api",
+            "tags": [
+                "Board miners",
+                "Board alerts",
+                "Board configuration"
+            ]
+        },
+        {
+            "name": "mailer",
+            "tags": [
+                "Mailer"
+            ]
+        }
+    ]
 }

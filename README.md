@@ -36,8 +36,8 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 The recommended setup (Docker, below) needs nothing but Docker itself
 installed — no Go, Node, or nginx on the machine at all. See the
 [Architecture page](https://joakim-ribier.github.io/axeos-dashboard/en/#architecture)
-in the user documentation for how the feeder, dashboard API and UI fit
-together.
+in the user documentation for how the feeder, dashboard API, mailer and
+UI fit together.
 
 Go and Node are only needed for local development, or to build the images
 yourself instead of pulling the prebuilt ones:
@@ -54,6 +54,7 @@ apt install -y golang nodejs npm
 make build
 make run-feeder        CONFIG=resources/dashboard.yml
 make run-dashboard-api CONFIG=resources/dashboard.yml
+make run-mailer        CONFIG=resources/dashboard.yml   # every mail (audit report, test mail)
 make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
 ```
 
@@ -93,14 +94,14 @@ targeting `main` runs
 
 When `checks.yml` succeeds on `main`,
 [`.github/workflows/latest.yml`](.github/workflows/latest.yml) builds the
-feeder/dashboard-api/remote-dashboard-api/rebuild-totals binaries for **both
+feeder/dashboard-api/mailer/remote-dashboard-api/rebuild-totals binaries for **both
 `linux/arm64` (Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI
 once, and publishes everything to a rolling `latest` GitHub Release.
 `make latest-fetch` auto-detects the local architecture (`uname -m`) and
 pulls the matching binaries — no need to specify it manually, override with
 `RELEASE_ARCH=` if detection ever guesses wrong.
 
-- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder
+- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder + mailer
 - `make latest-remote-up` / `make latest-remote-down` — VPS: remote-dashboard-api only
 
 Neither needs a local Go or npm build — see the Makefile's

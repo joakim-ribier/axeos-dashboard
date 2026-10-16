@@ -27,7 +27,7 @@ func boardDataRoot(dataDir, boardID string) string {
 //
 // @Summary List miners pushed to a hashboard board (read-only)
 // @Description Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.
-// @Tags remote-dashboard-api
+// @Tags Board miners
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Success 200 {object} model.MinersResponse
@@ -111,7 +111,7 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 //
 // @Summary Get the last 24h of stats for one remote miner (read-only)
 // @Description Same as /api/miners/{hostnameOrIp}/stats, for a miner pushed to a hashboard board.
-// @Tags remote-dashboard-api
+// @Tags Board miners
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Param ip path string true "Miner IP"

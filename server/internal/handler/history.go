@@ -44,7 +44,7 @@ type HistoryResponse struct {
 //
 // @Summary Get the last 24h of every miner, downsampled
 // @Description Hashrate of every configured miner over the last 24 hours, averaged into 15-minute buckets (96 points, oldest first). Feeds the dashboard's fleet chart and per-miner sparklines.
-// @Tags dashboard-api
+// @Tags Miners
 // @Produce json
 // @Success 200 {object} handler.HistoryResponse
 // @Router /api/miners/history [get]
@@ -68,7 +68,7 @@ func History(cfg config.Config, w http.ResponseWriter, r *http.Request) {
 //
 // @Summary Get the last 24h of every remote miner, downsampled (read-only)
 // @Description Same as /api/miners/history, for the miners pushed to a hashboard board.
-// @Tags remote-dashboard-api
+// @Tags Board miners
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Success 200 {object} handler.HistoryResponse

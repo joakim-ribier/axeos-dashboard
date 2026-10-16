@@ -44,7 +44,7 @@ type AuditTypesResponse struct {
 //
 // @Summary List audit entry types
 // @Description Every type an audit entry can have, in the order the dashboard offers them -- the values GET /api/audit and /api/audit/export accept as type.
-// @Tags dashboard-api
+// @Tags Audit
 // @Produce json
 // @Success 200 {object} handler.AuditTypesResponse
 // @Router /api/audit/types [get]
@@ -60,7 +60,7 @@ func ListAuditTypes(w http.ResponseWriter, _ *http.Request) {
 //
 // @Summary List audit entries
 // @Description Every user-triggered action that matters (miner restart, pool switch, config save, audit export, backups download, network scan) between from (inclusive) and to (exclusive) -- newest first. Both default to the last 24 hours; the range can't exceed a year. API entries carry the client's IP and User-Agent, system entries the service that acted (e.g. the scheduler).
-// @Tags dashboard-api
+// @Tags Audit
 // @Produce json
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
 // @Param to query string false "range end, RFC 3339 (default: now)"
@@ -102,7 +102,7 @@ func ListAudit(log *audit.Log) http.HandlerFunc {
 //
 // @Summary Export audit entries
 // @Description Same range and defaults as GET /api/audit (last 24 hours, at most a year), unpaginated, as a JSON file attachment: the resolved range, the export time and the entry count, then every entry.
-// @Tags dashboard-api
+// @Tags Audit
 // @Produce json
 // @Param from query string false "range start, RFC 3339 (default: to minus 24h)"
 // @Param to query string false "range end, RFC 3339 (default: now)"

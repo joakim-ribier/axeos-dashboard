@@ -46,7 +46,10 @@ cd ui && npm run clean:code  # typecheck + lint:fix + format (run before commit)
 make swagger        # regenerate server/docs/swagger/ from handler annotations, and copy
                      # the generated swagger.json into docs/assets/api/ (feeds the docs
                      # site's Redoc page, docs/en/api.md) -- run after touching a handler's
-                     # @Summary/@Router/etc comments
+                     # @Summary/@Router/etc comments. Each route's @Tags is its domain
+                     # (Miners, Audit, Configuration...); the tags and their service groups
+                     # (x-tagGroups: dashboard-api / remote-dashboard-api / mailer) are
+                     # declared in cmd/dashboard-api/main.go -- a new tag goes in both
 ```
 
 ## Architecture
@@ -124,7 +127,7 @@ Separate `cmd/` binaries sharing `internal/` packages:
 |---|---|
 | `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
-| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk; its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/status`, `POST /api/mail/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
+| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk; its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |

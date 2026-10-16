@@ -18,7 +18,7 @@ var mailerTestClient = &http.Client{Timeout: 25 * time.Second}
 //
 // @Summary Send a test mail
 // @Description Has the mailer service send a test mail to every configured recipient through the saved SMTP server.
-// @Tags dashboard-api
+// @Tags Notifications
 // @Accept json
 // @Param request body object{lang=string} false "Mail language (fr or en, default en)"
 // @Produce json
@@ -28,7 +28,7 @@ var mailerTestClient = &http.Client{Timeout: 25 * time.Second}
 // @Failure 503 {object} handler.ErrorResponse "the mailer service isn't running"
 // @Router /api/config/mail/test [post]
 func SendTestMail(cfg config.Config, w http.ResponseWriter, r *http.Request) {
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, "http://"+cfg.Mailer.Address()+"/api/mail/test", r.Body)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, "http://"+cfg.Mailer.Address()+"/api/mailer/test", r.Body)
 	if err != nil {
 		writeErrorResponse(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -21,7 +21,7 @@ import (
 //
 // @Summary Server build/version info
 // @Description Returns this binary's git SHA, whether it's up to date with the latest GitHub release, the UI feature flags (see config.UIConfig), whether this is remote-dashboard-api (as opposed to dashboard-api), and (remote-dashboard-api only) the hashboard base URL.
-// @Tags dashboard-api,remote-dashboard-api
+// @Tags Info
 // @Produce json
 // @Success 200 {object} model.InfoResponse
 // @Router /api/info [get]

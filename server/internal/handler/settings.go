@@ -19,7 +19,7 @@ import (
 //
 // @Summary Switch stratum pool
 // @Description Switches miner(s) to the primary or fallback pool and restarts them to apply it.
-// @Tags dashboard-api
+// @Tags Miner actions
 // @Param miner query string false "Miner IP or hostname — omit to apply to all configured miners"
 // @Success 204 "No Content"
 // @Failure 502 {object} handler.ErrorResponse "one or more miners didn't apply the change (unreachable, or rejected the request)"
@@ -44,7 +44,7 @@ func SwitchPool(logger *slog.Logger, cfg config.Config, poolTarget config.PoolTa
 //
 // @Summary Restart a miner
 // @Description Restarts the device via its AxeOs restart endpoint.
-// @Tags dashboard-api
+// @Tags Miner actions
 // @Param hostnameOrIp path string true "Miner IP or configured hostname"
 // @Success 204 "No Content"
 // @Failure 404 {object} handler.ErrorResponse "miner not found"
