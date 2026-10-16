@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MemoryIcon from "@mui/icons-material/Memory";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {
   Box,
@@ -23,14 +22,11 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
-import { useMiners } from "@/hooks/useMiners";
-import { formatTimestamp } from "@/utils/format";
 
 import {
   AppSettingsFrame,
   type AppSettingsFrameContext,
 } from "./AppSettingsFrame";
-import { isStale, latestTimestamp, useNow } from "./lastRun";
 import { SectionTitle } from "./SectionTitle";
 
 interface PoolDashboardRow {
@@ -46,15 +42,6 @@ const SystemSection = ({
   serverBasePayload,
 }: AppSettingsFrameContext) => {
   const { t } = useTranslation();
-  // Only used to derive an at-a-glance "is the feeder/health-check loop
-  // actually running" indicator below, from data the dashboard already
-  // fetches -- no dedicated backend endpoint for this exists (feeder is a
-  // separate OS process with no last-run state of its own, and the
-  // health-check watcher only tracks a per-miner timestamp, not a global
-  // one). Enabled miners only (useMiners already filters to those), same
-  // reasoning as everywhere else this data is read.
-  const { data: miners } = useMiners();
-  const now = useNow();
   const [poolDashboards, setPoolDashboards] = useState<PoolDashboardRow[]>([]);
   const [newPoolHost, setNewPoolHost] = useState("");
   const [newPoolUrl, setNewPoolUrl] = useState("");
@@ -106,38 +93,6 @@ const SystemSection = ({
 
   const handleRemovePoolDashboard = (host: string) =>
     persistPoolDashboards(poolDashboards.filter((p) => p.host !== host));
-
-  const latestFeederAt = latestTimestamp(miners?.map((m) => m.timestamp) ?? []);
-  const latestHealthCheckAt = latestTimestamp(
-    miners?.map((m) => m.aliveCheckedAt) ?? [],
-  );
-
-  const renderLastRun = (lastAt: string | undefined, intervalStr?: string) => {
-    if (now === null || !lastAt) {
-      return (
-        <Typography
-          variant="body2"
-          color="text.disabled"
-          sx={{ fontFamily: "monospace" }}
-        >
-          {t("settingsPage.appSettings.readOnly.never")}
-        </Typography>
-      );
-    }
-    return (
-      <Typography
-        variant="body2"
-        sx={{
-          fontFamily: "monospace",
-          color: isStale(now, lastAt, intervalStr)
-            ? "warning.main"
-            : "success.main",
-        }}
-      >
-        {formatTimestamp(lastAt)}
-      </Typography>
-    );
-  };
 
   return (
     <Stack spacing={4}>
@@ -312,75 +267,6 @@ const SystemSection = ({
                   </TableRow>
                 ),
               )}
-          </TableBody>
-        </DataTable>
-      </Box>
-
-      <SectionDivider />
-
-      {/* Read-only, process-launch settings */}
-      <Box>
-        <SectionTitle
-          icon={<MonitorHeartIcon fontSize="small" />}
-          title={t("settingsPage.appSettings.readOnly.title")}
-          description={t("settingsPage.appSettings.readOnly.description")}
-        />
-        <DataTable>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                {t("settingsPage.appSettings.readOnly.settingLabel")}
-              </TableCell>
-              <TableCell>
-                {t("settingsPage.appSettings.readOnly.valueLabel")}
-              </TableCell>
-              <TableCell>
-                {t("settingsPage.appSettings.readOnly.lastRunLabel")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow hover>
-              <TableCell>
-                {t("settingsPage.appSettings.readOnly.feederIntervalLabel")}
-              </TableCell>
-              <TableCell sx={{ fontFamily: "monospace" }}>
-                {data?.readOnly.feederInterval}
-              </TableCell>
-              <TableCell>
-                {renderLastRun(latestFeederAt, data?.readOnly.feederInterval)}
-              </TableCell>
-            </TableRow>
-            <TableRow hover>
-              <TableCell>
-                {t(
-                  "settingsPage.appSettings.readOnly.healthCheckIntervalLabel",
-                )}
-              </TableCell>
-              <TableCell sx={{ fontFamily: "monospace" }}>
-                {data?.readOnly.healthCheckInterval}
-              </TableCell>
-              <TableCell>
-                {renderLastRun(
-                  latestHealthCheckAt,
-                  data?.readOnly.healthCheckInterval,
-                )}
-              </TableCell>
-            </TableRow>
-            <TableRow hover>
-              <TableCell>
-                {t("settingsPage.appSettings.readOnly.firmwareCacheTTLLabel")}
-              </TableCell>
-              <TableCell sx={{ fontFamily: "monospace" }}>
-                {data?.readOnly.firmwareCacheTTL}
-              </TableCell>
-              <TableCell>
-                {renderLastRun(
-                  data?.readOnly.firmwareCacheCheckedAt,
-                  data?.readOnly.firmwareCacheTTL,
-                )}
-              </TableCell>
-            </TableRow>
           </TableBody>
         </DataTable>
       </Box>

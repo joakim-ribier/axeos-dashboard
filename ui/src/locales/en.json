@@ -152,8 +152,7 @@
     "alerts": "Alerts",
     "settings": "Settings",
     "backups": "Backups",
-    "audit": "Audit",
-    "autoRefresh": "Auto-refresh"
+    "audit": "Audit"
   },
   "sidebar": {
     "versionUpToDate": "Up to date",
@@ -431,9 +430,7 @@
       },
       "system": {
         "title": "System",
-        "lastFeeder": "Last feeder run: {{date}}",
-        "neverFed": "Feeder: no run yet",
-        "feederLate": "Feeder late"
+        "summary": "Pool dashboards and firmware"
       }
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
@@ -586,17 +583,6 @@
         "modelLabel": "Model",
         "urlLabel": "Repository URL"
       },
-      "readOnly": {
-        "title": "Process settings",
-        "description": "Service settings, fixed at startup, and when each last ran.",
-        "settingLabel": "Setting",
-        "valueLabel": "Value",
-        "lastRunLabel": "Last run",
-        "feederIntervalLabel": "Feeder poll interval",
-        "healthCheckIntervalLabel": "Health check interval",
-        "firmwareCacheTTLLabel": "Firmware cache TTL",
-        "never": "Never"
-      },
       "mail": {
         "smtp": {
           "title": "SMTP server",
@@ -695,6 +681,39 @@
       "saveSelected": "Save selection",
       "saving": "Saving…",
       "saveSuccess": "{{count}} miner(s) saved — active within moments."
+    }
+  },
+  "servicesStatus": {
+    "title": "Services state",
+    "services": {
+      "dashboardApi": "Dashboard (API)",
+      "feeder": "Feeder",
+      "healthCheck": "Health check",
+      "mailer": "Mailer",
+      "firmwareCache": "Firmware cache"
+    },
+    "states": {
+      "ok": "Running",
+      "late": "Late",
+      "offline": "Unreachable",
+      "unknown": "No run yet"
+    },
+    "startedAt": "started {{date}}",
+    "checkedAt": "Checked {{date}}",
+    "label": "Platform status",
+    "every": "every {{interval}}",
+    "lastRun": "last run {{date}}",
+    "noRunYet": "no run yet",
+    "summary": {
+      "ok": "Operational",
+      "late": "Degraded",
+      "offline": "Outage"
+    },
+    "version": "version {{version}}",
+    "everyOne": {
+      "s": "every second",
+      "min": "every minute",
+      "h": "every hour"
     }
   }
 }

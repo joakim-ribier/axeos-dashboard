@@ -32,7 +32,7 @@ import { formatTimestamp } from "@/utils/format";
 import { poolMismatches } from "@/utils/poolDrift";
 
 import { ElectricitySettings } from "./ElectricitySettings";
-import { isStale, latestTimestamp, useNow } from "./lastRun";
+import { latestTimestamp } from "./lastRun";
 import { MinersSettings } from "./MinersSettings";
 import { NotificationsSettings } from "./NotificationsSettings";
 import { RemoteSettings } from "./RemoteSettings";
@@ -52,7 +52,8 @@ type SectionKey = keyof typeof SECTIONS;
 const EDIT_ONLY: SectionKey[] = ["notifications", "remote"];
 
 interface SectionSummary {
-  summary: string;
+  /** Left out when there's nothing worth a glance. */
+  summary?: string;
   /** Something that needs a look -- an orange dot on the card, the text
    * itself only on hover so the card stays compact. */
   issue?: string;
@@ -65,7 +66,6 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
   const { data: configured } = useMinersConfig();
   const { data: liveMiners } = useMiners();
   const { data: settings } = useAppSettings();
-  const now = useNow();
 
   const liveByMac = new Map(
     (liveMiners ?? []).map((m) => [normalizeMac(m.macAddr), m]),
@@ -85,14 +85,6 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
     : [];
   const pushFailed = pushStatuses.some((s) => s.lastError);
   const lastPush = latestTimestamp(pushStatuses.map((s) => s.lastSuccessAt));
-
-  const latestFeederAt = latestTimestamp(
-    (liveMiners ?? []).map((m) => m.timestamp),
-  );
-  const feederLate =
-    now !== null &&
-    (liveMiners?.length ?? 0) > 0 &&
-    isStale(now, latestFeederAt, settings?.readOnly.feederInterval);
 
   return {
     miners: {
@@ -143,14 +135,8 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
           ? t("settingsPage.toc.remote.failing")
           : undefined,
     },
-    system: {
-      summary: latestFeederAt
-        ? t("settingsPage.toc.system.lastFeeder", {
-            date: formatTimestamp(latestFeederAt),
-          })
-        : t("settingsPage.toc.system.neverFed"),
-      issue: feederLate ? t("settingsPage.toc.system.feederLate") : undefined,
-    },
+    // What it holds, for someone looking for it.
+    system: { summary: t("settingsPage.toc.system.summary") },
   };
 };
 
@@ -223,14 +209,16 @@ const SectionList = ({
               >
                 {t(`settingsPage.toc.${k}.title`)}
               </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                noWrap
-                component="div"
-              >
-                {summary}
-              </Typography>
+              {summary && (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  noWrap
+                  component="div"
+                >
+                  {summary}
+                </Typography>
+              )}
             </Box>
             {issue && <IssueDot issue={issue} />}
           </ListItemButton>
@@ -278,14 +266,16 @@ const SectionPicker = ({
           <Typography variant="subtitle2" fontWeight={700}>
             {t(`settingsPage.toc.${current}.title`)}
           </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            noWrap
-            component="div"
-          >
-            {summaries[current].summary}
-          </Typography>
+          {summaries[current].summary && (
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              component="div"
+            >
+              {summaries[current].summary}
+            </Typography>
+          )}
         </Box>
         {!open && otherIssues.length > 0 && (
           <IssueDot issue={otherIssues.join(" · ")} />

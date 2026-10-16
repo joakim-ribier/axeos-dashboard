@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,43 +21,6 @@ func stoppedMailer() config.Config {
 	cfg := mailerAt(s)
 	s.Close()
 	return cfg
-}
-
-func getMailerStatus(t *testing.T, cfg config.Config) MailerStatusResponse {
-	t.Helper()
-	w := httptest.NewRecorder()
-	MailerStatus(cfg, w, httptest.NewRequest(http.MethodGet, "/api/mailer/status", nil))
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 either way", w.Code)
-	}
-	var resp MailerStatusResponse
-	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatal(err)
-	}
-	return resp
-}
-
-func TestMailerStatus_online(t *testing.T) {
-	mailer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/status" {
-			http.NotFound(w, r)
-			return
-		}
-		_, _ = w.Write([]byte(`{"startedAt":"2026-10-16T08:00:00Z","lastCheckAt":"2026-10-16T09:30:00Z"}`))
-	}))
-	defer mailer.Close()
-
-	resp := getMailerStatus(t, mailerAt(mailer))
-
-	if !resp.Online || resp.StartedAt == nil || resp.LastCheckAt == nil {
-		t.Errorf("status = %+v, want online with its start and last check", resp)
-	}
-}
-
-func TestMailerStatus_offline(t *testing.T) {
-	if resp := getMailerStatus(t, stoppedMailer()); resp.Online {
-		t.Errorf("status = %+v, want offline", resp)
-	}
 }
 
 func TestSendTestMail_relaysTheMailersAnswer(t *testing.T) {

@@ -495,26 +495,6 @@
                 }
             }
         },
-        "/api/mailer/status": {
-            "get": {
-                "description": "Whether the mailer service (the process that sends every mail) is running, since when, and when it last looked for a mail to send.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "dashboard-api"
-                ],
-                "summary": "Mailer service status",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.MailerStatusResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/miners": {
             "get": {
                 "description": "Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).",
@@ -780,6 +760,26 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/remotepush.Board"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status": {
+            "get": {
+                "description": "How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "dashboard-api"
+                ],
+                "summary": "Services status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StatusResponse"
                         }
                     }
                 }
@@ -1642,21 +1642,6 @@
                 }
             }
         },
-        "handler.MailerStatusResponse": {
-            "type": "object",
-            "properties": {
-                "lastCheckAt": {
-                    "type": "string"
-                },
-                "online": {
-                    "description": "Online is whether the mailer answered: without it, no mail is sent at\nall -- neither the audit report nor a test mail.",
-                    "type": "boolean"
-                },
-                "startedAt": {
-                    "type": "string"
-                }
-            }
-        },
         "handler.MinerHistory": {
             "type": "object",
             "properties": {
@@ -1672,6 +1657,51 @@
                 }
             }
         },
+        "handler.ServiceStatus": {
+            "type": "object",
+            "properties": {
+                "interval": {
+                    "type": "string"
+                },
+                "lastRunAt": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ServicesStatus": {
+            "type": "object",
+            "properties": {
+                "dashboardApi": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "feeder": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "firmwareCache": {
+                    "description": "FirmwareCache is the feeder's check for new firmware releases, once\nper its TTL.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.ServiceStatus"
+                        }
+                    ]
+                },
+                "healthCheck": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                },
+                "mailer": {
+                    "$ref": "#/definitions/handler.ServiceStatus"
+                }
+            }
+        },
         "handler.StatsResponse": {
             "type": "object",
             "properties": {
@@ -1683,6 +1713,17 @@
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "handler.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "checkedAt": {
+                    "type": "string"
+                },
+                "services": {
+                    "$ref": "#/definitions/handler.ServicesStatus"
                 }
             }
         },

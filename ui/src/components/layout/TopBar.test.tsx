@@ -180,7 +180,7 @@ describe("TopBar", () => {
     expect(screen.getByTestId("language-switcher")).toBeInTheDocument();
   });
 
-  describe("auto-refresh indicator", () => {
+  describe("auto-refresh toggle", () => {
     it("shows the 'on' state by default", () => {
       renderTopBar();
 
@@ -196,6 +196,30 @@ describe("TopBar", () => {
       expect(
         screen.getByLabelText("Auto-refresh is off", { exact: false }),
       ).toBeInTheDocument();
+    });
+
+    it("turns it off on a click, keeps it, and says so", async () => {
+      const user = userEvent.setup();
+      renderTopBar();
+
+      await user.click(
+        screen.getByRole("button", { name: /Auto-refresh is on/ }),
+      );
+
+      expect(
+        screen.getByRole("button", { name: /Auto-refresh is off/ }),
+      ).toBeInTheDocument();
+      expect(window.localStorage.getItem("axeos.autoRefreshEnabled")).toBe(
+        "false",
+      );
+      const stored = JSON.parse(
+        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+      );
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({
+        type: "autoRefreshToggled",
+        detail: "off",
+      });
     });
   });
 
