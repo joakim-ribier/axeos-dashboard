@@ -18,8 +18,8 @@ import (
 func (m *Mailer) Handler() http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer)
-	router.Get("/api/status", m.status)
-	router.Post("/api/mail/test", m.sendTestMail)
+	router.Get("/api/mailer/status", m.status)
+	router.Post("/api/mailer/test", m.sendTestMail)
 	return router
 }
 
@@ -30,6 +30,14 @@ type statusResponse struct {
 	LastCheckAt *time.Time `json:"lastCheckAt,omitempty"`
 }
 
+// status says the mailer runs, and when it last looked for a mail to send.
+//
+// @Summary Mailer status
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): since when it runs, and when its loop last looked for a mail to send (once a minute). Read through dashboard-api's GET /api/status.
+// @Tags Mailer
+// @Produce json
+// @Success 200 {object} main.statusResponse
+// @Router /api/mailer/status [get]
 func (m *Mailer) status(w http.ResponseWriter, _ *http.Request) {
 	resp := statusResponse{StartedAt: m.startedAt}
 	if last := m.lastCheck(); !last.IsZero() {
@@ -56,6 +64,17 @@ var sentAtLayouts = map[string]string{
 // sendTestMail sends a test mail to every recipient, through the SMTP
 // server as saved in settings.yml -- never what's being typed in the form,
 // so a success means the saved setup, and the mailer itself, actually work.
+//
+// @Summary Send a test mail (mailer)
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server. Reached through dashboard-api's POST /api/config/mail/test.
+// @Tags Mailer
+// @Accept json
+// @Param request body main.testMailRequest false "Mail language (fr or en, default en)"
+// @Produce json
+// @Success 200 {object} main.testMailResponse
+// @Failure 400 {object} object{error=string,message=string,code=int} "SMTP server or recipients not configured"
+// @Failure 502 {object} object{error=string,message=string,code=int} "the SMTP server refused or couldn't be reached"
+// @Router /api/mailer/test [post]
 func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 	var req testMailRequest
 	// No body, or an unreadable one, just means the default language.

@@ -98,16 +98,20 @@ axeos-dashboard/
 ├── docker-compose.yml
 ├── .env
 ├── config/
-│   └── dashboard.yml
-└── storage/            # filled in once the feeder starts running
+│   ├── dashboard.yml
+│   └── mail-templates/  # the mails' texts, created by the mailer
+└── storage/            # filled in once the services are running
     ├── logs/
     │   ├── dashboard-api.log
-    │   └── feeder.log
+    │   ├── feeder.log
+    │   └── mailer.log
     └── data/
         ├── bitaxes/
         │   └── <mac>/
         │       ├── latest.json
         │       └── YYYY-MM-DD.jsonl
+        ├── audit/
+        ├── mail/
         └── firmware_cache.json
 ```
 
@@ -161,6 +165,9 @@ requires **restarting** the binaries to take effect.
 server:
   port: "8080"
 
+mailer:
+  port: "8082"
+
 storage:
   dataDir: resources
 
@@ -183,6 +190,8 @@ firmware:
 - **global.env** — `dev` only shows logs on the console; any other value
   also writes log files.
 - **server.port** — dashboard-api's listening port.
+- **mailer.port** — the port of the mailer, the service sending the
+  mails; reached by dashboard-api on the machine itself only.
 - **storage.dataDir** — root data folder (miners, history, firmware
   cache).
 - **feeder.interval** — how often each miner is polled.
@@ -193,8 +202,8 @@ firmware:
   is cached.
 
 {: .note }
-> The electricity rate, pools, and miner list are all managed directly
-> from the app (**Configuration** page) — no need to hand-edit a file
-> for that.
+> The miner list, electricity rate, notifications and pools are all
+> managed directly from the app (**Configuration** page) — no need to
+> hand-edit a file for that.
 
-[Go to Configuration →]({{ '/en/configuration.html#electricity-pools' | relative_url }}){: .btn .btn-primary }
+[Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }

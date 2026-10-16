@@ -14,7 +14,7 @@ import (
 //
 // @Summary Remote board info
 // @Description Returns what hashboard knows about the board this instance pushes to: the link to its remote dashboard, and when hashboard last received a sample for it. Empty when remote push isn't configured, or hashboard can't be reached. Cached for one feeder interval.
-// @Tags dashboard-api
+// @Tags Remote push
 // @Produce json
 // @Success 200 {object} remotepush.Board
 // @Router /api/remote/board [get]

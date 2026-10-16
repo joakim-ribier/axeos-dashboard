@@ -48,7 +48,7 @@ func parseLimit(r *http.Request) int {
 //
 // @Summary List the most recent miner alerts
 // @Description Returns each miner's N most recent alert-bearing entries (today's history only).
-// @Tags dashboard-api
+// @Tags Alerts
 // @Produce json
 // @Param limit query int false "max entries to return per miner (default 10)"
 // @Success 200 {array} handler.AlertEntry
@@ -76,7 +76,7 @@ func ListAlerts(cfg config.Config) http.HandlerFunc {
 // no local config).
 //
 // @Summary List the most recent miner alerts for a hashboard board (read-only)
-// @Tags remote-dashboard-api
+// @Tags Board alerts
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Param limit query int false "max entries to return per miner (default 10)"
@@ -288,7 +288,7 @@ func parseDateFilter(r *http.Request) (date string, ok bool) {
 //
 // @Summary List a single day's recorded miner alerts, grouped into episodes and paginated
 // @Description Returns every alert episode (consecutive same-type occurrences collapsed into one) on the given day across all miners, most recently active first, optionally filtered by ip/type.
-// @Tags dashboard-api
+// @Tags Alerts
 // @Produce json
 // @Param date query string true "the single day to scan (YYYY-MM-DD)"
 // @Param page query int false "page number, 1-based (default 1)"
@@ -324,7 +324,7 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 // hashboard board's data directory.
 //
 // @Summary List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)
-// @Tags remote-dashboard-api
+// @Tags Board alerts
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Param date query string true "the single day to scan (YYYY-MM-DD)"

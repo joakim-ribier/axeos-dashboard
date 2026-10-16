@@ -28,7 +28,7 @@ func boardConfigDir(dataDir, boardID string) string {
 //
 // @Summary List a remote board's configured miners (read-only)
 // @Description Returns the managed miners list last pushed to hashboard for this board.
-// @Tags remote-dashboard-api
+// @Tags Board configuration
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Success 200 {object} handler.bitaxesResponse
@@ -69,7 +69,7 @@ func RemoteMinersConfig(cfg config.Config) http.HandlerFunc {
 //
 // @Summary Get a remote board's app settings (read-only)
 // @Description Returns the app settings last pushed to hashboard for this board, with remote push credentials always redacted.
-// @Tags remote-dashboard-api
+// @Tags Board configuration
 // @Produce json
 // @Param boardId path string true "hashboard board ID"
 // @Success 200 {object} handler.appSettingsResponse

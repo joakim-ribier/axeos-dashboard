@@ -7,9 +7,11 @@ lang: en
 
 # API
 
-Browsable reference for the dashboard-api and remote-dashboard-api REST
-endpoints, generated straight from the handler annotations in the Go
-code — always in sync with what's actually deployed.
+Browsable reference for the dashboard-api, remote-dashboard-api and
+mailer REST endpoints, generated straight from the handler annotations
+in the Go code — always in sync with what's actually deployed. Endpoints
+are grouped by service, then by domain (miners, alerts, audit,
+configuration...).
 
 <div class="terminal-card">
   <div class="terminal-card-header">

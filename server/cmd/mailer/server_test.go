@@ -28,7 +28,7 @@ func newTestMailer(t *testing.T, notifications config.NotificationsConfig) *Mail
 func postTestMail(m *Mailer, lang string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	body := strings.NewReader(`{"lang":"` + lang + `"}`)
-	m.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/mail/test", body))
+	m.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/mailer/test", body))
 	return w
 }
 
@@ -95,7 +95,7 @@ func TestStatus_saysWhenTheMailerLastLookedForAMail(t *testing.T) {
 	m.checked(checkedAt)
 
 	w := httptest.NewRecorder()
-	m.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/status", nil))
+	m.Handler().ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/mailer/status", nil))
 
 	var resp statusResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {

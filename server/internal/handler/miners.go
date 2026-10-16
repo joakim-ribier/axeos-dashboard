@@ -25,7 +25,7 @@ import (
 //
 // @Summary List all configured miners
 // @Description Returns every enabled miner with its latest snapshot (hashrate, temp, shares, pool, uptime...).
-// @Tags dashboard-api
+// @Tags Miners
 // @Produce json
 // @Success 200 {object} model.MinersResponse
 // @Router /api/miners [get]

@@ -34,7 +34,7 @@ type StatsResponse struct {
 //
 // @Summary Get the last 24h of stats for one miner
 // @Description Returns every JSONL entry (one per poll cycle) of the last 24 hours for a single miner, oldest first, used by the miner panel's history chart. An empty array when nothing was recorded in that time.
-// @Tags dashboard-api
+// @Tags Miners
 // @Produce json
 // @Param hostnameOrIp path string true "Miner IP or configured hostname"
 // @Success 200 {object} handler.StatsResponse

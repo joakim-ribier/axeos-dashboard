@@ -53,7 +53,7 @@ type StatusResponse struct {
 //
 // @Summary Services status
 // @Description How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet).
-// @Tags dashboard-api
+// @Tags Status
 // @Produce json
 // @Success 200 {object} handler.StatusResponse
 // @Router /api/status [get]
@@ -117,7 +117,7 @@ func runStatus(now, last time.Time, interval time.Duration) ServiceStatus {
 // mailerStatus asks the mailer, on the loopback (see config.MailerConfig).
 func mailerStatus(r *http.Request, cfg config.Config, now time.Time) ServiceStatus {
 	offline := ServiceStatus{State: StateOffline, Interval: mailerCheckInterval.String()}
-	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "http://"+cfg.Mailer.Address()+"/api/status", nil)
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, "http://"+cfg.Mailer.Address()+"/api/mailer/status", nil)
 	if err != nil {
 		return offline
 	}

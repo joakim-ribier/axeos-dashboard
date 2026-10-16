@@ -26,11 +26,42 @@ import (
 // @description Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.
 // @description No authentication — internal LAN use only.
 // @description
-// @description Endpoints tagged "dashboard-api" run on this binary (default :8080).
-// @description Endpoints tagged "remote-dashboard-api" run on the separate remote-dashboard-api binary (default :8081),
-// @description a read-only API serving miners pushed to hashboard.live — see the project README.
+// @description Endpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);
+// @description remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;
+// @description the mailer (default :8082, on the loopback only), reached through dashboard-api.
 // @host localhost:8080
 // @BasePath /
+//
+// @tag.name Info
+// @tag.description Build and version, UI feature flags -- served by dashboard-api and remote-dashboard-api alike.
+// @tag.name Miners
+// @tag.description The configured miners' latest snapshot, history and stats.
+// @tag.name Miner actions
+// @tag.description Restart a miner, switch its pool -- proxied to the device.
+// @tag.name Alerts
+// @tag.description Recent alerts and their history, grouped into episodes.
+// @tag.name Audit
+// @tag.description Every user-triggered action and scheduled run, its types and export.
+// @tag.name Backups
+// @tag.description The monthly archives of the miners' history.
+// @tag.name Configuration
+// @tag.description miners.yml and settings.yml, read and saved; network discovery.
+// @tag.name Notifications
+// @tag.description Mail: the test mail, sent by the mailer.
+// @tag.name Status
+// @tag.description How every process of the dashboard is doing.
+// @tag.name Remote push
+// @tag.description The hashboard board this dashboard pushes to.
+// @tag.name Board miners
+// @tag.description A board's miners, their history and stats.
+// @tag.name Board alerts
+// @tag.description A board's recent alerts and their history.
+// @tag.name Board configuration
+// @tag.description A board's miners.yml and settings.yml, read-only.
+// @tag.name Mailer
+// @tag.description The mailer's own API, on the loopback only.
+//
+// @x-tagGroups [{"name":"dashboard-api","tags":["Info","Miners","Miner actions","Alerts","Audit","Backups","Configuration","Notifications","Status","Remote push"]},{"name":"remote-dashboard-api","tags":["Board miners","Board alerts","Board configuration"]},{"name":"mailer","tags":["Mailer"]}]
 func main() {
 	var configPath, deprecatedMinersPath string
 	flag.StringVar(&configPath, "config", "", "Config path")

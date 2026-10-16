@@ -42,7 +42,7 @@ type bitaxesResponse struct {
 //
 // @Summary List configured miners
 // @Description Returns every miner entry in the managed miners config, including disabled ones. Read-only -- see POST/DELETE for writing.
-// @Tags dashboard-api
+// @Tags Configuration
 // @Produce json
 // @Success 200 {object} handler.bitaxesResponse
 // @Router /api/config/miners [get]
@@ -82,7 +82,7 @@ var normalizedMacPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 //
 // @Summary Add or update configured miners
 // @Description Upserts one or more miner entries into the managed miners file, matched by MAC. New entries are always saved enabled.
-// @Tags dashboard-api
+// @Tags Configuration
 // @Accept json
 // @Param request body handler.bitaxesResponse true "Miner entries to add/update"
 // @Produce json
@@ -237,7 +237,7 @@ func upsertBitaxes(existing, incoming []config.Bitaxe) ([]config.Bitaxe, error) 
 //
 // @Summary Discover AxeOS devices on the network
 // @Description Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24, defaults to the server's own local /24 subnet when both are omitted). ip takes priority if both are set.
-// @Tags dashboard-api
+// @Tags Configuration
 // @Param ip query string false "Probe exactly this one IP instead of scanning a range (e.g. a device on a different VLAN than the server). Takes priority over cidr."
 // @Param cidr query string false "Network range to sweep, e.g. '192.168.1.0/24' (max /24 = 254 hosts). Omitted: auto-detects and scans the server's own local /24 subnet. Ignored if ip is set."
 // @Param timeout query string false "Per-host probe timeout, e.g. '500ms' or '2s' (default 1s, capped at 3s). Raise it and retry if a scan/probe found nothing on a slow network."
@@ -484,7 +484,7 @@ func toRemotePushEndpointStatus(a remotepush.Attempt) remotePushEndpointStatus {
 //
 // @Summary Get app settings
 // @Description Returns the settings.yml overrides, the built-in defaults for pool dashboards/firmware repos, and a read-only snapshot of process-launch settings (poll intervals, firmware cache TTL) shown for visibility only.
-// @Tags dashboard-api
+// @Tags Configuration
 // @Produce json
 // @Success 200 {object} handler.appSettingsResponse
 // @Router /api/config/settings [get]
@@ -498,7 +498,7 @@ func GetAppSettings(cfg config.Config, current config.AppSettingsFile, w http.Re
 //
 // @Summary Save app settings
 // @Description Validates and persists the editable subset of app settings to settings.yml.
-// @Tags dashboard-api
+// @Tags Configuration
 // @Accept json
 // @Param request body config.AppSettingsFile true "Settings to save"
 // @Produce json

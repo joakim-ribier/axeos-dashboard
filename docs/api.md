@@ -6,9 +6,11 @@ group: Dev
 
 # API
 
-Référence navigable des endpoints REST de dashboard-api et
-remote-dashboard-api, générée directement depuis les annotations des
-handlers Go — toujours synchronisée avec ce qui est réellement déployé.
+Référence navigable des endpoints REST de dashboard-api,
+remote-dashboard-api et du mailer, générée directement depuis les
+annotations des handlers Go — toujours synchronisée avec ce qui est
+réellement déployé. Les endpoints sont rangés par service, puis par
+domaine (mineurs, alertes, audit, configuration...).
 
 <div class="terminal-card">
   <div class="terminal-card-header">

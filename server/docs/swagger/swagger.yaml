@@ -639,6 +639,30 @@ definitions:
       username:
         type: string
     type: object
+  main.statusResponse:
+    properties:
+      lastCheckAt:
+        description: |-
+          LastCheckAt is the last time the mailer looked for a mail to send --
+          once a minute, so an old one means its loop is stuck.
+        type: string
+      startedAt:
+        type: string
+    type: object
+  main.testMailRequest:
+    properties:
+      lang:
+        description: Lang picks the mail's language, the dashboard's own ("fr" or
+          "en").
+        type: string
+    type: object
+  main.testMailResponse:
+    properties:
+      sentTo:
+        items:
+          type: string
+        type: array
+    type: object
   model.Alert:
     properties:
       message:
@@ -924,9 +948,9 @@ info:
     Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.
     No authentication — internal LAN use only.
 
-    Endpoints tagged "dashboard-api" run on this binary (default :8080).
-    Endpoints tagged "remote-dashboard-api" run on the separate remote-dashboard-api binary (default :8081),
-    a read-only API serving miners pushed to hashboard.live — see the project README.
+    Endpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);
+    remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;
+    the mailer (default :8082, on the loopback only), reached through dashboard-api.
   title: axeos-dashboard API
   version: "1.0"
 paths:
@@ -958,7 +982,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get the last 24h of stats for one remote miner (read-only)
       tags:
-      - remote-dashboard-api
+      - Board miners
   /api/{boardId}/config/miners:
     get:
       description: Returns the managed miners list last pushed to hashboard for this
@@ -982,7 +1006,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: List a remote board's configured miners (read-only)
       tags:
-      - remote-dashboard-api
+      - Board configuration
   /api/{boardId}/config/settings:
     get:
       description: Returns the app settings last pushed to hashboard for this board,
@@ -1006,7 +1030,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get a remote board's app settings (read-only)
       tags:
-      - remote-dashboard-api
+      - Board configuration
   /api/{boardId}/miners:
     get:
       description: Auto-discovers miners from the board's bitaxes directory — no local
@@ -1030,7 +1054,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: List miners pushed to a hashboard board (read-only)
       tags:
-      - remote-dashboard-api
+      - Board miners
   /api/{boardId}/miners/alerts:
     get:
       parameters:
@@ -1054,7 +1078,7 @@ paths:
             type: array
       summary: List the most recent miner alerts for a hashboard board (read-only)
       tags:
-      - remote-dashboard-api
+      - Board alerts
   /api/{boardId}/miners/alerts/history:
     get:
       parameters:
@@ -1094,7 +1118,7 @@ paths:
       summary: List a single day's recorded miner alerts for a hashboard board, grouped
         into episodes and paginated (read-only)
       tags:
-      - remote-dashboard-api
+      - Board alerts
   /api/{boardId}/miners/history:
     get:
       description: Same as /api/miners/history, for the miners pushed to a hashboard
@@ -1118,7 +1142,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get the last 24h of every remote miner, downsampled (read-only)
       tags:
-      - remote-dashboard-api
+      - Board miners
   /api/audit:
     get:
       description: Every user-triggered action that matters (miner restart, pool switch,
@@ -1169,7 +1193,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: List audit entries
       tags:
-      - dashboard-api
+      - Audit
   /api/audit/export:
     get:
       description: 'Same range and defaults as GET /api/audit (last 24 hours, at most
@@ -1210,7 +1234,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Export audit entries
       tags:
-      - dashboard-api
+      - Audit
   /api/audit/types:
     get:
       description: Every type an audit entry can have, in the order the dashboard
@@ -1224,7 +1248,7 @@ paths:
             $ref: '#/definitions/handler.AuditTypesResponse'
       summary: List audit entry types
       tags:
-      - dashboard-api
+      - Audit
   /api/backups:
     get:
       description: Returns the monthly backup archives, most recent first. The feeder
@@ -1239,7 +1263,7 @@ paths:
             $ref: '#/definitions/handler.BackupsResponse'
       summary: List monthly backups
       tags:
-      - dashboard-api
+      - Backups
   /api/backups/download:
     get:
       description: 'Returns one zip holding the given months'' archives (up to yesterday
@@ -1268,7 +1292,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Download monthly backups
       tags:
-      - dashboard-api
+      - Backups
   /api/config/discover:
     get:
       description: Probes a single IP (?ip=) or sweeps a CIDR range (?cidr=, max /24,
@@ -1308,7 +1332,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Discover AxeOS devices on the network
       tags:
-      - dashboard-api
+      - Configuration
   /api/config/mail/test:
     post:
       consumes:
@@ -1350,7 +1374,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Send a test mail
       tags:
-      - dashboard-api
+      - Notifications
   /api/config/miners:
     get:
       description: Returns every miner entry in the managed miners config, including
@@ -1364,7 +1388,7 @@ paths:
             $ref: '#/definitions/handler.bitaxesResponse'
       summary: List configured miners
       tags:
-      - dashboard-api
+      - Configuration
     post:
       consumes:
       - application/json
@@ -1398,7 +1422,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Add or update configured miners
       tags:
-      - dashboard-api
+      - Configuration
   /api/config/settings:
     get:
       description: Returns the settings.yml overrides, the built-in defaults for pool
@@ -1413,7 +1437,7 @@ paths:
             $ref: '#/definitions/handler.appSettingsResponse'
       summary: Get app settings
       tags:
-      - dashboard-api
+      - Configuration
     post:
       consumes:
       - application/json
@@ -1446,7 +1470,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Save app settings
       tags:
-      - dashboard-api
+      - Configuration
   /api/info:
     get:
       description: Returns this binary's git SHA, whether it's up to date with the
@@ -1462,8 +1486,67 @@ paths:
             $ref: '#/definitions/model.InfoResponse'
       summary: Server build/version info
       tags:
-      - dashboard-api
-      - remote-dashboard-api
+      - Info
+  /api/mailer/status:
+    get:
+      description: 'The mailer''s own API, on the loopback only (mailer.port, default
+        8082): since when it runs, and when its loop last looked for a mail to send
+        (once a minute). Read through dashboard-api''s GET /api/status.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.statusResponse'
+      summary: Mailer status
+      tags:
+      - Mailer
+  /api/mailer/test:
+    post:
+      consumes:
+      - application/json
+      description: 'The mailer''s own API, on the loopback only (mailer.port, default
+        8082): sends a test mail to every recipient through the saved SMTP server.
+        Reached through dashboard-api''s POST /api/config/mail/test.'
+      parameters:
+      - description: Mail language (fr or en, default en)
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/main.testMailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.testMailResponse'
+        "400":
+          description: SMTP server or recipients not configured
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+        "502":
+          description: the SMTP server refused or couldn't be reached
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+      summary: Send a test mail (mailer)
+      tags:
+      - Mailer
   /api/miners:
     get:
       description: Returns every enabled miner with its latest snapshot (hashrate,
@@ -1477,7 +1560,7 @@ paths:
             $ref: '#/definitions/model.MinersResponse'
       summary: List all configured miners
       tags:
-      - dashboard-api
+      - Miners
   /api/miners/{hostnameOrIp}/restart:
     post:
       description: Restarts the device via its AxeOs restart endpoint.
@@ -1500,7 +1583,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Restart a miner
       tags:
-      - dashboard-api
+      - Miner actions
   /api/miners/{hostnameOrIp}/stats:
     get:
       description: Returns every JSONL entry (one per poll cycle) of the last 24 hours
@@ -1525,7 +1608,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Get the last 24h of stats for one miner
       tags:
-      - dashboard-api
+      - Miners
   /api/miners/alerts:
     get:
       description: Returns each miner's N most recent alert-bearing entries (today's
@@ -1546,7 +1629,7 @@ paths:
             type: array
       summary: List the most recent miner alerts
       tags:
-      - dashboard-api
+      - Alerts
   /api/miners/alerts/history:
     get:
       description: Returns every alert episode (consecutive same-type occurrences
@@ -1584,7 +1667,7 @@ paths:
       summary: List a single day's recorded miner alerts, grouped into episodes and
         paginated
       tags:
-      - dashboard-api
+      - Alerts
   /api/miners/history:
     get:
       description: Hashrate of every configured miner over the last 24 hours, averaged
@@ -1599,7 +1682,7 @@ paths:
             $ref: '#/definitions/handler.HistoryResponse'
       summary: Get the last 24h of every miner, downsampled
       tags:
-      - dashboard-api
+      - Miners
   /api/miners/pool/fallback/enable:
     put:
       description: Switches miner(s) to the primary or fallback pool and restarts
@@ -1619,7 +1702,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Switch stratum pool
       tags:
-      - dashboard-api
+      - Miner actions
   /api/miners/pool/primary/enable:
     put:
       description: Switches miner(s) to the primary or fallback pool and restarts
@@ -1639,7 +1722,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Switch stratum pool
       tags:
-      - dashboard-api
+      - Miner actions
   /api/remote/board:
     get:
       description: 'Returns what hashboard knows about the board this instance pushes
@@ -1655,7 +1738,7 @@ paths:
             $ref: '#/definitions/remotepush.Board'
       summary: Remote board info
       tags:
-      - dashboard-api
+      - Remote push
   /api/status:
     get:
       description: 'How each process is doing -- dashboard-api, the feeder (its last
@@ -1670,5 +1753,56 @@ paths:
             $ref: '#/definitions/handler.StatusResponse'
       summary: Services status
       tags:
-      - dashboard-api
+      - Status
 swagger: "2.0"
+tags:
+- description: Build and version, UI feature flags -- served by dashboard-api and
+    remote-dashboard-api alike.
+  name: Info
+- description: The configured miners' latest snapshot, history and stats.
+  name: Miners
+- description: Restart a miner, switch its pool -- proxied to the device.
+  name: Miner actions
+- description: Recent alerts and their history, grouped into episodes.
+  name: Alerts
+- description: Every user-triggered action and scheduled run, its types and export.
+  name: Audit
+- description: The monthly archives of the miners' history.
+  name: Backups
+- description: miners.yml and settings.yml, read and saved; network discovery.
+  name: Configuration
+- description: 'Mail: the test mail, sent by the mailer.'
+  name: Notifications
+- description: How every process of the dashboard is doing.
+  name: Status
+- description: The hashboard board this dashboard pushes to.
+  name: Remote push
+- description: A board's miners, their history and stats.
+  name: Board miners
+- description: A board's recent alerts and their history.
+  name: Board alerts
+- description: A board's miners.yml and settings.yml, read-only.
+  name: Board configuration
+- description: The mailer's own API, on the loopback only.
+  name: Mailer
+x-tagGroups:
+- name: dashboard-api
+  tags:
+  - Info
+  - Miners
+  - Miner actions
+  - Alerts
+  - Audit
+  - Backups
+  - Configuration
+  - Notifications
+  - Status
+  - Remote push
+- name: remote-dashboard-api
+  tags:
+  - Board miners
+  - Board alerts
+  - Board configuration
+- name: mailer
+  tags:
+  - Mailer
