@@ -1,6 +1,6 @@
 // src/components/layout/AppLayout.tsx
 import { useEffect, useState } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 
@@ -12,23 +12,13 @@ import { PageTitleSlotContext } from "./pageTitleSlot";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
-interface AppLayoutProps {
-  mode: "local" | "remote";
-}
-
 /**
- * The route element for every local ("/") and every remote ("/:boardId")
- * page -- see App.tsx. Mounting ModeProvider here, one level above
- * Sidebar/TopBar, is the whole point of this component: both of them (and
- * everything they render, e.g. the notification bell, the board chip) can
- * now read mode/boardId straight from useMode() instead of each
- * re-deriving it from the raw URL on their own (the previous source of a
- * class of local/remote bugs -- see boardIdFromPathname's history).
- * useParams() inside ModeProvider only ever sees :boardId once a <Route>
- * above it in the tree has actually matched it -- this component's own
- * <Route> (in App.tsx) is that match.
+ * The route element for every page of the local dashboard ("/", see
+ * App.tsx): the sidebar, the top bar, the page. A hashboard board has its
+ * own, much barer one (BoardLayout). Served by remote-dashboard-api
+ * instead, the local pages have nothing behind them: off to hashboard.
  */
-export const AppLayout: React.FC<AppLayoutProps> = ({ mode }) => {
+export const AppLayout: React.FC = () => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [titleSlot, setTitleSlot] = useState<HTMLElement | null>(null);
 
@@ -47,18 +37,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ mode }) => {
     retry: false,
   });
   const hashboardUrl = infoQuery.data?.hashboardUrl;
-  const leaveForHashboard =
-    mode === "local" && infoQuery.data?.remote === true && !!hashboardUrl;
+  const leaveForHashboard = infoQuery.data?.remote === true && !!hashboardUrl;
   useEffect(() => {
     if (leaveForHashboard) window.location.replace(`${hashboardUrl}/me`);
   }, [leaveForHashboard, hashboardUrl]);
   if (infoQuery.isLoading || leaveForHashboard) return null;
-  if (mode === "remote" && infoQuery.data?.remote === false) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
-    <ModeProvider mode={mode}>
+    <ModeProvider mode="local">
       <NotificationsProvider>
         <Box sx={{ display: "flex", minHeight: "100vh" }}>
           <Sidebar

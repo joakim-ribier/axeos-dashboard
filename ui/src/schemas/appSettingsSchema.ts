@@ -32,15 +32,6 @@ export const firmwareReposSchema = z.object({
   repos: z.record(z.string(), z.string()),
 });
 
-// The feeder's own record of its last attempt to push one config endpoint
-// to hashboard (see server/internal/remotepush) -- all three fields absent
-// together if that endpoint has never been attempted.
-export const remotePushEndpointStatusSchema = z.object({
-  lastAttemptAt: z.string().optional(),
-  lastSuccessAt: z.string().optional(),
-  lastError: z.string().optional(),
-});
-
 // The read-only process-launch settings shown for visibility only --
 // never sent back on save (see handler.appSettingsReadOnly). Durations
 // come pre-formatted as Go's time.Duration.String() (e.g. "2m0s"), not
@@ -52,10 +43,6 @@ export const appSettingsReadOnlySchema = z.object({
   // Most recent firmware-repo check across every model, RFC3339 -- absent
   // if none has ever run yet (fresh install).
   firmwareCacheCheckedAt: z.string().optional(),
-  // Tracked separately per config endpoint, not merged into one status --
-  // one endpoint succeeding must never hide the other currently failing.
-  remotePushMinersConfig: remotePushEndpointStatusSchema,
-  remotePushSettingsConfig: remotePushEndpointStatusSchema,
   // The feeder's record of the daily audit mail -- absent fields until it
   // first ran.
   auditReport: z

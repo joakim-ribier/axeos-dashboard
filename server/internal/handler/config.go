@@ -19,7 +19,6 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/discovery"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 )
 
 // bitaxesResponse wraps a list of miner entries the same way the managed
@@ -419,17 +418,6 @@ type appSettingsReadOnly struct {
 	// triggered a check). Lets the UI show "was this actually run" rather
 	// than just the configured TTL.
 	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
-	// RemotePushMinersConfig/RemotePushSettingsConfig mirror
-	// remotepush.Status's two independently-tracked config push attempts
-	// (RFC3339, UTC) -- the feeder's own record of its last attempt to
-	// push each config endpoint to hashboard, read back from disk since
-	// the feeder is a separate OS process. Kept separate rather than
-	// merged into one field so the Settings page can show both endpoints'
-	// health at once: one succeeding must never hide the other currently
-	// failing (see remotepush.Status). Each is its zero value when that
-	// endpoint has never been attempted (no status file yet).
-	RemotePushMinersConfig   remotePushEndpointStatus `json:"remotePushMinersConfig"`
-	RemotePushSettingsConfig remotePushEndpointStatus `json:"remotePushSettingsConfig"`
 	// AuditReport is the feeder's record of the daily audit mail (see
 	// auditreport.State), read back from disk -- the feeder sends it.
 	AuditReport auditReportStatus `json:"auditReport"`
@@ -454,24 +442,6 @@ func toAuditReportStatus(s auditreport.State) auditReportStatus {
 		status.LastAttemptAt = s.LastAttemptAt.UTC().Format(time.RFC3339)
 	}
 	return status
-}
-
-type remotePushEndpointStatus struct {
-	LastAttemptAt string `json:"lastAttemptAt,omitempty"`
-	LastSuccessAt string `json:"lastSuccessAt,omitempty"`
-	LastError     string `json:"lastError,omitempty"`
-}
-
-func toRemotePushEndpointStatus(a remotepush.Attempt) remotePushEndpointStatus {
-	var s remotePushEndpointStatus
-	if !a.LastAttemptAt.IsZero() {
-		s.LastAttemptAt = a.LastAttemptAt.UTC().Format(time.RFC3339)
-	}
-	if !a.LastSuccessAt.IsZero() {
-		s.LastSuccessAt = a.LastSuccessAt.UTC().Format(time.RFC3339)
-	}
-	s.LastError = a.LastError
-	return s
 }
 
 // GetAppSettings returns the current settings.yml overrides plus the
@@ -664,9 +634,6 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 	if checkedAt := firmware.LatestCheck(fwCache); !checkedAt.IsZero() {
 		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
 	}
-	pushStatus := remotepush.Load(getDataRoot(cfg.Storage))
-	readOnly.RemotePushMinersConfig = toRemotePushEndpointStatus(pushStatus.MinersConfig)
-	readOnly.RemotePushSettingsConfig = toRemotePushEndpointStatus(pushStatus.SettingsConfig)
 	readOnly.AuditReport = toAuditReportStatus(auditreport.Load(cfg.Storage.MailDir()))
 	resp := appSettingsResponse{
 		AppSettingsFile: settings,

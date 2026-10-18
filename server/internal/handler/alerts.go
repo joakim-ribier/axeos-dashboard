@@ -4,14 +4,12 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
@@ -65,41 +63,6 @@ func ListAlerts(cfg config.Config) http.HandlerFunc {
 				continue
 			}
 			entries = append(entries, alertsForMiner(root, key, miner.Ip, miner.DisplayName(), limit)...)
-		}
-
-		writeAlertEntries(w, entries)
-	}
-}
-
-// ListRemoteAlerts is the remote-dashboard-api equivalent: same logic, but
-// scanning the hashboard board's data directory (auto-discovered devices,
-// no local config).
-//
-// @Summary List the most recent miner alerts for a hashboard board (read-only)
-// @Tags Board alerts
-// @Produce json
-// @Param boardId path string true "hashboard board ID"
-// @Param limit query int false "max entries to return per miner (default 10)"
-// @Success 200 {array} handler.AlertEntry
-// @Router /api/{boardId}/miners/alerts [get]
-func ListRemoteAlerts(cfg config.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		boardID := chi.URLParam(r, "boardId")
-		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
-		limit := parseLimit(r)
-
-		dirEntries, err := os.ReadDir(root)
-		if err != nil {
-			writeErrorResponse(w, "board not found", http.StatusNotFound)
-			return
-		}
-
-		var entries []AlertEntry
-		for _, d := range dirEntries {
-			if !d.IsDir() {
-				continue
-			}
-			entries = append(entries, alertsForMiner(root, d.Name(), "", "", limit)...)
 		}
 
 		writeAlertEntries(w, entries)
@@ -196,12 +159,8 @@ func pollGapThresholdFor(interval time.Duration) time.Duration {
 	return 3 * interval
 }
 
-// episodeGapThreshold is pollGapThresholdFor for local mode's alert episode
-// grouping (see AlertEpisode), where the feeder interval is this
-// deployment's own config. Remote mode has no feeder.interval of its own to
-// read (see ListRemoteAlertsHistory, boardFeederInterval) -- it isn't this
-// server's feeder that's doing the polling, so it calls
-// pollGapThresholdFor directly instead.
+// episodeGapThreshold is pollGapThresholdFor for the alert episode grouping
+// (see AlertEpisode), from this deployment's own feeder interval.
 func episodeGapThreshold(cfg config.Config) time.Duration {
 	return pollGapThresholdFor(cfg.Feeder.Interval)
 }
@@ -317,75 +276,6 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 
 		writeAlertHistory(w, r, entries, episodeGapThreshold(cfg))
 	}
-}
-
-// ListRemoteAlertsHistory is the remote-dashboard-api equivalent of
-// ListAlertsHistory (date required, same episode grouping), scanning the
-// hashboard board's data directory.
-//
-// @Summary List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)
-// @Tags Board alerts
-// @Produce json
-// @Param boardId path string true "hashboard board ID"
-// @Param date query string true "the single day to scan (YYYY-MM-DD)"
-// @Param page query int false "page number, 1-based (default 1)"
-// @Param pageSize query int false "episodes per page (default 50, max 200)"
-// @Param ip query string false "filter to this miner IP only"
-// @Param type query string false "filter to this alert type only"
-// @Success 200 {object} handler.AlertHistoryResponse
-// @Router /api/{boardId}/miners/alerts/history [get]
-func ListRemoteAlertsHistory(cfg config.Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		date, ok := parseDateFilter(r)
-		if !ok {
-			writeErrorResponse(w, "date is required, want YYYY-MM-DD", http.StatusBadRequest)
-			return
-		}
-		boardID := chi.URLParam(r, "boardId")
-		root := boardDataRoot(cfg.Storage.ResolveBoardsDir(), boardID)
-
-		dirEntries, err := os.ReadDir(root)
-		if err != nil {
-			writeErrorResponse(w, "board not found", http.StatusNotFound)
-			return
-		}
-
-		var entries []AlertEntry
-		for _, d := range dirEntries {
-			if !d.IsDir() {
-				continue
-			}
-			entries = append(entries, allAlertsForMiner(root, d.Name(), "", "", date)...)
-		}
-
-		gapThreshold := pollGapThresholdFor(boardFeederInterval(root, dirEntries))
-		writeAlertHistory(w, r, entries, gapThreshold)
-	}
-}
-
-// boardFeederInterval reads the polling interval the board's source
-// axeos-dashboard feeder is configured with, straight from whichever
-// miner's latest.json is available -- pushed with every sample (see
-// cmd/feeder.pushSample) since every miner on a board comes from the same
-// feeder, so any one of them carries the same value. remote-dashboard-api
-// has no config of its own to read this from (it isn't the one doing the
-// polling), unlike local mode's episodeGapThreshold. Returns 0 (unknown) if
-// no miner's latest.json is readable, or none of them carry the field yet
-// (pushed by an axeos-dashboard version that predates it).
-func boardFeederInterval(root string, dirEntries []os.DirEntry) time.Duration {
-	for _, d := range dirEntries {
-		if !d.IsDir() {
-			continue
-		}
-		raw, err := decodeLatestJSON(filepath.Join(root, d.Name(), "latest.json"))
-		if err != nil {
-			continue
-		}
-		if raw.FeederIntervalSeconds > 0 {
-			return time.Duration(raw.FeederIntervalSeconds) * time.Second
-		}
-	}
-	return 0
 }
 
 // allAlertsForMiner is alertsForMiner without the "today only" restriction

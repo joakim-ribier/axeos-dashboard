@@ -63,10 +63,12 @@ feeder → writes resources/data/bitaxes/{mac}/YYYY-MM-DD.jsonl  (append)
                                           {mac}/latest.json     (overwrite)
          optionally pushes to hashboard via POST /api/push (includes the
          already-computed storageKey -- hashboard just uses it verbatim,
-         with no notion of MAC address formatting at all); an offline poll
-         or MAC mismatch goes to POST /api/push/history instead (appended
-         to the day there, latest.json untouched -- same as locally), so a
-         remote board's history mirrors the local one
+         with no notion of MAC address formatting at all) and totals to
+         POST /api/push/totals; an offline poll goes to POST
+         /api/push/history instead (appended to the day there, latest.json
+         untouched -- same as locally), so a remote board's 24h chart dips
+         like the local one. Stats only: no alerts, no config (miners.yml/
+         settings.yml), nothing of a MAC mismatch
     ↓  reads latest.json
 dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
                 config's mac: resolves the storage dir)
@@ -77,7 +79,7 @@ Bitaxe devices (restart / pool switch)
 
 remote-dashboard-api → REST API at /api/{boardId}/miners/*  (read-only, reads remote board data dir)
     ↓  axios + TanStack Query
-React UI → display only (MODE=remote → :8081, route /{boardId})
+React UI → the home page alone (MODE=remote → :8081, route /{boardId})
 ```
 
 Storage is keyed by each device's MAC address (`bitaxes: - mac:`), not its
@@ -181,12 +183,8 @@ remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all read-onl
 |---|---|---|---|
 | `GET` | `/api/info` | `Info()` | Build/version info |
 | `GET` | `/api/{boardId}/miners` | `ListRemoteMiners()` | Miners pushed to this board |
-| `GET` | `/api/{boardId}/miners/alerts` | `ListRemoteAlerts()` | Recent alerts for this board |
-| `GET` | `/api/{boardId}/miners/alerts/history` | `ListRemoteAlertsHistory()` | Paginated alert episodes for this board |
 | `GET` | `/api/{boardId}/miners/history` | `RemoteHistory()` | Last 24h of every remote miner's hashrate, same buckets as local |
 | `GET` | `/api/{boardId}/{ip}/stats` | `RemoteStats()` | Last 24h (rolling) of stats for one remote miner |
-| `GET` | `/api/{boardId}/config/miners` | `RemoteMinersConfig()` | The board's `miners.yml`, read-only |
-| `GET` | `/api/{boardId}/config/settings` | `RemoteAppSettings()` | The board's `settings.yml`, read-only |
 
 Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
@@ -201,7 +199,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 ### React Frontend (`ui/`)
 
-Pages: Home (`/`), Alerts, Settings, Backups (local only), each also under `/{boardId}` in remote mode. MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
+Pages: Home (`/`), Alerts, Audit, Settings, Backups. A board (`/{boardId}`, remote mode) is the Home page alone -- `BoardLayout`: no sidebar nor top bar, a faded footer with the board's line, the browser's language; any other path under it lands on its home. MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
 
 Every page declares its title with `PageHeader`, which renders into the sticky `TopBar` (a portal into a slot `AppLayout` provides) rather than above the page; on a phone the bar keeps the title, auto-refresh and the bell, the rest unfolds under a "More" button.
 
@@ -211,7 +209,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 |---|---|
 | `src/App.tsx` | MUI theme, i18next, React Query provider, routing |
 | `src/pages/Home.tsx` | Dashboard: `FleetSummary` + status/pool `BreakdownStrip`s (also quick filters) + `MinerToolbar` + `MinerList`/`MinerTiles` + `MinerDrawer` |
-| `src/components/layout/` | `AppLayout`, `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`; its sync icon is the auto-refresh switch), `ServicesStatus` (the sidebar's "Platform status" card -- green / orange when a service missed a run / red when one doesn't answer -- and its details window, from `GET /api/status`, local mode only) |
+| `src/components/layout/` | `AppLayout` (local) / `BoardLayout` (a board) -- the one place local vs. board is decided, each wraps its pages in `ModeProvider` (API paths); `Sidebar`, sticky `TopBar` (holds the page title slot, `pageTitleSlot.ts`; its sync icon is the auto-refresh switch), `ServicesStatus` (the sidebar's "Platform status" card -- green / orange when a service missed a run / red when one doesn't answer -- and its details window, from `GET /api/status`, local mode only) |
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |

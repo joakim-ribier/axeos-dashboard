@@ -74,8 +74,6 @@ const buildSettings = (
     feederInterval: "2m0s",
     healthCheckInterval: "1m0s",
     firmwareCacheTTL: "24h0m0s",
-    remotePushMinersConfig: {},
-    remotePushSettingsConfig: {},
     auditReport: {},
   },
   notifications: { ...EMPTY_NOTIFICATIONS, ...rest, mail },

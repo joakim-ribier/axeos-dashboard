@@ -14,19 +14,7 @@ hashboardURL: ""                             # base URL of the hashboard instanc
 # No cacheTTL setting needed here: this binary never checks GitHub itself,
 # it just reads latestFirmware from the pushed sample.
 ui:
-  # Settings now has content a remote visitor can actually use: the feeder
-  # pushes the managed miners list and app settings (minus remote push
-  # credentials, never sent) alongside its regular data push, and
-  # remote-dashboard-api serves them back read-only via
-  # GET /api/{boardId}/config/* -- readonly renders the page with every
-  # write affordance (Save, Add/remove, discovery, enable/disable) disabled.
-  page:
-    settings: readonly
-    # Backups are archived by the local feeder and served by dashboard-api
-    # only -- remote-dashboard-api has no backup endpoints.
-    backups: hidden
-    # The audit log is recorded and served by dashboard-api only.
-    audit: hidden
+  # A board is its home page alone -- no other page to show or hide.
   # remote-dashboard-api is read-only by design (no restart/pool-switch
   # endpoints exist here at all) -- hidden so the dashboard doesn't show
   # buttons that would just 404.

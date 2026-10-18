@@ -425,9 +425,8 @@
       "remote": {
         "title": "Distant",
         "off": "Non configuré",
-        "never": "Aucun envoi pour l'instant",
-        "lastPush": "Dernier envoi : {{date}}",
-        "failing": "Envoi vers hashboard en échec"
+        "lastData": "Dernières données reçues : {{date}}",
+        "noData": "Aucune donnée reçue pour l'instant"
       },
       "system": {
         "title": "Système",
@@ -542,24 +541,6 @@
       "remote": {
         "pushUrlLabel": "URL de push",
         "apiKeyLabel": "Clé API",
-        "pushStatus": {
-          "title": "État des envois",
-          "description": "Ce que le feeder envoie à hashboard en plus des données des mineurs.",
-          "endpointLabel": "Envoi",
-          "stateLabel": "État",
-          "lastSuccessLabel": "Dernier succès",
-          "lastAttemptLabel": "Dernière tentative",
-          "state": {
-            "ok": "OK",
-            "late": "En retard",
-            "failing": "En échec",
-            "never": "Jamais"
-          },
-          "endpoint": {
-            "minersConfig": "Liste des mineurs",
-            "settingsConfig": "Réglages"
-          }
-        },
         "board": {
           "title": "Ton board",
           "description": "Le board hashboard qui reçoit les données de tes mineurs.",

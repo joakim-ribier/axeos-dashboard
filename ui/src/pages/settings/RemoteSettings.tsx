@@ -5,22 +5,9 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import SaveIcon from "@mui/icons-material/Save";
-import SyncIcon from "@mui/icons-material/Sync";
-import {
-  Box,
-  Chip,
-  Link,
-  Stack,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Link, Stack, TextField, Typography } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
-import { DataTable } from "@/components/ui/DataTable";
 import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
@@ -30,17 +17,7 @@ import {
   AppSettingsFrame,
   type AppSettingsFrameContext,
 } from "./AppSettingsFrame";
-import { isStale, useNow } from "./lastRun";
 import { SectionTitle } from "./SectionTitle";
-
-type PushState = "ok" | "late" | "failing" | "never";
-
-const PUSH_STATE_COLOR = {
-  ok: "success",
-  late: "warning",
-  failing: "warning",
-  never: "default",
-} as const;
 
 /** A label/value line of the board block. */
 const InfoRow = ({
@@ -79,7 +56,6 @@ const RemoteSection = ({
   serverBasePayload,
 }: AppSettingsFrameContext) => {
   const { t } = useTranslation();
-  const now = useNow();
   const { data: board } = useRemoteBoard();
   const [pushURL, setPushURL] = useState("");
   const [apiKey, setApiKey] = useState("");
@@ -109,25 +85,6 @@ const RemoteSection = ({
       remote: { pushURL: pushURL.trim(), apiKey: apiKey.trim() },
     });
   };
-
-  const pushStateOf = (status: {
-    lastError?: string;
-    lastSuccessAt?: string;
-  }): PushState => {
-    if (status.lastError) return "failing";
-    if (!status.lastSuccessAt) return "never";
-    return now !== null &&
-      isStale(now, status.lastSuccessAt, data?.readOnly.feederInterval)
-      ? "late"
-      : "ok";
-  };
-
-  const endpoints = data
-    ? ([
-        ["minersConfig", data.readOnly.remotePushMinersConfig],
-        ["settingsConfig", data.readOnly.remotePushSettingsConfig],
-      ] as const)
-    : [];
 
   return (
     <Stack spacing={4}>
@@ -208,96 +165,6 @@ const RemoteSection = ({
                 </Link>
               </InfoRow>
             )}
-          </Box>
-          <SectionDivider />
-        </>
-      )}
-
-      {/* Push status, per endpoint */}
-      {data?.remote.pushURL && (
-        <>
-          <Box>
-            <SectionTitle
-              icon={<SyncIcon fontSize="small" />}
-              title={t("settingsPage.appSettings.remote.pushStatus.title")}
-              description={t(
-                "settingsPage.appSettings.remote.pushStatus.description",
-              )}
-            />
-            <DataTable>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    {t(
-                      "settingsPage.appSettings.remote.pushStatus.endpointLabel",
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {t("settingsPage.appSettings.remote.pushStatus.stateLabel")}
-                  </TableCell>
-                  <TableCell>
-                    {t(
-                      "settingsPage.appSettings.remote.pushStatus.lastSuccessLabel",
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                    {t(
-                      "settingsPage.appSettings.remote.pushStatus.lastAttemptLabel",
-                    )}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {endpoints.map(([endpoint, status]) => {
-                  const state = pushStateOf(status);
-                  return (
-                    <TableRow key={endpoint}>
-                      <TableCell>
-                        {t(
-                          `settingsPage.appSettings.remote.pushStatus.endpoint.${endpoint}`,
-                        )}
-                        {status.lastError && (
-                          <Typography
-                            variant="caption"
-                            color="warning.main"
-                            component="div"
-                            sx={{ overflowWrap: "anywhere" }}
-                          >
-                            {status.lastError}
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          color={PUSH_STATE_COLOR[state]}
-                          variant={state === "never" ? "outlined" : "filled"}
-                          label={t(
-                            `settingsPage.appSettings.remote.pushStatus.state.${state}`,
-                          )}
-                          sx={{ height: 24, borderRadius: 1 }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ fontFamily: "monospace" }}>
-                        {status.lastSuccessAt
-                          ? formatTimestamp(status.lastSuccessAt)
-                          : "—"}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          display: { xs: "none", sm: "table-cell" },
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {status.lastAttemptAt
-                          ? formatTimestamp(status.lastAttemptAt)
-                          : "—"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </DataTable>
           </Box>
           <SectionDivider />
         </>

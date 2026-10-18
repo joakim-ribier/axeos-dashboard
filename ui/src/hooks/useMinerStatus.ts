@@ -5,9 +5,8 @@ import { type Miner } from "@/schemas/minerSchema";
 import { parseGoDuration } from "@/utils/format";
 import { getMinerStatus } from "@/utils/minerStatus";
 
-// A remote board never gets the source feeder's interval (see
-// RemoteAppSettings) -- 5 minutes covers the default 2m interval plus one
-// full poll cycle.
+// A board has no settings to read the source feeder's interval from -- 5
+// minutes covers the default 2m interval plus one full poll cycle.
 const FALLBACK_FEEDER_INTERVAL_MS = 5 * 60_000;
 
 /** The one rule for "readings stopped coming in": the last one is more than

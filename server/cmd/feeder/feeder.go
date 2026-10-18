@@ -21,7 +21,6 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/storage"
 )
 
@@ -33,17 +32,10 @@ type Feeder struct {
 	minersStore      *config.MinersStore
 	appSettingsStore *config.AppSettingsStore
 
-	// pushStatusMu guards remotepush.Save -- every push type (sample,
-	// totals, miners config, settings config) fires concurrently via its
-	// own goroutine (see runOnce) and would otherwise race writing the
-	// same status file.
-	pushStatusMu sync.Mutex
-
 	// pushWG tracks every in-flight push goroutine (see goPush) -- runOnce
 	// itself never waits on it (a hashboard hiccup must never block local
-	// polling, see postToRemote), but tests do via WaitForPushes, so a
-	// push's async remotepush.Save can't still be writing into a temp dir
-	// t.TempDir() has already torn down by the time the test returns.
+	// polling, see postToRemote), but tests do via WaitForPushes, so every
+	// push has landed by the time a test checks what was sent.
 	pushWG sync.WaitGroup
 }
 
@@ -177,29 +169,12 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		f.config.Bitaxes = bitaxes
 	}
 
-	// settingsSnapshot is the raw AppSettingsFile as loaded this cycle (only
-	// settings.yml's own overrides, not the defaults-merged view ApplyTo
-	// computes into f.config) -- kept aside so pushSettingsConfigToRemote
-	// below can push the exact same shape GET /api/config/settings already
-	// returns locally, rather than the merged Pools.Dashboards/Firmware.Repos.
-	settingsSnapshot := f.config.AppSettingsSnapshot()
 	if f.appSettingsStore != nil {
 		settings, err := f.appSettingsStore.Reload()
 		if err != nil {
 			f.logger.Error("failed to reload app settings", "error", err)
 		}
-		settingsSnapshot = settings
 		settings.ApplyTo(&f.config)
-	}
-
-	if f.config.Remote.Enabled() {
-		// Pushed every cycle, not only on change -- keeps the remote copy an
-		// exact mirror of what this feeder is actually running with right
-		// now, rather than trusting a mtime-based diff to never miss an edit.
-		f.goPush(func() { f.pushMinersConfigToRemote(f.config.Bitaxes) })
-		// Settings themselves are pushed further down, once the firmware
-		// cache below has had a chance to refresh this cycle -- otherwise
-		// firmwareCacheCheckedAt would always be one cycle stale.
 	}
 
 	if err := os.MkdirAll(f.config.Storage.BitaxesDir(), 0o755); err != nil {
@@ -225,7 +200,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			if err := store.AppendAlertOnly(now, key, offline); err != nil {
 				f.logger.Error("storage error (offline alert)", "ip", addr, "mac", key, "error", err)
 			} else {
-				f.pushAlertOnly(now, key, addr, bitaxe, offline)
+				f.pushOffline(now, key, addr, bitaxe, offline)
 			}
 			continue
 		}
@@ -242,8 +217,6 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			}}
 			if err := store.AppendAlertOnly(now, key, mismatch); err != nil {
 				f.logger.Error("storage error (mismatch alert)", "ip", addr, "mac", key, "error", err)
-			} else {
-				f.pushAlertOnly(now, key, addr, bitaxe, mismatch)
 			}
 			continue
 		}
@@ -258,9 +231,10 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// Push the already-computed storage key, not the raw mac --
 			// hashboard just uses it verbatim as its own directory name, no
 			// need for it to know anything about MAC address formatting at
-			// all (single source of truth for that logic, here).
+			// all (single source of truth for that logic, here). A board only
+			// shows the miners' stats: the alerts stay local.
 			f.goPush(func() {
-				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, alerts)
+				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, nil)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -278,13 +252,6 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 	for model := range models {
 		firmware.CheckAndCache(model, f.config.Firmware.Repos, f.config.Firmware.CacheTTL, f.config.Storage.BitaxesDir(), f.logger)
-	}
-
-	if f.config.Remote.Enabled() {
-		// Reloaded rather than reusing fwCache from above -- CheckAndCache
-		// may have just updated it on disk this cycle.
-		checkedAt := firmware.LatestCheck(firmware.LoadCache(f.config.Storage.BitaxesDir()))
-		f.goPush(func() { f.pushSettingsConfigToRemote(settingsSnapshot, checkedAt) })
 	}
 }
 
@@ -343,13 +310,12 @@ func extractDeviceMac(payload []byte) string {
 }
 
 // Where each push goes, appended to remote.pushURL (hashboard's
-// .../api/push) -- one route per file hashboard writes, verbatim.
+// .../api/push) -- one route per file hashboard writes, verbatim. A board
+// only gets the miners' stats: nothing of the configuration.
 const (
-	pushSamplePath         = ""                 // a successful poll: the day's JSONL + latest.json
-	pushHistoryPath        = "/history"         // an alert-only line: the day's JSONL only
-	pushTotalsPath         = "/totals"          // totals.json
-	pushMinersConfigPath   = "/config/miners"   // config/miners.json
-	pushSettingsConfigPath = "/config/settings" // config/settings.json
+	pushSamplePath  = ""         // a successful poll: the day's JSONL + latest.json
+	pushHistoryPath = "/history" // an offline poll: the day's JSONL only
+	pushTotalsPath  = "/totals"  // totals.json
 )
 
 type pushSample struct {
@@ -364,28 +330,25 @@ type pushSample struct {
 	Model           string  `json:"model"`
 	ElectricityRate float64 `json:"electricityRatePerKwh,omitempty"`
 	LatestFirmware  string  `json:"latestFirmware,omitempty"`
-	// Payload is absent on an alert-only line (see pushAlertOnly).
+	// Payload is absent on an offline poll's line (see pushOffline).
 	Payload json.RawMessage `json:"payload,omitempty"`
-	// Alerts is opaque to hashboard -- it stores it verbatim, same principle
-	// as StorageKey.
+	// Alerts is only ever an offline poll's: the board's 24h chart reads it
+	// as a dip to 0. Opaque to hashboard, stored verbatim.
 	Alerts []model.Alert `json:"alerts,omitempty"`
 	// FeederIntervalSeconds is this server's own feeder.interval -- global
 	// to the deployment, not per-miner, so (like ElectricityRate) it's
 	// redundantly re-sent with every sample rather than pushed separately.
-	// remote-dashboard-api reads it back to derive the same alert-episode
-	// grouping threshold (see handler.episodeGapThreshold) that local mode
-	// gets from its own config directly -- a remote board has no config of
-	// its own to read it from otherwise.
+	// remote-dashboard-api reads it back to tell a miner gone quiet (see
+	// handler.aliveFromTimestamp) -- a board has no config of its own to
+	// read it from otherwise.
 	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
 }
 
-// pushAlertOnly sends hashboard the same alert-only line just stored
-// locally (an offline poll, a MAC mismatch), so a remote board's history
-// and alerts mirror the local ones -- a missed poll is a dip in its 24h
-// chart there too. It goes to /history, which only appends it to the day's
-// history: the miner's latest.json there keeps its last reading, as
-// storage.AppendAlertOnly leaves it here.
-func (f *Feeder) pushAlertOnly(now time.Time, key, addr string, bitaxe config.Bitaxe, alerts []model.Alert) {
+// pushOffline sends hashboard the offline line just stored locally, so a
+// missed poll is a dip in the board's 24h chart too. It goes to /history,
+// which only appends it to the day's history: the miner's latest.json there
+// keeps its last reading, as storage.AppendAlertOnly leaves it here.
+func (f *Feeder) pushOffline(now time.Time, key, addr string, bitaxe config.Bitaxe, alerts []model.Alert) {
 	if !f.config.Remote.Enabled() {
 		return
 	}
@@ -435,69 +398,10 @@ func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
 	_ = f.postToRemote(pushTotalsPath, body, "totals "+storageKey)
 }
 
-// configMinersPush is the body sent to hashboard's miners-config endpoint --
-// the full managed miners list, enabled and disabled alike (matching what
-// GET /api/config/miners returns locally), so a remote Settings page can
-// render the same table.
-type configMinersPush struct {
-	Bitaxes []config.Bitaxe `json:"bitaxes"`
-}
-
-func (f *Feeder) pushMinersConfigToRemote(bitaxes []config.Bitaxe) {
-	body, err := json.Marshal(configMinersPush{Bitaxes: bitaxes})
-	if err != nil {
-		f.logger.Error("push: miners config marshal error", "error", err)
-		return
-	}
-	f.recordPushStatus(remotepush.KindMinersConfig, f.postToRemote(pushMinersConfigPath, body, "config/miners"))
-}
-
-// configSettingsPush mirrors AppSettingsFile minus Remote -- the push
-// credentials themselves must never round-trip back out through a
-// read-only remote view, so they're deliberately left out here rather than
-// sent and relied upon to be filtered out downstream.
-type configSettingsPush struct {
-	Electricity config.ElectricityConfig   `json:"electricity"`
-	Pools       config.PoolsConfig         `json:"pools"`
-	Firmware    config.AppSettingsFirmware `json:"firmware"`
-	// FirmwareCacheCheckedAt is this feeder's own firmware.LatestCheck --
-	// the one process-launch "read-only" value dashboard-api's GET
-	// /api/config/settings has that a remote board otherwise has no way
-	// to see at all (unlike feederInterval/healthCheckInterval, which a
-	// remote board can approximate from the miner data it already gets --
-	// see RemoteAppSettings, internal/handler/remote_config.go). Lets a
-	// remote board tell at a glance whether the source Pi's feeder is
-	// still actually alive, not just quietly stalled.
-	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
-}
-
-func (f *Feeder) pushSettingsConfigToRemote(settings config.AppSettingsFile, firmwareCacheCheckedAt time.Time) {
-	push := configSettingsPush{
-		Electricity: settings.Electricity,
-		Pools:       settings.Pools,
-		Firmware:    settings.Firmware,
-	}
-	if !firmwareCacheCheckedAt.IsZero() {
-		push.FirmwareCacheCheckedAt = firmwareCacheCheckedAt.UTC().Format(time.RFC3339)
-	}
-
-	body, err := json.Marshal(push)
-	if err != nil {
-		f.logger.Error("push: settings config marshal error", "error", err)
-		return
-	}
-	f.recordPushStatus(remotepush.KindSettingsConfig, f.postToRemote(pushSettingsConfigPath, body, "config/settings"))
-}
-
 // postToRemote sends body as an authenticated JSON POST to hashboard and
-// returns the resulting error, if any (nil on 2xx). Shared by all four push
-// types -- same auth, same timeout, same fire-and-forget error handling
-// (logged, never fatal: a hashboard hiccup must never affect local
-// polling) -- but it does NOT itself call recordPushStatus: only the two
-// config pushes do that (see their call sites), so a same-cycle successful
-// sample/totals push can no longer race the status file and paper over a
-// failing config push (that's the bug the Settings page's "Remote" section
-// exists to surface -- see remotepush.Status).
+// returns the resulting error, if any (nil on 2xx). Shared by every push --
+// same auth, same timeout, same fire-and-forget error handling (logged,
+// never fatal: a hashboard hiccup must never affect local polling).
 // path is relative to f.config.Remote.PushURL -- only that path suffix is
 // ever logged/persisted (never the full URL), so a hashboard.live URL
 // doesn't get repeated in full on every single log line and error message.
@@ -525,40 +429,4 @@ func (f *Feeder) postToRemote(path string, body []byte, logCtx string) error {
 	}
 
 	return nil
-}
-
-// recordPushStatus persists the outcome of one config push (miners or
-// settings, per kind) to remotepush.Status -- see that package for why
-// this needs to be a file, not just an in-memory field, and
-// internal/handler.GetAppSettings for the read side the Settings page's
-// "Remote" section surfaces this through. Deliberately not called for the
-// sample/totals pushes: those are a separate, older, always-on concern
-// (live miner data), and mixing their status in would let a successful
-// sample push mask a genuinely failing config push (see postToRemote).
-// kind is tracked separately per config endpoint, not merged into one
-// shared field, so a successful miners-config push can't overwrite a
-// still-failing settings-config push's status or vice versa -- they run
-// as independent goroutines at different points in the cycle (see
-// runOnce) and would otherwise race the same field. The Settings page's
-// "Remote" section shows both endpoints' status side by side.
-func (f *Feeder) recordPushStatus(kind remotepush.Kind, pushErr error) {
-	f.pushStatusMu.Lock()
-	defer f.pushStatusMu.Unlock()
-
-	dataDir := f.config.Storage.BitaxesDir()
-	status := remotepush.Load(dataDir)
-
-	attempt := status.Attempt(kind)
-	attempt.LastAttemptAt = time.Now().UTC()
-	if pushErr != nil {
-		attempt.LastError = pushErr.Error()
-	} else {
-		attempt.LastError = ""
-		attempt.LastSuccessAt = attempt.LastAttemptAt
-	}
-	status.SetAttempt(kind, attempt)
-
-	if err := remotepush.Save(dataDir, status); err != nil {
-		f.logger.Error("push: failed to persist push status", "error", err)
-	}
 }

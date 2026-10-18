@@ -199,20 +199,20 @@ Voir dans le dashboard : {{link}}
 ## ☁️ Distant (hashboard.live)
 {: #distant }
 
-Envoie vos données vers [hashboard.live](https://hashboard.live) pour
-consulter vos mineurs depuis n'importe où, sans VPN — il suffit de coller
-l'URL de push et votre clé API.
+Envoie les stats de vos mineurs vers [hashboard.live](https://hashboard.live)
+pour suivre votre flotte depuis n'importe où, sans VPN — il suffit de
+coller l'URL de push et votre clé API.
 
 ![Distant (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
 
-Une fois le push configuré, la section montre aussi :
+Une fois le push configuré, la section montre aussi **Ton board** :
+l'identifiant du board (clic pour l'ouvrir), s'il est public ou privé,
+l'heure des dernières données reçues par hashboard, et un lien vers votre
+compte.
 
-- **Ton board** — l'identifiant du board (clic pour l'ouvrir), s'il est
-  public ou privé, l'heure des dernières données reçues par hashboard, et
-  un lien vers votre compte.
-- **État des envois** — ce que le feeder envoie en plus des données des
-  mineurs (la liste des mineurs, les réglages), avec son dernier succès
-  et sa dernière tentative.
+Le board est la page d'accueil de votre flotte — hashrate sur 24 h,
+indicateurs, état des mineurs, pools et liste des mineurs — rafraîchie
+automatiquement, dans la langue du navigateur.
 
 Et votre board hashboard apparaît dans le dashboard lui-même :
 

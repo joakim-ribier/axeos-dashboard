@@ -622,13 +622,11 @@ type UIPageConfig struct {
 	Settings UIVisibility `yaml:"settings"`
 	// Backups controls the /backups page: "enabled" (default) shows it,
 	// "hidden" hides the page and its nav entry. The feeder keeps creating
-	// the archives either way. remote-dashboard-api serves no backups, so
-	// remote-dashboard.yml sets it to hidden.
+	// the archives either way.
 	Backups UIVisibility `yaml:"backups"`
 	// Audit controls the /audit page: "enabled" (default) shows it,
 	// "hidden" hides the page and its nav entry. dashboard-api keeps
-	// recording either way. remote-dashboard-api serves no audit log, so
-	// remote-dashboard.yml sets it to hidden.
+	// recording either way.
 	Audit UIVisibility `yaml:"audit"`
 }
 

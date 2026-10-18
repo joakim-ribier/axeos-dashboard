@@ -1,38 +1,22 @@
 import type { ReactNode } from "react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { ModeProvider } from "@/contexts/ModeContext";
 
 import { useAlertsHistory } from "./useAlertsHistory";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
 
-function makeWrapper(initialEntry: string, mode: "local" | "remote") {
+function makeWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  // ModeProvider derives boardId via useParams(), which only populates
-  // from an actual matching <Route path="/:boardId">, not just being
-  // inside a MemoryRouter -- mirrors how App.tsx nests it for real.
-  const routePath = mode === "remote" ? "/:boardId" : "/";
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[initialEntry]}>
-          <Routes>
-            <Route
-              path={routePath}
-              element={<ModeProvider mode={mode}>{children}</ModeProvider>}
-            />
-          </Routes>
-        </MemoryRouter>
-      </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
   }
 
@@ -47,10 +31,10 @@ describe("useAlertsHistory", () => {
     });
   });
 
-  it("fetches from /api/miners/alerts/history in local mode", async () => {
+  it("fetches from /api/miners/alerts/history", async () => {
     const { result } = renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     await waitFor(() => expect(result.current.data).toBeDefined());
@@ -59,19 +43,6 @@ describe("useAlertsHistory", () => {
       expect.objectContaining({
         params: expect.objectContaining({ page: 1, pageSize: 50 }),
       }),
-    );
-  });
-
-  it("fetches from the board-scoped path in remote mode", async () => {
-    const { result } = renderHook(
-      () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
-      { wrapper: makeWrapper("/demo", "remote") },
-    );
-
-    await waitFor(() => expect(result.current.data).toBeDefined());
-    expect(mockedAxios.get).toHaveBeenCalledWith(
-      "/api/demo/miners/alerts/history",
-      expect.anything(),
     );
   });
 
@@ -85,7 +56,7 @@ describe("useAlertsHistory", () => {
           type: "offline",
           date: "2026-07-14",
         }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     await waitFor(() => expect(result.current.data).toBeDefined());
@@ -105,7 +76,7 @@ describe("useAlertsHistory", () => {
   it("omits ip/type params entirely when unset", async () => {
     renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
@@ -117,25 +88,20 @@ describe("useAlertsHistory", () => {
   it("never calls the API when date is empty -- a hard backstop, not just a UI guard", async () => {
     const { result } = renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "" }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     // fetchStatus stays "idle" (React Query never even attempts the
     // request) rather than "fetching" -- confirms this is `enabled: false`,
-    // not a request that fires and then errors. ModeProvider's own
-    // unrelated GET /api/info (for isRemoteBackend) still fires and isn't
-    // what this test is about, so check the alerts endpoint specifically.
+    // not a request that fires and then errors.
     expect(result.current.fetchStatus).toBe("idle");
-    expect(mockedAxios.get).not.toHaveBeenCalledWith(
-      "/api/miners/alerts/history",
-      expect.anything(),
-    );
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it("always passes the date filter through as a query param -- the API requires it", async () => {
     renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
@@ -168,7 +134,7 @@ describe("useAlertsHistory", () => {
 
     const { result } = renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
-      { wrapper: makeWrapper("/", "local") },
+      { wrapper: makeWrapper() },
     );
 
     await waitFor(() => expect(result.current.data?.total).toBe(1));

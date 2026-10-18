@@ -2,11 +2,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-import { useMode } from "@/contexts/ModeContext";
 import {
   type AlertHistoryResponse,
   alertHistoryResponseSchema,
 } from "@/schemas/minerSchema";
+
+// The local dashboard's alert history -- a board has none.
+const ALERTS_HISTORY_PATH = "/api/miners/alerts/history";
 
 export interface AlertHistoryFilters {
   page: number;
@@ -42,7 +44,7 @@ export const fetchAlertsHistory = async (
 
 /**
  * The paginated alert history for one day (GET
- * /api/{boardId?}/miners/alerts/history) -- unlike useAlerts' endpoint,
+ * /api/miners/alerts/history) -- unlike useAlerts' endpoint,
  * which is scoped to "recent, for the notification bell", this covers every
  * miner's alerts on the requested day. Backs the dedicated Alerts page.
  *
@@ -62,11 +64,9 @@ export const fetchAlertsHistory = async (
  * bug, a bad intermediate value while a date field is being edited, etc.).
  */
 export const useAlertsHistory = (filters: AlertHistoryFilters) => {
-  const { apiPaths } = useMode();
-
   return useQuery<AlertHistoryResponse, Error>({
-    queryKey: ["alertsHistory", apiPaths.alertsHistory, filters],
-    queryFn: () => fetchAlertsHistory(apiPaths.alertsHistory, filters),
+    queryKey: ["alertsHistory", ALERTS_HISTORY_PATH, filters],
+    queryFn: () => fetchAlertsHistory(ALERTS_HISTORY_PATH, filters),
     enabled: !!filters.date,
     staleTime: Infinity,
     // Same reasoning as useMiners: staleTime: Infinity alone would keep

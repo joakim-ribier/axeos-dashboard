@@ -871,76 +871,6 @@
                 }
             }
         },
-        "/api/{boardId}/config/miners": {
-            "get": {
-                "description": "Returns the managed miners list last pushed to hashboard for this board.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Board configuration"
-                ],
-                "summary": "List a remote board's configured miners (read-only)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "hashboard board ID",
-                        "name": "boardId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.bitaxesResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "no miners config ever pushed for this board",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/{boardId}/config/settings": {
-            "get": {
-                "description": "Returns the app settings last pushed to hashboard for this board, with remote push credentials always redacted.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Board configuration"
-                ],
-                "summary": "Get a remote board's app settings (read-only)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "hashboard board ID",
-                        "name": "boardId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.appSettingsResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "no settings ever pushed for this board",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/{boardId}/miners": {
             "get": {
                 "description": "Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.",
@@ -971,102 +901,6 @@
                         "description": "board not found",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/{boardId}/miners/alerts": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Board alerts"
-                ],
-                "summary": "List the most recent miner alerts for a hashboard board (read-only)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "hashboard board ID",
-                        "name": "boardId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "max entries to return per miner (default 10)",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/handler.AlertEntry"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/{boardId}/miners/alerts/history": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Board alerts"
-                ],
-                "summary": "List a single day's recorded miner alerts for a hashboard board, grouped into episodes and paginated (read-only)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "hashboard board ID",
-                        "name": "boardId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "the single day to scan (YYYY-MM-DD)",
-                        "name": "date",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "page number, 1-based (default 1)",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "episodes per page (default 50, max 200)",
-                        "name": "pageSize",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "filter to this miner IP only",
-                        "name": "ip",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "filter to this alert type only",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.AlertHistoryResponse"
                         }
                     }
                 }
@@ -1847,17 +1681,6 @@
                 },
                 "healthCheckInterval": {
                     "type": "string"
-                },
-                "remotePushMinersConfig": {
-                    "description": "RemotePushMinersConfig/RemotePushSettingsConfig mirror\nremotepush.Status's two independently-tracked config push attempts\n(RFC3339, UTC) -- the feeder's own record of its last attempt to\npush each config endpoint to hashboard, read back from disk since\nthe feeder is a separate OS process. Kept separate rather than\nmerged into one field so the Settings page can show both endpoints'\nhealth at once: one succeeding must never hide the other currently\nfailing (see remotepush.Status). Each is its zero value when that\nendpoint has never been attempted (no status file yet).",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/handler.remotePushEndpointStatus"
-                        }
-                    ]
-                },
-                "remotePushSettingsConfig": {
-                    "$ref": "#/definitions/handler.remotePushEndpointStatus"
                 }
             }
         },
@@ -1980,20 +1803,6 @@
                 },
                 "mail": {
                     "$ref": "#/definitions/handler.mailSettingsResponse"
-                }
-            }
-        },
-        "handler.remotePushEndpointStatus": {
-            "type": "object",
-            "properties": {
-                "lastAttemptAt": {
-                    "type": "string"
-                },
-                "lastError": {
-                    "type": "string"
-                },
-                "lastSuccessAt": {
-                    "type": "string"
                 }
             }
         },
@@ -2407,14 +2216,6 @@
             "name": "Board miners"
         },
         {
-            "description": "A board's recent alerts and their history.",
-            "name": "Board alerts"
-        },
-        {
-            "description": "A board's miners.yml and settings.yml, read-only.",
-            "name": "Board configuration"
-        },
-        {
             "description": "The mailer's own API, on the loopback only.",
             "name": "Mailer"
         }
@@ -2438,9 +2239,7 @@
         {
             "name": "remote-dashboard-api",
             "tags": [
-                "Board miners",
-                "Board alerts",
-                "Board configuration"
+                "Board miners"
             ]
         },
         {
