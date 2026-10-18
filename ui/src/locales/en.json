@@ -425,9 +425,8 @@
       "remote": {
         "title": "Remote",
         "off": "Not configured",
-        "never": "Nothing sent yet",
-        "lastPush": "Last push: {{date}}",
-        "failing": "Push to hashboard failing"
+        "lastData": "Last data received: {{date}}",
+        "noData": "No data received yet"
       },
       "system": {
         "title": "System",
@@ -542,24 +541,6 @@
       "remote": {
         "pushUrlLabel": "Push URL",
         "apiKeyLabel": "API key",
-        "pushStatus": {
-          "title": "Push status",
-          "description": "What the feeder sends to hashboard on top of the miners' data.",
-          "endpointLabel": "Push",
-          "stateLabel": "Status",
-          "lastSuccessLabel": "Last success",
-          "lastAttemptLabel": "Last attempt",
-          "state": {
-            "ok": "OK",
-            "late": "Late",
-            "failing": "Failing",
-            "never": "Never"
-          },
-          "endpoint": {
-            "minersConfig": "Miners list",
-            "settingsConfig": "Settings"
-          }
-        },
         "board": {
           "title": "Your board",
           "description": "The hashboard board receiving your miners' data.",

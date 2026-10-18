@@ -514,21 +514,6 @@ definitions:
         type: string
       healthCheckInterval:
         type: string
-      remotePushMinersConfig:
-        allOf:
-        - $ref: '#/definitions/handler.remotePushEndpointStatus'
-        description: |-
-          RemotePushMinersConfig/RemotePushSettingsConfig mirror
-          remotepush.Status's two independently-tracked config push attempts
-          (RFC3339, UTC) -- the feeder's own record of its last attempt to
-          push each config endpoint to hashboard, read back from disk since
-          the feeder is a separate OS process. Kept separate rather than
-          merged into one field so the Settings page can show both endpoints'
-          health at once: one succeeding must never hide the other currently
-          failing (see remotepush.Status). Each is its zero value when that
-          endpoint has never been attempted (no status file yet).
-      remotePushSettingsConfig:
-        $ref: '#/definitions/handler.remotePushEndpointStatus'
     type: object
   handler.appSettingsResponse:
     properties:
@@ -613,15 +598,6 @@ definitions:
         type: string
       mail:
         $ref: '#/definitions/handler.mailSettingsResponse'
-    type: object
-  handler.remotePushEndpointStatus:
-    properties:
-      lastAttemptAt:
-        type: string
-      lastError:
-        type: string
-      lastSuccessAt:
-        type: string
     type: object
   handler.smtpSettingsResponse:
     properties:
@@ -983,54 +959,6 @@ paths:
       summary: Get the last 24h of stats for one remote miner (read-only)
       tags:
       - Board miners
-  /api/{boardId}/config/miners:
-    get:
-      description: Returns the managed miners list last pushed to hashboard for this
-        board.
-      parameters:
-      - description: hashboard board ID
-        in: path
-        name: boardId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.bitaxesResponse'
-        "404":
-          description: no miners config ever pushed for this board
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: List a remote board's configured miners (read-only)
-      tags:
-      - Board configuration
-  /api/{boardId}/config/settings:
-    get:
-      description: Returns the app settings last pushed to hashboard for this board,
-        with remote push credentials always redacted.
-      parameters:
-      - description: hashboard board ID
-        in: path
-        name: boardId
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.appSettingsResponse'
-        "404":
-          description: no settings ever pushed for this board
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: Get a remote board's app settings (read-only)
-      tags:
-      - Board configuration
   /api/{boardId}/miners:
     get:
       description: Auto-discovers miners from the board's bitaxes directory — no local
@@ -1055,70 +983,6 @@ paths:
       summary: List miners pushed to a hashboard board (read-only)
       tags:
       - Board miners
-  /api/{boardId}/miners/alerts:
-    get:
-      parameters:
-      - description: hashboard board ID
-        in: path
-        name: boardId
-        required: true
-        type: string
-      - description: max entries to return per miner (default 10)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/handler.AlertEntry'
-            type: array
-      summary: List the most recent miner alerts for a hashboard board (read-only)
-      tags:
-      - Board alerts
-  /api/{boardId}/miners/alerts/history:
-    get:
-      parameters:
-      - description: hashboard board ID
-        in: path
-        name: boardId
-        required: true
-        type: string
-      - description: the single day to scan (YYYY-MM-DD)
-        in: query
-        name: date
-        required: true
-        type: string
-      - description: page number, 1-based (default 1)
-        in: query
-        name: page
-        type: integer
-      - description: episodes per page (default 50, max 200)
-        in: query
-        name: pageSize
-        type: integer
-      - description: filter to this miner IP only
-        in: query
-        name: ip
-        type: string
-      - description: filter to this alert type only
-        in: query
-        name: type
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.AlertHistoryResponse'
-      summary: List a single day's recorded miner alerts for a hashboard board, grouped
-        into episodes and paginated (read-only)
-      tags:
-      - Board alerts
   /api/{boardId}/miners/history:
     get:
       description: Same as /api/miners/history, for the miners pushed to a hashboard
@@ -1779,10 +1643,6 @@ tags:
   name: Remote push
 - description: A board's miners, their history and stats.
   name: Board miners
-- description: A board's recent alerts and their history.
-  name: Board alerts
-- description: A board's miners.yml and settings.yml, read-only.
-  name: Board configuration
 - description: The mailer's own API, on the loopback only.
   name: Mailer
 x-tagGroups:
@@ -1801,8 +1661,6 @@ x-tagGroups:
 - name: remote-dashboard-api
   tags:
   - Board miners
-  - Board alerts
-  - Board configuration
 - name: mailer
   tags:
   - Mailer

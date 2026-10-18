@@ -13,11 +13,7 @@ vi.mock("@/hooks/useMiners", () => ({
   useUiFeatures: () => mockUseUiFeatures(),
 }));
 
-function renderGate(
-  page: UIFeatures["page"],
-  isLoading = false,
-  path = "/backups",
-) {
+function renderGate(page: UIFeatures["page"], isLoading = false) {
   mockUseUiFeatures.mockReturnValue({
     ui: {
       page,
@@ -32,12 +28,10 @@ function renderGate(
   );
   return render(
     <I18nextProvider i18n={i18n}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={["/backups"]}>
         <Routes>
           <Route path="/" element={<p>local home</p>} />
           <Route path="/backups" element={gated} />
-          <Route path="/:boardId" element={<p>board home</p>} />
-          <Route path="/:boardId/backups" element={gated} />
         </Routes>
       </MemoryRouter>
     </I18nextProvider>,
@@ -56,17 +50,6 @@ describe("RequirePageEnabled", () => {
 
     expect(screen.queryByText("backups content")).not.toBeInTheDocument();
     expect(screen.getByText("local home")).toBeInTheDocument();
-  });
-
-  it("redirects to the board's home when its flag is hidden under a board", () => {
-    renderGate(
-      { settings: "enabled", backups: "hidden", audit: "enabled" },
-      false,
-      "/demo/backups",
-    );
-
-    expect(screen.queryByText("backups content")).not.toBeInTheDocument();
-    expect(screen.getByText("board home")).toBeInTheDocument();
   });
 
   it("waits for the flags instead of flashing the page", () => {

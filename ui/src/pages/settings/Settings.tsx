@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
+import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { normalizeMac } from "@/schemas/minerConfigSchema";
 import { formatTimestamp } from "@/utils/format";
 import { poolMismatches } from "@/utils/poolDrift";
@@ -77,14 +78,7 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
 
   const notif = settings?.notifications;
 
-  const pushStatuses = settings
-    ? [
-        settings.readOnly.remotePushMinersConfig,
-        settings.readOnly.remotePushSettingsConfig,
-      ]
-    : [];
-  const pushFailed = pushStatuses.some((s) => s.lastError);
-  const lastPush = latestTimestamp(pushStatuses.map((s) => s.lastSuccessAt));
+  const { data: board } = useRemoteBoard();
 
   return {
     miners: {
@@ -122,18 +116,15 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
             ? t("settingsPage.toc.notifications.reportFailed")
             : undefined,
     },
+    // When hashboard last got the miners' data -- what a board is for.
     remote: {
       summary: !settings?.remote.pushURL
         ? t("settingsPage.toc.remote.off")
-        : lastPush
-          ? t("settingsPage.toc.remote.lastPush", {
-              date: formatTimestamp(lastPush),
+        : board?.lastSampleAt
+          ? t("settingsPage.toc.remote.lastData", {
+              date: formatTimestamp(board.lastSampleAt),
             })
-          : t("settingsPage.toc.remote.never"),
-      issue:
-        settings?.remote.pushURL && pushFailed
-          ? t("settingsPage.toc.remote.failing")
-          : undefined,
+          : t("settingsPage.toc.remote.noData"),
     },
     // What it holds, for someone looking for it.
     system: { summary: t("settingsPage.toc.system.summary") },

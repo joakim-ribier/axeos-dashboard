@@ -1,17 +1,14 @@
 // src/pages/Alerts.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate } from "react-router-dom";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import { Box, Skeleton, TablePagination, Typography } from "@mui/material";
 import { format, parseISO } from "date-fns";
 
-import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { useMode } from "@/contexts/ModeContext";
 import { useAlertsHistory } from "@/hooks/useAlertsHistory";
-import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
+import { useMiners } from "@/hooks/useMiners";
 import { formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
 import {
@@ -120,8 +117,6 @@ const RowsSkeleton: React.FC = () => (
 /* ── Alerts page ─────────────────────────────────────────────── */
 export const Alerts = () => {
   const { t } = useTranslation();
-  const { boardId, isRemoteBackend } = useMode();
-  const { hashboardUrl } = useAppInfo();
   const { data: miners } = useMiners();
 
   const [page, setPage] = useState(1);
@@ -134,7 +129,7 @@ export const Alerts = () => {
     setPage(1);
   }, [ip, type, date, pageSize]);
 
-  const { data, isLoading, isPlaceholderData, error } = useAlertsHistory({
+  const { data, isLoading, isPlaceholderData } = useAlertsHistory({
     page,
     pageSize,
     ip: ip || undefined,
@@ -157,21 +152,6 @@ export const Alerts = () => {
         .sort((a, b) => a.label.localeCompare(b.label)),
     [miners],
   );
-
-  if (
-    error instanceof ApiError &&
-    error.status === 403 &&
-    boardId &&
-    isRemoteBackend
-  ) {
-    return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
-  }
-
-  // Same as Home: a board with nothing behind it yet leaves for this
-  // backend's own home (see AppLayout).
-  if (error instanceof ApiError && error.status === 404 && boardId) {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>

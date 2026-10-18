@@ -16,12 +16,6 @@ vi.mock("@/hooks/useAlertsHistory", () => ({
   useAlertsHistory: (...args: unknown[]) => mockUseAlertsHistory(...args),
 }));
 
-// ModeProvider itself now fetches GET /api/info (for isRemoteBackend) --
-// mocked at the source, same as useMiners/useAppInfo below.
-vi.mock("@/api/info", () => ({
-  fetchInfo: () => Promise.resolve({ remote: false }),
-}));
-
 const mockUseMiners = vi.fn();
 const mockUseAppInfo = vi.fn();
 vi.mock("@/hooks/useMiners", async () => {

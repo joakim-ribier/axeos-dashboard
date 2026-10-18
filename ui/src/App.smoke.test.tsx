@@ -9,6 +9,7 @@ import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "@/App";
+import i18n from "@/i18n";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
@@ -37,6 +38,9 @@ describe("App routing smoke test (remote board)", () => {
           data: { configured: 0, total: 0, miners: [] },
         });
       }
+      if (url.endsWith("/miners/history")) {
+        return Promise.resolve({ data: { buckets: [], miners: [] } });
+      }
       if (url.endsWith("/config/settings")) {
         return Promise.resolve({
           data: { electricity: { ratePerKwh: 0 }, remote: {}, readOnly: {} },
@@ -49,37 +53,50 @@ describe("App routing smoke test (remote board)", () => {
     });
   });
 
-  it("renders Home under a remote board, scoped to that board's API", async () => {
-    renderApp("/demo");
+  it("renders only the board's home, scoped to that board's API", async () => {
+    const { container } = renderApp("/demo");
 
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
     );
-    // The board chip also waits on /api/info (isRemoteBackend), a separate
-    // fetch from the miners call above -- wait for the actual DOM outcome
-    // rather than assuming both have settled by now.
+    // The footer's board line links back to the board.
     await waitFor(() =>
-      expect(screen.getAllByText("demo").length).toBeGreaterThan(0),
+      expect(container.querySelector('a[href="/demo"]')).not.toBeNull(),
     );
+    // A board only reads its miners' stats: nothing else is fetched...
+    const urls = new Set(mockedAxios.get.mock.calls.map(([url]) => url));
+    expect([...urls].sort()).toEqual(
+      ["/api/demo/miners", "/api/demo/miners/history", "/api/info"].sort(),
+    );
+    // ...and there's nowhere else to go: no sidebar nor top bar.
+    expect(container.querySelector('a[href="/demo/alerts"]')).toBeNull();
+    expect(container.querySelector('a[href="/demo/settings"]')).toBeNull();
+    expect(container.querySelector('a[href="/alerts"]')).toBeNull();
   });
 
-  it("renders Alerts under a remote board, scoped to that board's API", async () => {
-    renderApp("/demo/alerts");
+  it.each(["/demo/alerts", "/demo/settings"])(
+    "lands on the board's home for a page a board doesn't have (%s)",
+    async (path) => {
+      renderApp(path);
 
-    await waitFor(() =>
-      expect(mockedAxios.get).toHaveBeenCalledWith(
-        expect.stringContaining("/api/demo/miners/alerts"),
-        expect.anything(),
-      ),
-    );
-  });
+      await waitFor(() =>
+        expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
+      );
+      for (const [url] of mockedAxios.get.mock.calls) {
+        expect(url).not.toMatch(/alerts|config/);
+      }
+    },
+  );
 
-  it("renders Settings under a remote board, scoped to that board's API", async () => {
-    renderApp("/demo/settings");
+  it("speaks the visitor's browser language, whatever was picked before", async () => {
+    await i18n.changeLanguage("fr");
+    try {
+      renderApp("/demo");
 
-    await waitFor(() =>
-      expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/config/settings"),
-    );
+      await waitFor(() => expect(i18n.language).toBe(navigator.language));
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 
   it.each(["/does-not-exist", "/does-not-exist/some-random-subpath"])(
@@ -114,26 +131,28 @@ describe("App routing smoke test (remote board)", () => {
     },
   );
 
-  it("shows the same board-locked screen on an unknown sub-path as on a private board's root, instead of a generic 'not found'", async () => {
-    mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info")
-        return Promise.resolve({ data: { remote: true } });
-      const err = Object.assign(new Error("forbidden"), {
-        response: { status: 403, data: { error: "board is private" } },
+  it.each(["/test", "/test/some-random-subpath"])(
+    "shows the request-access screen for a private board (403, %s), instead of a generic 'not found'",
+    async (path) => {
+      mockedAxios.get.mockImplementation((url: string) => {
+        if (url === "/api/info")
+          return Promise.resolve({ data: { remote: true } });
+        const err = Object.assign(new Error("forbidden"), {
+          response: { status: 403, data: { error: "board is private" } },
+        });
+        return Promise.reject(err);
       });
-      return Promise.reject(err);
-    });
-    vi.mocked(axios.isAxiosError).mockReturnValue(true);
+      vi.mocked(axios.isAxiosError).mockReturnValue(true);
 
-    renderApp("/test/some-random-subpath");
+      renderApp(path);
 
-    // Same request-access form as the board-root 403 case -- not the
-    // generic OopsPage, which would hide that the board does exist.
-    await screen.findByRole("button", { name: "Send access link" });
-    expect(
-      screen.queryByText("This page does not exist."),
-    ).not.toBeInTheDocument();
-  });
+      // Not the generic OopsPage, which would hide that the board does exist.
+      await screen.findByRole("button", { name: "Send access link" });
+      expect(
+        screen.queryByText("This page does not exist."),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("still renders the local dashboard at / (unaffected by the remote branch)", async () => {
     renderApp("/");
@@ -168,42 +187,12 @@ describe("App routing smoke test (remote board)", () => {
     },
   );
 
-  it("also locks the sidebar for a private board (403), not just a missing one (404)", async () => {
-    mockedAxios.get.mockImplementation((url: string) => {
-      if (url === "/api/info")
-        return Promise.resolve({ data: { remote: true } });
-      const err = Object.assign(new Error("forbidden"), {
-        response: { status: 403, data: { error: "board is private" } },
-      });
-      return Promise.reject(err);
-    });
-    vi.mocked(axios.isAxiosError).mockReturnValue(true);
-
-    const { container } = renderApp("/test");
-
-    // BoardLockedPage renders on 403 -- its request-access form is the
-    // clearest sign the error actually propagated before checking the nav.
-    await screen.findByRole("button", { name: "Send access link" });
-
-    for (const href of ["/test", "/test/alerts", "/test/settings"]) {
-      const link = container.querySelector(`a[href="${href}"]`);
-      expect(link).toHaveAttribute("aria-disabled", "true");
-    }
-  });
-
   it("lands on a valid board's home for an unknown sub-path under it, instead of a dead end", async () => {
-    const { container } = renderApp("/demo/some-unknown-subpath");
+    renderApp("/demo/some-unknown-subpath");
 
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
     );
-    // The Sidebar mounts twice (mobile + desktop drawers), so "demo"
-    // appears twice.
-    await waitFor(() =>
-      expect(screen.getAllByText("demo").length).toBeGreaterThan(0),
-    );
-    const homeLink = container.querySelector('a[href="/demo"]');
-    expect(homeLink).not.toHaveAttribute("aria-disabled");
     expect(
       screen.queryByText("This page does not exist."),
     ).not.toBeInTheDocument();

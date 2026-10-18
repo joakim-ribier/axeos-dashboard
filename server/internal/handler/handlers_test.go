@@ -386,11 +386,12 @@ func TestListRemoteMiners(t *testing.T) {
 			t.Error("BoardPublic = true, want false (no accounts/demo.json fixture -> defaults private)")
 		}
 		if got.Devices != nil {
-			t.Errorf("Devices = %+v, want none (no settings pushed for this board yet)", got.Devices)
+			t.Errorf("Devices = %+v, want none (a board only counts its miners)", got.Devices)
 		}
 	})
 
-	t.Run("devices from the board's pushed settings", func(t *testing.T) {
+	// What a board pushed before only its stats were: still on disk, never read.
+	t.Run("ignores the settings a board pushed before", func(t *testing.T) {
 		withSettings := t.TempDir()
 		writeTestFile(t, filepath.Join(withSettings, "data", "boards", "demo", "bitaxes", "10.0.0.1", "latest.json"),
 			`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","payload":{}}`)
@@ -407,9 +408,8 @@ func TestListRemoteMiners(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 			t.Fatalf("failed to decode response: %v", err)
 		}
-		want := config.PowerDevice{Name: "Fan", Power: 30}
-		if len(got.Devices) != 1 || got.Devices[0] != want {
-			t.Errorf("Devices = %+v, want [%+v]", got.Devices, want)
+		if got.Devices != nil {
+			t.Errorf("Devices = %+v, want none", got.Devices)
 		}
 	})
 

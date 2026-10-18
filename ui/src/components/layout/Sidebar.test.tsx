@@ -1,10 +1,9 @@
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
@@ -21,75 +20,36 @@ vi.mock("@/hooks/useMiners", () => ({
   useUiFeatures: () => mockUseUiFeatures(),
 }));
 
-// ModeProvider itself now fetches GET /api/info (for isRemoteBackend) --
-// mocked at the source rather than via axios, so this stays a one-line
-// constant instead of duplicating the URL-routing every other axios mock
-// in this suite would need. Remote-dashboard-api by default (a board that
-// IS reachable) -- the "typo'd against dashboard-api" case lives in
-// App.smoke.test.tsx, which mounts the real ModeProvider tree.
-const mockFetchInfo = vi.fn();
-vi.mock("@/api/info", () => ({
-  fetchInfo: () => mockFetchInfo(),
-}));
-
 const mockUseRemoteBoard = vi.fn();
 vi.mock("@/hooks/useRemoteBoard", () => ({
   useRemoteBoard: () => mockUseRemoteBoard(),
 }));
 
-function sidebarProviders(mobileOpen: boolean, onClose: () => void) {
-  return (
-    <RefreshSettingsProvider>
-      <NotificationsProvider>
-        <Sidebar mobileOpen={mobileOpen} onClose={onClose} />
-      </NotificationsProvider>
-    </RefreshSettingsProvider>
-  );
-}
-
-// ModeProvider derives boardId via useParams(), which only populates from
-// an actual matching <Route path=":boardId/*">, not just being inside a
-// MemoryRouter -- mirrors how App.tsx's AppLayout route nests it for real
-// (see AppLayout.tsx). "/*" (rather than exact leaf paths) is enough here
-// since Sidebar itself only reads boardId + the raw pathname, never an
-// actual matched child route.
 function sidebarRouterTree(
   initialEntry: string,
-  mode: "local" | "remote",
   mobileOpen = false,
   onClose: () => void = () => {},
 ) {
-  const routePath = mode === "remote" ? "/:boardId/*" : "/*";
-  const queryClient = new QueryClient();
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route
-            path={routePath}
-            element={
-              <ModeProvider mode={mode}>
-                {sidebarProviders(mobileOpen, onClose)}
-              </ModeProvider>
-            }
-          />
-        </Routes>
+        <RefreshSettingsProvider>
+          <NotificationsProvider>
+            <Sidebar mobileOpen={mobileOpen} onClose={onClose} />
+          </NotificationsProvider>
+        </RefreshSettingsProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
 }
 
-function renderSidebar(
-  initialEntry: string,
-  mode: "local" | "remote" = "local",
-) {
-  return render(sidebarRouterTree(initialEntry, mode));
+function renderSidebar(initialEntry: string) {
+  return render(sidebarRouterTree(initialEntry));
 }
 
 describe("Sidebar", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    mockFetchInfo.mockResolvedValue({ remote: true });
     mockUseRemoteBoard.mockReturnValue({ data: undefined });
     mockUseAppInfo.mockReturnValue({
       buildSHA: undefined,
@@ -104,39 +64,6 @@ describe("Sidebar", () => {
         action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
       },
       isLoading: false,
-    });
-  });
-
-  describe("board public/private indicator", () => {
-    it("shows the private icon by default", async () => {
-      renderSidebar("/demo", "remote");
-
-      // The chip now also waits on ModeProvider's own /api/info fetch
-      // (isRemoteBackend) -- find* auto-retries until that resolves.
-      expect(
-        (await screen.findAllByLabelText("board is private")).length,
-      ).toBeGreaterThan(0);
-      expect(
-        screen.queryByLabelText("board is public"),
-      ).not.toBeInTheDocument();
-    });
-
-    it("shows the public icon when the board is public", async () => {
-      mockUseAppInfo.mockReturnValue({
-        buildSHA: undefined,
-        versionStatus: "unknown",
-        releaseUrl: null,
-        hashboardUrl: null,
-        isPublic: true,
-      });
-      renderSidebar("/demo", "remote");
-
-      expect(
-        (await screen.findAllByLabelText("board is public")).length,
-      ).toBeGreaterThan(0);
-      expect(
-        screen.queryByLabelText("board is private"),
-      ).not.toBeInTheDocument();
     });
   });
 
@@ -168,43 +95,16 @@ describe("Sidebar", () => {
       expect(alertsLinks[0]).toHaveAttribute("href", "/alerts");
     });
 
-    it("links Home/Alerts to the board-scoped routes when on a remote board", async () => {
-      renderSidebar("/demo", "remote");
+    it("marks Home as selected on the root, and Alerts as selected on the alerts route", () => {
+      const { container: homeContainer } = renderSidebar("/");
+      const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
+      expect(homeSelected.length).toBeGreaterThan(0);
+      expect(homeSelected[0]).toHaveTextContent("nav.home");
 
-      // boardId only feeds nav links once ModeProvider's own /api/info fetch
-      // confirms isRemoteBackend -- until then they stay board-free (see
-      // Sidebar.tsx's own doc comment), so wait for the real, board-scoped
-      // hrefs.
-      await waitFor(() => {
-        const homeLinks = screen
-          .getAllByText("nav.home")
-          .map((el) => el.closest("a"));
-        expect(homeLinks[0]).toHaveAttribute("href", "/demo");
-      });
-      const alertsLinks = screen
-        .getAllByText("nav.alerts")
-        .map((el) => el.closest("a"));
-      expect(alertsLinks[0]).toHaveAttribute("href", "/demo/alerts");
-    });
-
-    it("marks Home as selected on the board root, and Alerts as selected on the alerts route", async () => {
-      const { container: homeContainer } = renderSidebar("/demo", "remote");
-      await waitFor(() => {
-        const homeSelected = homeContainer.querySelectorAll(".Mui-selected");
-        expect(homeSelected.length).toBeGreaterThan(0);
-        expect(homeSelected[0]).toHaveTextContent("nav.home");
-      });
-
-      const { container: alertsContainer } = renderSidebar(
-        "/demo/alerts",
-        "remote",
-      );
-      await waitFor(() => {
-        const alertsSelected =
-          alertsContainer.querySelectorAll(".Mui-selected");
-        expect(alertsSelected.length).toBeGreaterThan(0);
-        expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
-      });
+      const { container: alertsContainer } = renderSidebar("/alerts");
+      const alertsSelected = alertsContainer.querySelectorAll(".Mui-selected");
+      expect(alertsSelected.length).toBeGreaterThan(0);
+      expect(alertsSelected[0]).toHaveTextContent("nav.alerts");
     });
 
     it("renders the Settings nav item, enabled, on the local board", () => {
@@ -215,24 +115,6 @@ describe("Sidebar", () => {
         .map((el) => el.closest("a"));
 
       expect(settingsLinks[0]).toHaveAttribute("href", "/settings");
-      expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
-    });
-
-    it("links the Settings nav item to the board's own settings route, enabled, on a remote board", async () => {
-      renderSidebar("/demo", "remote");
-
-      // The page itself renders read-only (ui.page.settings: readonly) --
-      // the nav link is no longer force-disabled here, see
-      // RequirePageEnabled/Settings.tsx's own readOnly gating.
-      await waitFor(() => {
-        const settingsLinks = screen
-          .getAllByText("nav.settings")
-          .map((el) => el.closest("a"));
-        expect(settingsLinks[0]).toHaveAttribute("href", "/demo/settings");
-      });
-      const settingsLinks = screen
-        .getAllByText("nav.settings")
-        .map((el) => el.closest("a"));
       expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
     });
 
@@ -272,40 +154,13 @@ describe("Sidebar", () => {
     });
   });
 
-  it("shows the current board id (without the word 'board') on a remote route", async () => {
-    renderSidebar("/demo", "remote");
-
-    expect((await screen.findAllByText("demo")).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/board demo/)).not.toBeInTheDocument();
-  });
-
-  it("shows the full board id, not truncated to a handful of characters", async () => {
-    const longBoardId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-    renderSidebar(`/${longBoardId}`, "remote");
-
-    expect((await screen.findAllByText(longBoardId)).length).toBeGreaterThan(0);
-  });
-
   it("does not show a board id chip on the local route", () => {
     renderSidebar("/");
 
     expect(screen.queryByText("demo")).not.toBeInTheDocument();
   });
 
-  it("links the board id chip to the board's home page in remote mode", async () => {
-    renderSidebar("/demo/alerts", "remote");
-
-    expect(await screen.findByRole("link", { name: "demo" })).toHaveAttribute(
-      "href",
-      "/demo",
-    );
-  });
-
   describe("local board line (the hashboard board this instance pushes to)", () => {
-    beforeEach(() => {
-      mockFetchInfo.mockResolvedValue({ remote: false });
-    });
-
     it("shows the board id, its visibility and the hashboard account link", async () => {
       mockUseRemoteBoard.mockReturnValue({
         data: {
@@ -343,11 +198,10 @@ describe("Sidebar", () => {
       ).toBeGreaterThan(0);
     });
 
-    it("shows nothing when remote push isn't configured", async () => {
+    it("shows nothing when remote push isn't configured", () => {
       mockUseRemoteBoard.mockReturnValue({ data: { public: false } });
       renderSidebar("/");
 
-      await waitFor(() => expect(mockFetchInfo).toHaveBeenCalled());
       expect(screen.queryByLabelText(/board is/)).not.toBeInTheDocument();
     });
 
@@ -392,7 +246,7 @@ describe("Sidebar", () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
 
-    render(sidebarRouterTree("/", "local", true, onClose));
+    render(sidebarRouterTree("/", true, onClose));
 
     for (const item of screen.getAllByText("nav.home")) {
       await user.click(item);
@@ -407,15 +261,6 @@ describe("Sidebar", () => {
 
       const logos = screen.getAllByText("AxeOS");
       expect(logos[0].closest("a")).toHaveAttribute("href", "/");
-    });
-
-    it("links to the board's home page in remote mode", async () => {
-      renderSidebar("/demo", "remote");
-
-      await waitFor(() => {
-        const logos = screen.getAllByText("AxeOS");
-        expect(logos[0].closest("a")).toHaveAttribute("href", "/demo");
-      });
     });
   });
 
@@ -518,7 +363,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(sidebarRouterTree("/", "local"));
+      rerender(sidebarRouterTree("/"));
 
       const stored = JSON.parse(
         window.localStorage.getItem("axeos.notifications.local") ?? "[]",
@@ -539,7 +384,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(sidebarRouterTree("/", "local"));
+      rerender(sidebarRouterTree("/"));
 
       // Same status again, as if a later 90s poll came back unchanged.
       mockUseAppInfo.mockReturnValue({
@@ -547,7 +392,7 @@ describe("Sidebar", () => {
         versionStatus: "updateAvailable",
         releaseUrl: "https://example.com/releases/latest",
       });
-      rerender(sidebarRouterTree("/", "local"));
+      rerender(sidebarRouterTree("/"));
 
       const stored = JSON.parse(
         window.localStorage.getItem("axeos.notifications.local") ?? "[]",

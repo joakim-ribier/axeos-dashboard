@@ -11,6 +11,9 @@ import {
 } from "@/schemas/appSettingsSchema";
 import { extractErrorMessage } from "@/utils/apiError";
 
+// The local dashboard's own settings -- a board has none.
+const SETTINGS_PATH = "/api/config/settings";
+
 const fetchAppSettings = async (url: string): Promise<AppSettings> => {
   const { data } = await axios.get(url);
   return appSettingsSchema.parse(data);
@@ -50,11 +53,13 @@ export interface UseAppSettingsReturn {
  * TTL) shown for visibility only -- never part of what saveSettings sends.
  */
 export const useAppSettings = (): UseAppSettingsReturn => {
-  const { apiPaths } = useMode();
   const queryClient = useQueryClient();
+  const { mode } = useMode();
   const query = useQuery<AppSettings, Error>({
-    queryKey: ["config", "settings", apiPaths.config.settings],
-    queryFn: () => fetchAppSettings(apiPaths.config.settings),
+    queryKey: ["config", "settings", SETTINGS_PATH],
+    queryFn: () => fetchAppSettings(SETTINGS_PATH),
+    // A board has no settings of its own (see useMinerStatus's fallback).
+    enabled: mode === "local",
     // Always refetched on mount, same reasoning as useMinersConfig: this
     // page needs to see a save made just moments ago, not a stale snapshot.
     staleTime: 0,
@@ -70,7 +75,7 @@ export const useAppSettings = (): UseAppSettingsReturn => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const result = await postAppSettings(apiPaths.config.settings, settings);
+      const result = await postAppSettings(SETTINGS_PATH, settings);
       await query.refetch();
       // GET /api/miners echoes electricity.devices -- drop its cached copy
       // so the dashboard shows a device added/removed here right away.

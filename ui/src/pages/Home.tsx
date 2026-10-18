@@ -1,7 +1,6 @@
 // src/pages/Home.tsx
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate } from "react-router-dom";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import { Box, Link, Typography, useMediaQuery, useTheme } from "@mui/material";
 
@@ -19,11 +18,9 @@ import {
   MinerToolbar,
 } from "@/components/dashboard/toolbar/MinerToolbar";
 import { AlertList } from "@/components/ui/AlertList";
-import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { useMode } from "@/contexts/ModeContext";
 import { useSearch } from "@/contexts/SearchContext";
-import { ApiError, useAppInfo, useMiners } from "@/hooks/useMiners";
+import { useMiners } from "@/hooks/useMiners";
 import { useMinersHistory } from "@/hooks/useMinersHistory";
 import { sortMiners, useMinerSort } from "@/hooks/useMinerSort";
 import { useMinerStatus } from "@/hooks/useMinerStatus";
@@ -53,8 +50,6 @@ export const Home = () => {
   const { t } = useTranslation();
   const { data, devices, isLoading, error } = useMiners();
   const { data: history } = useMinersHistory();
-  const { hashboardUrl } = useAppInfo();
-  const { boardId, isRemoteBackend } = useMode();
   const { data: remoteBoard } = useRemoteBoard();
   const { query } = useSearch();
   const [sort, setSort] = useMinerSort();
@@ -74,21 +69,6 @@ export const Home = () => {
   // it slides out.
   const [selectedIp, setSelectedIp] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  if (
-    error instanceof ApiError &&
-    error.status === 403 &&
-    boardId &&
-    isRemoteBackend
-  ) {
-    return <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />;
-  }
-
-  // A board with nothing behind it yet has no page to show: "/" sends the
-  // visitor on to this backend's own home (see AppLayout).
-  if (error instanceof ApiError && error.status === 404 && boardId) {
-    return <Navigate to="/" replace />;
-  }
 
   const miners = data ?? [];
   const setFilter = <K extends keyof QuickFilters>(

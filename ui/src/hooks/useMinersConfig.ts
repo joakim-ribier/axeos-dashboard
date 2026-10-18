@@ -3,12 +3,14 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-import { useMode } from "@/contexts/ModeContext";
 import {
   bitaxesResponseSchema,
   type MinerConfig,
 } from "@/schemas/minerConfigSchema";
 import { extractErrorMessage } from "@/utils/apiError";
+
+// The local dashboard's own miners config -- a board has none.
+const MINERS_CONFIG_PATH = "/api/config/miners";
 
 interface MinersConfigResult {
   bitaxes: MinerConfig[];
@@ -57,11 +59,10 @@ export interface UseMinersConfigReturn {
  * redirect when it's empty (see RequireMinersConfigured).
  */
 export const useMinersConfig = (): UseMinersConfigReturn => {
-  const { apiPaths } = useMode();
   const queryClient = useQueryClient();
   const query = useQuery<MinersConfigResult, Error>({
-    queryKey: ["config", "miners", apiPaths.config.miners],
-    queryFn: () => fetchMinersConfig(apiPaths.config.miners),
+    queryKey: ["config", "miners", MINERS_CONFIG_PATH],
+    queryFn: () => fetchMinersConfig(MINERS_CONFIG_PATH),
     // Always refetched on mount rather than cached indefinitely (unlike
     // useMiners' staleTime: Infinity) -- this drives both the onboarding
     // redirect and the discovery page's "already configured" diff, both of
@@ -77,7 +78,7 @@ export const useMinersConfig = (): UseMinersConfigReturn => {
     setIsSaving(true);
     setSaveError(null);
     try {
-      const result = await postMinersConfig(apiPaths.config.miners, miners);
+      const result = await postMinersConfig(MINERS_CONFIG_PATH, miners);
       await query.refetch();
       // The dashboard (useMiners, GET /api/miners) has its own long-lived
       // cache (staleTime: Infinity, see useMiners.ts) -- without this it

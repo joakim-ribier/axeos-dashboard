@@ -4,9 +4,8 @@ import axios from "axios";
 import { DEFAULT_UI_FEATURES, UIFeatures } from "@/types/uiFeatures";
 
 // Its own module (rather than living in useMiners.ts, where the rest of
-// GET /api/info's consumers are) so that ModeContext can fetch it too
-// without a circular import: ModeContext -> here, and useMiners -> both
-// ModeContext (for apiPaths/boardId) and here.
+// GET /api/info's consumers are) so that the layouts, which pick local or
+// board from it, read it without pulling in useMiners.
 export type AppVersionStatus = "unknown" | "upToDate" | "updateAvailable";
 
 export interface InfoResult {

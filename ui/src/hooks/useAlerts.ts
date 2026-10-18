@@ -17,6 +17,9 @@ import {
 
 const ALERTS_LIMIT = 10;
 
+// Local only: the bell lives in the local dashboard's top bar.
+const ALERTS_PATH = "/api/miners/alerts";
+
 export const fetchAlerts = async (url: string): Promise<AlertEntry[]> => {
   const { data } = await axios.get<unknown[]>(url, {
     params: { limit: ALERTS_LIMIT },
@@ -33,18 +36,13 @@ export const fetchAlerts = async (url: string): Promise<AlertEntry[]> => {
  * tell whether something is *still* active though (see
  * minerNotifications.currentAlertState) -- it's only used here to find out
  * when a since-resolved alert was last seen, for useAlertResolutionEffect.
- *
- * Consumed by TopBar, which sits inside ModeProvider same as every page
- * (see AppLayout).
  */
 const useAlertsHistoryQuery = (): UseQueryResult<AlertEntry[], Error> => {
-  const { apiPaths } = useMode();
-  const alertsPath = `${apiPaths.miners}/alerts`;
   const { autoRefreshEnabled } = useRefreshSettings();
 
   return useQuery<AlertEntry[], Error>({
-    queryKey: ["alerts", alertsPath],
-    queryFn: () => fetchAlerts(alertsPath),
+    queryKey: ["alerts", ALERTS_PATH],
+    queryFn: () => fetchAlerts(ALERTS_PATH),
     staleTime: Infinity,
     refetchInterval: autoRefreshEnabled ? 90_000 : false,
     refetchOnWindowFocus: false,

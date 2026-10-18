@@ -54,14 +54,10 @@ import (
 // @tag.description The hashboard board this dashboard pushes to.
 // @tag.name Board miners
 // @tag.description A board's miners, their history and stats.
-// @tag.name Board alerts
-// @tag.description A board's recent alerts and their history.
-// @tag.name Board configuration
-// @tag.description A board's miners.yml and settings.yml, read-only.
 // @tag.name Mailer
 // @tag.description The mailer's own API, on the loopback only.
 //
-// @x-tagGroups [{"name":"dashboard-api","tags":["Info","Miners","Miner actions","Alerts","Audit","Backups","Configuration","Notifications","Status","Remote push"]},{"name":"remote-dashboard-api","tags":["Board miners","Board alerts","Board configuration"]},{"name":"mailer","tags":["Mailer"]}]
+// @x-tagGroups [{"name":"dashboard-api","tags":["Info","Miners","Miner actions","Alerts","Audit","Backups","Configuration","Notifications","Status","Remote push"]},{"name":"remote-dashboard-api","tags":["Board miners"]},{"name":"mailer","tags":["Mailer"]}]
 func main() {
 	var configPath, deprecatedMinersPath string
 	flag.StringVar(&configPath, "config", "", "Config path")

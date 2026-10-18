@@ -28,7 +28,6 @@ import {
   Typography,
 } from "@mui/material";
 
-import { useMode } from "@/contexts/ModeContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
@@ -39,6 +38,153 @@ import {
 import { createAppUpdateAvailableNotification } from "@/utils/minerNotifications";
 
 import { ServicesStatusBlock } from "./ServicesStatus";
+
+const MONO = "'Courier New', 'Courier', monospace";
+
+/** "AxeOS · D#hashboard" -- or just its "#" in the folded sidebar rail. */
+const Brand = ({ collapsed = false }: { collapsed?: boolean }) =>
+  collapsed ? (
+    <Typography
+      component="span"
+      sx={{ fontFamily: MONO, color: "primary.main", fontWeight: 800 }}
+    >
+      #
+    </Typography>
+  ) : (
+    <>
+      <Typography
+        component="span"
+        sx={{
+          color: "text.primary",
+          fontFamily: MONO,
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        AxeOS
+      </Typography>
+      <Typography
+        component="span"
+        sx={{ color: "text.secondary", fontWeight: 800 }}
+      >
+        ·
+      </Typography>
+      <Typography
+        component="span"
+        sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}
+      >
+        <Box component="span" sx={{ color: "text.primary" }}>
+          D
+        </Box>
+        <Box
+          component="span"
+          sx={{
+            fontFamily: MONO,
+            color: "primary.main",
+            opacity: 0.55,
+            fontWeight: 700,
+          }}
+        >
+          #
+        </Box>
+        <Box component="span" sx={{ fontFamily: MONO, color: "primary.main" }}>
+          hash
+        </Box>
+        <Box component="span" sx={{ color: "text.primary" }}>
+          board
+        </Box>
+      </Typography>
+    </>
+  );
+
+interface BoardInfo {
+  id: string;
+  /** Where the board's ID links to. */
+  url: string;
+  isPublic: boolean;
+  hashboardUrl: string | null;
+}
+
+/**
+ * A hashboard board's line: its ID (a link to it), public or private, and
+ * a link to the hashboard account. external opens the board in a new tab --
+ * from the local dashboard, which isn't that board.
+ */
+export const BoardChip = ({
+  board,
+  external = false,
+  maxWidth,
+}: {
+  board: BoardInfo;
+  external?: boolean;
+  maxWidth?: number;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, minWidth: 0 }}>
+      <Tooltip title={board.id} arrow>
+        <Chip
+          size="small"
+          label={board.id}
+          component="a"
+          href={board.url}
+          clickable
+          {...(external && { target: "_blank", rel: "noopener noreferrer" })}
+          sx={{
+            fontFamily: "monospace",
+            fontSize: "0.7rem",
+            height: 22,
+            borderRadius: 1,
+            maxWidth,
+            minWidth: 0,
+            color: "text.disabled",
+            bgcolor: "rgba(255,255,255,0.06)",
+            "& .MuiChip-label": {
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            },
+          }}
+        />
+      </Tooltip>
+      <Tooltip
+        title={
+          board.isPublic
+            ? t("sidebar.boardPublicHint")
+            : t("sidebar.boardPrivateHint")
+        }
+        arrow
+      >
+        <Box
+          component="span"
+          aria-label={board.isPublic ? "board is public" : "board is private"}
+          sx={{
+            display: "flex",
+            color: board.isPublic ? "success.main" : "warning.main",
+          }}
+        >
+          {board.isPublic ? (
+            <PublicIcon sx={{ fontSize: 14 }} />
+          ) : (
+            <LockIcon sx={{ fontSize: 14 }} />
+          )}
+        </Box>
+      </Tooltip>
+      {board.hashboardUrl && (
+        <Tooltip title={t("sidebar.openHashboardAccount")} arrow>
+          <Link
+            href={`${board.hashboardUrl}/me`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="open hashboard account"
+            sx={{ display: "flex", color: "text.disabled" }}
+          >
+            <OpenInNewIcon sx={{ fontSize: 14 }} />
+          </Link>
+        </Tooltip>
+      )}
+    </Box>
+  );
+};
 
 const APP_VERSION_STATUS_STORAGE_KEY = "axeos.appVersionStatus";
 
@@ -173,10 +319,6 @@ interface SidebarContentProps {
   buildSHA: string | undefined;
   versionStatus: "unknown" | "upToDate" | "updateAvailable";
   releaseUrl: string | null;
-  hashboardUrl: string | null;
-  isPublic: boolean;
-  boardNotFound: boolean;
-  boardBlocked: boolean;
   onItemClick?: () => void;
   /** The desktop rail: icons only (see Sidebar). */
   collapsed?: boolean;
@@ -373,32 +515,18 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   buildSHA,
   versionStatus,
   releaseUrl,
-  hashboardUrl,
-  isPublic,
-  boardNotFound,
-  boardBlocked,
   onItemClick,
   collapsed = false,
   onToggleCollapsed,
 }) => {
   const { t } = useTranslation();
   const location = useLocation();
-  // isRemoteBackend-gated the same way as NotificationsContext: a
-  // board-shaped URL typo'd against plain dashboard-api (:boardId still
-  // matches route-wise, see App.tsx's local/remote route split) must never
-  // make nav links point at /{thatTypo}/... -- dashboard-api has no board
-  // concept at all, so every link below must stay board-free.
-  const { boardId: rawBoardId, isRemoteBackend } = useMode();
-  const boardId = isRemoteBackend ? rawBoardId : undefined;
   const { ui } = useUiFeatures();
   const { data: remoteBoard } = useRemoteBoard();
-  // The board line under the brand: this remote board, or -- in local
-  // mode -- the hashboard board this instance pushes to.
-  const board = isRemoteBackend
-    ? boardId && !boardNotFound
-      ? { id: boardId, url: `/${boardId}`, isPublic, hashboardUrl }
-      : null
-    : remoteBoard?.boardId && remoteBoard.dashboardURL
+  // The board line under the brand: the hashboard board this dashboard
+  // pushes to, once remote push is set up.
+  const board: BoardInfo | null =
+    remoteBoard?.boardId && remoteBoard.dashboardURL
       ? {
           id: remoteBoard.boardId,
           url: remoteBoard.dashboardURL,
@@ -425,11 +553,8 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           on the dashboard. */}
       <Box
         component="a"
-        href={boardId ? `/${boardId}` : "/"}
-        title={boardBlocked ? undefined : t("nav.home")}
-        onClick={boardBlocked ? (e) => e.preventDefault() : undefined}
-        tabIndex={boardBlocked ? -1 : undefined}
-        aria-disabled={boardBlocked || undefined}
+        href="/"
+        title={t("nav.home")}
         sx={{
           display: "flex",
           alignItems: "center",
@@ -440,153 +565,17 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           py: 3,
           textDecoration: "none",
           userSelect: "none",
-          cursor: boardBlocked ? "default" : "pointer",
+          cursor: "pointer",
           transition: "opacity 0.15s ease",
-          "&:hover": boardBlocked ? undefined : { opacity: 0.75 },
+          "&:hover": { opacity: 0.75 },
         }}
       >
-        {collapsed ? (
-          <Typography
-            component="span"
-            sx={{
-              fontFamily: "'Courier New', 'Courier', monospace",
-              color: "primary.main",
-              fontWeight: 800,
-            }}
-          >
-            #
-          </Typography>
-        ) : (
-          <>
-            <Typography
-              component="span"
-              sx={{
-                color: "text.primary",
-                fontFamily: "'Courier New', 'Courier', monospace",
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              AxeOS
-            </Typography>
-
-            <Typography
-              component="span"
-              sx={{ color: "text.secondary", fontWeight: 800 }}
-            >
-              ·
-            </Typography>
-
-            <Typography
-              component="span"
-              sx={{ fontWeight: 800, letterSpacing: "-0.02em" }}
-            >
-              <Box component="span" sx={{ color: "text.primary" }}>
-                D
-              </Box>
-              <Box
-                component="span"
-                sx={{
-                  fontFamily: "'Courier New', 'Courier', monospace",
-                  color: "primary.main",
-                  opacity: 0.55,
-                  fontWeight: 700,
-                }}
-              >
-                #
-              </Box>
-              <Box
-                component="span"
-                sx={{
-                  fontFamily: "'Courier New', 'Courier', monospace",
-                  color: "primary.main",
-                }}
-              >
-                hash
-              </Box>
-              <Box component="span" sx={{ color: "text.primary" }}>
-                board
-              </Box>
-            </Typography>
-          </>
-        )}
+        <Brand collapsed={collapsed} />
       </Box>
 
       {board && !collapsed && (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 0.5,
-            pb: 2,
-            mt: -1,
-          }}
-        >
-          <Tooltip title={board.id} arrow>
-            <Chip
-              size="small"
-              label={board.id}
-              component="a"
-              href={board.url}
-              clickable
-              {...(!isRemoteBackend && {
-                target: "_blank",
-                rel: "noopener noreferrer",
-              })}
-              sx={{
-                fontFamily: "monospace",
-                fontSize: "0.7rem",
-                height: 22,
-                borderRadius: 1,
-                maxWidth: SIDEBAR_WIDTH - 32,
-                color: "text.disabled",
-                bgcolor: "rgba(255,255,255,0.06)",
-                "& .MuiChip-label": {
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                },
-              }}
-            />
-          </Tooltip>
-          <Tooltip
-            title={
-              board.isPublic
-                ? t("sidebar.boardPublicHint")
-                : t("sidebar.boardPrivateHint")
-            }
-            arrow
-          >
-            <Box
-              component="span"
-              aria-label={
-                board.isPublic ? "board is public" : "board is private"
-              }
-              sx={{
-                display: "flex",
-                color: board.isPublic ? "success.main" : "warning.main",
-              }}
-            >
-              {board.isPublic ? (
-                <PublicIcon sx={{ fontSize: 14 }} />
-              ) : (
-                <LockIcon sx={{ fontSize: 14 }} />
-              )}
-            </Box>
-          </Tooltip>
-          {board.hashboardUrl && (
-            <Tooltip title={t("sidebar.openHashboardAccount")} arrow>
-              <Link
-                href={`${board.hashboardUrl}/me`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="open hashboard account"
-                sx={{ display: "flex", color: "text.disabled" }}
-              >
-                <OpenInNewIcon sx={{ fontSize: 14 }} />
-              </Link>
-            </Tooltip>
-          )}
+        <Box sx={{ display: "flex", justifyContent: "center", pb: 2, mt: -1 }}>
+          <BoardChip board={board} external maxWidth={SIDEBAR_WIDTH - 32} />
         </Box>
       )}
 
@@ -609,43 +598,32 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
         }}
       >
         <NavItem
-          to={boardId ? `/${boardId}` : "/"}
-          selected={location.pathname === (boardId ? `/${boardId}` : "/")}
+          to="/"
+          selected={location.pathname === "/"}
           icon={<DashboardIcon sx={{ fontSize: 18 }} />}
           label={t("nav.home")}
           onClick={onItemClick}
-          disabled={boardBlocked}
           collapsed={collapsed}
         />
         <NavItem
-          to={boardId ? `/${boardId}/alerts` : "/alerts"}
-          selected={
-            location.pathname === (boardId ? `/${boardId}/alerts` : "/alerts")
-          }
+          to="/alerts"
+          selected={location.pathname === "/alerts"}
           icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
           label={t("nav.alerts")}
           onClick={onItemClick}
-          disabled={boardBlocked}
           collapsed={collapsed}
         />
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)
             -- the route itself also 404s in that case, see
-            RequirePageEnabled. On a remote board, ui.page.settings is
-            normally "readonly" (see remote-dashboard.yml): the entry links
-            to /{boardId}/settings, which renders the same page with every
-            write affordance disabled rather than a separate "unavailable"
-            state. */}
+            RequirePageEnabled. */}
         {ui.page.settings !== "hidden" && (
           <NavItem
-            to={boardId ? `/${boardId}/settings` : "/settings"}
-            selected={location.pathname.startsWith(
-              boardId ? `/${boardId}/settings` : "/settings",
-            )}
+            to="/settings"
+            selected={location.pathname.startsWith("/settings")}
             icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
-            disabled={boardBlocked}
             collapsed={collapsed}
           />
         )}
@@ -700,15 +678,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
   // twice -- once for the mobile drawer, once for the desktop permanent
   // drawer) so the one-shot "update available" notification doesn't
   // double-fire across both instances.
-  const {
-    buildSHA,
-    versionStatus,
-    releaseUrl,
-    hashboardUrl,
-    isPublic,
-    boardNotFound,
-    boardBlocked,
-  } = useAppInfo();
+  const { buildSHA, versionStatus, releaseUrl } = useAppInfo();
   const { addNotifications } = useNotifications();
 
   // The actual GitHub check happens server-side (see internal/appversion),
@@ -769,10 +739,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           buildSHA={buildSHA}
           versionStatus={versionStatus}
           releaseUrl={releaseUrl}
-          hashboardUrl={hashboardUrl}
-          isPublic={isPublic}
-          boardNotFound={boardNotFound}
-          boardBlocked={boardBlocked}
           onItemClick={onClose}
         />
       </Drawer>
@@ -796,10 +762,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose }) => {
           buildSHA={buildSHA}
           versionStatus={versionStatus}
           releaseUrl={releaseUrl}
-          hashboardUrl={hashboardUrl}
-          isPublic={isPublic}
-          boardNotFound={boardNotFound}
-          boardBlocked={boardBlocked}
           collapsed={collapsed}
           onToggleCollapsed={toggleCollapsed}
         />

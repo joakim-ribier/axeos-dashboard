@@ -7,11 +7,12 @@ import {
   useState,
 } from "react";
 
-import { useMode } from "@/contexts/ModeContext";
 import { MinerNotification } from "@/utils/minerNotifications";
 
-const STORAGE_KEY_PREFIX = "axeos.notifications.";
-const READ_STORAGE_KEY_PREFIX = "axeos.notifications.read.";
+// The local dashboard's -- a board has no notifications. ".local" is a
+// leftover of when boards had their own, kept so nothing stored is lost.
+const STORAGE_KEY = "axeos.notifications.local";
+const READ_STORAGE_KEY = "axeos.notifications.read.local";
 const MAX_NOTIFICATIONS = 100;
 const MAX_READ_IDS = 200;
 
@@ -39,12 +40,9 @@ export const useNotifications = (): NotificationsContextValue => {
   return ctx;
 };
 
-const storageKey = (boardId: string | undefined): string =>
-  `${STORAGE_KEY_PREFIX}${boardId ?? "local"}`;
-
-const loadFromStorage = (boardId: string | undefined): MinerNotification[] => {
+const loadFromStorage = (): MinerNotification[] => {
   try {
-    const raw = window.localStorage.getItem(storageKey(boardId));
+    const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as MinerNotification[]) : [];
@@ -53,12 +51,9 @@ const loadFromStorage = (boardId: string | undefined): MinerNotification[] => {
   }
 };
 
-const readStorageKey = (boardId: string | undefined): string =>
-  `${READ_STORAGE_KEY_PREFIX}${boardId ?? "local"}`;
-
-const loadReadIds = (boardId: string | undefined): Set<string> => {
+const loadReadIds = (): Set<string> => {
   try {
-    const raw = window.localStorage.getItem(readStorageKey(boardId));
+    const raw = window.localStorage.getItem(READ_STORAGE_KEY);
     if (!raw) return new Set();
     const parsed: unknown = JSON.parse(raw);
     return new Set(Array.isArray(parsed) ? (parsed as string[]) : []);
@@ -72,51 +67,23 @@ interface NotificationsProviderProps {
 }
 
 /**
- * Notifications are scoped per board (keyed by boardId) — otherwise a
- * shared/remote deployment serving multiple boards under the same origin
- * would mix every board's notification history into a single list, since
- * localStorage is shared across all paths on that origin.
- *
- * Mounted inside AppLayout, below ModeProvider (see App.tsx). Reloads from
- * storage whenever boardId changes, in case client-side navigation between
- * boards is ever introduced (today every board is a distinct URL, so a
- * fresh mount already picks up the right key on its own).
+ * The local dashboard's notifications, kept in the browser (see AppLayout).
  */
 export const NotificationsProvider = ({
   children,
 }: NotificationsProviderProps) => {
-  // isRemoteBackend-gated the same way as the Sidebar's board chrome: a
-  // board-shaped URL typo'd against plain dashboard-api must still scope
-  // its notifications under "local", not under whatever the typo happened
-  // to spell (see ModeContext's own doc comment on isRemoteBackend).
-  const { boardId: rawBoardId, isRemoteBackend } = useMode();
-  const boardId = isRemoteBackend ? rawBoardId : undefined;
-
-  const [notifications, setNotifications] = useState<MinerNotification[]>(() =>
-    loadFromStorage(boardId),
-  );
-  const [readIds, setReadIds] = useState<Set<string>>(() =>
-    loadReadIds(boardId),
-  );
-
-  useEffect(() => {
-    setNotifications(loadFromStorage(boardId));
-    setReadIds(loadReadIds(boardId));
-    // Only re-run when the board itself changes, not on every notifications
-    // update (that's handled by the persist effects below).
-  }, [boardId]);
+  const [notifications, setNotifications] =
+    useState<MinerNotification[]>(loadFromStorage);
+  const [readIds, setReadIds] = useState<Set<string>>(loadReadIds);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        storageKey(boardId),
-        JSON.stringify(notifications),
-      );
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
     } catch {
       // localStorage can throw (private browsing quota, disabled storage) —
       // notifications simply won't survive a refresh in that case.
     }
-  }, [notifications, boardId]);
+  }, [notifications]);
 
   useEffect(() => {
     try {
@@ -124,13 +91,13 @@ export const NotificationsProvider = ({
       // for an id that's since fallen out of the notifications list is
       // harmless to keep around, this just stops it growing unbounded.
       window.localStorage.setItem(
-        readStorageKey(boardId),
+        READ_STORAGE_KEY,
         JSON.stringify([...readIds].slice(-MAX_READ_IDS)),
       );
     } catch {
       // best-effort only, same reasoning as the notifications persist above.
     }
-  }, [readIds, boardId]);
+  }, [readIds]);
 
   // Stable reference — consumed as a useEffect dependency (see
   // useAlertResolutionEffect), so a new function identity on every render

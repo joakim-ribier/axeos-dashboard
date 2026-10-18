@@ -105,18 +105,9 @@ export interface AppInfo {
   releaseUrl: string | null;
   hashboardUrl: string | null;
   isPublic: boolean;
-  /** True once the URL's board id is confirmed not to exist (the miners
-   * fetch above came back 404) -- lets the Sidebar tell a genuinely
-   * unknown board apart from a private one it just can't see into (403),
-   * which still renders the normal board chrome. */
+  /** A board whose miners fetch came back 404: nothing behind it. */
   boardNotFound: boolean;
-  /** True when this board is private (403) and we're locked out of it --
-   * every page under it (Home/Alerts/Settings) would show the same
-   * request-access screen, so the Sidebar disables navigating between them
-   * instead of offering links that just lead to more of the same. A plain
-   * "page not found" (404, or any other unmatched path) never blocks the
-   * Sidebar -- Home/Alerts/Settings are still real, useful destinations to
-   * navigate to from there. */
+  /** A private board (403) the visitor has no access to. */
   boardBlocked: boolean;
 }
 
@@ -161,7 +152,7 @@ export const useUiFeatures = (): UseUiFeaturesReturn => {
  *   page already makes the privacy state obvious.
  */
 export const useAppInfo = (): AppInfo => {
-  const { boardId, apiPaths, isRemoteBackend } = useMode();
+  const { mode, apiPaths } = useMode();
   const minersPath = apiPaths.miners;
 
   const infoQuery = useQuery<InfoResult, Error>({
@@ -190,17 +181,14 @@ export const useAppInfo = (): AppInfo => {
     releaseUrl: infoQuery.data?.appVersionReleaseURL ?? null,
     hashboardUrl: infoQuery.data?.hashboardUrl ?? null,
     isPublic: minersQuery.data?.isPublic ?? false,
-    // Gates every board-flavored inference below: a 404/403 only means
-    // "this board" when ModeContext has already confirmed (via
-    // /api/info) that this backend serves board routes at all.
+    // Remote mode only exists on remote-dashboard-api (BoardLayout checks
+    // /api/info first), so a 404/403 there is about the board itself.
     boardNotFound:
-      isRemoteBackend &&
-      Boolean(boardId) &&
+      mode === "remote" &&
       minersQuery.error instanceof ApiError &&
       minersQuery.error.status === 404,
     boardBlocked:
-      isRemoteBackend &&
-      Boolean(boardId) &&
+      mode === "remote" &&
       minersQuery.error instanceof ApiError &&
       minersQuery.error.status === 403,
   };

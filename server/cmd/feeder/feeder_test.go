@@ -29,18 +29,12 @@ func serverAddr(server *httptest.Server) string {
 	return strings.TrimPrefix(server.URL, "http://")
 }
 
-// isNonSamplePushPath reports whether path is one of the pushes runOnce
-// fires alongside the per-miner sample push (totals, managed miners config,
-// managed settings config) -- shared by every test remoteServer handler
-// below that only cares about the sample push, so those concurrent pushes
-// don't race it onto the same assertion channel.
+// isNonSamplePushPath reports whether path is the totals push runOnce fires
+// alongside the per-miner sample push -- shared by every test remoteServer
+// handler below that only cares about the sample push, so the concurrent
+// totals push doesn't race it onto the same assertion channel.
 func isNonSamplePushPath(path string) bool {
-	switch path {
-	case "/totals", "/config/miners", "/config/settings":
-		return true
-	default:
-		return false
-	}
+	return path == "/totals"
 }
 
 func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
@@ -51,7 +45,7 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 			t.Errorf("request path = %q, want %q", r.URL.Path, "/api/system/info")
 		}
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"hashRate":500000,"version":"v2.0"}`))
+		_, _ = w.Write([]byte(`{"hashRate":500000,"version":"v2.0","temp":70}`))
 	}))
 	defer bitaxeServer.Close()
 
@@ -71,11 +65,7 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
 		w.WriteHeader(http.StatusOK)
-		// runOnce also pushes totals (POST .../totals) and the managed
-		// miners/settings config (POST .../config/miners, .../config/settings)
-		// concurrently with the sample push -- only the sample push is under
-		// test here, so ignore those requests rather than racing them all
-		// onto the same channel.
+		// See isNonSamplePushPath -- only the sample push is under test here.
 		if isNonSamplePushPath(r.URL.Path) {
 			return
 		}
@@ -101,9 +91,7 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 	feeder := NewFeeder(testLogger(), cfg)
 	feeder.runOnce(context.Background())
 	// Waits for every push this cycle spawned (not just the sample push
-	// asserted on below) -- otherwise a still-running push's async
-	// remotepush.Save could still be writing into this test's t.TempDir()
-	// after the test itself returns and the dir gets torn down.
+	// asserted on below), so none outlives the test.
 	feeder.WaitForPushes()
 
 	// Storage is keyed by the configured MAC, not the IP.
@@ -130,8 +118,21 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		if p.body["hostname"] != "bitaxe-1" {
 			t.Errorf("push body hostname = %v, want %q", p.body["hostname"], "bitaxe-1")
 		}
+		// A board only shows the miners' stats: the poll's tempHigh alert
+		// stays local.
+		if alerts, ok := p.body["alerts"]; ok {
+			t.Errorf("push body alerts = %v, want none", alerts)
+		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("expected a push to the remote server, none received")
+	}
+
+	day, err := os.ReadFile(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", time.Now().UTC().Format("2006-01-02")+".jsonl"))
+	if err != nil {
+		t.Fatalf("day's jsonl was not written: %v", err)
+	}
+	if !strings.Contains(string(day), `"tempHigh"`) {
+		t.Errorf("day's jsonl = %s, want the tempHigh alert stored locally", day)
 	}
 
 	cache := firmware.LoadCache(cfg.Storage.BitaxesDir())
@@ -307,12 +308,6 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
 		w.WriteHeader(http.StatusOK)
-		// The miners/settings config pushes fire every cycle regardless of
-		// any single miner's poll outcome -- see isNonSamplePushPath. Only
-		// the per-miner push is under test here.
-		if isNonSamplePushPath(r.URL.Path) {
-			return
-		}
 		pushCh <- pushedRequest{path: r.URL.Path, body: decoded}
 	}))
 	defer remoteServer.Close()
@@ -367,15 +362,12 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		t.Errorf("expected an error to be logged about the mac mismatch, got log: %s", logBuf.String())
 	}
 
-	// The wrong device's reading is never pushed -- only the mismatch
-	// alert, to /history, mirroring the jsonl-only line stored above.
+	// Nothing reaches the board: neither the wrong device's reading nor the
+	// mismatch alert, a local configuration matter.
 	select {
 	case p := <-pushCh:
-		if _, hasPayload := p.body["payload"]; p.path != "/history" || hasPayload {
-			t.Errorf("pushed %v to %q, want the alert alone, to /history", p.body, p.path)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("expected the mismatch alert to be pushed to /history, none received")
+		t.Errorf("pushed %v to %q, want nothing", p.body, p.path)
+	default:
 	}
 }
 
@@ -518,45 +510,6 @@ func TestFeeder_withMinersStore_picksUpMinerAddedAfterConstruction(t *testing.T)
 	}
 }
 
-// A remote board has no settings.yml of its own: the devices only reach its
-// dashboard through this push.
-func TestFeeder_pushSettingsConfigToRemote_includesDevices(t *testing.T) {
-	bodyCh := make(chan []byte, 1)
-	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		w.WriteHeader(http.StatusNoContent)
-		if r.URL.Path == "/config/settings" {
-			bodyCh <- body
-		}
-	}))
-	defer remoteServer.Close()
-
-	cfg := config.Config{
-		Storage: config.StorageConfig{DataDir: t.TempDir()},
-		Remote:  config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
-	}
-	devices := []config.PowerDevice{{Name: "Fan", Power: 30}}
-
-	NewFeeder(testLogger(), cfg).pushSettingsConfigToRemote(config.AppSettingsFile{
-		Electricity: config.ElectricityConfig{RatePerKwh: 0.2, Devices: devices},
-	}, time.Time{})
-
-	var pushed struct {
-		Electricity config.ElectricityConfig `json:"electricity"`
-	}
-	select {
-	case body := <-bodyCh:
-		if err := json.Unmarshal(body, &pushed); err != nil {
-			t.Fatalf("decode pushed settings: %v", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("expected a push to /config/settings, none received")
-	}
-	if len(pushed.Electricity.Devices) != 1 || pushed.Electricity.Devices[0] != devices[0] {
-		t.Errorf("pushed devices = %+v, want %+v", pushed.Electricity.Devices, devices)
-	}
-}
-
 func TestFeeder_runBackup_recordsOnlyRunsThatDidSomething(t *testing.T) {
 	cfg := config.Config{Storage: config.StorageConfig{DataDir: t.TempDir()}}
 	minerDir := filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddee01")
@@ -587,45 +540,5 @@ func TestFeeder_runBackup_recordsOnlyRunsThatDidSomething(t *testing.T) {
 	want := []audit.Change{{Field: "backupMonth", Kind: audit.ChangeAdded, After: "2026-10"}}
 	if len(e.Changes) != 1 || e.Changes[0] != want[0] {
 		t.Errorf("changes = %+v, want %+v", e.Changes, want)
-	}
-}
-
-// A remote board is read by anyone the board owner lets in -- the
-// notifications settings, SMTP password first, must never reach it.
-func TestFeeder_pushSettingsConfigToRemote_neverSendsMail(t *testing.T) {
-	bodyCh := make(chan []byte, 1)
-	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		w.WriteHeader(http.StatusNoContent)
-		if r.URL.Path == "/config/settings" {
-			bodyCh <- body
-		}
-	}))
-	defer remoteServer.Close()
-
-	cfg := config.Config{
-		Storage: config.StorageConfig{DataDir: t.TempDir()},
-		Remote:  config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
-	}
-
-	NewFeeder(testLogger(), cfg).pushSettingsConfigToRemote(config.AppSettingsFile{
-		Notifications: config.NotificationsConfig{
-			DashboardURL: "http://192.168.1.60",
-			Mail: config.MailConfig{
-				SMTP: config.SMTPConfig{Host: "smtp.example.com", Port: 587, Security: config.SMTPStartTLS, Username: "axeos", Password: "s3cret", From: "axeos@example.com"},
-				To:   []string{"me@example.com"},
-			},
-		},
-	}, time.Time{})
-
-	select {
-	case body := <-bodyCh:
-		for _, leak := range []string{`"notifications"`, `"mail"`, "s3cret", "smtp.example.com", "me@example.com", "192.168.1.60"} {
-			if strings.Contains(string(body), leak) {
-				t.Errorf("pushed settings carry %s: %s", leak, body)
-			}
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("expected a push to /config/settings, none received")
 	}
 }

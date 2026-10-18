@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { z } from "zod";
 
-import { useMode } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 
 const serviceStateSchema = z.enum(["ok", "late", "offline", "unknown"]);
@@ -37,16 +36,13 @@ const fetchServicesStatus = async (): Promise<ServicesStatus> => {
   return servicesStatusSchema.parse(data);
 };
 
-/** How every process of this dashboard is doing (GET /api/status) --
- * local mode only for now: a board doesn't get it yet. Refreshed with the
- * rest of the page, as the auto-refresh switch says. */
+/** How every process of this dashboard is doing (GET /api/status).
+ * Refreshed with the rest of the page, as the auto-refresh switch says. */
 export const useServicesStatus = () => {
-  const { mode } = useMode();
   const { autoRefreshEnabled } = useRefreshSettings();
   return useQuery<ServicesStatus, Error>({
     queryKey: ["servicesStatus"],
     queryFn: fetchServicesStatus,
-    enabled: mode === "local",
     // Read by the sidebar card in both drawers (desktop and phone): one
     // answer serves them all.
     staleTime: 15_000,

@@ -198,19 +198,19 @@ Open in the dashboard: {{link}}
 ## ☁️ Remote (hashboard.live)
 {: #remote }
 
-Sends your data to [hashboard.live](https://hashboard.live) so you can
-check on your miners from anywhere, no VPN needed — just paste the push
-URL and your API key.
+Sends your miners' stats to [hashboard.live](https://hashboard.live) so
+you can follow your fleet from anywhere, no VPN needed — just paste the
+push URL and your API key.
 
 ![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
 
-Once the push is set up, the section also shows:
+Once the push is set up, the section also shows **Your board**: the
+board ID (click to open it), whether it's public or private, when
+hashboard last received data, and a link to your account.
 
-- **Your board** — the board ID (click to open it), whether it's public
-  or private, when hashboard last received data, and a link to your
-  account.
-- **Pushes** — what the feeder sends on top of the miners' data (the
-  miners list, the settings), with its last success and last attempt.
+The board is your fleet's home page — 24h hashrate, KPIs, miners'
+status, pools and the miner list — refreshed automatically, in the
+browser's language.
 
 And your hashboard board shows in the dashboard itself:
 
