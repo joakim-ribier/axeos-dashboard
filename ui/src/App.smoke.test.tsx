@@ -88,6 +88,21 @@ describe("App routing smoke test (remote board)", () => {
     },
   );
 
+  it("always refreshes, even if auto-refresh was switched off before", async () => {
+    window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
+    try {
+      renderApp("/demo");
+
+      await waitFor(() =>
+        expect(window.localStorage.getItem("axeos.autoRefreshEnabled")).toBe(
+          "true",
+        ),
+      );
+    } finally {
+      window.localStorage.removeItem("axeos.autoRefreshEnabled");
+    }
+  });
+
   it("speaks the visitor's browser language, whatever was picked before", async () => {
     await i18n.changeLanguage("fr");
     try {
