@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchInfo } from "@/api/info";
 import { BoardLockedPage } from "@/components/ui/BoardLockedPage";
 import { ModeProvider } from "@/contexts/ModeContext";
+import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo } from "@/hooks/useMiners";
 
 import { BoardChip } from "./Sidebar";
@@ -52,16 +53,20 @@ const Board = () => {
 
 /**
  * A hashboard board (/:boardId, see App.tsx): its miners' stats and
- * nothing else -- the home page alone, no sidebar nor top bar. Every board-only concern lives here; the pages themselves don't
- * know they're on a board, they just read their API paths from ModeContext.
+ * nothing else -- the home page alone, no sidebar nor top bar. Every
+ * board-only concern lives here; the pages themselves don't know they're on
+ * a board, they just read their API paths from ModeContext.
  */
 export const BoardLayout = () => {
   const { i18n } = useTranslation();
-  // A board speaks its visitor's browser language, whatever was picked
-  // here before (the old board had a language menu).
+  const { setAutoRefreshEnabled } = useRefreshSettings();
+  // A board speaks its visitor's browser language and always refreshes,
+  // whatever was picked here before: the old board had a language menu and
+  // an auto-refresh switch, this one has neither.
   useEffect(() => {
     void i18n.changeLanguage(navigator.language);
-  }, [i18n]);
+    setAutoRefreshEnabled(true);
+  }, [i18n, setAutoRefreshEnabled]);
 
   const infoQuery = useQuery({
     queryKey: ["info"],
