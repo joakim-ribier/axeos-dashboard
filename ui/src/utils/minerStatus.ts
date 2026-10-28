@@ -1,14 +1,12 @@
 import { type Miner } from "@/schemas/minerSchema";
 
-// Same values as the server's defaults (model.DefaultTempThreshold/
-// DefaultFanThreshold), but reached rather than exceeded: on the dashboard a
-// gauge turns red and its miner goes "warning" at the very same reading. The
-// server's own alerts (Alerts page, notifications) keep their > rule.
+// The server's alert thresholds (alerts.TempThreshold/FanThreshold), with
+// the same > rule.
 export const TEMP_THRESHOLD = 62;
 export const FAN_THRESHOLD = 75;
 
-export const isTempHigh = (miner: Miner) => miner.temp >= TEMP_THRESHOLD;
-export const isFanHigh = (miner: Miner) => miner.fanspeed >= FAN_THRESHOLD;
+export const isTempHigh = (miner: Miner) => miner.temp > TEMP_THRESHOLD;
+export const isFanHigh = (miner: Miner) => miner.fanspeed > FAN_THRESHOLD;
 
 /** Most urgent first -- the order of the status chips, and of the miners
  * pinned at the top of the list. */

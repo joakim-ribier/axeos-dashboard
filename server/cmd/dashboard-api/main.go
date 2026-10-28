@@ -39,7 +39,7 @@ import (
 // @tag.name Miner actions
 // @tag.description Restart a miner, switch its pool -- proxied to the device.
 // @tag.name Alerts
-// @tag.description Recent alerts and their history, grouped into episodes.
+// @tag.description The alerts' changes of state: raised once when one starts, cleared once when it ends.
 // @tag.name Audit
 // @tag.description Every user-triggered action and scheduled run, its types and export.
 // @tag.name Backups

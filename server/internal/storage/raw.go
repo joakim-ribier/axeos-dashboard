@@ -16,9 +16,8 @@ type RawSample struct {
 	Bitaxe          string          `json:"bitaxe"`
 	Payload         json.RawMessage `json:"payload,omitempty"`
 	ElectricityRate float64         `json:"electricityRatePerKwh,omitempty"`
-	// Alerts is the feeder's own computed state for this poll -- see
-	// model.Alert. Present even on a poll that failed or mismatched (in
-	// which case Payload is empty and this is the only content of the line).
+	// Alerts is only ever an offline poll's (see AppendAlertOnly) -- the
+	// 24h chart reads it as a dip to 0.
 	Alerts []model.Alert `json:"alerts,omitempty"`
 }
 
@@ -36,7 +35,7 @@ func NewRawStorage(baseDir string, electricityRate float64) *RawStorage {
 
 // Append appends a raw JSON payload to the daily JSONL file
 // and updates latest.json for the given Bitaxe address.
-func (s *RawStorage) Append(now time.Time, bitaxeAddr string, payload []byte, alerts []model.Alert) error {
+func (s *RawStorage) Append(now time.Time, bitaxeAddr string, payload []byte) error {
 	if !json.Valid(payload) {
 		return fmt.Errorf("invalid JSON payload for %s — skipping write", bitaxeAddr)
 	}
@@ -52,7 +51,6 @@ func (s *RawStorage) Append(now time.Time, bitaxeAddr string, payload []byte, al
 		Bitaxe:          bitaxeAddr,
 		Payload:         json.RawMessage(payload),
 		ElectricityRate: s.electricityRate,
-		Alerts:          alerts,
 	}
 
 	data, err := json.Marshal(sample)
@@ -83,11 +81,10 @@ func (s *RawStorage) Append(now time.Time, bitaxeAddr string, payload []byte, al
 	return nil
 }
 
-// AppendAlertOnly records a tick that produced no usable payload (the fetch
-// failed, or the device's reported MAC didn't match what's configured) --
-// still worth persisting as an alert (so an offline/mismatch period shows up
-// in the day's history), but latest.json must stay untouched: overwriting it
-// with an empty payload would blank out the last real, known-good reading.
+// AppendAlertOnly records a poll the miner didn't answer -- still worth a
+// line (the 24h chart shows it as a dip to 0), but latest.json must stay
+// untouched: overwriting it with an empty payload would blank out the last
+// real, known-good reading.
 func (s *RawStorage) AppendAlertOnly(now time.Time, bitaxeAddr string, alerts []model.Alert) error {
 	dir := filepath.Join(s.baseDir, bitaxeAddr)
 	if err := os.MkdirAll(dir, 0o755); err != nil {

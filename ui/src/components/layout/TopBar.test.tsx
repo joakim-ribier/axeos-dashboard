@@ -9,6 +9,7 @@ import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import i18n from "@/i18n";
+import type { AlertEvent, AlertsResponse } from "@/schemas/minerSchema";
 
 import { TopBar } from "./TopBar";
 
@@ -16,16 +17,25 @@ vi.mock("@/components/LanguageSwitcher", () => ({
   LanguageSwitcher: () => <div data-testid="language-switcher" />,
 }));
 
-// The bell also renders currently-active alerts (useActiveAlerts) and runs
-// useAlertResolutionEffect, which cross-references alert history against
-// the live miners list to turn resolutions into notifications -- covered
-// by its own tests (minerNotifications.test.ts for the underlying logic).
-// Mocked here so this file stays focused on the local-notification/layout
-// behavior it actually tests, without making a real network call.
+// The server's side of the bell: what GET /api/miners/alerts returns, and
+// the POST that marks it read.
+let alertsResponse: AlertsResponse = { events: [] };
+const refetch = vi.fn();
+const markSeen = vi.fn();
 vi.mock("@/hooks/useAlerts", () => ({
-  useActiveAlerts: () => [],
-  useAlertResolutionEffect: () => {},
+  useAlerts: () => ({ data: alertsResponse, refetch }),
+  useMarkAlertsSeen: () => ({ mutate: markSeen }),
 }));
+
+const alertEvent = (overrides: Partial<AlertEvent>): AlertEvent => ({
+  ts: "2026-10-28T10:00:00Z",
+  mac: "aabbccddeeff",
+  ip: "10.0.0.1",
+  hostname: "bitaxe-office",
+  type: "offline",
+  state: "raised",
+  ...overrides,
+});
 
 // Uses the app's real i18n instance (rather than mocking react-i18next) so
 // the notification message assertions below also catch a wrong/missing
@@ -64,6 +74,9 @@ function renderTopBar(onMenuClick: () => void = () => {}) {
 describe("TopBar", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    alertsResponse = { events: [] };
+    refetch.mockReset();
+    markSeen.mockReset();
   });
 
   it("calls onMenuClick when the hamburger button is clicked", async () => {
@@ -97,81 +110,136 @@ describe("TopBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists persisted notifications with a clear button", async () => {
-    window.localStorage.setItem(
-      "axeos.notifications.local",
-      JSON.stringify([
-        {
-          id: "n1",
-          timestamp: Date.now(),
-          minerLabel: "bitaxe-office",
-          type: "offline",
-        },
-      ]),
-    );
+  describe("the bell", () => {
+    const badge = (container: HTMLElement) =>
+      container.querySelector(".MuiBadge-badge");
+    const openBell = (user: ReturnType<typeof userEvent.setup>) =>
+      user.click(screen.getByRole("button", { name: "notifications" }));
 
-    const user = userEvent.setup();
-    renderTopBar();
+    it("lists the alerts raised and cleared and its own events, most recent first", async () => {
+      alertsResponse = {
+        events: [
+          alertEvent({
+            ts: "2026-10-28T11:00:00Z",
+            type: "tempHigh",
+            state: "cleared",
+          }),
+          alertEvent({
+            ts: "2026-10-28T10:00:00Z",
+            type: "tempHigh",
+            value: 64.6,
+          }),
+        ],
+      };
+      window.localStorage.setItem(
+        "axeos.notifications",
+        JSON.stringify([
+          {
+            id: "n1",
+            timestamp: Date.parse("2026-10-28T10:30:00Z"),
+            type: "appUpdateAvailable",
+          },
+        ]),
+      );
 
-    await user.click(screen.getByRole("button", { name: "notifications" }));
+      const user = userEvent.setup();
+      renderTopBar();
+      await openBell(user);
 
-    expect(
-      await screen.findByText("bitaxe-office went offline"),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
-  });
+      const lines = [
+        "bitaxe-office temperature back to normal",
+        "A new version of the dashboard is available",
+        "bitaxe-office temperature reached 65°C",
+      ].map((text) => screen.getByText(text));
+      expect(lines[0].compareDocumentPosition(lines[1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(lines[1].compareDocumentPosition(lines[2])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+    });
 
-  it("shows an unread badge for a persisted notification, then hides it once opened", async () => {
-    window.localStorage.setItem(
-      "axeos.notifications.local",
-      JSON.stringify([
-        {
-          id: "n1",
-          timestamp: Date.now(),
-          minerLabel: "bitaxe-office",
-          type: "offline",
-        },
-      ]),
-    );
+    it("counts what's newer than the server's seenAt", () => {
+      alertsResponse = {
+        events: [
+          alertEvent({ ts: "2026-10-28T11:00:00Z", state: "cleared" }),
+          alertEvent({ ts: "2026-10-28T10:00:00Z" }),
+        ],
+        seenAt: "2026-10-28T10:00:00Z",
+      };
 
-    const user = userEvent.setup();
-    const { container } = renderTopBar();
-    const badge = () => container.querySelector(".MuiBadge-badge");
+      const { container } = renderTopBar();
 
-    expect(badge()?.textContent).toBe("1");
-    expect(badge()?.className).not.toContain("MuiBadge-invisible");
+      expect(badge(container)?.textContent).toBe("1");
+    });
 
-    await user.click(screen.getByRole("button", { name: "notifications" }));
+    it("marks what it shows read on the server when clicked, then fetches again", async () => {
+      alertsResponse = {
+        events: [alertEvent({ ts: "2026-10-28T11:00:00Z" })],
+      };
 
-    expect(badge()?.className).toContain("MuiBadge-invisible");
-  });
+      const user = userEvent.setup();
+      renderTopBar();
+      await openBell(user);
 
-  it("only counts ids not already marked read -- e.g. one seen last session, one new", () => {
-    window.localStorage.setItem(
-      "axeos.notifications.local",
-      JSON.stringify([
-        {
-          id: "n1",
-          timestamp: Date.now(),
-          minerLabel: "bitaxe-office",
-          type: "offline",
-        },
-        {
-          id: "n2",
-          timestamp: Date.now(),
-          minerLabel: "bitaxe-office",
-          type: "online",
-        },
-      ]),
-    );
-    window.localStorage.setItem(
-      "axeos.notifications.read.local",
-      JSON.stringify(["n1"]),
-    );
+      expect(markSeen).toHaveBeenCalledWith(Date.parse("2026-10-28T11:00:00Z"));
+      expect(refetch).toHaveBeenCalled();
+    });
 
-    const { container } = renderTopBar();
+    it("keeps an alert that arrives after the click unread", async () => {
+      alertsResponse = {
+        events: [alertEvent({ ts: "2026-10-28T11:00:00Z" })],
+      };
 
-    expect(container.querySelector(".MuiBadge-badge")?.textContent).toBe("1");
+      const user = userEvent.setup();
+      const { container } = renderTopBar();
+      await openBell(user);
+
+      // The click's POST went through, and the fetch it triggered brought
+      // a newer one.
+      alertsResponse = {
+        events: [
+          alertEvent({ ts: "2026-10-28T11:02:00Z", state: "cleared" }),
+          alertEvent({ ts: "2026-10-28T11:00:00Z" }),
+        ],
+        seenAt: "2026-10-28T11:00:00Z",
+      };
+      await user.keyboard("{Escape}");
+
+      expect(markSeen).toHaveBeenCalledTimes(1);
+      expect(badge(container)?.textContent).toBe("1");
+    });
+
+    it("marks nothing when everything shown was already read", async () => {
+      alertsResponse = {
+        events: [alertEvent({ ts: "2026-10-28T11:00:00Z" })],
+        seenAt: "2026-10-28T11:00:00Z",
+      };
+
+      const user = userEvent.setup();
+      const { container } = renderTopBar();
+      expect(badge(container)?.className).toContain("MuiBadge-invisible");
+      await openBell(user);
+
+      expect(markSeen).not.toHaveBeenCalled();
+    });
+
+    it("hides everything shown in this browser on Clear", async () => {
+      alertsResponse = {
+        events: [alertEvent({ ts: "2026-10-28T11:00:00Z" })],
+      };
+
+      const user = userEvent.setup();
+      renderTopBar();
+      await openBell(user);
+      await user.click(screen.getByRole("button", { name: "Clear" }));
+
+      expect(screen.getByText("No notifications yet.")).toBeInTheDocument();
+      expect(window.localStorage.getItem("axeos.notifications.clearedAt")).toBe(
+        String(Date.parse("2026-10-28T11:00:00Z")),
+      );
+    });
   });
 
   it("renders the language switcher", () => {
@@ -213,7 +281,7 @@ describe("TopBar", () => {
         "false",
       );
       const stored = JSON.parse(
-        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+        window.localStorage.getItem("axeos.notifications") ?? "[]",
       );
       expect(stored).toHaveLength(1);
       expect(stored[0]).toMatchObject({

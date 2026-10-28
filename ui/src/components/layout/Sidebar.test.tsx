@@ -369,7 +369,7 @@ describe("Sidebar", () => {
       rerender(sidebarRouterTree("/"));
 
       const stored = JSON.parse(
-        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+        window.localStorage.getItem("axeos.notifications") ?? "[]",
       );
       expect(stored).toHaveLength(1);
       expect(stored[0]).toMatchObject({ type: "appUpdateAvailable" });
@@ -398,7 +398,7 @@ describe("Sidebar", () => {
       rerender(sidebarRouterTree("/"));
 
       const stored = JSON.parse(
-        window.localStorage.getItem("axeos.notifications.local") ?? "[]",
+        window.localStorage.getItem("axeos.notifications") ?? "[]",
       );
       expect(stored).toHaveLength(1);
     });

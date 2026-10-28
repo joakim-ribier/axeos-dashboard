@@ -120,9 +120,10 @@ Toujours visible en haut de l'écran, même en faisant défiler la page.
 3. **Actualisation auto** — active (bleu) ou coupe (gris) l'actualisation
    automatique des données, d'un clic ; le choix est gardé par le
    navigateur.
-4. **Notifications** — alertes en cours et événements récents (alerte
-   résolue, mise à jour disponible...) ; le badge rouge compte les non
-   lues.
+4. **Notifications** — les alertes qui commencent et celles qui se
+   terminent, et les événements récents (mise à jour disponible...) ; le
+   badge rouge compte les non lues. Un clic sur la cloche les marque lues
+   sur tous les appareils.
 5. **Langue** — bascule entre français et anglais.
 
 Sur téléphone, la barre garde l'essentiel :
@@ -193,8 +194,8 @@ Sur téléphone, la barre garde l'essentiel :
      frappe).
    - **En retard** — le mineur répond, mais aucun relevé n'est arrivé
      depuis plus de 2 fois l'intervalle de sondage.
-   - **En alerte** — température de puce à 62 °C ou plus, ou ventilateur
-     à 75 % ou plus.
+   - **En alerte** — température de puce au-dessus de 62 °C, ou
+     ventilateur au-dessus de 75 %.
    - **En ligne** — tout va bien.
 2. **Pools** — la part du hashrate de la flotte envoyée à chaque pool.
 

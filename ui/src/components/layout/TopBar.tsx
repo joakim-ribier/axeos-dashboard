@@ -25,13 +25,12 @@ import {
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
-import { useActiveAlerts, useAlertResolutionEffect } from "@/hooks/useAlerts";
+import { useAlerts, useMarkAlertsSeen } from "@/hooks/useAlerts";
 import { formatTimestamp } from "@/utils/format";
 import {
-  activeAlertsToNotifications,
-  ALERT_TYPE_COLOR,
+  alertColor,
+  alertText,
   createAutoRefreshToggledNotification,
-  type MinerNotification,
 } from "@/utils/minerNotifications";
 
 interface TopBarProps {
@@ -104,45 +103,51 @@ const AutoRefreshToggle: React.FC = () => {
   );
 };
 
+interface BellItem {
+  id: string;
+  timestamp: number;
+  color?: string;
+  text: string;
+}
+
 /**
- * Merges two sources that behave differently on purpose:
- *  - Currently active alerts (temp/fan/offline/mismatch/firmware) are
- *    recomputed from the live server feed on every render -- see
- *    activeAlertsToNotifications. They're never persisted as a one-off
- *    event, so there's no stale/lost-event state possible: as long as the
- *    condition is still true server-side, the row is there, page reload or
- *    not. They also aren't affected by "Clear" for the same reason -- it's
- *    not a dismissible event, it's live status.
- *  - Everything else (an alert *resolving*, auto-refresh toggled, a new
- *    dashboard build available) is a one-off event, pushed into
- *    NotificationsContext once and persisted there until "Clear".
+ * The alerts raised and cleared (from the server, see useAlerts) and the
+ * bell's own events (auto-refresh toggled, a new dashboard build), most
+ * recent first. A click on it marks what it showed at that moment as read
+ * -- on the server, so for every browser -- then fetches the alerts again
+ * (auto-refresh may be off): what that brings stays unread. "Clear" hides
+ * everything up to now, in this browser.
  */
 const NotificationBell: React.FC = () => {
   const { t } = useTranslation();
-  const miners = useActiveAlerts();
-  useAlertResolutionEffect();
-  const {
-    notifications: events,
-    clear,
-    readIds,
-    markRead,
-  } = useNotifications();
+  const { data, refetch } = useAlerts();
+  const { mutate: markSeen } = useMarkAlertsSeen();
+  const { notifications: local, clearedAt, clear } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
-  const notifications: MinerNotification[] = [
-    ...activeAlertsToNotifications(miners),
-    ...events,
-  ].sort((a, b) => b.timestamp - a.timestamp);
+  const notifications: BellItem[] = [
+    ...(data?.events ?? []).map((event) => ({
+      id: `${event.mac}-${event.type}-${event.state}-${event.ts}`,
+      timestamp: Date.parse(event.ts),
+      color: alertColor(event),
+      text: alertText(t, event),
+    })),
+    ...local.map((n) => ({
+      id: n.id,
+      timestamp: n.timestamp,
+      text: t(`notifications.${n.type}`, { value: n.detail }),
+    })),
+  ]
+    .filter((n) => n.timestamp > clearedAt)
+    .sort((a, b) => b.timestamp - a.timestamp);
 
-  const unreadCount = notifications.filter((n) => !readIds.has(n.id)).length;
-
-  // Marks everything currently on screen as read -- a still-ongoing alert
-  // keeps the same deterministic id (see activeAlertsToNotifications), so
-  // it won't re-trigger the badge on its own; only a genuinely new id
-  // (a different alert, a resolution, a new episode) will.
+  const seenAt = Date.parse(data?.seenAt ?? "") || 0;
+  const unreadCount = notifications.filter((n) => n.timestamp > seenAt).length;
+  const latest = notifications[0]?.timestamp ?? 0;
   const openNotifications = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
-    markRead(notifications.map((n) => n.id));
+    if (latest > seenAt) markSeen(latest);
+    void refetch();
   };
 
   return (
@@ -187,10 +192,10 @@ const NotificationBell: React.FC = () => {
           >
             {t("notifications.title")}
           </Typography>
-          {events.length > 0 && (
+          {notifications.length > 0 && (
             <Button
               size="small"
-              onClick={clear}
+              onClick={() => clear(latest)}
               sx={{ minWidth: 0, py: 0, fontSize: "0.7rem" }}
             >
               {t("notifications.clear")}
@@ -225,7 +230,7 @@ const NotificationBell: React.FC = () => {
                   "&:last-of-type": { borderBottom: "none", pb: 0 },
                 }}
               >
-                {ALERT_TYPE_COLOR[n.type] && (
+                {n.color && (
                   <Box
                     sx={{
                       width: 6,
@@ -233,16 +238,13 @@ const NotificationBell: React.FC = () => {
                       borderRadius: "50%",
                       flexShrink: 0,
                       mt: "5px",
-                      backgroundColor: ALERT_TYPE_COLOR[n.type],
+                      backgroundColor: n.color,
                     }}
                   />
                 )}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="caption" component="div">
-                    {t(`notifications.${n.type}`, {
-                      miner: n.minerLabel,
-                      value: n.detail,
-                    })}
+                    {n.text}
                   </Typography>
                   <Typography
                     variant="caption"

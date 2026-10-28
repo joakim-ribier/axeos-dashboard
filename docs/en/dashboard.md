@@ -118,8 +118,9 @@ Always on screen, even while scrolling the page.
 2. **Documentation** — opens this documentation.
 3. **Auto-refresh** — turns the automatic data refresh on (blue) or off
    (grey) in one click; the browser keeps the choice.
-4. **Notifications** — ongoing alerts and recent events (alert resolved,
-   update available...); the red badge counts the unread ones.
+4. **Notifications** — the alerts that start and those that end, and
+   recent events (update available...); the red badge counts the unread
+   ones. A click on the bell marks them read on every device.
 5. **Language** — switches between French and English.
 
 On a phone, the bar keeps what matters most:
@@ -185,8 +186,7 @@ On a phone, the bar keeps what matters most:
      reports (wrong device at that IP, or a typo).
    - **Delayed** — the miner answers, but no reading has come in for more
      than twice the polling interval.
-   - **Alert** — chip temperature at 62 °C or more, or fan at 75 % or
-     more.
+   - **Alert** — chip temperature above 62 °C, or fan above 75 %.
    - **Online** — all good.
 2. **Pools** — the share of the fleet's hashrate going to each pool.
 

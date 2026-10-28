@@ -327,6 +327,7 @@ const (
 	BackupsRelDir = "data/backups"
 	BoardsRelDir  = "data/boards"
 	AuditRelDir   = "data/audit"
+	AlertsRelDir  = "data/alerts"
 	MailRelDir    = "data/mail"
 	// BoardBitaxesDirName is each board's miners directory, under
 	// BoardsRelDir/{boardId}.
@@ -346,6 +347,12 @@ func (s StorageConfig) BackupsDir() string {
 // AuditDir returns the directory that holds the daily audit logs.
 func (s StorageConfig) AuditDir() string {
 	return filepath.Join(s.DataDir, filepath.FromSlash(AuditRelDir))
+}
+
+// AlertsDir returns the directory that holds the daily logs of the alerts'
+// changes of state.
+func (s StorageConfig) AlertsDir() string {
+	return filepath.Join(s.DataDir, filepath.FromSlash(AlertsRelDir))
 }
 
 // MailDir returns the directory that holds the state of the scheduled mails

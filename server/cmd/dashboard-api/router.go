@@ -162,6 +162,9 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/miners/alerts", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListAlerts(f.snapshotConfig())(w, r)
 	})
+	router.Post("/api/miners/alerts/seen", func(w http.ResponseWriter, r *http.Request) {
+		handler.MarkAlertsSeen(f.snapshotConfig())(w, r)
+	})
 	router.Get("/api/miners/history", func(w http.ResponseWriter, r *http.Request) {
 		handler.History(f.snapshotConfig(), w, r)
 	})

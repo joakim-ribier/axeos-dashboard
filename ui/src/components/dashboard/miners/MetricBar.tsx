@@ -18,7 +18,7 @@ interface ThresholdBarProps {
  * within ~5% of it, red past it. */
 export const ThresholdBar = ({ value, threshold, max }: ThresholdBarProps) => {
   const color =
-    value >= threshold
+    value > threshold
       ? "error.main"
       : value >= threshold * 0.95
         ? "warning.main"

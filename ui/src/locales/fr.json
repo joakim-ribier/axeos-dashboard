@@ -169,16 +169,24 @@
     "title": "Notifications",
     "empty": "Aucune notification pour le moment.",
     "clear": "Effacer",
-    "tempHigh": "{{miner}} a atteint {{value}}°C",
-    "tempRecovered": "{{miner}} : température revenue à la normale",
-    "fanHigh": "{{miner}} : ventilateur à {{value}}%",
-    "fanRecovered": "{{miner}} : ventilateur revenu à la normale",
-    "offline": "{{miner}} est hors ligne",
-    "macMismatch": "{{miner}} a une erreur de configuration : {{value}}",
-    "firmwareUpdate": "{{miner}} : mise à jour firmware disponible",
-    "firmwareResolved": "{{miner}} : firmware à jour",
     "autoRefreshToggled": "Actualisation auto : {{value}}",
     "appUpdateAvailable": "Une nouvelle version du dashboard est disponible"
+  },
+  "alerts": {
+    "raised": {
+      "tempHigh": "{{miner}} a atteint {{value}}°C",
+      "fanHigh": "{{miner}} : ventilateur à {{value}}%",
+      "offline": "{{miner}} est hors ligne",
+      "macMismatch": "{{miner}} : un autre appareil répond à son IP ({{value}})",
+      "firmwareUpdate": "{{miner}} : firmware {{value}} disponible"
+    },
+    "cleared": {
+      "tempHigh": "{{miner}} : température revenue à la normale",
+      "fanHigh": "{{miner}} : ventilateur revenu à la normale",
+      "offline": "{{miner}} est de nouveau en ligne",
+      "macMismatch": "{{miner}} : le bon appareil répond de nouveau",
+      "firmwareUpdate": "{{miner}} : firmware à jour"
+    }
   },
   "alertsPage": {
     "header": {
@@ -201,7 +209,7 @@
     },
     "empty": "Aucune alerte ne correspond à ces filtres.",
     "shownCount": "{{count}} affichées sur {{total}}",
-    "occurrences": "{{count}} occurrences",
+    "lasted": "a duré {{duration}}",
     "summary": "{{from}}–{{to}} sur {{total}}",
     "pagination": {
       "rowsPerPage": "Lignes par page :"

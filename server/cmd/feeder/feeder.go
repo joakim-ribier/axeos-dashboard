@@ -11,11 +11,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/backup"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/bitaxe"
@@ -30,6 +32,7 @@ type Feeder struct {
 
 	config           config.Config
 	auditLog         *audit.Log
+	alertsLog        *alerts.Log
 	minersStore      *config.MinersStore
 	appSettingsStore *config.AppSettingsStore
 
@@ -59,9 +62,10 @@ func (f *Feeder) WaitForPushes() {
 
 func NewFeeder(logger *slog.Logger, config config.Config) *Feeder {
 	return &Feeder{
-		logger:   logger.With("namespace", "feeder"),
-		config:   config,
-		auditLog: audit.NewLog(config.Storage.AuditDir()),
+		logger:    logger.With("namespace", "feeder"),
+		config:    config,
+		auditLog:  audit.NewLog(config.Storage.AuditDir()),
+		alertsLog: alerts.NewLog(config.Storage.AlertsDir()),
 	}
 }
 
@@ -197,6 +201,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		payload, err := client.FetchSystemInfo(ctx, addr)
 		if err != nil {
 			f.logger.Error("bitaxe fetch error", "ip", addr, "error", err)
+			f.trackAlerts(now, bitaxe, alerts.Poll{Err: err})
 			offline := []model.Alert{{Type: model.AlertOffline, Message: err.Error()}}
 			if err := store.AppendAlertOnly(now, key, offline); err != nil {
 				f.logger.Error("storage error (offline alert)", "ip", addr, "mac", key, "error", err)
@@ -212,21 +217,15 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		if reportedMac := config.NormalizeMac(extractDeviceMac(payload)); reportedMac != "" && reportedMac != key {
 			f.logger.Error("bitaxe: mac mismatch, refusing to store this poll",
 				"ip", addr, "configuredMac", key, "reportedMac", reportedMac)
-			mismatch := []model.Alert{{
-				Type:    model.AlertMacMismatch,
-				Message: fmt.Sprintf("configured mac %s doesn't match the device's reported %s", key, reportedMac),
-			}}
-			if err := store.AppendAlertOnly(now, key, mismatch); err != nil {
-				f.logger.Error("storage error (mismatch alert)", "ip", addr, "mac", key, "error", err)
-			}
+			f.trackAlerts(now, bitaxe, alerts.Poll{ReportedMac: reportedMac})
 			continue
 		}
 
 		latestFW := fwCache.Models[string(bitaxe.Model)].Version
-		alerts := computeAlerts(payload, latestFW)
+		f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW))
 
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
-		if err := store.Append(now, key, payload, alerts); err != nil {
+		if err := store.Append(now, key, payload); err != nil {
 			f.logger.Error("storage error", "ip", addr, "mac", key, "error", err)
 		} else if f.config.Remote.Enabled() {
 			// Push the already-computed storage key, not the raw mac --
@@ -256,45 +255,39 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 }
 
-// computeAlerts inspects a single poll's raw payload and returns whatever
-// alerts apply *at this instant* -- temp/fan compared against the fixed
-// default thresholds (not yet configurable, see model.Default*Threshold),
-// and a firmware-update alert if the device's reported version doesn't match
-// the cached latest release. Deliberately stateless: no comparison against
-// any previous poll, no memory of what was alerting last tick -- each call
-// starts fresh from just this payload.
-func computeAlerts(payload []byte, latestFirmwareVersion string) []model.Alert {
+// trackAlerts updates the miner's alerts with this poll and records their
+// changes of state, if any.
+func (f *Feeder) trackAlerts(now time.Time, bitaxe config.Bitaxe, poll alerts.Poll) {
+	key := bitaxe.StorageKey()
+	dir := filepath.Join(f.config.Storage.BitaxesDir(), key)
+	state, err := alerts.LoadState(dir)
+	if err != nil {
+		f.logger.Error("failed to read alerts state, starting over", "mac", key, "error", err)
+	}
+
+	events := state.Observe(now, poll)
+	for i := range events {
+		events[i].Mac, events[i].IP, events[i].Hostname = key, bitaxe.Ip, bitaxe.DisplayName()
+	}
+
+	if err := f.alertsLog.Record(events); err != nil {
+		f.logger.Error("failed to record alerts", "mac", key, "error", err)
+		return
+	}
+	if err := alerts.SaveState(dir, state); err != nil {
+		f.logger.Error("failed to save alerts state", "mac", key, "error", err)
+	}
+}
+
+// readingsPoll reads what the alerts need off a poll's raw payload.
+func readingsPoll(payload []byte, latestFirmwareVersion string) alerts.Poll {
 	var p struct {
 		Temp     float64 `json:"temp"`
 		FanSpeed float64 `json:"fanspeed"`
 		Version  string  `json:"version"`
 	}
-	if err := json.Unmarshal(payload, &p); err != nil {
-		return nil
-	}
-
-	var alerts []model.Alert
-	if p.Temp > model.DefaultTempThreshold {
-		alerts = append(alerts, model.Alert{
-			Type:      model.AlertTempHigh,
-			Value:     p.Temp,
-			Threshold: model.DefaultTempThreshold,
-		})
-	}
-	if p.FanSpeed > model.DefaultFanThreshold {
-		alerts = append(alerts, model.Alert{
-			Type:      model.AlertFanHigh,
-			Value:     p.FanSpeed,
-			Threshold: model.DefaultFanThreshold,
-		})
-	}
-	if latestFirmwareVersion != "" && p.Version != "" && p.Version != latestFirmwareVersion {
-		alerts = append(alerts, model.Alert{
-			Type:    model.AlertFirmwareStale,
-			Message: fmt.Sprintf("%s -> %s available", p.Version, latestFirmwareVersion),
-		})
-	}
-	return alerts
+	_ = json.Unmarshal(payload, &p)
+	return alerts.Poll{Temp: p.Temp, FanSpeed: p.FanSpeed, Version: p.Version, LatestVersion: latestFirmwareVersion}
 }
 
 // extractDeviceMac pulls the macAddr field a device reports flat/top-level

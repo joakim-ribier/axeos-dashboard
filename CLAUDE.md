@@ -106,6 +106,7 @@ gated by a settings toggle, unlike temp/fan/offline).
 resources/data/bitaxes/
   aabbccddee01/
     latest.json          ← overwritten each poll cycle
+    alerts.json          ← its alerts in progress (feeder), kept between polls
     2026-06-22.jsonl    ← append-only daily log
     2026-06-21.jsonl
   aabbccddee02/
@@ -119,6 +120,9 @@ resources/data/backups/
                           opened or rewritten again
 resources/data/audit/
   2026-06-22.jsonl      ← append-only audit log (dashboard-api), one per UTC day
+resources/data/alerts/
+  2026-06-22.jsonl      ← append-only alerts log (feeder), one per UTC day:
+                          only changes of state, raised / cleared
 ```
 
 ### Go Backend (`server/`)
@@ -127,13 +131,14 @@ Separate `cmd/` binaries sharing `internal/` packages:
 
 | Package | Role |
 |---|---|
-| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
+| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, track alerts (`internal/alerts`), push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
 | `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk; its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
+| `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis (temp > 62 / < 60, fan > 75 / < 70), offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
 | `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
 | `internal/mailtemplate/` | The mails' wording, as editable text files: built-in ones embedded (`templates/*.txt`, one per mail and language), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
 | `internal/mail/` | SMTP sending, standard library only (`Send`: STARTTLS / TLS / plain, optional auth, 15s timeout, UTF-8 headers); `mailtest` is a fake SMTP server for tests |
@@ -142,7 +147,7 @@ Separate `cmd/` binaries sharing `internal/` packages:
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
 | `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (selects the active pool via `useFallbackStratum`, not by swapping URLs between slots); `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
-| `internal/model/` | `MinerInfo` (41 fields) / `MinersResponse` JSON types |
+| `internal/model/` | `MinerInfo` (40 fields) / `MinersResponse` JSON types |
 | `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions; `config.go` also serves `/api/config/miners` and `/api/config/settings` (read/write the two managed YAML files) |
 
 #### API Endpoints
@@ -157,8 +162,9 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 |---|---|---|---|
 | `GET` | `/api/info` | `Info()` | Build/version info |
 | `GET` | `/api/miners` | `ListMiners()` | All miners + latest snapshot |
-| `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alerts across miners |
-| `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One day's alerts, grouped into episodes, paginated |
+| `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alert changes (raised / cleared) across miners, and `seenAt` -- the bell |
+| `POST` | `/api/miners/alerts/seen` | `MarkAlertsSeen()` | Marks the alerts read up to `seenAt` (`data/alerts/seen.json`, never moves back) -- for every browser |
+| `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One UTC day's alert changes, paginated, `ip`/`type` filters -- the Alerts page |
 | `GET` | `/api/miners/history` | `History()` | Last 24h of every miner's hashrate, in 96 buckets of 15 min (0 = offline, null = no reading) |
 | `GET` | `/api/miners/{hostnameOrIp}/stats` | `Stats()` | Last 24h (rolling) of JSONL entries for one miner |
 | `POST` | `/api/miners/{hostnameOrIp}/restart` | `Restart()` | Proxies restart to device |
@@ -195,7 +201,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 #### MinerInfo Fields
 
-41 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals (including cumulative electricity cost), firmware version, response time, fallback flag, alerts, electricity rate.
+40 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals (including cumulative electricity cost), firmware version, response time, fallback flag, electricity rate.
 
 ### React Frontend (`ui/`)
 
@@ -213,7 +219,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
-| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp >= 62 / fan >= 75) > ok |
+| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp > 62 / fan > 75) > ok |
 | `src/hooks/useMiners.ts` | TanStack Query: `GET /api/miners`, Zod validation, staleTime=Infinity |
 | `src/hooks/useMinersHistory.ts` | `GET /api/miners/history` -- the fleet chart and every sparkline |
 | `src/hooks/useMinerActions.ts` | Local state (isExecuting, error); restart + pool switch mutations |

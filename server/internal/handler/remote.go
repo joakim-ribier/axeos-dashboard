@@ -173,16 +173,32 @@ func resolveMacByIP(root, ip string) (string, error) {
 	return "", nil
 }
 
+// unknownIntervalFallback is the gap threshold used whenever a source
+// feeder's polling interval isn't known (zero) -- a miner pushed by an
+// axeos-dashboard version that predates FeederIntervalSeconds (see
+// cmd/feeder.pushSample) never sent one.
+const unknownIntervalFallback = 10 * time.Minute
+
+// pollGapThresholdFor is the longest gap since a feeder with the given
+// polling interval was last heard from that still counts as normal --
+// three times the interval: two would already tolerate a single missed or
+// slow poll, and the third covers real-world jitter (network latency, a
+// slow device response). Falls back to unknownIntervalFallback when the
+// interval isn't known (interval <= 0).
+func pollGapThresholdFor(interval time.Duration) time.Duration {
+	if interval <= 0 {
+		return unknownIntervalFallback
+	}
+	return 3 * interval
+}
+
 // aliveFromTimestamp returns alive=true if the timestamp is more recent
 // than pollGapThresholdFor(intervalSeconds) -- used in remote mode, where
 // no real-time watcher runs (see healtcheck.Watcher, local mode only), so
 // "no push in a while" is the only signal available at all. intervalSeconds
 // is the source feeder's own polling interval for this miner (see
 // cmd/feeder.pushSample.FeederIntervalSeconds), read straight off the same
-// decoded sample as ts -- reuses the same 3x-the-interval derivation as
-// alert episode grouping (see pollGapThresholdFor), since it's the same
-// underlying question just applied to a different signal: how long a gap
-// since the feeder was last heard from still counts as "nothing's wrong."
+// decoded sample as ts.
 func aliveFromTimestamp(ts string, intervalSeconds int) (bool, string) {
 	t, err := time.Parse(time.RFC3339, ts)
 	if err != nil {

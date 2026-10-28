@@ -147,7 +147,7 @@ describe("Home page", () => {
         ip: "10.0.0.2",
         macAddr: "b",
         temp: 50,
-        fanspeed: 75,
+        fanspeed: 76,
       }),
     ]);
     renderHome();

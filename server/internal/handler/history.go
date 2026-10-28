@@ -130,8 +130,8 @@ func readMinerHistory(dir, ip string, from time.Time) MinerHistory {
 		case slices.ContainsFunc(entry.Alerts, func(a model.Alert) bool { return a.Type == model.AlertOffline }):
 			count[i]++
 		}
-		// The only other alert-only line is a MAC mismatch: another device
-		// answered, nothing is known about this miner itself.
+		// Older data also has MAC mismatch lines: another device answered,
+		// nothing is known about this miner itself.
 	}
 
 	h := MinerHistory{IP: ip, HashRate: make([]*float64, historyBuckets)}

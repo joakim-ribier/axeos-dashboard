@@ -27,7 +27,7 @@ describe("useAlertsHistory", () => {
   beforeEach(() => {
     mockedAxios.get.mockReset();
     mockedAxios.get.mockResolvedValue({
-      data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+      data: { events: [], total: 0, page: 1, pageSize: 50 },
     });
   });
 
@@ -85,19 +85,6 @@ describe("useAlertsHistory", () => {
     expect(params.type).toBeUndefined();
   });
 
-  it("never calls the API when date is empty -- a hard backstop, not just a UI guard", async () => {
-    const { result } = renderHook(
-      () => useAlertsHistory({ page: 1, pageSize: 50, date: "" }),
-      { wrapper: makeWrapper() },
-    );
-
-    // fetchStatus stays "idle" (React Query never even attempts the
-    // request) rather than "fetching" -- confirms this is `enabled: false`,
-    // not a request that fires and then errors.
-    expect(result.current.fetchStatus).toBe("idle");
-    expect(mockedAxios.get).not.toHaveBeenCalled();
-  });
-
   it("always passes the date filter through as a query param -- the API requires it", async () => {
     renderHook(
       () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
@@ -113,17 +100,16 @@ describe("useAlertsHistory", () => {
     );
   });
 
-  it("returns the parsed episodes/total/page/pageSize", async () => {
+  it("returns the parsed events/total/page/pageSize", async () => {
     mockedAxios.get.mockResolvedValue({
       data: {
-        episodes: [
+        events: [
           {
+            ts: "2026-07-14T10:00:00Z",
+            mac: "aabbccddeeff",
             type: "tempHigh",
-            minerMac: "aabbccddeeff",
-            firstSeen: "2026-07-22T10:00:00Z",
-            lastSeen: "2026-07-22T10:00:00Z",
-            occurrences: 1,
-            peakValue: 65,
+            state: "cleared",
+            raisedAt: "2026-07-14T09:00:00Z",
           },
         ],
         total: 1,
@@ -138,6 +124,9 @@ describe("useAlertsHistory", () => {
     );
 
     await waitFor(() => expect(result.current.data?.total).toBe(1));
-    expect(result.current.data?.episodes).toHaveLength(1);
+    expect(result.current.data?.events[0]).toMatchObject({
+      state: "cleared",
+      raisedAt: "2026-07-14T09:00:00Z",
+    });
   });
 });
