@@ -217,5 +217,5 @@ settings saved on disk, and the test mail, asked for by the dashboard.
 
 Tested firmware, up to these versions:
 
-- **Bitaxe Gamma** — [v2.15.3](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.3){:target="_blank" rel="noopener noreferrer"}
+- **Bitaxe Gamma** — [v2.15.4](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.4){:target="_blank" rel="noopener noreferrer"}
 - **NerdQAxe++** — [v1.1.0.1](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.0.1){:target="_blank" rel="noopener noreferrer"}
