@@ -21,6 +21,11 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 > curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=latest bash
 > ```
 
+> [!NOTE]
+> **Monitor your miners from anywhere** — push your stats to
+> [hashboard.live](https://hashboard.live), free, no port to open or VPN to
+> set up.
+
 - [Prerequisites](#prerequisites)
 - [Quick Start (dev)](#quick-start-dev)
 - [Testing](#testing)
