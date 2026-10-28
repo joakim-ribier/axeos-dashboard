@@ -1,4 +1,32 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#1e1e2a"/>
-  <text x="16" y="23" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#00b4ff" text-anchor="middle">₿</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>axeos-dashboard</title>
+  <!-- simplified for 16–48 px: no blur, thicker strokes, fewer pins, no LED -->
+  <defs>
+    <linearGradient id="neon" gradientUnits="userSpaceOnUse" x1="96" y1="96" x2="416" y2="416">
+      <stop offset="0" stop-color="#5fdcff"/>
+      <stop offset=".55" stop-color="#00b4ff"/>
+      <stop offset="1" stop-color="#8b7cf6"/>
+    </linearGradient>
+    <linearGradient id="amber" gradientUnits="userSpaceOnUse" x1="160" y1="0" x2="310" y2="0">
+      <stop offset="0" stop-color="#ffd54f"/>
+      <stop offset="1" stop-color="#ff9800"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="64" fill="#15151f"/>
+  <g stroke="url(#neon)" stroke-width="26" stroke-linecap="round">
+    <path d="M196 56v34M256 56v34M316 56v34"/>
+    <path d="M196 422v34M256 422v34M316 422v34"/>
+    <path d="M56 196h34M56 256h34M56 316h34"/>
+    <path d="M422 196h34M422 256h34M422 316h34"/>
+  </g>
+  <rect x="112" y="112" width="288" height="288" rx="28" fill="#0d0d16" stroke="url(#neon)" stroke-width="18"/>
+  <g transform="translate(256 256) scale(1.04) skewX(-6.4) translate(-256 -256)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <g stroke="url(#neon)">
+      <path d="M212 172 V340"/>
+      <path d="M302 172 V340"/>
+      <path d="M184 204 H298 C326 204 340 217 340 230 C340 244 326 256 306 256"/>
+      <path d="M306 256 C334 256 350 270 350 286 C350 302 334 312 298 312 H184"/>
+    </g>
+    <path d="M168 256 H230 L244 230 L258 282 L272 256 H306" stroke="url(#amber)"/>
+  </g>
 </svg>
