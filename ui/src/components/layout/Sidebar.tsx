@@ -12,8 +12,8 @@ import ManageHistoryIcon from "@mui/icons-material/ManageHistory";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PublicIcon from "@mui/icons-material/Public";
+import SettingsIcon from "@mui/icons-material/Settings";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
-import WifiFindIcon from "@mui/icons-material/WifiFind";
 import {
   Box,
   Chip,
@@ -621,7 +621,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           <NavItem
             to="/settings"
             selected={location.pathname.startsWith("/settings")}
-            icon={<WifiFindIcon sx={{ fontSize: 18 }} />}
+            icon={<SettingsIcon sx={{ fontSize: 18 }} />}
             label={t("nav.settings")}
             onClick={onItemClick}
             collapsed={collapsed}
