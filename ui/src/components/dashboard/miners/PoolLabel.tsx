@@ -9,14 +9,15 @@ import { PoolLink } from "../PoolLink";
 export const PoolLabel = ({ miner }: { miner: Miner }) => {
   const { t } = useTranslation();
   const isFallback = miner.isUsingFallbackStratum === 1;
-  const host = poolHostname(activePoolUrl(miner)) || "—";
+  const host = poolHostname(activePoolUrl(miner));
   const dashboardUrl = isFallback
     ? miner.fallbackStratumDashboardURL
     : miner.stratumDashboardURL;
 
   return (
     <Box sx={{ minWidth: 0 }}>
-      {dashboardUrl ? (
+      {/* A board only gets the pool if its dashboard shares it. */}
+      {!host ? null : dashboardUrl ? (
         <Typography variant="body2" sx={{ display: "flex", minWidth: 0 }}>
           <PoolLink
             host={host}

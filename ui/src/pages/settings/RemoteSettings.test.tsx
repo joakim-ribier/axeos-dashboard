@@ -52,7 +52,13 @@ describe("RemoteSettings -- push URL check", () => {
     settings = {
       electricity: { ratePerKwh: 0.2 },
       pools: { dashboards: {} },
-      remote: { pushURL: "", apiKey: "" },
+      remote: {
+        pushURL: "",
+        apiKey: "",
+        sendUser: false,
+        sendPools: false,
+        sendIP: false,
+      },
       firmware: { repos: {} },
       defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
       readOnly: {
@@ -94,5 +100,74 @@ describe("RemoteSettings -- push URL check", () => {
     await user.click(save());
 
     expect(saveSettings.mock.calls[0][0].remote.pushURL).toBe("");
+  });
+});
+
+describe("RemoteSettings -- sensitive data", () => {
+  const toggle = (name: "user" | "pools" | "ip") =>
+    screen.getByRole("switch", { name: `${k}.shared.${name}` });
+
+  beforeEach(() => {
+    saveSettings.mockReset();
+    saveSettings.mockResolvedValue(undefined);
+    settings = {
+      electricity: { ratePerKwh: 0.2 },
+      pools: { dashboards: {} },
+      remote: {
+        pushURL: "https://hashboard.live/api/push",
+        apiKey: "key",
+        sendUser: false,
+        sendPools: true,
+        sendIP: false,
+      },
+      firmware: { repos: {} },
+      defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
+      readOnly: {
+        feederInterval: "2m0s",
+        healthCheckInterval: "1m0s",
+        firmwareCacheTTL: "24h0m0s",
+        auditReport: {},
+      },
+      notifications: EMPTY_NOTIFICATIONS,
+    };
+  });
+
+  it("shows what is shared and what stays private", () => {
+    render(<RemoteSettings />);
+
+    expect(toggle("user")).not.toBeChecked();
+    expect(toggle("pools")).toBeChecked();
+    expect(toggle("ip")).not.toBeChecked();
+    expect(screen.getAllByText(`${k}.shared.notSent`)).toHaveLength(1);
+    expect(screen.getAllByText(`${k}.shared.sent`)).toHaveLength(1);
+    // The IP isn't left out but replaced.
+    expect(screen.getAllByText(`${k}.shared.masked`)).toHaveLength(1);
+  });
+
+  it("saves a toggle on its own, nothing else changed", async () => {
+    const user = userEvent.setup();
+    render(<RemoteSettings />);
+
+    await user.click(toggle("user"));
+
+    expect(saveSettings).toHaveBeenCalledTimes(1);
+    expect(saveSettings.mock.calls[0][0].remote).toEqual({
+      ...settings.remote,
+      sendUser: true,
+    });
+  });
+
+  it("keeps the saved toggles when the connection is saved", async () => {
+    const user = userEvent.setup();
+    render(<RemoteSettings />);
+
+    await user.clear(pushUrl());
+    await user.type(pushUrl(), "https://elsewhere.example/api/push");
+    await user.click(save());
+
+    expect(saveSettings.mock.calls[0][0].remote).toEqual({
+      ...settings.remote,
+      pushURL: "https://elsewhere.example/api/push",
+    });
   });
 });

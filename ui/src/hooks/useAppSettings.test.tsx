@@ -20,7 +20,13 @@ const mockedAxios = vi.mocked(axios, true);
 const settings: AppSettings = {
   electricity: { ratePerKwh: 0.2, devices: [{ name: "Fan", power: 30 }] },
   pools: { dashboards: {} },
-  remote: { pushURL: "", apiKey: "" },
+  remote: {
+    pushURL: "",
+    apiKey: "",
+    sendUser: false,
+    sendPools: false,
+    sendIP: false,
+  },
   firmware: { repos: {} },
   defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
   readOnly: {

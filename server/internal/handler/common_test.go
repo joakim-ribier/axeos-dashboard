@@ -43,6 +43,12 @@ func TestPoolDashboardURL(t *testing.T) {
 			stratumUser: "",
 			want:        "",
 		},
+		{
+			name:        "a user the board wasn't given returns empty",
+			stratumURL:  "stratum.braiins.com",
+			stratumUser: "xxxxxxxx",
+			want:        "",
+		},
 	}
 
 	for _, tt := range tests {

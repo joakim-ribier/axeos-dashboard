@@ -3,6 +3,11 @@ package model
 
 import "github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 
+// Obfuscated is what a board gets instead of a device field its dashboard
+// doesn't share (see the feeder's remotePayload): the field is there, its
+// value isn't.
+const Obfuscated = "xxxxxxxx"
+
 // MinerInfo holds the information that is exposed for each miner.
 type MinerInfo struct {
 	Timestamp string `json:"timestamp"`

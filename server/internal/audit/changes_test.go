@@ -105,6 +105,22 @@ func TestSettingsChanges(t *testing.T) {
 	}
 }
 
+func TestSettingsChanges_sharedData(t *testing.T) {
+	var before, after config.AppSettingsFile
+	before.Remote = config.RemoteConfig{SendPools: true}
+	after.Remote = config.RemoteConfig{SendUser: true, SendIP: true}
+
+	got := SettingsChanges(before, after)
+	want := []Entry{{Type: TypeRemotePush, Changes: []Change{
+		{Field: "sendUser", Kind: ChangeChanged, Before: "off", After: "on"},
+		{Field: "sendPools", Kind: ChangeChanged, Before: "on", After: "off"},
+		{Field: "sendIP", Kind: ChangeChanged, Before: "off", After: "on"},
+	}}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
 func TestSettingsChanges_details(t *testing.T) {
 	var before, after config.AppSettingsFile
 	before.Electricity = config.ElectricityConfig{RatePerKwh: 0.1915, Devices: []config.PowerDevice{{Name: "Router", Power: 10}}}

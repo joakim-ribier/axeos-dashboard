@@ -177,39 +177,45 @@ export const MinerPools = ({ miner }: { miner: Miner }) => {
     selected === "fallback" ? miner.fallbackStratumUser : miner.stratumUser;
   const label = (slot: Slot) =>
     slot === "primary" ? t("miner.mainPool") : t("miner.fallbackPool");
+  // A board only gets them if its dashboard shares them.
+  const hasPools = Boolean(miner.stratumURL || miner.fallbackStratumURL);
+  const hasUser = Boolean(miner.stratumUser || miner.fallbackStratumUser);
+  if (!hasPools && !hasUser) return null;
 
   return (
     <DrawerSection icon="pools" title={t("dashboard.drawer.pools")}>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "minmax(0, 1fr)",
-            sm: "repeat(2, minmax(0, 1fr))",
-          },
-          gap: 1.5,
-        }}
-      >
-        <PoolCard
-          label={label("primary")}
-          active={active === "primary"}
-          selected={selected === "primary"}
-          onSelect={() => setSelected("primary")}
-          url={miner.stratumURL}
-          port={miner.stratumPort}
-          dashboardUrl={miner.stratumDashboardURL}
-        />
-        <PoolCard
-          label={label("fallback")}
-          active={active === "fallback"}
-          selected={selected === "fallback"}
-          onSelect={() => setSelected("fallback")}
-          url={miner.fallbackStratumURL}
-          port={miner.fallbackStratumPort}
-          dashboardUrl={miner.fallbackStratumDashboardURL}
-        />
-      </Box>
-      <PoolUser user={user} />
+      {hasPools && (
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: {
+              xs: "minmax(0, 1fr)",
+              sm: "repeat(2, minmax(0, 1fr))",
+            },
+            gap: 1.5,
+          }}
+        >
+          <PoolCard
+            label={label("primary")}
+            active={active === "primary"}
+            selected={selected === "primary"}
+            onSelect={() => setSelected("primary")}
+            url={miner.stratumURL}
+            port={miner.stratumPort}
+            dashboardUrl={miner.stratumDashboardURL}
+          />
+          <PoolCard
+            label={label("fallback")}
+            active={active === "fallback"}
+            selected={selected === "fallback"}
+            onSelect={() => setSelected("fallback")}
+            url={miner.fallbackStratumURL}
+            port={miner.fallbackStratumPort}
+            dashboardUrl={miner.fallbackStratumDashboardURL}
+          />
+        </Box>
+      )}
+      {hasUser && <PoolUser user={user} />}
     </DrawerSection>
   );
 };

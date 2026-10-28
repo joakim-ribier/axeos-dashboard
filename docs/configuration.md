@@ -199,28 +199,26 @@ Voir dans le dashboard : {{link}}
 ## ☁️ Distant (hashboard.live)
 {: #distant }
 
-Envoie les stats de vos mineurs vers [hashboard.live](https://hashboard.live)
-pour suivre votre flotte depuis n'importe où, sans VPN — il suffit de
-coller l'URL de push et votre clé API.
+L'envoi des stats de vos mineurs vers [hashboard.live](https://hashboard.live),
+pour suivre votre flotte depuis n'importe où, sans VPN.
 
 ![Distant (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
 
-Une fois le push configuré, la section montre aussi **Ton board** :
-l'identifiant du board (clic pour l'ouvrir), s'il est public ou privé,
-l'heure des dernières données reçues par hashboard, et un lien vers votre
-compte.
+- **Ton board** — une fois l'envoi configuré : l'identifiant du board
+  (clic pour l'ouvrir), s'il est public ou privé, l'heure des dernières
+  données reçues par hashboard, et un lien vers votre compte.
+- **Connexion** — l'URL de push et votre clé API hashboard, puis
+  **Enregistrer**. Une URL vide coupe l'envoi.
+- **Protection de tes données** — votre wallet, vos pools et l'IP de vos
+  mineurs sont offusqués avant l'envoi : hashboard ne les reçoit pas. Un
+  interrupteur par donnée pour la partager malgré tout ; chacun
+  s'enregistre dès le clic et affiche son état : *Privé — jamais envoyé*,
+  *Masqué — adresse fictive* (l'IP), ou *Partagé avec hashboard*.
 
-Le board est la page d'accueil de votre flotte — hashrate sur 24 h,
-indicateurs, état des mineurs, pools et liste des mineurs — rafraîchie
-automatiquement, dans la langue du navigateur.
+Chaque modification est enregistrée dans l'audit, sous *Accès distant
+modifié*.
 
-Et votre board hashboard apparaît dans le dashboard lui-même :
-
-- **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
-  ouvrir le board), s'il est public ou privé, et un lien vers votre compte
-  hashboard.
-- **Accueil** — sous le titre de la page, un lien *Ouvrir le board
-  distant* et l'heure des dernières données reçues par hashboard.
+[Voir la protection des données →]({{ '/hashboard.html#protection-des-donnees' | relative_url }}){: .btn .btn-primary }
 
 ---
 

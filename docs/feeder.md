@@ -164,17 +164,18 @@ mineur :
 
 - **le relevé** — vers `…/api/push` : les mesures, le nom (ou l'alias), le
   modèle, le tarif du kWh, la dernière release du firmware et l'intervalle
-  du feeder ;
+  du feeder — le wallet, les pools et l'IP remplacés par `xxxxxxxx`, sauf
+  si vous choisissez de les partager ([Protection des données]({{ '/hashboard.html#protection-des-donnees' | relative_url }})) ;
 - **les totaux** — vers `…/api/push/totals` ;
 - **une ligne « hors ligne »** — vers `…/api/push/history`, quand le
   mineur ne répond pas : le graphe 24 h du board chute à 0 comme en local.
 
-Chaque mineur est rangé côté hashboard sous le même nom de dossier qu'en
-local. Les envois partent en arrière-plan, avec un délai de 10 s : un
+Seul l'envoi est filtré : le relevé stocké en local reste complet. Chaque
+mineur est rangé côté hashboard sous le même nom de dossier qu'en local. Les envois partent en arrière-plan, avec un délai de 10 s : un
 hashboard lent ou injoignable ne retarde jamais le cycle, l'échec est
 écrit dans les logs.
 
-[Aller à Distant →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
+[Aller à Hashboard →]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ## Détection des mises à jour firmware
 {: #firmware-update-detection }

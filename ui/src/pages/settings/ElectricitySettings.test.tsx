@@ -46,7 +46,13 @@ vi.mock("@/hooks/useMiners", () => ({
 const buildSettings = (devices: PowerDevice[]): AppSettings => ({
   electricity: { ratePerKwh: 0.2, devices },
   pools: { dashboards: {} },
-  remote: { pushURL: "", apiKey: "" },
+  remote: {
+    pushURL: "",
+    apiKey: "",
+    sendUser: false,
+    sendPools: false,
+    sendIP: false,
+  },
   firmware: { repos: {} },
   defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
   readOnly: {

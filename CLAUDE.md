@@ -297,6 +297,9 @@ firmware:
 remote:
   pushURL: ""
   apiKey: ""
+  sendUser: false               # push the stratum users (wallet) -- off by default: pushed as "xxxxxxxx"
+  sendPools: false              # push the pools (url/port) -- off by default: "xxxxxxxx"/0; ssid/ipv6 always obfuscated
+  sendIP: false                 # push the miners' IPs -- off by default: the board then knows each by fd00::<mac> (aabb:ccdd:eeff)
 notifications:                  # Configuration > Notifications; never pushed to hashboard
   language: fr                  # fr | en -- the messages' language
   dashboardURL: http://192.168.1.60   # the dashboard's own address, for the messages' links

@@ -28,7 +28,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
 {: .note }
 > 💡 **Astuce** — Exportez vos données vers le cloud pour surveiller vos
 > mineurs depuis n'importe où dans le monde, sans VPN, via
-> [hashboard.live](https://hashboard.live).
+> [hashboard.live](https://hashboard.live) — vos données personnelles
+> offusquées. [En savoir plus]({{ '/hashboard.html' | relative_url }})
 
 ![Aperçu du dashboard axeos-dashboard]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})
 
@@ -84,6 +85,15 @@ local. Aucune authentification requise — usage réseau local uniquement.
 - Filtres par mineur, type et jour, export JSON
 
 [Voir le détail de l'Audit]({{ '/audit.html' | relative_url }}){: .btn .btn-primary }
+
+### Hashboard
+
+- Vos mineurs suivis depuis n'importe où, sans VPN ni port ouvert, sur
+  [hashboard.live](https://hashboard.live)
+- Données personnelles offusquées avant l'envoi : wallet, pools, adresses
+  du réseau local — à partager seulement si vous le choisissez
+
+[Voir le détail de Hashboard]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ---
 

@@ -292,6 +292,9 @@
       "ip": "IP",
       "pushURL": "Push URL",
       "apiKey": "API key",
+      "sendUser": "User / wallet push",
+      "sendPools": "Pools push",
+      "sendIP": "IP push",
       "scheduleAdded": "Job added",
       "scheduleRemoved": "Job removed",
       "alias": "Alias",
@@ -346,6 +349,18 @@
       "mailLanguage": {
         "fr": "Français",
         "en": "English"
+      },
+      "sendUser": {
+        "on": "on",
+        "off": "off"
+      },
+      "sendPools": {
+        "on": "on",
+        "off": "off"
+      },
+      "sendIP": {
+        "on": "on",
+        "off": "off"
       }
     },
     "change": "{{field}}: {{change}}",
@@ -425,8 +440,7 @@
       "remote": {
         "title": "Remote",
         "off": "Not configured",
-        "lastData": "Last data received: {{date}}",
-        "noData": "No data received yet"
+        "summary": "Data protection"
       },
       "system": {
         "title": "System",
@@ -556,6 +570,17 @@
         "connection": {
           "title": "Connection",
           "description": "Push address and API key of your hashboard account."
+        },
+        "shared": {
+          "title": "Your data protection",
+          "description": "Your wallet, your pools and your local network are personal data: by default, they stay with you. As long as a setting is off, the data never leaves this dashboard — hashboard, a third-party service, doesn't receive it, doesn't store it and so can never expose it, not even on a public board.",
+          "user": "Pools' user / wallet",
+          "pools": "Pools (address and port)",
+          "ip": "Miners' IP address",
+          "ipHint": "Off, your board recognizes each miner by a made-up address derived from its MAC address, which says nothing about your network: aa:bb:cc:dd:ee:ff becomes fd00::aabb:ccdd:eeff.",
+          "sent": "Shared with hashboard",
+          "notSent": "Private — never sent",
+          "masked": "Masked — made-up address"
         },
         "invalidPushUrl": "The address must start with http:// or https://."
       },

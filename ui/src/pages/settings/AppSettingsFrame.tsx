@@ -74,7 +74,13 @@ export const AppSettingsFrame = ({
   const serverBasePayload = (): AppSettingsInput => ({
     electricity: data?.electricity ?? { ratePerKwh: 0 },
     pools: data?.pools ?? { dashboards: {} },
-    remote: data?.remote ?? { pushURL: "", apiKey: "" },
+    remote: data?.remote ?? {
+      pushURL: "",
+      apiKey: "",
+      sendUser: false,
+      sendPools: false,
+      sendIP: false,
+    },
     notifications: toNotificationsInput(
       data?.notifications ?? EMPTY_NOTIFICATIONS,
     ),

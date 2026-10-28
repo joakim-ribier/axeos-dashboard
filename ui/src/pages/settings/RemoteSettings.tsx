@@ -4,8 +4,17 @@ import { useTranslation } from "react-i18next";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import SaveIcon from "@mui/icons-material/Save";
-import { Box, Chip, Link, Stack, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  Link,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+} from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SecretField } from "@/components/ui/SecretField";
@@ -49,6 +58,28 @@ const InfoRow = ({
   </Box>
 );
 
+type SharedField = "sendUser" | "sendPools" | "sendIP";
+
+// off: what an unshared value becomes -- left out, or for the IP a made-up
+// one in its place (see the ipHint).
+const SHARED_FIELDS: { field: SharedField; label: string; off: string }[] = [
+  {
+    field: "sendUser",
+    label: "settingsPage.appSettings.remote.shared.user",
+    off: "settingsPage.appSettings.remote.shared.notSent",
+  },
+  {
+    field: "sendPools",
+    label: "settingsPage.appSettings.remote.shared.pools",
+    off: "settingsPage.appSettings.remote.shared.notSent",
+  },
+  {
+    field: "sendIP",
+    label: "settingsPage.appSettings.remote.shared.ip",
+    off: "settingsPage.appSettings.remote.shared.masked",
+  },
+];
+
 const RemoteSection = ({
   data,
   isSaving,
@@ -80,10 +111,22 @@ const RemoteSection = ({
 
   const handleSaveRemote = () => {
     if (pushURLInvalid) return;
+    const base = serverBasePayload();
     return persist({
-      ...serverBasePayload(),
-      remote: { pushURL: pushURL.trim(), apiKey: apiKey.trim() },
+      ...base,
+      remote: {
+        ...base.remote,
+        pushURL: pushURL.trim(),
+        apiKey: apiKey.trim(),
+      },
     });
+  };
+
+  // A toggle saves on its own; it shows the server's state, so a refused
+  // save leaves it where it was.
+  const handleShare = (field: SharedField, checked: boolean) => {
+    const base = serverBasePayload();
+    return persist({ ...base, remote: { ...base.remote, [field]: checked } });
   };
 
   return (
@@ -216,6 +259,41 @@ const RemoteSection = ({
             </ActionButton>
           </Box>
         </Stack>
+      </Box>
+
+      <SectionDivider />
+
+      {/* What the board gets besides the miners' stats */}
+      <Box>
+        <SectionTitle
+          icon={<PrivacyTipIcon fontSize="small" />}
+          title={t("settingsPage.appSettings.remote.shared.title")}
+          description={t("settingsPage.appSettings.remote.shared.description")}
+        />
+        {SHARED_FIELDS.map(({ field, label, off }) => {
+          const sent = data?.remote[field] ?? false;
+          return (
+            <InfoRow key={field} label={t(label)}>
+              <Switch
+                size="small"
+                checked={sent}
+                disabled={isSaving}
+                onChange={(e) => void handleShare(field, e.target.checked)}
+                slotProps={{ input: { "aria-label": t(label) } }}
+              />
+              <Typography
+                variant="body2"
+                color={sent ? "warning.main" : "text.secondary"}
+              >
+                {t(sent ? "settingsPage.appSettings.remote.shared.sent" : off)}
+              </Typography>
+            </InfoRow>
+          );
+        })}
+        {/* Under the IP row, the last one. */}
+        <Typography variant="caption" color="text.secondary" component="p">
+          {t("settingsPage.appSettings.remote.shared.ipHint")}
+        </Typography>
       </Box>
     </Stack>
   );

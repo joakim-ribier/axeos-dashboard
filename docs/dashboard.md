@@ -64,7 +64,7 @@ subnav:
 2. **Board hashboard** — quand l'envoi vers hashboard est configuré :
    l'identifiant du board (clic pour l'ouvrir), public ou privé, et un
    lien vers votre compte hashboard.
-   [Aller à Distant →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
+   [Aller à Hashboard →]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 3. **Accueil** — vue d'ensemble de tous les mineurs.
 4. **Alertes** — historique des alertes (température, ventilation, hors-ligne...).
    [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }

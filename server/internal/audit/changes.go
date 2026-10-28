@@ -20,7 +20,7 @@ const (
 	TypeMinerEnabled  = "miner_enabled"
 	TypeMinerDisabled = "miner_disabled" // no longer polled nor scheduled
 	TypeMinerAdded    = "miner_added"
-	TypeRemotePush    = "remote_push"   // where (and with which key) the data is pushed
+	TypeRemotePush    = "remote_push"   // where (and with which key) the data is pushed, and what of it
 	TypeMailSettings  = "mail_settings" // the SMTP server mails go out through, and their recipients
 )
 
@@ -175,16 +175,18 @@ func job(j config.CronSchedule) string {
 }
 
 // SettingsChanges is what a settings.yml save changed: where the data is
-// pushed to and with which key (remote_push, the key itself never written
-// down), and the rest under the save's own type -- the electricity rate,
+// pushed to, what of it and with which key (remote_push, the key itself
+// never written down), and the rest under the save's own type -- the electricity rate,
 // the other devices, the custom pool dashboards and firmware repos.
 func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 	var entries []Entry
 
-	var remote []Change
-	if before.Remote.PushURL != after.Remote.PushURL {
-		remote = append(remote, Change{Field: "pushURL", Kind: ChangeChanged, Before: before.Remote.PushURL, After: after.Remote.PushURL})
-	}
+	remote := compareFields([][3]string{
+		{"pushURL", before.Remote.PushURL, after.Remote.PushURL},
+		{"sendUser", onOff(before.Remote.SendUser), onOff(after.Remote.SendUser)},
+		{"sendPools", onOff(before.Remote.SendPools), onOff(after.Remote.SendPools)},
+		{"sendIP", onOff(before.Remote.SendIP), onOff(after.Remote.SendIP)},
+	})
 	if before.Remote.APIKey != after.Remote.APIKey {
 		remote = append(remote, Change{Field: "apiKey", Kind: ChangeChanged})
 	}
