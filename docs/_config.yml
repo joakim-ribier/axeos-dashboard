@@ -4,6 +4,9 @@ remote_theme: just-the-docs/just-the-docs
 
 plugins:
   - jekyll-remote-theme
+  # sitemap.xml lists every page for search engines (supported natively
+  # by GitHub Pages), instead of leaving them to find each one by links
+  - jekyll-sitemap
 
 search_enabled: true
 color_scheme: dark
