@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
@@ -131,12 +132,12 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		t.Fatal("expected a push to the remote server, none received")
 	}
 
-	day, err := os.ReadFile(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", time.Now().UTC().Format("2006-01-02")+".jsonl"))
+	day, err := os.ReadFile(filepath.Join(cfg.Storage.AlertsDir(), time.Now().UTC().Format("2006-01-02")+".jsonl"))
 	if err != nil {
-		t.Fatalf("day's jsonl was not written: %v", err)
+		t.Fatalf("day's alerts were not written: %v", err)
 	}
-	if !strings.Contains(string(day), `"tempHigh"`) {
-		t.Errorf("day's jsonl = %s, want the tempHigh alert stored locally", day)
+	if !strings.Contains(string(day), `"type":"tempHigh","state":"raised"`) {
+		t.Errorf("day's alerts = %s, want the tempHigh alert raised", day)
 	}
 
 	cache := firmware.LoadCache(cfg.Storage.BitaxesDir())
@@ -337,29 +338,8 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		t.Errorf("latest.json should not be created/updated on a mac mismatch, stat err = %v", err)
 	}
 
-	entries, err := os.ReadDir(minerDir)
-	if err != nil {
-		t.Fatalf("expected a jsonl-only directory to be created for the mismatch alert, got err: %v", err)
-	}
-	var jsonlFound bool
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".jsonl") {
-			jsonlFound = true
-			data, err := os.ReadFile(filepath.Join(minerDir, e.Name()))
-			if err != nil {
-				t.Fatalf("failed to read %s: %v", e.Name(), err)
-			}
-			var sample storage.RawSample
-			if err := json.Unmarshal(bytes.TrimSpace(data), &sample); err != nil {
-				t.Fatalf("failed to unmarshal jsonl line: %v", err)
-			}
-			if len(sample.Alerts) != 1 || sample.Alerts[0].Type != model.AlertMacMismatch {
-				t.Errorf("Alerts = %+v, want one macMismatch alert", sample.Alerts)
-			}
-		}
-	}
-	if !jsonlFound {
-		t.Error("expected a jsonl file recording the mac mismatch alert")
+	if matches, _ := filepath.Glob(filepath.Join(minerDir, "*.jsonl")); len(matches) > 0 {
+		t.Errorf("history written on a mac mismatch: %v", matches)
 	}
 
 	if !strings.Contains(logBuf.String(), "mac mismatch") {
@@ -471,6 +451,33 @@ func TestFeeder_runOnce_unreachableMinerIsSkipped(t *testing.T) {
 	}
 	if !jsonlFound {
 		t.Error("expected a jsonl file recording the offline alert")
+	}
+}
+
+func TestFeeder_runOnce_offlineAlertOnTheSecondMissedPollOnly(t *testing.T) {
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: "127.0.0.1:1", Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: 200 * time.Millisecond},
+		Storage:   config.StorageConfig{DataDir: t.TempDir()},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+	}
+	log := alerts.NewLog(cfg.Storage.AlertsDir())
+	today := time.Now().UTC().Format("2006-01-02")
+
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+	if events, _ := log.ReadDay(today); len(events) != 0 {
+		t.Fatalf("after one missed poll: %+v, want nothing yet", events)
+	}
+
+	// A new Feeder, as after a restart: the miss is remembered on disk.
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+	NewFeeder(testLogger(), cfg).runOnce(context.Background())
+	events, _ := log.ReadDay(today)
+	if len(events) != 1 || events[0].Type != alerts.TypeOffline || events[0].State != alerts.Raised ||
+		events[0].Mac != "aabbccddeeff" || events[0].IP != "127.0.0.1:1" || events[0].Hostname != "bitaxe-1" {
+		t.Errorf("after three missed polls: %+v, want one offline raised", events)
 	}
 }
 

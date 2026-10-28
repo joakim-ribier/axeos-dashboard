@@ -1,15 +1,6 @@
 // src/schemas/minerSchema.ts
 import { z } from "zod";
 
-export const alertSchema = z.object({
-  type: z.string(),
-  message: z.string().optional(),
-  value: z.number().optional(),
-  threshold: z.number().optional(),
-});
-
-export type Alert = z.infer<typeof alertSchema>;
-
 // What a board gets instead of a value its dashboard doesn't share (the
 // feeder's remotePayload) -- read as no value at all, so it shows nowhere.
 const OBFUSCATED = "xxxxxxxx";
@@ -32,10 +23,6 @@ export const minerSchema = z.object({
   alive: z.boolean().optional(),
   aliveCheckedAt: z.string().optional(),
   error: z.string().optional(),
-  // Computed server-side by the feeder on the poll that produced this
-  // sample -- not re-derived client-side, so it always agrees with what's
-  // persisted in the day's JSONL (see GET /api/miners/alerts).
-  alerts: z.array(alertSchema).optional(),
 
   sharesAccepted: z.number(),
   sharesRejected: z.number(),
@@ -77,46 +64,37 @@ export const minerSchema = z.object({
 
 export type Miner = z.infer<typeof minerSchema>;
 
-// One alert-bearing history line, as returned by GET /api/miners/alerts (and
-// the remote equivalent) -- see handler.AlertEntry server-side.
-export const alertEntrySchema = z.object({
-  timestamp: z.string(),
-  minerIp: z.string().optional(),
-  minerMac: z.string(),
+// An alert raised (when it starts) or cleared (when it ends) -- see
+// alerts.Event server-side. value: the reading that raised it (temp/fan);
+// message: what it's about (the firmware available, the MAC reported, the
+// connection error).
+export const alertEventSchema = z.object({
+  ts: z.string(),
+  mac: z.string(),
+  ip: z.string().optional(),
   hostname: z.string().optional(),
-  alerts: z.array(alertSchema),
-});
-
-export type AlertEntry = z.infer<typeof alertEntrySchema>;
-
-// One contiguous stretch of the same alert type on the same miner within a
-// requested day, as returned by GET /api/miners/alerts/history (and the
-// remote equivalent) -- see handler.AlertEpisode server-side. Consecutive
-// occurrences of the same (miner, type) are collapsed server-side into one
-// episode, so a condition that holds across many polls in a row (e.g. a fan
-// stuck high for hours) is one row here, not dozens.
-export const alertEpisodeSchema = z.object({
   type: z.string(),
-  minerIp: z.string().optional(),
-  minerMac: z.string(),
-  hostname: z.string().optional(),
-  firstSeen: z.string(),
-  lastSeen: z.string(),
-  occurrences: z.number(),
-  peakValue: z.number().optional(),
+  state: z.enum(["raised", "cleared"]),
+  value: z.number().optional(),
   threshold: z.number().optional(),
   message: z.string().optional(),
+  raisedAt: z.string().optional(),
 });
 
-export type AlertEpisode = z.infer<typeof alertEpisodeSchema>;
+export type AlertEvent = z.infer<typeof alertEventSchema>;
 
-// Paginated response for GET /api/miners/alerts/history (and the remote
-// equivalent) -- see handler.AlertHistoryResponse server-side. Unlike
-// alertEntrySchema's endpoint (recent-per-miner, for the notification
-// bell), this scans one explicitly requested day, grouped into episodes,
-// and is the source for the dedicated Alerts page.
+// GET /api/miners/alerts: the bell's content, and up to when it's been read
+// (absent: never) -- shared by every browser.
+export const alertsResponseSchema = z.object({
+  events: z.array(alertEventSchema),
+  seenAt: z.string().optional(),
+});
+
+export type AlertsResponse = z.infer<typeof alertsResponseSchema>;
+
+// GET /api/miners/alerts/history: one day's events, paginated.
 export const alertHistoryResponseSchema = z.object({
-  episodes: z.array(alertEpisodeSchema),
+  events: z.array(alertEventSchema),
   total: z.number(),
   page: z.number(),
   pageSize: z.number(),

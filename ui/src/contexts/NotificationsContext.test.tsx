@@ -1,17 +1,16 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { MinerNotification } from "@/utils/minerNotifications";
+import type { LocalNotification } from "@/utils/minerNotifications";
 
 import {
   NotificationsProvider,
   useNotifications,
 } from "./NotificationsContext";
 
-const makeNotification = (id: string): MinerNotification => ({
+const makeNotification = (id: string): LocalNotification => ({
   id,
   timestamp: Date.now(),
-  minerLabel: "bitaxe-office",
   type: "autoRefreshToggled",
   detail: "on",
 });
@@ -33,7 +32,7 @@ describe("NotificationsContext", () => {
 
   it("loads previously persisted notifications on mount", () => {
     window.localStorage.setItem(
-      "axeos.notifications.local",
+      "axeos.notifications",
       JSON.stringify([makeNotification("a")]),
     );
 
@@ -82,58 +81,35 @@ describe("NotificationsContext", () => {
     expect(remounted.current.notifications.map((n) => n.id)).toContain("kept");
   });
 
-  it("clears all notifications", () => {
+  it("clears all notifications, and hides everything up to the given time", () => {
     const { result } = renderHook(() => useNotifications(), { wrapper });
+    expect(result.current.clearedAt).toBe(0);
 
     act(() => result.current.addNotifications([makeNotification("a")]));
-    act(() => result.current.clear());
+    act(() => result.current.clear(2_000));
 
     expect(result.current.notifications).toEqual([]);
+    expect(result.current.clearedAt).toBe(2_000);
+  });
+
+  it("never moves clearedAt back, and keeps it across a remount", () => {
+    const { result, unmount } = renderHook(() => useNotifications(), {
+      wrapper,
+    });
+    act(() => result.current.clear(2_000));
+    act(() => result.current.clear(1_000));
+    expect(result.current.clearedAt).toBe(2_000);
+    unmount();
+
+    const { result: remounted } = renderHook(() => useNotifications(), {
+      wrapper,
+    });
+    expect(remounted.current.clearedAt).toBe(2_000);
   });
 
   it("throws when used outside a provider", () => {
     expect(() => renderHook(() => useNotifications())).toThrow(
       /must be used within NotificationsProvider/,
     );
-  });
-
-  describe("readIds / markRead", () => {
-    it("starts with nothing marked read", () => {
-      const { result } = renderHook(() => useNotifications(), { wrapper });
-      expect(result.current.readIds.size).toBe(0);
-    });
-
-    it("marks the given ids as read", () => {
-      const { result } = renderHook(() => useNotifications(), { wrapper });
-
-      act(() => result.current.markRead(["a", "b"]));
-
-      expect(result.current.readIds.has("a")).toBe(true);
-      expect(result.current.readIds.has("b")).toBe(true);
-      expect(result.current.readIds.has("c")).toBe(false);
-    });
-
-    it("persists read ids across a remount", () => {
-      const { result, unmount } = renderHook(() => useNotifications(), {
-        wrapper,
-      });
-      act(() => result.current.markRead(["seen"]));
-      unmount();
-
-      const { result: remounted } = renderHook(() => useNotifications(), {
-        wrapper,
-      });
-
-      expect(remounted.current.readIds.has("seen")).toBe(true);
-    });
-
-    it("clear() does not affect read ids", () => {
-      const { result } = renderHook(() => useNotifications(), { wrapper });
-
-      act(() => result.current.markRead(["a"]));
-      act(() => result.current.clear());
-
-      expect(result.current.readIds.has("a")).toBe(true);
-    });
   });
 });

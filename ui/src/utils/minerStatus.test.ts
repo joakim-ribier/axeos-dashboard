@@ -9,21 +9,19 @@ describe("getMinerStatus", () => {
     expect(getMinerStatus(makeMiner(), false)).toBe("ok");
   });
 
-  it("is a warning from the threshold itself, like the gauges", () => {
+  it("is a warning above the threshold, like the server's alerts", () => {
+    expect(
+      getMinerStatus(makeMiner({ temp: TEMP_THRESHOLD + 0.1 }), false),
+    ).toBe("warning");
+    expect(
+      getMinerStatus(makeMiner({ fanspeed: FAN_THRESHOLD + 1 }), false),
+    ).toBe("warning");
     expect(getMinerStatus(makeMiner({ temp: TEMP_THRESHOLD }), false)).toBe(
-      "warning",
+      "ok",
     );
     expect(getMinerStatus(makeMiner({ fanspeed: FAN_THRESHOLD }), false)).toBe(
-      "warning",
+      "ok",
     );
-    expect(
-      getMinerStatus(makeMiner({ temp: TEMP_THRESHOLD - 0.1 }), false),
-    ).toBe("ok");
-  });
-
-  it("ignores the server's firmware-update alert", () => {
-    const outdated = makeMiner({ alerts: [{ type: "firmwareUpdate" }] });
-    expect(getMinerStatus(outdated, false)).toBe("ok");
   });
 
   it("keeps the most urgent status when several apply", () => {

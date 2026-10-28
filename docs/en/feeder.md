@@ -66,8 +66,9 @@ that:
 - **collect** — every enabled miner is polled on each cycle;
 - **store** — each reading is added to the day's history, and each
   miner's latest reading and totals are updated;
-- **compute the alerts** — temperature, fan, firmware, miner offline,
-  MAC address mismatch;
+- **track the alerts** — temperature, fan, firmware, miner offline, MAC
+  address mismatch: each one is only recorded when it starts and when it
+  ends;
 - **push to hashboard** — the miners' stats, when remote access is set
   up;
 - **check the firmware** — each model's latest release;
@@ -94,16 +95,18 @@ default, in `dashboard.yml`).
       `endpoints.timeout` delay (5 s by default).
    3. **If it doesn't answer** — an "offline" line is added to the day's
       history (`latest.json` keeps the last known reading), then pushed
-      to hashboard. On to the next miner.
+      to hashboard; on the 2nd missed reading in a row, the "offline"
+      alert starts. On to the next miner.
    4. **If the MAC it reports isn't the configured one** (another device
-      at this IP, or a typo) — the reading is refused: only a "MAC
-      mismatch" alert line is added to the day's history. On to the next
-      miner.
-   5. **Compute the reading's alerts** — chip temperature above 62 °C,
-      fan above 75 %, firmware other than the latest release known for
-      its model.
+      at this IP, or a typo) — the reading is refused and the "MAC
+      mismatch" alert starts. On to the next miner.
+   5. **Track the alerts** — each one is compared with its state at the
+      previous reading: an alert that starts or ends is recorded, one that
+      goes on isn't recorded again. Temperature: starts above 62 °C, ends
+      under 60 °C; fan: above 75 %, under 70 %; firmware: other than the
+      latest release known for its model.
    6. **Store** — the reading's line (measurements, the kWh rate in
-      effect, alerts) is added to the day's history, `latest.json` is
+      effect) is added to the day's history, `latest.json` is
       replaced, and `totals.json` adds up the uptime, the accepted and
       rejected shares and the electricity cost since the previous reading.
    7. **Push to hashboard** — the reading and the totals, if remote
@@ -115,9 +118,8 @@ default, in `dashboard.yml`).
 A disabled miner isn't polled: its history stays on disk, with no new
 lines.
 
-The alerts are computed again on each reading, from that reading alone.
-The dashboard then groups the successive readings of a same alert into
-episodes.
+Each miner's ongoing alerts are kept from one cycle to the next (and
+across feeder restarts): an alert that goes on is never recorded twice.
 
 [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }
 
@@ -132,18 +134,22 @@ Everything lives under `dashboard.yml`'s `storage.dataDir`:
     2026-10-18.jsonl         ← the day's (UTC) history, one line per cycle
     latest.json              ← the latest successful reading, replaced every cycle
     totals.json              ← the totals since tracking began
+    alerts.json              ← its ongoing alerts
   firmware_cache.json        ← each model's latest known release
 {dataDir}/data/backups/      ← the monthly archives, see Backups
 {dataDir}/data/audit/        ← the audit, where the feeder records its backups
+{dataDir}/data/alerts/       ← the alerts, one file per (UTC) day
 ```
 
 - **The day's history** (`YYYY-MM-DD.jsonl`) — one file per UTC day,
   never rewritten, only appended to. Each line carries the time (UTC),
-  the miner's raw response, the kWh rate in effect and the computed
-  alerts. An "offline" or "MAC mismatch" line only has the time and its
-  alert.
+  the miner's raw response and the kWh rate in effect. An "offline" line
+  only has the time and its alert.
 - **Latest reading** (`latest.json`) — the latest successful line; it's
   what the home screen shows for each miner.
+- **Alerts** (`data/alerts/YYYY-MM-DD.jsonl`) — one line per alert that
+  starts or ends, across every miner; it's what the Alerts page and the
+  bell show.
 - **Totals** (`totals.json`) — uptime, accepted and rejected shares,
   electricity cost. They keep growing when the miner restarts (its own
   counters then start over from zero) and when the rate changes (each

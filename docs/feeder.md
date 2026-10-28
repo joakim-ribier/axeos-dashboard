@@ -65,8 +65,9 @@ tourne en continu, à côté de dashboard-api et du mailer, et ne fait que
 - **collecter** — chaque mineur activé est interrogé à chaque cycle ;
 - **enregistrer** — chaque relevé est ajouté à l'historique du jour, le
   dernier relevé et les totaux de chaque mineur sont mis à jour ;
-- **calculer les alertes** — température, ventilateur, firmware, mineur
-  hors ligne, adresse MAC différente ;
+- **suivre les alertes** — température, ventilateur, firmware, mineur
+  hors ligne, adresse MAC différente : chacune n'est enregistrée qu'au
+  moment où elle commence et où elle se termine ;
 - **envoyer à hashboard** — les stats des mineurs, quand l'accès distant
   est configuré ;
 - **vérifier le firmware** — la dernière release de chaque modèle ;
@@ -94,16 +95,19 @@ par défaut, dans `dashboard.yml`).
       `endpoints.timeout` (5 s par défaut).
    3. **S'il ne répond pas** — une ligne « hors ligne » est ajoutée à
       l'historique du jour (`latest.json` garde le dernier relevé connu),
-      puis envoyée à hashboard. On passe au mineur suivant.
+      puis envoyée à hashboard ; au 2ᵉ relevé manqué de suite, l'alerte
+      « hors ligne » commence. On passe au mineur suivant.
    4. **Si la MAC qu'il annonce n'est pas celle configurée** (un autre
-      appareil à cette IP, ou une faute de frappe) — le relevé est refusé :
-      seule une ligne d'alerte « MAC différente » est ajoutée à
-      l'historique du jour. On passe au mineur suivant.
-   5. **Calculer les alertes du relevé** — température de la puce au-dessus
-      de 62 °C, ventilateur au-dessus de 75 %, firmware différent de la
-      dernière release connue pour son modèle.
+      appareil à cette IP, ou une faute de frappe) — le relevé est refusé
+      et l'alerte « MAC différente » commence. On passe au mineur suivant.
+   5. **Suivre les alertes** — chacune est comparée à son état au relevé
+      précédent : une alerte qui commence ou se termine est enregistrée,
+      une alerte qui dure ne l'est pas de nouveau. Température : commence
+      au-dessus de 62 °C, se termine sous 60 °C ; ventilateur : au-dessus
+      de 75 %, sous 70 % ; firmware : différent de la dernière release
+      connue pour son modèle.
    6. **Enregistrer** — la ligne du relevé (mesures, tarif du kWh en
-      vigueur, alertes) est ajoutée à l'historique du jour, `latest.json`
+      vigueur) est ajoutée à l'historique du jour, `latest.json`
       est remplacé, et `totals.json` cumule le temps de fonctionnement, les
       parts acceptées et rejetées et le coût d'électricité depuis le
       relevé précédent.
@@ -116,9 +120,9 @@ par défaut, dans `dashboard.yml`).
 Un mineur désactivé n'est pas interrogé : son historique reste sur le
 disque, sans nouvelles lignes.
 
-Les alertes sont recalculées à chaque relevé, à partir de ce seul relevé.
-Le dashboard regroupe ensuite les relevés successifs d'une même alerte en
-épisodes.
+Les alertes en cours de chaque mineur sont gardées d'un cycle à l'autre
+(et d'un redémarrage du feeder à l'autre) : une alerte qui dure n'est
+jamais enregistrée deux fois.
 
 [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }
 
@@ -133,18 +137,22 @@ Tout est rangé sous le `storage.dataDir` de `dashboard.yml` :
     2026-10-18.jsonl         ← l'historique du jour (UTC), une ligne par cycle
     latest.json              ← le dernier relevé réussi, remplacé à chaque cycle
     totals.json              ← les totaux depuis le début du suivi
+    alerts.json              ← ses alertes en cours
   firmware_cache.json        ← la dernière release connue de chaque modèle
 {dataDir}/data/backups/      ← les archives mensuelles, voir Sauvegardes
 {dataDir}/data/audit/        ← l'audit, où le feeder trace ses sauvegardes
+{dataDir}/data/alerts/       ← les alertes, un fichier par jour (UTC)
 ```
 
 - **Historique du jour** (`YYYY-MM-DD.jsonl`) — un fichier par jour UTC,
   jamais réécrit, seulement complété. Chaque ligne porte l'heure (UTC), la
-  réponse brute du mineur, le tarif du kWh en vigueur et les alertes
-  calculées. Une ligne « hors ligne » ou « MAC différente » n'a que
-  l'heure et son alerte.
+  réponse brute du mineur et le tarif du kWh en vigueur. Une ligne « hors
+  ligne » n'a que l'heure et son alerte.
 - **Dernier relevé** (`latest.json`) — la dernière ligne réussie ; c'est
   ce que l'écran d'accueil affiche pour chaque mineur.
+- **Alertes** (`data/alerts/YYYY-MM-DD.jsonl`) — une ligne par alerte qui
+  commence ou se termine, tous mineurs confondus ; c'est ce qu'affichent
+  la page Alertes et la cloche.
 - **Totaux** (`totals.json`) — temps de fonctionnement, parts acceptées et
   rejetées, coût d'électricité. Ils continuent de grandir quand le mineur
   redémarre (ses propres compteurs repartent alors de zéro) et quand le

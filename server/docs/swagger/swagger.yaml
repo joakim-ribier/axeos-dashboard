@@ -1,5 +1,40 @@
 basePath: /
 definitions:
+  alerts.Event:
+    properties:
+      hostname:
+        type: string
+      ip:
+        type: string
+      mac:
+        type: string
+      message:
+        type: string
+      raisedAt:
+        description: 'Cleared only: when it was raised.'
+        type: string
+      state:
+        $ref: '#/definitions/alerts.State'
+      threshold:
+        type: number
+      ts:
+        type: string
+      type:
+        type: string
+      value:
+        description: |-
+          Raised only: the reading that raised it (temp/fan), or what it's about
+          (the firmware available, the MAC reported, the connection error).
+        type: number
+    type: object
+  alerts.State:
+    enum:
+    - raised
+    - cleared
+    type: string
+    x-enum-varnames:
+    - Raised
+    - Cleared
   audit.Change:
     properties:
       after:
@@ -325,49 +360,11 @@ definitions:
     - ActionSwitchPrimary
     - ActionSwitchFallback
     - ActionRestart
-  handler.AlertEntry:
-    properties:
-      alerts:
-        items:
-          $ref: '#/definitions/model.Alert'
-        type: array
-      hostname:
-        type: string
-      minerIp:
-        type: string
-      minerMac:
-        type: string
-      timestamp:
-        type: string
-    type: object
-  handler.AlertEpisode:
-    properties:
-      firstSeen:
-        type: string
-      hostname:
-        type: string
-      lastSeen:
-        type: string
-      message:
-        type: string
-      minerIp:
-        type: string
-      minerMac:
-        type: string
-      occurrences:
-        type: integer
-      peakValue:
-        type: number
-      threshold:
-        type: number
-      type:
-        type: string
-    type: object
   handler.AlertHistoryResponse:
     properties:
-      episodes:
+      events:
         items:
-          $ref: '#/definitions/handler.AlertEpisode'
+          $ref: '#/definitions/alerts.Event'
         type: array
       page:
         type: integer
@@ -375,6 +372,20 @@ definitions:
         type: integer
       total:
         type: integer
+    type: object
+  handler.AlertsResponse:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/alerts.Event'
+        type: array
+      seenAt:
+        type: string
+    type: object
+  handler.AlertsSeen:
+    properties:
+      seenAt:
+        type: string
     type: object
   handler.AuditExport:
     properties:
@@ -658,20 +669,6 @@ definitions:
           type: string
         type: array
     type: object
-  model.Alert:
-    properties:
-      message:
-        type: string
-      threshold:
-        description: the threshold in effect at calculation time, omitted otherwise
-        type: number
-      type:
-        description: '"tempHigh", "fanHigh", "offline", "macMismatch", "firmwareUpdate"'
-        type: string
-      value:
-        description: the reading that triggered it (temp/fan), omitted otherwise
-        type: number
-    type: object
   model.InfoResponse:
     properties:
       appVersion:
@@ -724,14 +721,6 @@ definitions:
     type: object
   model.MinerInfo:
     properties:
-      alerts:
-        description: |-
-          Alerts is whatever the feeder computed and persisted at the poll that
-          produced this snapshot (temp/fan out of range, offline, mac mismatch,
-          firmware update) -- the current state as of Timestamp, not a live value.
-        items:
-          $ref: '#/definitions/model.Alert'
-        type: array
       alias:
         description: Operator-set override for Hostname (see config.Bitaxe.DisplayName)
           -- empty when not set, UI falls back to Hostname
@@ -1494,10 +1483,11 @@ paths:
       - Miners
   /api/miners/alerts:
     get:
-      description: Returns each miner's N most recent alert-bearing entries (today's
-        history only).
+      description: An alert is raised once when it starts and cleared once when it
+        ends -- each is one event. Returns the most recent ones (last 30 days), across
+        every miner, most recent first, and up to when they've been read.
       parameters:
-      - description: max entries to return per miner (default 10)
+      - description: max events to return (default 50, max 200)
         in: query
         name: limit
         type: integer
@@ -1507,19 +1497,16 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/handler.AlertEntry'
-            type: array
-      summary: List the most recent miner alerts
+            $ref: '#/definitions/handler.AlertsResponse'
+      summary: List the most recent alert changes
       tags:
       - Alerts
   /api/miners/alerts/history:
     get:
-      description: Returns every alert episode (consecutive same-type occurrences
-        collapsed into one) on the given day across all miners, most recently active
-        first, optionally filtered by ip/type.
+      description: Every alert raised or cleared on the given UTC day, across every
+        miner, most recent first, optionally filtered by ip/type.
       parameters:
-      - description: the single day to scan (YYYY-MM-DD)
+      - description: the UTC day (YYYY-MM-DD)
         in: query
         name: date
         required: true
@@ -1528,7 +1515,7 @@ paths:
         in: query
         name: page
         type: integer
-      - description: episodes per page (default 50, max 200)
+      - description: events per page (default 50, max 200)
         in: query
         name: pageSize
         type: integer
@@ -1547,8 +1534,34 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/handler.AlertHistoryResponse'
-      summary: List a single day's recorded miner alerts, grouped into episodes and
-        paginated
+      summary: List a single day's alert changes, paginated
+      tags:
+      - Alerts
+  /api/miners/alerts/seen:
+    post:
+      consumes:
+      - application/json
+      description: Marks every alert up to seenAt as read, for every browser -- never
+        moves it back. Returns the resulting seenAt.
+      parameters:
+      - description: up to when
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AlertsSeen'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AlertsSeen'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Mark the alerts read
       tags:
       - Alerts
   /api/miners/history:
@@ -1647,7 +1660,8 @@ tags:
   name: Miners
 - description: Restart a miner, switch its pool -- proxied to the device.
   name: Miner actions
-- description: Recent alerts and their history, grouped into episodes.
+- description: 'The alerts'' changes of state: raised once when one starts, cleared
+    once when it ends.'
   name: Alerts
 - description: Every user-triggered action and scheduled run, its types and export.
   name: Audit

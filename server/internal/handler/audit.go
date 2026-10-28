@@ -80,8 +80,7 @@ func ListAudit(log *audit.Log) http.HandlerFunc {
 		}
 
 		total := len(entries)
-		page := parsePage(r)
-		pageSize := parsePageSize(r)
+		page, pageSize := parsePagination(r)
 		start := min((page-1)*pageSize, total)
 		end := min(start+pageSize, total)
 		pageEntries := entries[start:end]

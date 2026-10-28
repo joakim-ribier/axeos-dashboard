@@ -2,379 +2,158 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
 
-// testGapThreshold stands in for what episodeGapThreshold(cfg) would derive
-// from a real config -- these tests exercise groupIntoEpisodes directly, so
-// they don't go through a config.Config at all.
-const testGapThreshold = 15 * time.Minute
-
-func TestGroupIntoEpisodes(t *testing.T) {
-	t.Run("a gap of exactly the threshold still merges", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 65}}},
-			{Timestamp: "2026-07-14T08:15:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 66}}},
-		}, testGapThreshold)
-		if len(got) != 1 || got[0].Occurrences != 2 {
-			t.Fatalf("got %+v, want a single 2-occurrence episode", got)
-		}
-	})
-
-	t.Run("a gap one second over the threshold splits into two episodes", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 65}}},
-			{Timestamp: "2026-07-14T08:15:01Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 66}}},
-		}, testGapThreshold)
-		if len(got) != 2 {
-			t.Fatalf("got %+v, want two separate episodes", got)
-		}
-	})
-
-	t.Run("two alerts on the same poll become two independent episodes", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{
-				Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff",
-				Alerts: []model.Alert{{Type: "tempHigh", Value: 65}, {Type: "fanHigh", Value: 80}},
-			},
-		}, testGapThreshold)
-		if len(got) != 2 {
-			t.Fatalf("got %+v, want one episode per alert type", got)
-		}
-	})
-
-	t.Run("the same type at the same time on two different miners never merges", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "offline"}}},
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "112233445566", Alerts: []model.Alert{{Type: "offline"}}},
-		}, testGapThreshold)
-		if len(got) != 2 {
-			t.Fatalf("got %+v, want one episode per miner", got)
-		}
-	})
-
-	t.Run("tracks the peak value across occurrences, not just the last one", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 70}}},
-			{Timestamp: "2026-07-14T08:05:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "tempHigh", Value: 63}}},
-		}, testGapThreshold)
-		if len(got) != 1 || got[0].PeakValue != 70 {
-			t.Fatalf("got %+v, want PeakValue = 70 (the higher of the two)", got)
-		}
-	})
-
-	t.Run("carries a message-based alert's message through", func(t *testing.T) {
-		got := groupIntoEpisodes([]AlertEntry{
-			{Timestamp: "2026-07-14T08:00:00Z", MinerMac: "aabbccddeeff", Alerts: []model.Alert{{Type: "firmwareUpdate", Message: "v2.4.0 -> v2.5.1 available"}}},
-		}, testGapThreshold)
-		if len(got) != 1 || got[0].Message != "v2.4.0 -> v2.5.1 available" {
-			t.Fatalf("got %+v, want the alert's message carried through", got)
-		}
-	})
-
-	t.Run("empty input produces an empty (not nil) result", func(t *testing.T) {
-		got := groupIntoEpisodes(nil, testGapThreshold)
-		if len(got) != 0 {
-			t.Fatalf("got %+v, want empty", got)
-		}
-	})
-
-	t.Run("derives the threshold as three times the configured feeder interval -- room for one skipped poll plus jitter", func(t *testing.T) {
-		cfg := config.Config{Feeder: config.FeederConfig{Interval: 10 * time.Minute}}
-		got := episodeGapThreshold(cfg)
-		want := 30 * time.Minute
-		if got != want {
-			t.Errorf("episodeGapThreshold() = %v, want %v", got, want)
-		}
-	})
-
-	t.Run("falls back to unknownIntervalFallback when the feeder interval is unknown (zero)", func(t *testing.T) {
-		got := episodeGapThreshold(config.Config{})
-		if got != unknownIntervalFallback {
-			t.Errorf("episodeGapThreshold() = %v, want the fallback %v", got, unknownIntervalFallback)
-		}
-	})
-}
-
-func TestListAlertsHistory(t *testing.T) {
-	dir := t.TempDir()
-
-	// A day with no alerts on it at all -- 07-13 -- used only to prove the
-	// 07-14 query never touches it.
-	writeTestFile(t, filepath.Join(dir, "aabbccddeeff", "2026-07-13.jsonl"),
-		`{"ts":"2026-07-13T09:00:00Z","ip":"10.0.0.1","alerts":[{"type":"offline"}]}`+"\n")
-
-	// 07-14: a tempHigh condition spanning three consecutive polls 5 minutes
-	// apart (must collapse into one episode), an unrelated offline tick, and
-	// a later tempHigh more than episodeGapThreshold after the first spell
-	// (must start a second, separate episode) -- all for the same miner.
-	writeTestFile(t, filepath.Join(dir, "aabbccddeeff", "2026-07-14.jsonl"),
-		`{"ts":"2026-07-14T08:00:00Z","ip":"10.0.0.1","alerts":[{"type":"tempHigh","value":65,"threshold":62}]}`+"\n"+
-			`{"ts":"2026-07-14T08:05:00Z","ip":"10.0.0.1","alerts":[{"type":"tempHigh","value":66,"threshold":62}]}`+"\n"+
-			`{"ts":"2026-07-14T08:10:00Z","ip":"10.0.0.1","alerts":[{"type":"tempHigh","value":64,"threshold":62}]}`+"\n"+
-			`{"ts":"2026-07-14T09:00:00Z","ip":"10.0.0.1","alerts":[{"type":"offline"}]}`+"\n"+
-			`{"ts":"2026-07-14T11:00:00Z","ip":"10.0.0.1","alerts":[{"type":"tempHigh","value":70,"threshold":62}]}`+"\n"+
-			`{"ts":"2026-07-14T11:05:00Z","ip":"10.0.0.1"}`+"\n") // clean line -- must never surface
-
-	// A second miner, one fanHigh tick -- proves grouping is independent per
-	// miner (never merges across miners even at an overlapping time).
-	writeTestFile(t, filepath.Join(dir, "112233445566", "2026-07-14.jsonl"),
-		`{"ts":"2026-07-14T08:02:00Z","ip":"10.0.0.2","alerts":[{"type":"fanHigh","value":80,"threshold":75}]}`+"\n")
-
+func alertsTestConfig(t *testing.T) config.Config {
+	t.Helper()
 	cfg := config.Config{
-		Storage: config.StorageConfig{DataDir: dir},
-		// Matches the 5-minute gaps in the fixture data above -- makes the
-		// episode-merging assertions below exercise the real derivation
-		// (episodeGapThreshold = 3 * Feeder.Interval, 15m here) instead of
-		// happening to work off Feeder.Interval's zero value.
-		Feeder: config.FeederConfig{Interval: 5 * time.Minute},
+		Storage: config.StorageConfig{DataDir: t.TempDir()},
 		Bitaxes: []config.Bitaxe{
-			{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "bitaxe-office", Enabled: true},
+			{Ip: "10.0.0.1", Mac: "aa:bb:cc:dd:ee:ff", Hostname: "bitaxe-office", Alias: "Office", Enabled: true},
 			{Ip: "10.0.0.2", Mac: "112233445566", Hostname: "bitaxe-garage", Enabled: true},
 		},
 	}
-	t.Setenv(envDataRoot, dir)
 
-	t.Run("date is required -- a request without one is rejected", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		if w.Code != http.StatusBadRequest {
-			t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	day := time.Now().UTC().Truncate(24 * time.Hour)
+	at := func(h int) time.Time { return day.Add(time.Duration(h) * time.Hour) }
+	raisedAt := at(1)
+	events := []alerts.Event{
+		{Timestamp: at(1), Mac: "aabbccddeeff", IP: "10.0.0.1", Hostname: "old-name", Type: alerts.TypeTempHigh, State: alerts.Raised, Value: 64},
+		{Timestamp: at(2), Mac: "112233445566", IP: "10.0.0.2", Type: alerts.TypeOffline, State: alerts.Raised},
+		{Timestamp: at(3), Mac: "aabbccddeeff", IP: "10.0.0.1", Type: alerts.TypeTempHigh, State: alerts.Cleared, RaisedAt: &raisedAt},
+		// No longer configured: keeps the name it had then.
+		{Timestamp: at(4), Mac: "999999999999", IP: "10.0.0.9", Hostname: "gone", Type: alerts.TypeFanHigh, State: alerts.Raised},
+	}
+	log := alerts.NewLog(cfg.Storage.AlertsDir())
+	for _, e := range events {
+		if err := log.Record([]alerts.Event{e}); err != nil {
+			t.Fatal(err)
 		}
-	})
+	}
+	return cfg
+}
 
-	t.Run("groups consecutive same-miner-and-type ticks into one episode, most recently active first", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14", nil)
+func serve(t *testing.T, h http.HandlerFunc, method, target, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	w := httptest.NewRecorder()
+	h(w, httptest.NewRequest(method, target, strings.NewReader(body)))
+	return w
+}
 
-		ListAlertsHistory(cfg)(w, r)
+func decode[T any](t *testing.T, w *httptest.ResponseRecorder) T {
+	t.Helper()
+	var v T
+	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
+		t.Fatalf("decode %s: %v", w.Body.String(), err)
+	}
+	return v
+}
 
+func TestListAlerts(t *testing.T) {
+	cfg := alertsTestConfig(t)
+
+	w := serve(t, ListAlerts(cfg), http.MethodGet, "/api/miners/alerts", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	got := decode[AlertsResponse](t, w)
+	if len(got.Events) != 4 || got.SeenAt != nil {
+		t.Fatalf("got %+v, want the 4 events and no seenAt", got)
+	}
+	wantNames := []string{"gone", "Office", "bitaxe-garage", "Office"}
+	for i, e := range got.Events {
+		if e.Hostname != wantNames[i] {
+			t.Errorf("event %d hostname = %q, want %q (most recent first, named as configured now)", i, e.Hostname, wantNames[i])
+		}
+	}
+
+	limited := decode[AlertsResponse](t, serve(t, ListAlerts(cfg), http.MethodGet, "/api/miners/alerts?limit=1", ""))
+	if len(limited.Events) != 1 || limited.Events[0].Type != alerts.TypeFanHigh {
+		t.Errorf("limit=1 = %+v, want the most recent one", limited.Events)
+	}
+}
+
+func TestListAlerts_none(t *testing.T) {
+	w := serve(t, ListAlerts(config.Config{Storage: config.StorageConfig{DataDir: t.TempDir()}}), http.MethodGet, "/api/miners/alerts", "")
+	if body := strings.TrimSpace(w.Body.String()); body != `{"events":[]}` {
+		t.Errorf("body = %s, want an empty list", body)
+	}
+}
+
+func TestMarkAlertsSeen(t *testing.T) {
+	cfg := alertsTestConfig(t)
+	seenAt := time.Date(2026, 10, 28, 9, 30, 0, 123_000_000, time.UTC)
+
+	w := serve(t, MarkAlertsSeen(cfg), http.MethodPost, "/api/miners/alerts/seen", `{"seenAt":"2026-10-28T09:30:00.123Z"}`)
+	if w.Code != http.StatusOK || !decode[AlertsSeen](t, w).SeenAt.Equal(seenAt) {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+
+	earlier := serve(t, MarkAlertsSeen(cfg), http.MethodPost, "/api/miners/alerts/seen", `{"seenAt":"2026-10-28T08:00:00Z"}`)
+	if !decode[AlertsSeen](t, earlier).SeenAt.Equal(seenAt) {
+		t.Errorf("an earlier seenAt moved it back: %s", earlier.Body.String())
+	}
+
+	listed := decode[AlertsResponse](t, serve(t, ListAlerts(cfg), http.MethodGet, "/api/miners/alerts", ""))
+	if listed.SeenAt == nil || !listed.SeenAt.Equal(seenAt) {
+		t.Errorf("ListAlerts seenAt = %v, want %v", listed.SeenAt, seenAt)
+	}
+
+	for _, body := range []string{``, `{}`, `{"seenAt":"yesterday"}`} {
+		if w := serve(t, MarkAlertsSeen(cfg), http.MethodPost, "/api/miners/alerts/seen", body); w.Code != http.StatusBadRequest {
+			t.Errorf("body %q: status = %d, want %d", body, w.Code, http.StatusBadRequest)
+		}
+	}
+}
+
+func TestListAlertsHistory(t *testing.T) {
+	cfg := alertsTestConfig(t)
+	today := time.Now().UTC().Format("2006-01-02")
+	history := func(query string) AlertHistoryResponse {
+		t.Helper()
+		w := serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date="+today+query, "")
 		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+			t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 		}
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
+		return decode[AlertHistoryResponse](t, w)
+	}
+
+	for _, date := range []string{"", "../../etc", "2026-1-1"} {
+		if w := serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date="+date, ""); w.Code != http.StatusBadRequest {
+			t.Errorf("date %q: status = %d, want %d", date, w.Code, http.StatusBadRequest)
 		}
-		// 4 episodes: the 08:00-08:10 tempHigh spell, the 09:00 offline
-		// blip, the 11:00 tempHigh (too far from the first spell to merge),
-		// and the other miner's fanHigh. The clean line contributes nothing.
-		if got.Total != 4 {
-			t.Fatalf("Total = %d, want 4 episodes, got %+v", got.Total, got.Episodes)
-		}
+	}
 
-		wantOrder := []struct {
-			alertType   string
-			firstSeen   string
-			lastSeen    string
-			occurrences int
-			peakValue   float64
-		}{
-			{"tempHigh", "2026-07-14T11:00:00Z", "2026-07-14T11:00:00Z", 1, 70},
-			{"offline", "2026-07-14T09:00:00Z", "2026-07-14T09:00:00Z", 1, 0},
-			{"tempHigh", "2026-07-14T08:00:00Z", "2026-07-14T08:10:00Z", 3, 66},
-			{"fanHigh", "2026-07-14T08:02:00Z", "2026-07-14T08:02:00Z", 1, 80},
-		}
-		if len(got.Episodes) != len(wantOrder) {
-			t.Fatalf("Episodes = %+v, want %d entries", got.Episodes, len(wantOrder))
-		}
-		for i, want := range wantOrder {
-			ep := got.Episodes[i]
-			if ep.Type != want.alertType || ep.FirstSeen != want.firstSeen || ep.LastSeen != want.lastSeen ||
-				ep.Occurrences != want.occurrences || ep.PeakValue != want.peakValue {
-				t.Errorf("Episodes[%d] = %+v, want %+v", i, ep, want)
-			}
-		}
-		// The merged episode keeps the miner's identity.
-		merged := got.Episodes[2]
-		if merged.MinerMac != "aabbccddeeff" || merged.MinerIP != "10.0.0.1" || merged.Hostname != "bitaxe-office" {
-			t.Errorf("merged episode identity = %+v, want mac/ip/hostname for bitaxe-office", merged)
-		}
-	})
+	if all := history(""); all.Total != 4 || len(all.Events) != 4 || all.Events[0].Type != alerts.TypeFanHigh {
+		t.Errorf("all = %+v, want the 4 events, most recent first", all)
+	}
 
-	t.Run("paginates", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&page=1&pageSize=2", nil)
+	byIP := history("&ip=10.0.0.1")
+	if byIP.Total != 2 || byIP.Events[0].State != alerts.Cleared || byIP.Events[1].State != alerts.Raised {
+		t.Errorf("ip filter = %+v, want the office miner's tempHigh cleared then raised", byIP)
+	}
+	if byType := history("&type=offline"); byType.Total != 1 || byType.Events[0].IP != "10.0.0.2" {
+		t.Errorf("type filter = %+v, want the garage miner's offline", byType)
+	}
 
-		ListAlertsHistory(cfg)(w, r)
+	page2 := history("&pageSize=3&page=2")
+	if page2.Total != 4 || len(page2.Events) != 1 || page2.Page != 2 || page2.PageSize != 3 {
+		t.Errorf("page 2 = %+v, want the 4th event alone", page2)
+	}
+	if past := history("&page=9"); past.Total != 4 || len(past.Events) != 0 {
+		t.Errorf("past the last page = %+v, want no events", past)
+	}
 
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 4 {
-			t.Errorf("Total = %d, want 4 (unaffected by pagination)", got.Total)
-		}
-		if len(got.Episodes) != 2 {
-			t.Errorf("Episodes = %+v, want 2 (pageSize)", got.Episodes)
-		}
-		if got.Page != 1 || got.PageSize != 2 {
-			t.Errorf("Page/PageSize = %d/%d, want 1/2", got.Page, got.PageSize)
-		}
-	})
-
-	t.Run("second page returns the remainder", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&page=2&pageSize=2", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if len(got.Episodes) != 2 {
-			t.Errorf("Episodes = %+v, want 2 (the remaining episodes)", got.Episodes)
-		}
-	})
-
-	t.Run("a page past the end returns an empty (not error) result", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&page=99&pageSize=2", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-		}
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if len(got.Episodes) != 0 {
-			t.Errorf("Episodes = %+v, want empty", got.Episodes)
-		}
-	})
-
-	t.Run("filters by ip", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&ip=10.0.0.2", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 1 || len(got.Episodes) != 1 || got.Episodes[0].MinerIP != "10.0.0.2" {
-			t.Errorf("got %+v, want a single episode for 10.0.0.2", got)
-		}
-	})
-
-	t.Run("filters by type", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&type=offline", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 1 || len(got.Episodes) != 1 || got.Episodes[0].Type != "offline" {
-			t.Errorf("got %+v, want a single offline episode", got)
-		}
-	})
-
-	t.Run("date filter for a day with no data returns an empty (not error) result", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-01-01", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		if w.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-		}
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 0 {
-			t.Errorf("Total = %d, want 0", got.Total)
-		}
-	})
-
-	t.Run("date and ip filters combine", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&ip=10.0.0.2", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 1 || len(got.Episodes) != 1 || got.Episodes[0].MinerIP != "10.0.0.2" {
-			t.Errorf("got %+v, want a single episode for 10.0.0.2 on 2026-07-14", got)
-		}
-	})
-
-	t.Run("rejects a malformed date instead of using it as a path", func(t *testing.T) {
-		for _, bad := range []string{"../../../etc/passwd", "not-a-date", "2026/07/14"} {
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date="+bad, nil)
-
-			ListAlertsHistory(cfg)(w, r)
-
-			if w.Code != http.StatusBadRequest {
-				t.Errorf("date=%q: status = %d, want %d", bad, w.Code, http.StatusBadRequest)
-			}
-		}
-	})
-
-	t.Run("ip and type filters combine", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14&ip=10.0.0.1&type=offline", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Total != 1 {
-			t.Errorf("Total = %d, want 1", got.Total)
-		}
-	})
-
-	t.Run("pageSize is capped at the max", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/miners/alerts/history?date=2026-07-14&pageSize=%d", maxHistoryPageSize+1000), nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.PageSize != maxHistoryPageSize {
-			t.Errorf("PageSize = %d, want the cap of %d", got.PageSize, maxHistoryPageSize)
-		}
-	})
-
-	t.Run("defaults to page 1 / pageSize 50 with just a date", func(t *testing.T) {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest(http.MethodGet, "/api/miners/alerts/history?date=2026-07-14", nil)
-
-		ListAlertsHistory(cfg)(w, r)
-
-		var got AlertHistoryResponse
-		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
-			t.Fatalf("failed to decode response: %v", err)
-		}
-		if got.Page != 1 || got.PageSize != defaultHistoryPageSize {
-			t.Errorf("Page/PageSize = %d/%d, want 1/%d", got.Page, got.PageSize, defaultHistoryPageSize)
-		}
-	})
+	empty := serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date=2020-01-01", "")
+	if !strings.Contains(empty.Body.String(), `"events":[]`) {
+		t.Errorf("a day with nothing = %s, want an empty list", empty.Body.String())
+	}
 }

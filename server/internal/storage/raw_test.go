@@ -19,7 +19,7 @@ func TestRawStorage_Append(t *testing.T) {
 	now := time.Date(2026, 7, 14, 10, 30, 45, 123456789, time.UTC)
 	payload := []byte(`{"hashRate":123.4}`)
 
-	if err := s.Append(now, "10.0.0.1", payload, nil); err != nil {
+	if err := s.Append(now, "10.0.0.1", payload); err != nil {
 		t.Fatalf("Append() unexpected error: %v", err)
 	}
 
@@ -61,10 +61,10 @@ func TestRawStorage_Append_appendsAcrossCalls(t *testing.T) {
 	s := NewRawStorage(dir, 0)
 	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
 
-	if err := s.Append(now, "10.0.0.1", []byte(`{"n":1}`), nil); err != nil {
+	if err := s.Append(now, "10.0.0.1", []byte(`{"n":1}`)); err != nil {
 		t.Fatalf("Append() #1 unexpected error: %v", err)
 	}
-	if err := s.Append(now.Add(time.Minute), "10.0.0.1", []byte(`{"n":2}`), nil); err != nil {
+	if err := s.Append(now.Add(time.Minute), "10.0.0.1", []byte(`{"n":2}`)); err != nil {
 		t.Fatalf("Append() #2 unexpected error: %v", err)
 	}
 
@@ -103,36 +103,13 @@ func TestRawStorage_Append_invalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	s := NewRawStorage(dir, 0)
 
-	err := s.Append(time.Now(), "10.0.0.1", []byte(`not json`), nil)
+	err := s.Append(time.Now(), "10.0.0.1", []byte(`not json`))
 	if err == nil {
 		t.Fatal("Append() error = nil, want error for invalid JSON payload")
 	}
 
 	if _, err := os.Stat(filepath.Join(dir, "10.0.0.1")); !os.IsNotExist(err) {
 		t.Error("Append() should not create the miner directory when the payload is invalid")
-	}
-}
-
-func TestRawStorage_Append_storesAlerts(t *testing.T) {
-	dir := t.TempDir()
-	s := NewRawStorage(dir, 0)
-	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
-	alerts := []model.Alert{{Type: model.AlertTempHigh, Value: 70, Threshold: 62}}
-
-	if err := s.Append(now, "aabbccddee01", []byte(`{"temp":70}`), alerts); err != nil {
-		t.Fatalf("Append() unexpected error: %v", err)
-	}
-
-	latestData, err := os.ReadFile(filepath.Join(dir, "aabbccddee01", "latest.json"))
-	if err != nil {
-		t.Fatalf("failed to read latest.json: %v", err)
-	}
-	var latest RawSample
-	if err := json.Unmarshal(latestData, &latest); err != nil {
-		t.Fatalf("failed to unmarshal latest.json: %v", err)
-	}
-	if len(latest.Alerts) != 1 || latest.Alerts[0].Type != model.AlertTempHigh {
-		t.Errorf("Alerts = %+v, want one tempHigh alert", latest.Alerts)
 	}
 }
 
@@ -170,7 +147,7 @@ func TestRawStorage_AppendAlertOnly_doesNotOverwriteExistingLatest(t *testing.T)
 	s := NewRawStorage(dir, 0)
 	now := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
 
-	if err := s.Append(now, "aabbccddee01", []byte(`{"temp":55}`), nil); err != nil {
+	if err := s.Append(now, "aabbccddee01", []byte(`{"temp":55}`)); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(filepath.Join(dir, "aabbccddee01", "latest.json"))

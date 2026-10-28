@@ -67,7 +67,7 @@ describe("Alerts page", () => {
 
   it("shows an empty state when there are no alerts", () => {
     mockUseAlertsHistory.mockReturnValue({
-      data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+      data: { events: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
       isPlaceholderData: false,
       error: null,
@@ -80,22 +80,31 @@ describe("Alerts page", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders a row per episode, most recently active first", () => {
+  it("renders a row per change of state: raised, then cleared with how long it lasted", () => {
     mockUseAlertsHistory.mockReturnValue({
       data: {
-        episodes: [
+        events: [
           {
-            type: "tempHigh",
-            minerIp: "10.0.0.1",
-            minerMac: "aabbccddeeff",
+            ts: "2026-07-22T11:30:00Z",
+            mac: "aabbccddeeff",
+            ip: "10.0.0.1",
             hostname: "bitaxe-office",
-            firstSeen: "2026-07-22T10:00:00Z",
-            lastSeen: "2026-07-22T10:00:00Z",
-            occurrences: 1,
-            peakValue: 65,
+            type: "tempHigh",
+            state: "cleared",
+            raisedAt: "2026-07-22T10:00:00Z",
+          },
+          {
+            ts: "2026-07-22T10:00:00Z",
+            mac: "aabbccddeeff",
+            ip: "10.0.0.1",
+            hostname: "bitaxe-office",
+            type: "tempHigh",
+            state: "raised",
+            value: 64.6,
+            threshold: 62,
           },
         ],
-        total: 1,
+        total: 2,
         page: 1,
         pageSize: 50,
       },
@@ -106,23 +115,29 @@ describe("Alerts page", () => {
 
     renderAlerts();
 
+    const rows = screen.getAllByTestId("alert-row");
+    expect(rows).toHaveLength(2);
     expect(
-      screen.getByText("bitaxe-office temperature reached 65°C"),
+      within(rows[0]).getByText("bitaxe-office temperature back to normal"),
     ).toBeInTheDocument();
+    expect(rows[0]).toHaveTextContent("lasted 1h 30m");
+    expect(
+      within(rows[1]).getByText("bitaxe-office temperature reached 65°C"),
+    ).toBeInTheDocument();
+    expect(rows[1]).not.toHaveTextContent("lasted");
   });
 
   it("shows the summary and pagination when there is more than one page", () => {
     mockUseAlertsHistory.mockReturnValue({
       data: {
-        episodes: [
+        events: [
           {
-            type: "offline",
-            minerIp: "10.0.0.1",
-            minerMac: "aabbccddeeff",
+            ts: "2026-07-22T10:00:00Z",
+            mac: "aabbccddeeff",
+            ip: "10.0.0.1",
             hostname: "bitaxe-office",
-            firstSeen: "2026-07-22T10:00:00Z",
-            lastSeen: "2026-07-22T10:00:00Z",
-            occurrences: 1,
+            type: "offline",
+            state: "raised",
           },
         ],
         total: 120,
@@ -145,15 +160,14 @@ describe("Alerts page", () => {
   it("advances to the next page when its pagination button is clicked", async () => {
     mockUseAlertsHistory.mockReturnValue({
       data: {
-        episodes: [
+        events: [
           {
-            type: "offline",
-            minerIp: "10.0.0.1",
-            minerMac: "aabbccddeeff",
+            ts: "2026-07-22T10:00:00Z",
+            mac: "aabbccddeeff",
+            ip: "10.0.0.1",
             hostname: "bitaxe-office",
-            firstSeen: "2026-07-22T10:00:00Z",
-            lastSeen: "2026-07-22T10:00:00Z",
-            occurrences: 1,
+            type: "offline",
+            state: "raised",
           },
         ],
         total: 120,
@@ -181,15 +195,14 @@ describe("Alerts page", () => {
     it("shows how many of the total are currently displayed", () => {
       mockUseAlertsHistory.mockReturnValue({
         data: {
-          episodes: [
+          events: [
             {
-              type: "offline",
-              minerIp: "10.0.0.1",
-              minerMac: "mac1",
+              ts: "2026-07-22T09:00:00Z",
+              mac: "mac1",
+              ip: "10.0.0.1",
               hostname: "bitaxe-one",
-              firstSeen: "2026-07-22T09:00:00Z",
-              lastSeen: "2026-07-22T09:00:00Z",
-              occurrences: 1,
+              type: "offline",
+              state: "raised",
             },
           ],
           total: 120,
@@ -208,7 +221,7 @@ describe("Alerts page", () => {
 
     it("shows nothing when there are no alerts at all", () => {
       mockUseAlertsHistory.mockReturnValue({
-        data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+        data: { events: [], total: 0, page: 1, pageSize: 50 },
         isLoading: false,
         isPlaceholderData: false,
         error: null,
@@ -222,7 +235,7 @@ describe("Alerts page", () => {
 
   it("defaults to today's date (fast path, required by the API) with nothing to clear", () => {
     mockUseAlertsHistory.mockReturnValue({
-      data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+      data: { events: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
       isPlaceholderData: false,
       error: null,
@@ -243,7 +256,7 @@ describe("Alerts page", () => {
 
   it("resets to page 1 when another filter is chosen on top of the default date", async () => {
     mockUseAlertsHistory.mockReturnValue({
-      data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+      data: { events: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
       isPlaceholderData: false,
       error: null,
@@ -266,7 +279,7 @@ describe("Alerts page", () => {
 
   it("resets ip/type back to unset and date back to today when clear all is clicked", async () => {
     mockUseAlertsHistory.mockReturnValue({
-      data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+      data: { events: [], total: 0, page: 1, pageSize: 50 },
       isLoading: false,
       isPlaceholderData: false,
       error: null,
@@ -321,7 +334,7 @@ describe("Alerts page", () => {
 
     it("passes the chosen date to the hook and resets to page 1", async () => {
       mockUseAlertsHistory.mockReturnValue({
-        data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+        data: { events: [], total: 0, page: 1, pageSize: 50 },
         isLoading: false,
         isPlaceholderData: false,
         error: null,
@@ -342,7 +355,7 @@ describe("Alerts page", () => {
 
     it("puts the date back to today (not unset -- the API requires a date) when clear all is clicked", async () => {
       mockUseAlertsHistory.mockReturnValue({
-        data: { episodes: [], total: 0, page: 1, pageSize: 50 },
+        data: { events: [], total: 0, page: 1, pageSize: 50 },
         isLoading: false,
         isPlaceholderData: false,
         error: null,

@@ -9,41 +9,27 @@ import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useAlertsHistory } from "@/hooks/useAlertsHistory";
 import { useMiners } from "@/hooks/useMiners";
-import { formatTimestamp } from "@/utils/format";
+import { type AlertEvent } from "@/schemas/minerSchema";
+import { formatDuration, formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
-import {
-  ALERT_TYPE_COLOR,
-  ALERT_TYPES,
-  episodesToAlertHistoryRows,
-} from "@/utils/minerNotifications";
+import { ALERT_TYPES, alertColor, alertText } from "@/utils/minerNotifications";
 
 const DEFAULT_PAGE_SIZE = 50;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 
-// Defaulting the date filter to today isn't just a UX nicety -- reading a
-// single day's JSONL is what lets the backend skip scanning every day a
-// miner has ever recorded (see allAlertsForMiner), so this is also what
-// makes the page's first load fast. Clearing the filter (reset) still shows
-// full history, just slower, same as explicitly picking an older date would
-// have been anyway.
 const todayISO = (): string => format(new Date(), "yyyy-MM-dd");
 
 /* ── Row ─────────────────────────────────────────────────────── */
-type AlertRowData = ReturnType<typeof episodesToAlertHistoryRows>[number];
-
-const AlertRow: React.FC<{ row: AlertRowData }> = ({ row }) => {
+const AlertRow: React.FC<{ event: AlertEvent }> = ({ event }) => {
   const { t } = useTranslation();
-  const dotColor = ALERT_TYPE_COLOR[row.type];
-  // A one-off blip (occurrences === 1) reads as a single timestamp, same as
-  // before episodes existed. Only a real span gets the range + count, so
-  // the common case doesn't grow a redundant "1 occurrences".
-  const whenAndCount =
-    row.occurrences > 1
-      ? `${formatTimestamp(row.firstSeen)} → ${formatTimestamp(row.lastSeen)} · ${t(
-          "alertsPage.occurrences",
-          { count: row.occurrences },
-        )}`
-      : formatTimestamp(row.firstSeen);
+  const dotColor = alertColor(event);
+  const lasted =
+    event.raisedAt &&
+    t("alertsPage.lasted", {
+      duration: formatDuration(
+        Date.parse(event.ts) - Date.parse(event.raisedAt),
+      ),
+    });
 
   return (
     <Box
@@ -66,23 +52,19 @@ const AlertRow: React.FC<{ row: AlertRowData }> = ({ row }) => {
           flexShrink: 0,
           mt: "6px",
           backgroundColor: dotColor,
-          boxShadow: dotColor ? `0 0 6px ${dotColor}` : "none",
+          boxShadow: `0 0 6px ${dotColor}`,
         }}
       />
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2">
-          {t(`notifications.${row.type}`, {
-            miner: row.minerLabel,
-            value: row.detail,
-          })}
-        </Typography>
+        <Typography variant="body2">{alertText(t, event)}</Typography>
         <Typography
           variant="caption"
           color="text.secondary"
           sx={{ display: "block", mt: 0.25 }}
         >
-          {t(`alertsPage.types.${row.type}`)}
-          {row.minerIp ? ` · ${row.minerIp}` : ""} · {whenAndCount}
+          {t(`alertsPage.types.${event.type}`)}
+          {event.ip ? ` · ${event.ip}` : ""} · {formatTimestamp(event.ts)}
+          {lasted ? ` · ${lasted}` : ""}
         </Typography>
       </Box>
     </Box>
@@ -137,10 +119,7 @@ export const Alerts = () => {
     date,
   });
 
-  const rows = useMemo(
-    () => episodesToAlertHistoryRows(data?.episodes ?? []),
-    [data],
-  );
+  const events = data?.events ?? [];
 
   const minerOptions = useMemo(
     () =>
@@ -211,7 +190,7 @@ export const Alerts = () => {
             data.total > 0 && (
               <Typography variant="caption" color="text.secondary">
                 {t("alertsPage.shownCount", {
-                  count: rows.length,
+                  count: events.length,
                   total: data.total,
                 })}
               </Typography>
@@ -219,7 +198,7 @@ export const Alerts = () => {
           }
         />
 
-        {!isLoading && rows.length === 0 ? (
+        {!isLoading && events.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 6 }}>
             {t("alertsPage.empty")}
           </Typography>
@@ -229,7 +208,12 @@ export const Alerts = () => {
               {isLoading && !data ? (
                 <RowsSkeleton />
               ) : (
-                rows.map((row) => <AlertRow key={row.id} row={row} />)
+                events.map((event) => (
+                  <AlertRow
+                    key={`${event.mac}-${event.type}-${event.state}-${event.ts}`}
+                    event={event}
+                  />
+                ))
               )}
             </Box>
             <TablePagination

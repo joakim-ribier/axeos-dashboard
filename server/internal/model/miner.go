@@ -69,11 +69,6 @@ type MinerInfo struct {
 	// reports (wrong device at this IP, or a config typo).
 	Error string `json:"error,omitempty"`
 
-	// Alerts is whatever the feeder computed and persisted at the poll that
-	// produced this snapshot (temp/fan out of range, offline, mac mismatch,
-	// firmware update) -- the current state as of Timestamp, not a live value.
-	Alerts []Alert `json:"alerts,omitempty"`
-
 	// Pool urls -- Stratum(Port|Fallback...) is what the device itself is
 	// currently connected with, straight off its own /api/system/info
 	// (see handler.PayloadStructure) -- not to be confused with the

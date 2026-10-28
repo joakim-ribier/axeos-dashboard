@@ -7,23 +7,18 @@ import {
   useState,
 } from "react";
 
-import { MinerNotification } from "@/utils/minerNotifications";
+import { type LocalNotification } from "@/utils/minerNotifications";
 
-// The local dashboard's -- a board has no notifications. ".local" is a
-// leftover of when boards had their own, kept so nothing stored is lost.
-const STORAGE_KEY = "axeos.notifications.local";
-const READ_STORAGE_KEY = "axeos.notifications.read.local";
+const STORAGE_KEY = "axeos.notifications";
+const CLEARED_AT_KEY = "axeos.notifications.clearedAt";
 const MAX_NOTIFICATIONS = 100;
-const MAX_READ_IDS = 200;
 
 interface NotificationsContextValue {
-  notifications: MinerNotification[];
-  addNotifications: (notifications: MinerNotification[]) => void;
-  clear: () => void;
-  // Ids the bell has already been opened on, so it can show an "unread"
-  // badge count instead of a total count -- see markRead().
-  readIds: Set<string>;
-  markRead: (ids: string[]) => void;
+  notifications: LocalNotification[];
+  addNotifications: (notifications: LocalNotification[]) => void;
+  // The bell's items up to this time (ms) are hidden, in this browser.
+  clearedAt: number;
+  clear: (timestamp: number) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextValue | null>(
@@ -40,25 +35,21 @@ export const useNotifications = (): NotificationsContextValue => {
   return ctx;
 };
 
-const loadFromStorage = (): MinerNotification[] => {
+const load = <T,>(key: string, fallback: T): T => {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as MinerNotification[]) : [];
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 };
 
-const loadReadIds = (): Set<string> => {
+const save = (key: string, value: unknown) => {
   try {
-    const raw = window.localStorage.getItem(READ_STORAGE_KEY);
-    if (!raw) return new Set();
-    const parsed: unknown = JSON.parse(raw);
-    return new Set(Array.isArray(parsed) ? (parsed as string[]) : []);
+    window.localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    return new Set();
+    // localStorage can throw (private browsing quota, disabled storage) --
+    // the bell then simply starts over on a refresh.
   }
 };
 
@@ -72,73 +63,35 @@ interface NotificationsProviderProps {
 export const NotificationsProvider = ({
   children,
 }: NotificationsProviderProps) => {
-  const [notifications, setNotifications] =
-    useState<MinerNotification[]>(loadFromStorage);
-  const [readIds, setReadIds] = useState<Set<string>>(loadReadIds);
+  const [notifications, setNotifications] = useState<LocalNotification[]>(() =>
+    load(STORAGE_KEY, []),
+  );
+  const [clearedAt, setClearedAt] = useState(() => load(CLEARED_AT_KEY, 0));
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
-    } catch {
-      // localStorage can throw (private browsing quota, disabled storage) —
-      // notifications simply won't survive a refresh in that case.
-    }
-  }, [notifications]);
+  useEffect(() => save(STORAGE_KEY, notifications), [notifications]);
+  useEffect(() => save(CLEARED_AT_KEY, clearedAt), [clearedAt]);
 
-  useEffect(() => {
-    try {
-      // Capped the same way as notifications, oldest first -- read state
-      // for an id that's since fallen out of the notifications list is
-      // harmless to keep around, this just stops it growing unbounded.
-      window.localStorage.setItem(
-        READ_STORAGE_KEY,
-        JSON.stringify([...readIds].slice(-MAX_READ_IDS)),
-      );
-    } catch {
-      // best-effort only, same reasoning as the notifications persist above.
-    }
-  }, [readIds]);
-
-  // Stable reference — consumed as a useEffect dependency (see
-  // useAlertResolutionEffect), so a new function identity on every render
-  // would trigger spurious re-runs. Deduped by id: resolvedAlertsToNotifications
-  // recomputes the same deterministic ids on every poll for as long as a
-  // resolved alert stays within the fetched history window, so without this
-  // the same event would pile up as a new row every 90s instead of once.
-  const addNotifications = useCallback((newOnes: MinerNotification[]) => {
+  // Stable reference -- consumed as a useEffect dependency (see Sidebar).
+  const addNotifications = useCallback((newOnes: LocalNotification[]) => {
     if (newOnes.length === 0) return;
-    setNotifications((current) => {
-      const existingIds = new Set(current.map((n) => n.id));
-      const deduped = newOnes.filter((n) => !existingIds.has(n.id));
-      if (deduped.length === 0) return current;
-      return [...deduped, ...current].slice(0, MAX_NOTIFICATIONS);
-    });
+    setNotifications((current) =>
+      [...newOnes, ...current].slice(0, MAX_NOTIFICATIONS),
+    );
   }, []);
 
-  const clear = useCallback(() => setNotifications([]), []);
-
-  // Marks the given ids as read -- called when the bell popover opens, with
-  // the ids currently on screen. Bails out (no new Set) when nothing
-  // actually changes, so opening the bell repeatedly with no new
-  // notifications in between doesn't churn the read-state persist effect.
-  const markRead = useCallback((ids: string[]) => {
-    if (ids.length === 0) return;
-    setReadIds((current) => {
-      const next = new Set(current);
-      let changed = false;
-      for (const id of ids) {
-        if (!next.has(id)) {
-          next.add(id);
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
+  const clear = useCallback((timestamp: number) => {
+    setClearedAt((current) => Math.max(current, timestamp));
+    setNotifications([]);
   }, []);
 
   return (
     <NotificationsContext.Provider
-      value={{ notifications, addNotifications, clear, readIds, markRead }}
+      value={{
+        notifications,
+        addNotifications,
+        clearedAt,
+        clear,
+      }}
     >
       {children}
     </NotificationsContext.Provider>
