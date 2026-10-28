@@ -154,3 +154,20 @@ func TestStatus_theFirmwareCache(t *testing.T) {
 		t.Errorf("firmwareCache = %+v, want checked 3h ago, within its 24h", s.FirmwareCache)
 	}
 }
+
+func TestStatus_remotePushConfigured(t *testing.T) {
+	cfg := statusConfig(t, time.Time{}, stoppedMailer())
+	if getStatus(t, cfg, time.Now()).RemotePushConfigured {
+		t.Error("remotePushConfigured = true with no push URL nor key, want false")
+	}
+
+	cfg.Remote.PushURL = "https://hashboard.example.com"
+	if getStatus(t, cfg, time.Now()).RemotePushConfigured {
+		t.Error("remotePushConfigured = true with a push URL but no key, want false")
+	}
+
+	cfg.Remote.APIKey = "key"
+	if !getStatus(t, cfg, time.Now()).RemotePushConfigured {
+		t.Error("remotePushConfigured = false with a push URL and key, want true")
+	}
+}

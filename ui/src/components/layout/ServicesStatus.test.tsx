@@ -45,7 +45,11 @@ const buildStatus = (
       state,
     };
   }
-  return { checkedAt: "2026-10-16T09:31:00Z", services };
+  return {
+    checkedAt: "2026-10-16T09:31:00Z",
+    services,
+    remotePushConfigured: false,
+  };
 };
 
 const card = () =>

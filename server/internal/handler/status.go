@@ -47,12 +47,16 @@ type ServicesStatus struct {
 type StatusResponse struct {
 	CheckedAt time.Time      `json:"checkedAt"`
 	Services  ServicesStatus `json:"services"`
+	// RemotePushConfigured is whether settings.yml has a hashboard push URL
+	// and key -- the UI only asks for the board's info (GET
+	// /api/remote/board) when it has.
+	RemotePushConfigured bool `json:"remotePushConfigured"`
 }
 
 // Status is how every process of this dashboard is doing, in one answer.
 //
 // @Summary Services status
-// @Description How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet).
+// @Description How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet). Also whether remote (hashboard) push is configured.
 // @Tags Status
 // @Produce json
 // @Success 200 {object} handler.StatusResponse
@@ -92,6 +96,7 @@ func Status(cfg config.Config, watcher *healtcheck.Watcher, startedAt time.Time,
 			Mailer:        mailerStatus(r, cfg, now),
 			FirmwareCache: runStatus(now, firmware.LatestCheck(firmware.LoadCache(root)), cfg.Firmware.CacheTTL),
 		},
+		RemotePushConfigured: cfg.Remote.Enabled(),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)

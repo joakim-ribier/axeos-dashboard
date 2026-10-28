@@ -853,7 +853,7 @@
         },
         "/api/status": {
             "get": {
-                "description": "How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet).",
+                "description": "How each process is doing -- dashboard-api, the feeder (its last poll), the health check, the mailer, the firmware cache: ok, late (nothing within twice its interval), offline (didn't answer) or unknown (no run yet). Also whether remote (hashboard) push is configured.",
                 "produces": [
                     "application/json"
                 ],
@@ -1651,6 +1651,10 @@
             "properties": {
                 "checkedAt": {
                     "type": "string"
+                },
+                "remotePushConfigured": {
+                    "description": "RemotePushConfigured is whether settings.yml has a hashboard push URL\nand key -- the UI only asks for the board's info (GET\n/api/remote/board) when it has.",
+                    "type": "boolean"
                 },
                 "services": {
                     "$ref": "#/definitions/handler.ServicesStatus"

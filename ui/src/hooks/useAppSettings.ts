@@ -80,6 +80,9 @@ export const useAppSettings = (): UseAppSettingsReturn => {
       // GET /api/miners echoes electricity.devices -- drop its cached copy
       // so the dashboard shows a device added/removed here right away.
       void queryClient.invalidateQueries({ queryKey: ["miners"] });
+      // GET /api/status says whether remote push is configured: refreshed
+      // so the board's link follows a push turned on or off.
+      void queryClient.invalidateQueries({ queryKey: ["servicesStatus"] });
       return result;
     } catch (err: unknown) {
       setSaveError(extractErrorMessage(err));

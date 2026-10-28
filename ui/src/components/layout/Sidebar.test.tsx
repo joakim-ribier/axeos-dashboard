@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ModeProvider } from "@/contexts/ModeContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
@@ -33,11 +34,13 @@ function sidebarRouterTree(
   return (
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={[initialEntry]}>
-        <RefreshSettingsProvider>
-          <NotificationsProvider>
-            <Sidebar mobileOpen={mobileOpen} onClose={onClose} />
-          </NotificationsProvider>
-        </RefreshSettingsProvider>
+        <ModeProvider mode="local">
+          <RefreshSettingsProvider>
+            <NotificationsProvider>
+              <Sidebar mobileOpen={mobileOpen} onClose={onClose} />
+            </NotificationsProvider>
+          </RefreshSettingsProvider>
+        </ModeProvider>
       </MemoryRouter>
     </QueryClientProvider>
   );
