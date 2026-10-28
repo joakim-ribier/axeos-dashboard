@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="brand/icon.svg" alt="axeos-dashboard icon: a mining chip whose # closes into ₿" width="128">
+</p>
+
 # axeos-dashboard
 
 📖 **[Documentation](https://joakim-ribier.github.io/axeos-dashboard/en/)** — supported models, tested firmware versions, full breakdown of every screen.
@@ -32,6 +36,7 @@ Two Go binaries handle data collection and the REST API; a React SPA provides th
 - [Deployment](#deployment)
 - [API Reference](#api-reference)
 - [AxeOs Device API](#axeos-device-api)
+- [Icons](#icons)
 - [License](#license)
 
 ---
@@ -141,10 +146,20 @@ Full device API docs: https://osmu.wiki/bitaxe/api/
 
 ---
 
+## Icons
+
+The app's, the docs site's and [hashboard.live](https://hashboard.live)'s
+icons all come from one pack, kept in [`brand/`](brand/) — what each file
+is for and where it's used: [brand/README.md](brand/README.md).
+
+---
+
 ## License
 
 [MIT](LICENSE) © Joakim Ribier
 
+---
+
 <p align="center">
-  <a href="https://badele.github.io/build-with-ai/"><img src="readme/build-with-ai.png" alt="Build with AI" width="300"></a>
+  <a href="https://badele.github.io/build-with-ai/"><img src="readme/build-with-ai.png" alt="Built with AI: spec human, code AI, review human-ish, tested on real Bitaxes" width="620"></a>
 </p>

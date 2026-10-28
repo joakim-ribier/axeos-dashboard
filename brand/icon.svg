@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>axeos-dashboard</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22223a"/>
+      <stop offset="1" stop-color="#0b0b14"/>
+    </linearGradient>
+    <linearGradient id="neon" gradientUnits="userSpaceOnUse" x1="96" y1="96" x2="416" y2="416">
+      <stop offset="0" stop-color="#5fdcff"/>
+      <stop offset=".55" stop-color="#00b4ff"/>
+      <stop offset="1" stop-color="#8b7cf6"/>
+    </linearGradient>
+    <linearGradient id="amber" gradientUnits="userSpaceOnUse" x1="170" y1="0" x2="300" y2="0">
+      <stop offset="0" stop-color="#ffd54f"/>
+      <stop offset="1" stop-color="#ff9800"/>
+    </linearGradient>
+    <radialGradient id="halo" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#00b4ff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#00b4ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="die" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1b2c"/>
+      <stop offset="1" stop-color="#11111c"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- tile -->
+  <rect id="tile" width="512" height="512" rx="64" fill="url(#bg)"/>
+  <rect id="tile-edge" x="2" y="2" width="508" height="508" rx="62" fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="4"/>
+
+  <g id="mark">
+    <circle cx="256" cy="256" r="210" fill="url(#halo)"/>
+    <!-- chip pins -->
+    <g stroke="url(#neon)" stroke-width="14" stroke-linecap="round" opacity=".7">
+      <path d="M202 92v22M238 92v22M274 92v22M310 92v22"/>
+      <path d="M202 398v22M238 398v22M274 398v22M310 398v22"/>
+      <path d="M92 202h22M92 238h22M92 274h22M92 310h22"/>
+      <path d="M398 202h22M398 238h22M398 274h22M398 310h22"/>
+    </g>
+    <!-- chip die -->
+    <rect x="128" y="128" width="256" height="256" rx="24" fill="url(#die)" stroke="url(#neon)" stroke-width="9"/>
+    <!-- # that closes into a ₿, hashrate pulse as its waist -->
+    <g transform="translate(256 256) scale(.92) skewX(-6.4) translate(-256 -256)" filter="url(#glow)" stroke-width="21" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <g stroke="url(#neon)">
+        <path d="M214 168 V344"/>
+        <path d="M302 168 V344"/>
+        <path d="M180 202 H300 C326 202 340 215 340 229 C340 243 326 256 306 256"/>
+        <path d="M306 256 C332 256 348 270 348 286 C348 302 332 314 300 314 H180"/>
+      </g>
+      <path d="M166 256 H232 L244 234 L257 280 L269 256 H306" stroke="url(#amber)"/>
+    </g>
+    <!-- online LED -->
+    <circle cx="346" cy="166" r="11" fill="#66bb6a" filter="url(#glow)"/>
+  </g>
+</svg>
