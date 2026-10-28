@@ -1302,6 +1302,16 @@
                 },
                 "pushURL": {
                     "type": "string"
+                },
+                "sendIP": {
+                    "type": "boolean"
+                },
+                "sendPools": {
+                    "type": "boolean"
+                },
+                "sendUser": {
+                    "description": "SendUser, SendPools and SendIP opt in to pushing the stratum users (a\nwallet address, often), the pools and the miners' IPs (a map of the\nlocal network) -- off by default, nothing sensitive leaves the Pi\nunless the operator asks for it. Without SendIP a board knows each\nminer by an IPv6 made from its MAC instead (see the feeder's\nmaskedIP).",
+                    "type": "boolean"
                 }
             }
         },

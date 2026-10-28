@@ -183,6 +183,58 @@ describe("Home page", () => {
     ).toBeInTheDocument();
   });
 
+  // A board only gets what its dashboard chose to share (see the feeder's
+  // remotePayload): nothing of it shows, rather than empty placeholders.
+  describe("data a board doesn't get", () => {
+    const drawer = () =>
+      within(document.querySelector<HTMLElement>(".MuiDrawer-paper")!);
+
+    it("shows the pools and the user when they're there", () => {
+      showMiners([freshMiner({ hostname: "rig-full" })]);
+      renderHome();
+
+      expect(screen.getByText("share of hashrate")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /^rig-full/ }));
+      expect(drawer().getByText("Pools")).toBeInTheDocument();
+      expect(drawer().getByText("wallet.office")).toBeInTheDocument();
+    });
+
+    it("hides the pools and the user when the board has none", () => {
+      showMiners([
+        freshMiner({
+          hostname: "rig-private",
+          stratumURL: undefined,
+          stratumUser: undefined,
+          fallbackStratumURL: undefined,
+          fallbackStratumUser: undefined,
+        }),
+      ]);
+      renderHome();
+
+      expect(screen.queryByText("share of hashrate")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /^rig-private/ }));
+      expect(drawer().queryByText("Pools")).not.toBeInTheDocument();
+    });
+
+    it("shows the user alone when the pools weren't shared", () => {
+      showMiners([
+        freshMiner({
+          hostname: "rig-user",
+          stratumURL: undefined,
+          fallbackStratumURL: undefined,
+        }),
+      ]);
+      renderHome();
+
+      fireEvent.click(screen.getByRole("button", { name: /^rig-user/ }));
+      expect(drawer().getByText("wallet.office")).toBeInTheDocument();
+      // No pool cards, then.
+      expect(drawer().queryByText("Primary")).not.toBeInTheDocument();
+    });
+  });
+
   it("filters the list on a status chip", () => {
     showMiners([
       freshMiner({ hostname: "rig-ok", ip: "10.0.0.1", macAddr: "a" }),

@@ -234,8 +234,8 @@ plusieurs (par exemple le pool **et** la planification d'un mineur).
     <tr>
       <td><code>remote_push</code></td>
       <td>Accès distant modifié</td>
-      <td>l'URL de push ou la clé API hashboard change</td>
-      <td>l'URL avant et après ; la clé API n'est jamais écrite, seulement « modifiée »</td>
+      <td>l'URL de push, la clé API hashboard ou un réglage de protection des données change</td>
+      <td>l'URL avant et après, chaque réglage de protection des données activé ou désactivé ; la clé API n'est jamais écrite, seulement « modifiée »</td>
     </tr>
     <tr>
       <td><code>mail_settings</code></td>

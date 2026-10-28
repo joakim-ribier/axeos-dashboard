@@ -23,6 +23,8 @@ callouts:
     color: yellow
   release:
     color: green
+  protection:
+    color: blue
 
 aux_links:
   "axeos-dashboard sur GitHub":

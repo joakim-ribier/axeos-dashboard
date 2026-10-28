@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -109,8 +112,9 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		if p.auth != "Bearer test-key" {
 			t.Errorf("push Authorization = %q, want %q", p.auth, "Bearer test-key")
 		}
-		if p.body["ip"] != minerAddr {
-			t.Errorf("push body ip = %v, want %v", p.body["ip"], minerAddr)
+		// remote.sendIP is off: an IPv6 made from the MAC stands in for the IP.
+		if p.body["ip"] != "fd00::aabb:ccdd:eeff" {
+			t.Errorf("push body ip = %v, want %q", p.body["ip"], "fd00::aabb:ccdd:eeff")
 		}
 		if p.body["storageKey"] != "aabbccddeeff" {
 			t.Errorf("push body storageKey = %v, want %q", p.body["storageKey"], "aabbccddeeff")
@@ -541,4 +545,263 @@ func TestFeeder_runBackup_recordsOnlyRunsThatDidSomething(t *testing.T) {
 	if len(e.Changes) != 1 || e.Changes[0] != want[0] {
 		t.Errorf("changes = %+v, want %+v", e.Changes, want)
 	}
+}
+
+func TestRemotePayload(t *testing.T) {
+	payload := []byte(`{"hashRate":500000,"ssid":"home-wifi","ipv6":"FE80::1","ipv4":"192.168.1.65",` +
+		`"stratumUser":"bc1q.worker","fallbackStratumUser":"acct.worker",` +
+		`"stratumURL":"solo.example","stratumPort":3333,"fallbackStratumURL":"pool.example","fallbackStratumPort":3334,"scriptsig":"/pool/"}`)
+	userKeys := []string{"stratumUser", "fallbackStratumUser"}
+	poolKeys := []string{"stratumURL", "fallbackStratumURL", "scriptsig"}
+	portKeys := []string{"stratumPort", "fallbackStratumPort"}
+	ipKeys := []string{"ipv4"}
+
+	tests := []struct {
+		name   string
+		remote config.RemoteConfig
+		hidden []string // texts that read "xxxxxxxx"
+		zeroed []string // numbers that read 0
+	}{
+		{"nothing shared by default", config.RemoteConfig{}, concat(userKeys, poolKeys, ipKeys), portKeys},
+		{"users only", config.RemoteConfig{SendUser: true}, concat(poolKeys, ipKeys), portKeys},
+		{"pools only", config.RemoteConfig{SendPools: true}, concat(userKeys, ipKeys), nil},
+		{"ip only", config.RemoteConfig{SendIP: true}, concat(userKeys, poolKeys), portKeys},
+		{"everything shared", config.RemoteConfig{SendUser: true, SendPools: true, SendIP: true}, nil, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got map[string]any
+			if err := json.Unmarshal(remotePayload(payload, tt.remote), &got); err != nil {
+				t.Fatalf("filtered payload isn't JSON: %v", err)
+			}
+			want := map[string]any{}
+			_ = json.Unmarshal(payload, &want)
+			// The Wi-Fi name and the IPv6 are never shared.
+			for _, key := range concat([]string{"ssid", "ipv6"}, tt.hidden) {
+				want[key] = "xxxxxxxx"
+			}
+			for _, key := range tt.zeroed {
+				want[key] = float64(0)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("remotePayload =\n %v\nwant\n %v", got, want)
+			}
+		})
+	}
+
+	t.Run("a field the device doesn't report isn't added", func(t *testing.T) {
+		var got map[string]any
+		_ = json.Unmarshal(remotePayload([]byte(`{"hashRate":1}`), config.RemoteConfig{}), &got)
+		if len(got) != 1 {
+			t.Errorf("remotePayload = %v, want just the hashRate", got)
+		}
+	})
+
+	t.Run("a payload that isn't a JSON object goes as-is", func(t *testing.T) {
+		if got := remotePayload([]byte("not json"), config.RemoteConfig{}); string(got) != "not json" {
+			t.Errorf("remotePayload = %q, want it unchanged", got)
+		}
+	})
+}
+
+func concat(lists ...[]string) []string {
+	var all []string
+	for _, l := range lists {
+		all = append(all, l...)
+	}
+	return all
+}
+
+// pushOneSample runs one feeder cycle against a device answering
+// devicePayload and returns the sample pushed to hashboard, the local
+// latest.json and the miner's address.
+func pushOneSample(t *testing.T, devicePayload string, remote config.RemoteConfig) (map[string]any, string, string) {
+	t.Helper()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(devicePayload))
+	}))
+	t.Cleanup(bitaxeServer.Close)
+
+	pushCh := make(chan map[string]any, 1)
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+		if isNonSamplePushPath(r.URL.Path) {
+			return
+		}
+		var decoded map[string]any
+		_ = json.Unmarshal(body, &decoded)
+		pushCh <- decoded
+	}))
+	t.Cleanup(remoteServer.Close)
+
+	remote.PushURL = remoteServer.URL
+	remote.APIKey = "test-key"
+	minerAddr := serverAddr(bitaxeServer)
+	cfg := config.Config{
+		Bitaxes:   []config.Bitaxe{{Ip: minerAddr, Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true}},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: t.TempDir()},
+		Remote:    remote,
+	}
+
+	feeder := NewFeeder(testLogger(), cfg)
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes()
+
+	latest, err := os.ReadFile(filepath.Join(cfg.Storage.BitaxesDir(), "aabbccddeeff", "latest.json"))
+	if err != nil {
+		t.Fatalf("latest.json was not written: %v", err)
+	}
+	select {
+	case sample := <-pushCh:
+		return sample, string(latest), minerAddr
+	case <-time.After(2 * time.Second):
+		t.Fatal("no sample was pushed")
+		return nil, "", ""
+	}
+}
+
+func TestFeeder_runOnce_keepsSensitiveDataLocal(t *testing.T) {
+	sample, latest, _ := pushOneSample(t,
+		`{"hashRate":500000,"ssid":"home-wifi","ipv4":"192.168.1.65","stratumUser":"bc1q.worker","stratumURL":"solo.example"}`,
+		config.RemoteConfig{})
+
+	// Only the push is filtered: the local copy stays whole.
+	for _, want := range []string{`"ssid":"home-wifi"`, `"ipv4":"192.168.1.65"`, `"stratumUser":"bc1q.worker"`, `"stratumURL":"solo.example"`} {
+		if !strings.Contains(latest, want) {
+			t.Errorf("local latest.json = %s, want it to contain %s", latest, want)
+		}
+	}
+
+	payload, _ := sample["payload"].(map[string]any)
+	if payload["hashRate"] == nil {
+		t.Errorf("pushed payload = %v, want the measures", payload)
+	}
+	for _, key := range []string{"ssid", "ipv4", "stratumUser", "stratumURL"} {
+		if payload[key] != "xxxxxxxx" {
+			t.Errorf("pushed payload %s = %v, want it obfuscated", key, payload[key])
+		}
+	}
+	if sample["ip"] != "fd00::aabb:ccdd:eeff" {
+		t.Errorf("push body ip = %v, want the IPv6 made from the MAC", sample["ip"])
+	}
+}
+
+func TestFeeder_runOnce_sendIPPushesTheMinersIP(t *testing.T) {
+	sample, _, minerAddr := pushOneSample(t,
+		`{"hashRate":500000,"ipv4":"192.168.1.65"}`,
+		config.RemoteConfig{SendIP: true})
+
+	if sample["ip"] != minerAddr {
+		t.Errorf("push body ip = %v, want %v", sample["ip"], minerAddr)
+	}
+	if payload, _ := sample["payload"].(map[string]any); payload["ipv4"] != "192.168.1.65" {
+		t.Errorf("pushed payload = %v, want its ipv4", payload)
+	}
+}
+
+func TestMaskedIP(t *testing.T) {
+	got := maskedIP("10b41dc09b5c")
+	if got != "fd00::10b4:1dc0:9b5c" {
+		t.Errorf("maskedIP = %q, want %q", got, "fd00::10b4:1dc0:9b5c")
+	}
+	// hashboard refuses a push whose ip isn't one.
+	if net.ParseIP(got) == nil {
+		t.Errorf("maskedIP = %q, not an IP", got)
+	}
+}
+
+// pushedBodies runs one feeder cycle against a device answering
+// devicePayload (or not answering at all when devicePayload is empty) and
+// returns every body pushed to hashboard, whatever the route -- the
+// reading, the offline line, the totals -- and the miner's address.
+func pushedBodies(t *testing.T, devicePayload string, remote config.RemoteConfig) (string, string) {
+	t.Helper()
+
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(devicePayload))
+	}))
+	minerAddr := serverAddr(bitaxeServer)
+	if devicePayload == "" {
+		bitaxeServer.Close()
+	} else {
+		t.Cleanup(bitaxeServer.Close)
+	}
+
+	var mu sync.Mutex
+	var bodies []string
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		bodies = append(bodies, r.URL.Path+" "+string(body))
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(remoteServer.Close)
+
+	remote.PushURL = remoteServer.URL
+	remote.APIKey = "test-key"
+	feeder := NewFeeder(testLogger(), config.Config{
+		Bitaxes:   []config.Bitaxe{{Ip: minerAddr, Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true}},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: t.TempDir()},
+		Remote:    remote,
+	})
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) == 0 {
+		t.Fatal("nothing was pushed")
+	}
+	return strings.Join(bodies, "\n"), minerAddr
+}
+
+// Whatever the route, nothing obfuscated reaches hashboard -- checked on the
+// raw bodies, so a value can't slip through some other field (an error
+// message, a new one).
+func TestFeeder_runOnce_nothingObfuscatedReachesHashboard(t *testing.T) {
+	device := `{"hashRate":500000,"ssid":"home-wifi","ipv6":"FE80::1234","ipv4":"192.168.1.65",` +
+		`"stratumUser":"bc1q.worker","fallbackStratumUser":"acct.worker",` +
+		`"stratumURL":"solo.example","stratumPort":3333,"fallbackStratumURL":"pool.example","fallbackStratumPort":3334,"scriptsig":"/pool/"}`
+	secrets := []string{"home-wifi", "FE80::1234", "192.168.1.65", "bc1q.worker", "acct.worker", "solo.example", "pool.example", "/pool/", "3333", "3334"}
+	ipHost := func(addr string) string { return strings.Split(addr, ":")[0] }
+
+	t.Run("a reading", func(t *testing.T) {
+		bodies, minerAddr := pushedBodies(t, device, config.RemoteConfig{})
+		for _, secret := range append(secrets, ipHost(minerAddr)) {
+			if strings.Contains(bodies, secret) {
+				t.Errorf("%q pushed:\n%s", secret, bodies)
+			}
+		}
+	})
+
+	t.Run("an offline poll", func(t *testing.T) {
+		bodies, minerAddr := pushedBodies(t, "", config.RemoteConfig{})
+		if !strings.Contains(bodies, "/history ") {
+			t.Fatalf("no offline line pushed:\n%s", bodies)
+		}
+		if strings.Contains(bodies, ipHost(minerAddr)) {
+			t.Errorf("the miner's IP pushed:\n%s", bodies)
+		}
+	})
+
+	// The positive control: shared, the same values do reach hashboard --
+	// the checks above can't pass for not seeing them.
+	t.Run("everything shared", func(t *testing.T) {
+		shared := config.RemoteConfig{SendUser: true, SendPools: true, SendIP: true}
+		bodies, minerAddr := pushedBodies(t, device, shared)
+		for _, value := range []string{"bc1q.worker", "solo.example", "3333", "192.168.1.65", ipHost(minerAddr)} {
+			if !strings.Contains(bodies, value) {
+				t.Errorf("%q not pushed though shared:\n%s", value, bodies)
+			}
+		}
+		offline, offlineAddr := pushedBodies(t, "", shared)
+		if !strings.Contains(offline, ipHost(offlineAddr)) {
+			t.Errorf("the miner's IP not pushed though shared:\n%s", offline)
+		}
+	})
 }

@@ -198,27 +198,25 @@ Open in the dashboard: {{link}}
 ## ☁️ Remote (hashboard.live)
 {: #remote }
 
-Sends your miners' stats to [hashboard.live](https://hashboard.live) so
-you can follow your fleet from anywhere, no VPN needed — just paste the
-push URL and your API key.
+Pushing your miners' stats to [hashboard.live](https://hashboard.live), to
+follow your fleet from anywhere, no VPN needed.
 
 ![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }})
 
-Once the push is set up, the section also shows **Your board**: the
-board ID (click to open it), whether it's public or private, when
-hashboard last received data, and a link to your account.
+- **Your board** — once the push is set up: the board ID (click to open
+  it), whether it's public or private, when hashboard last received data,
+  and a link to your account.
+- **Connection** — the push URL and your hashboard API key, then
+  **Save**. A blank URL turns the push off.
+- **Your data protection** — your wallet, your pools and your miners' IP
+  are obfuscated before the push: hashboard doesn't receive them. One
+  switch per piece of data to share it anyway; each saves on click and
+  shows its state: *Private — never sent*, *Masked — made-up address*
+  (the IP), or *Shared with hashboard*.
 
-The board is your fleet's home page — 24h hashrate, KPIs, miners'
-status, pools and the miner list — refreshed automatically, in the
-browser's language.
+Each change is recorded in the audit, under *Remote push changed*.
 
-And your hashboard board shows in the dashboard itself:
-
-- **Menu** — under *AxeOS · D#hashboard*, the board ID (click to open the
-  board), whether it's public or private, and a link to your hashboard
-  account.
-- **Home** — under the page title, an *Open the remote board* link and
-  when hashboard last received data.
+[See data protection →]({{ '/en/hashboard.html#data-protection' | relative_url }}){: .btn .btn-primary }
 
 ---
 

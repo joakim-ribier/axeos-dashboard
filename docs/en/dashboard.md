@@ -65,7 +65,7 @@ subnav:
 2. **Hashboard board** — once the push to hashboard is set up: the
    board ID (click to open it), whether it's public or private, and a
    link to your hashboard account.
-   [Go to Remote →]({{ '/en/configuration.html#remote' | relative_url }}){: .btn .btn-primary }
+   [Go to Hashboard →]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 3. **Home** — overview of all your miners.
 4. **Alerts** — alert history (temperature, fan, offline...).
    [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }

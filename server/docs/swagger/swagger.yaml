@@ -250,6 +250,19 @@ definitions:
         type: string
       pushURL:
         type: string
+      sendIP:
+        type: boolean
+      sendPools:
+        type: boolean
+      sendUser:
+        description: |-
+          SendUser, SendPools and SendIP opt in to pushing the stratum users (a
+          wallet address, often), the pools and the miners' IPs (a map of the
+          local network) -- off by default, nothing sensitive leaves the Pi
+          unless the operator asks for it. Without SendIP a board knows each
+          miner by an IPv6 made from its MAC instead (see the feeder's
+          maskedIP).
+        type: boolean
     type: object
   config.ReportFrequency:
     enum:

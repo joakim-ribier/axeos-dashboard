@@ -231,8 +231,8 @@ removed), so it can be searched for directly. One save can produce several
     <tr>
       <td><code>remote_push</code></td>
       <td>Remote push changed</td>
-      <td>the hashboard push URL or API key changes</td>
-      <td>the URL before and after; the API key is never written down, only "changed"</td>
+      <td>the hashboard push URL, API key or a data protection setting changes</td>
+      <td>the URL before and after, each data protection setting on or off; the API key is never written down, only "changed"</td>
     </tr>
     <tr>
       <td><code>mail_settings</code></td>

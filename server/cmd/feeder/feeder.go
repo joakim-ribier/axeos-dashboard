@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -234,7 +235,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// all (single source of truth for that logic, here). A board only
 			// shows the miners' stats: the alerts stay local.
 			f.goPush(func() {
-				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, payload, nil)
+				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, remotePayload(payload, f.config.Remote), nil)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -309,6 +310,72 @@ func extractDeviceMac(payload []byte) string {
 	return m.MacAddr
 }
 
+// Device fields kept off a board: never shown there, and they say where the
+// miner is (the home Wi-Fi, an IPv6 that embeds the MAC) -- or, unless the
+// operator opts in, who gets paid, where it mines and its address on the
+// local network (bitaxe: ipv4, nerdaxe: hostip). scriptsig is the pool's
+// coinbase tag ("/slush/"), the pool again.
+var (
+	neverPushedFields = []string{"ssid", "ipv6"}
+	userFields        = []string{"stratumUser", "fallbackStratumUser"}
+	poolFields        = []string{"stratumURL", "stratumPort", "fallbackStratumURL", "fallbackStratumPort", "scriptsig"}
+	ipFields          = []string{"ipv4", "hostip"}
+)
+
+// remotePayload is payload with the fields remote doesn't let out
+// obfuscated -- the stored one stays whole. Every field stays, its value
+// doesn't: a text says model.Obfuscated, a number (a port) says 0, since a
+// board decodes it as one and a word there would make it drop the whole
+// reading. A payload that isn't a JSON object goes out as-is: there's
+// nothing in it to obfuscate.
+func remotePayload(payload []byte, remote config.RemoteConfig) []byte {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		return payload
+	}
+	obfuscatedText, _ := json.Marshal(model.Obfuscated)
+	hide := func(names []string) {
+		for _, name := range names {
+			value, ok := fields[name]
+			switch {
+			case !ok:
+			case len(value) > 0 && value[0] == '"':
+				fields[name] = obfuscatedText
+			default:
+				fields[name] = json.RawMessage("0")
+			}
+		}
+	}
+	hide(neverPushedFields)
+	if !remote.SendUser {
+		hide(userFields)
+	}
+	if !remote.SendPools {
+		hide(poolFields)
+	}
+	if !remote.SendIP {
+		hide(ipFields)
+	}
+	filtered, err := json.Marshal(fields)
+	if err != nil {
+		return payload
+	}
+	return filtered
+}
+
+// maskedIP stands in for the IP of a miner whose IP isn't shared: an IPv6
+// of the private fd00::/8 range carrying its storage key (aabbccddeeff ->
+// fd00::aabb:ccdd:eeff). A board only uses the value to address the miner,
+// but hashboard requires an IP -- this one is unique per miner and says
+// nothing of the network. A key that isn't a normalized MAC is refused by
+// hashboard anyway.
+func maskedIP(storageKey string) string {
+	if len(storageKey) != 12 {
+		return "fd00::"
+	}
+	return "fd00::" + storageKey[0:4] + ":" + storageKey[4:8] + ":" + storageKey[8:12]
+}
+
 // Where each push goes, appended to remote.pushURL (hashboard's
 // .../api/push) -- one route per file hashboard writes, verbatim. A board
 // only gets the miners' stats: nothing of the configuration.
@@ -352,15 +419,27 @@ func (f *Feeder) pushOffline(now time.Time, key, addr string, bitaxe config.Bita
 	if !f.config.Remote.Enabled() {
 		return
 	}
+	if !f.config.Remote.SendIP {
+		// The message is the HTTP client's error, the miner's IP in it --
+		// the board only needs the type.
+		alerts = slices.Clone(alerts)
+		for i := range alerts {
+			alerts[i].Message = model.Obfuscated
+		}
+	}
 	f.goPush(func() {
 		f.pushToRemote(pushHistoryPath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), "", nil, alerts)
 	})
 }
 
 func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip, hostname, alias, model, latestFirmware string, payload []byte, alerts []model.Alert) {
+	remoteIP := maskedIP(storageKey)
+	if f.config.Remote.SendIP {
+		remoteIP = ip
+	}
 	sample := pushSample{
 		Timestamp:             now.UTC().Truncate(time.Second),
-		IP:                    ip,
+		IP:                    remoteIP,
 		StorageKey:            storageKey,
 		Hostname:              hostname,
 		Alias:                 alias,

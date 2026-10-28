@@ -92,6 +92,7 @@ export const Home = () => {
   const hashRateHistory = new Map(
     history?.miners.map((h) => [h.ip, h.hashRate]),
   );
+  const pools = poolSegments(miners);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -139,7 +140,10 @@ export const Home = () => {
               display: "grid",
               gridTemplateColumns: {
                 xs: "minmax(0,1fr)",
-                md: "repeat(2, minmax(0,1fr))",
+                md:
+                  pools.length > 0
+                    ? "repeat(2, minmax(0,1fr))"
+                    : "minmax(0,1fr)",
               },
               gap: 2,
             }}
@@ -156,14 +160,16 @@ export const Home = () => {
                 setFilter("selectedStatus", s as MinerStatus | null)
               }
             />
-            <BreakdownStrip
-              icon="pools"
-              title={t("dashboard.breakdown.pools")}
-              hint={t("dashboard.breakdown.poolsHint")}
-              segments={poolSegments(miners)}
-              selected={filters.selectedPool}
-              onSelect={(url) => setFilter("selectedPool", url)}
-            />
+            {pools.length > 0 && (
+              <BreakdownStrip
+                icon="pools"
+                title={t("dashboard.breakdown.pools")}
+                hint={t("dashboard.breakdown.poolsHint")}
+                segments={pools}
+                selected={filters.selectedPool}
+                onSelect={(url) => setFilter("selectedPool", url)}
+              />
+            )}
           </Box>
 
           <MinerToolbar

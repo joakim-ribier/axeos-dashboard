@@ -10,6 +10,14 @@ export const alertSchema = z.object({
 
 export type Alert = z.infer<typeof alertSchema>;
 
+// What a board gets instead of a value its dashboard doesn't share (the
+// feeder's remotePayload) -- read as no value at all, so it shows nowhere.
+const OBFUSCATED = "xxxxxxxx";
+const unlessObfuscated = z.preprocess(
+  (value) => (value === OBFUSCATED ? undefined : value),
+  z.string().optional(),
+);
+
 export const minerSchema = z.object({
   timestamp: z.string(),
 
@@ -54,13 +62,13 @@ export const minerSchema = z.object({
   temp: z.number(),
   fanspeed: z.number(),
 
-  stratumURL: z.string().optional(),
+  stratumURL: unlessObfuscated,
   stratumPort: z.number().optional(),
-  stratumUser: z.string().optional(),
+  stratumUser: unlessObfuscated,
   stratumDashboardURL: z.string().optional(),
-  fallbackStratumURL: z.string().optional(),
+  fallbackStratumURL: unlessObfuscated,
   fallbackStratumPort: z.number().optional(),
-  fallbackStratumUser: z.string().optional(),
+  fallbackStratumUser: unlessObfuscated,
   fallbackStratumDashboardURL: z.string().optional(),
   isUsingFallbackStratum: z.number().int().min(0).max(1).optional(),
 

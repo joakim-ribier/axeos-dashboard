@@ -430,6 +430,15 @@ type PowerDevice struct {
 type RemoteConfig struct {
 	PushURL string `yaml:"pushURL" json:"pushURL"`
 	APIKey  string `yaml:"apiKey" json:"apiKey"`
+	// SendUser, SendPools and SendIP opt in to pushing the stratum users (a
+	// wallet address, often), the pools and the miners' IPs (a map of the
+	// local network) -- off by default, nothing sensitive leaves the Pi
+	// unless the operator asks for it. Without SendIP a board knows each
+	// miner by an IPv6 made from its MAC instead (see the feeder's
+	// maskedIP).
+	SendUser  bool `yaml:"sendUser" json:"sendUser"`
+	SendPools bool `yaml:"sendPools" json:"sendPools"`
+	SendIP    bool `yaml:"sendIP" json:"sendIP"`
 }
 
 // Enabled reports whether the feeder has enough to push to hashboard --

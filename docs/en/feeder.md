@@ -162,16 +162,18 @@ pushes to hashboard, on each cycle and for each miner:
 
 - **the reading** — to `…/api/push`: the measurements, the name (or
   alias), the model, the kWh rate, the firmware's latest release and the
-  feeder's interval;
+  feeder's interval — the wallet, the pools and the IP replaced by
+  `xxxxxxxx`, unless you choose to share them ([Data protection]({{ '/en/hashboard.html#data-protection' | relative_url }}));
 - **the totals** — to `…/api/push/totals`;
 - **an "offline" line** — to `…/api/push/history`, when the miner
   doesn't answer: the board's 24h chart dips to 0 as it does locally.
 
-Each miner is stored on hashboard under the same folder name as locally.
+Only the push is filtered: the reading stored locally stays whole. Each
+miner is stored on hashboard under the same folder name as locally.
 Pushes run in the background, with a 10 s delay: a slow or unreachable
 hashboard never delays the cycle, the failure is written to the logs.
 
-[Go to Remote →]({{ '/en/configuration.html#remote' | relative_url }}){: .btn .btn-primary }
+[Go to Hashboard →]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ## Firmware update detection
 {: #firmware-update-detection }

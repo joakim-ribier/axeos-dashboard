@@ -22,6 +22,9 @@ export const poolsSchema = z.object({
 export const remoteSchema = z.object({
   pushURL: z.string(),
   apiKey: z.string(),
+  sendUser: z.boolean(),
+  sendPools: z.boolean(),
+  sendIP: z.boolean(),
 });
 
 // Keyed by model -- only "bitaxe"/"nerdaxe" are ever meaningful (see

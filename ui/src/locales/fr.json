@@ -292,6 +292,9 @@
       "ip": "IP",
       "pushURL": "URL de push",
       "apiKey": "Clé API",
+      "sendUser": "Envoi de l'utilisateur / wallet",
+      "sendPools": "Envoi des pools",
+      "sendIP": "Envoi de l'IP",
       "scheduleAdded": "Tâche ajoutée",
       "scheduleRemoved": "Tâche supprimée",
       "alias": "Alias",
@@ -346,6 +349,18 @@
       "mailLanguage": {
         "fr": "Français",
         "en": "English"
+      },
+      "sendUser": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "sendPools": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "sendIP": {
+        "on": "activé",
+        "off": "désactivé"
       }
     },
     "change": "{{field}} : {{change}}",
@@ -425,8 +440,7 @@
       "remote": {
         "title": "Distant",
         "off": "Non configuré",
-        "lastData": "Dernières données reçues : {{date}}",
-        "noData": "Aucune donnée reçue pour l'instant"
+        "summary": "Protection des données"
       },
       "system": {
         "title": "Système",
@@ -556,6 +570,17 @@
         "connection": {
           "title": "Connexion",
           "description": "Adresse de push et clé API de ton compte hashboard."
+        },
+        "shared": {
+          "title": "Protection de tes données",
+          "description": "Ton wallet, tes pools et ton réseau local sont des données personnelles : par défaut, elles restent chez toi. Tant qu'un réglage est désactivé, la donnée ne quitte jamais ce dashboard — hashboard, un service tiers, ne la reçoit pas, ne la stocke pas et ne peut donc jamais l'exposer, même sur un board public.",
+          "user": "Utilisateur / wallet des pools",
+          "pools": "Pools (adresse et port)",
+          "ip": "Adresse IP des mineurs",
+          "ipHint": "Désactivé, ton board reconnaît chaque mineur à une adresse fictive tirée de son adresse MAC, qui ne dit rien de ton réseau : aa:bb:cc:dd:ee:ff devient fd00::aabb:ccdd:eeff.",
+          "sent": "Partagé avec hashboard",
+          "notSent": "Privé — jamais envoyé",
+          "masked": "Masqué — adresse fictive"
         },
         "invalidPushUrl": "L'adresse doit commencer par http:// ou https://."
       },

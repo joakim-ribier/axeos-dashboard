@@ -27,7 +27,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
-import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { normalizeMac } from "@/schemas/minerConfigSchema";
 import { formatTimestamp } from "@/utils/format";
 import { poolMismatches } from "@/utils/poolDrift";
@@ -78,8 +77,6 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
 
   const notif = settings?.notifications;
 
-  const { data: board } = useRemoteBoard();
-
   return {
     miners: {
       summary: t("settingsPage.toc.miners.summary", {
@@ -116,15 +113,11 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
             ? t("settingsPage.toc.notifications.reportFailed")
             : undefined,
     },
-    // When hashboard last got the miners' data -- what a board is for.
+    // What it holds, once there's a push to set up.
     remote: {
-      summary: !settings?.remote.pushURL
-        ? t("settingsPage.toc.remote.off")
-        : board?.lastSampleAt
-          ? t("settingsPage.toc.remote.lastData", {
-              date: formatTimestamp(board.lastSampleAt),
-            })
-          : t("settingsPage.toc.remote.noData"),
+      summary: settings?.remote.pushURL
+        ? t("settingsPage.toc.remote.summary")
+        : t("settingsPage.toc.remote.off"),
     },
     // What it holds, for someone looking for it.
     system: { summary: t("settingsPage.toc.system.summary") },

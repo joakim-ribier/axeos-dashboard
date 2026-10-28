@@ -144,7 +144,7 @@ func (p PayloadStructure) getDeviceModel(miner config.Bitaxe) string {
 // account part of the stratum user (everything before the first dot).
 func poolDashboardURL(stratumURL, stratumUser string, dashboards map[string]string) string {
 	tmpl, ok := dashboards[stratumURL]
-	if !ok || stratumUser == "" {
+	if !ok || stratumUser == "" || stratumUser == model.Obfuscated {
 		return ""
 	}
 	account := stratumUser

@@ -28,7 +28,8 @@ No authentication required — internal LAN use only.
 {: .note }
 > 💡 **Tip** — export your data to the cloud to keep an eye on your
 > miners from anywhere in the world, no VPN needed, via
-> [hashboard.live](https://hashboard.live).
+> [hashboard.live](https://hashboard.live) — your personal data
+> obfuscated. [Learn more]({{ '/en/hashboard.html' | relative_url }})
 
 ![axeos-dashboard preview]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})
 
@@ -82,6 +83,15 @@ No authentication required — internal LAN use only.
 - Filters by miner, type and day, JSON export
 
 [See Audit in detail]({{ '/en/audit.html' | relative_url }}){: .btn .btn-primary }
+
+### Hashboard
+
+- Your miners followed from anywhere, no VPN or open port, on
+  [hashboard.live](https://hashboard.live)
+- Personal data obfuscated before the push: wallet, pools, local network
+  addresses — shared only if you choose to
+
+[See Hashboard in detail]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ---
 
