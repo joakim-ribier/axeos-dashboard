@@ -58,8 +58,8 @@ Once the push is set up, the feeder sends hashboard, on each cycle and
 for each miner:
 
 - **the reading** — the measurements, the name (or alias), the model, the
-  kWh rate, the firmware's latest release and the feeder's interval, with
-  the personal data obfuscated;
+  kWh rate, the firmware's latest release, the feeder's interval and the
+  miner's alert thresholds, with the personal data obfuscated;
 - **the totals** — uptime, accepted and rejected shares, electricity
   cost;
 - **an "offline" line** when the miner doesn't answer: the board's 24h

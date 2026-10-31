@@ -1,10 +1,20 @@
 import { Box, Typography } from "@mui/material";
 
-import { FAN_THRESHOLD, TEMP_THRESHOLD } from "@/utils/minerStatus";
+import { type Miner } from "@/schemas/minerSchema";
+import { fanThreshold, tempThreshold } from "@/utils/minerStatus";
 
-/** The temp and fan gauges, the same wherever they're drawn. */
-export const TEMP_GAUGE = { threshold: TEMP_THRESHOLD, max: 80, unit: "°C" };
-export const FAN_GAUGE = { threshold: FAN_THRESHOLD, max: 100, unit: "%" };
+/** The temp and fan gauges of a miner, the same wherever they're drawn --
+ * the temperature's scale wide enough for a threshold above 80 °C. */
+export const tempGauge = (miner: Miner) => ({
+  threshold: tempThreshold(miner),
+  max: Math.max(80, tempThreshold(miner) + 10),
+  unit: "°C",
+});
+export const fanGauge = (miner: Miner) => ({
+  threshold: fanThreshold(miner),
+  max: 100,
+  unit: "%",
+});
 
 interface ThresholdBarProps {
   value: number;

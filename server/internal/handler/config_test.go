@@ -503,3 +503,78 @@ func TestDiscover_timeoutParam(t *testing.T) {
 		})
 	}
 }
+
+func TestSaveMinersConfig_alertThresholdsValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		alerts config.AlertThresholds
+		valid  bool
+	}{
+		{"unset", config.AlertThresholds{}, true},
+		{"both set", config.AlertThresholds{TempHigh: 70, FanHigh: 95}, true},
+		{"temperature too low", config.AlertThresholds{TempHigh: 20}, false},
+		{"temperature too high", config.AlertThresholds{TempHigh: 120}, false},
+		{"fan negative", config.AlertThresholds{FanHigh: -5}, false},
+		{"fan over 100 %", config.AlertThresholds{FanHigh: 101}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := config.Config{MinersFilePath: filepath.Join(t.TempDir(), "miners.yml")}
+			w, saved, ok := postSaveMiners(t, cfg, bitaxesResponse{Bitaxes: []config.Bitaxe{
+				{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "h", Alerts: tt.alerts},
+			}})
+			if ok != tt.valid {
+				t.Fatalf("ok = %v, want %v (status %d: %s)", ok, tt.valid, w.Code, w.Body.String())
+			}
+			if tt.valid && saved[0].Alerts != tt.alerts {
+				t.Errorf("saved alerts = %+v, want %+v", saved[0].Alerts, tt.alerts)
+			}
+		})
+	}
+}
+
+func TestSaveAppSettings_alertThresholdsValidation(t *testing.T) {
+	tests := []struct {
+		name   string
+		alerts config.AlertThresholds
+		valid  bool
+	}{
+		{"unset", config.AlertThresholds{}, true},
+		{"both set", config.AlertThresholds{TempHigh: 65, FanHigh: 80}, true},
+		{"temperature too low", config.AlertThresholds{TempHigh: 29}, false},
+		{"fan over 100 %", config.AlertThresholds{FanHigh: 150}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w, saved, ok := postSaveAppSettings(t, config.AppSettingsFile{Alerts: tt.alerts})
+			if ok != tt.valid {
+				t.Fatalf("ok = %v, want %v (status %d: %s)", ok, tt.valid, w.Code, w.Body.String())
+			}
+			if tt.valid && saved.Alerts != tt.alerts {
+				t.Errorf("saved alerts = %+v, want %+v", saved.Alerts, tt.alerts)
+			}
+		})
+	}
+}
+
+func TestGetAppSettings_builtInAlertThresholds(t *testing.T) {
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: t.TempDir()}}
+	w := httptest.NewRecorder()
+	GetAppSettings(cfg, config.AppSettingsFile{Alerts: config.AlertThresholds{FanHigh: 80}}, w, httptest.NewRequest(http.MethodGet, "/api/config/settings", nil))
+
+	var got struct {
+		Alerts   config.AlertThresholds `json:"alerts"`
+		Defaults struct {
+			Alerts config.AlertThresholds `json:"alerts"`
+		} `json:"defaults"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Defaults.Alerts != config.DefaultAlertThresholds {
+		t.Errorf("defaults.alerts = %+v, want %+v", got.Defaults.Alerts, config.DefaultAlertThresholds)
+	}
+	if want := (config.AlertThresholds{FanHigh: 80}); got.Alerts != want {
+		t.Errorf("alerts = %+v, want %+v (as saved, an unset one left at 0)", got.Alerts, want)
+	}
+}

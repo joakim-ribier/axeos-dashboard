@@ -68,7 +68,9 @@ feeder → writes resources/data/bitaxes/{mac}/YYYY-MM-DD.jsonl  (append)
          /api/push/history instead (appended to the day there, latest.json
          untouched -- same as locally), so a remote board's 24h chart dips
          like the local one. Stats only: no alerts, no config (miners.yml/
-         settings.yml), nothing of a MAC mismatch
+         settings.yml), nothing of a MAC mismatch -- each sample carries
+         just what the board shows it by (alias, rate, feeder interval, the
+         miner's alert thresholds)
     ↓  reads latest.json
 dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
                 config's mac: resolves the storage dir)
@@ -138,7 +140,7 @@ Separate `cmd/` binaries sharing `internal/` packages:
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
-| `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis (temp > 62 / < 60, fan > 75 / < 70), offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
+| `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis: raised above the miner's thresholds (`config.AlertThresholdsFor`: its own in `miners.yml`, else `settings.yml`'s, else 62 °C / 75 %), cleared 2 °C / 5 % under; offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
 | `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*` -- the HTML template `audit-report.*.html` filled + a generated text version + the logo inline, the link to the Audit page only for a dashboard with a name: `mailtemplate.Linkable`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
 | `internal/alertmail/` | The alerts mail: `Build` (the HTML template filled + a generated text version + the logo inline), `State` on disk (`data/mail/alerts-mail.json`: last sent, last error, for the Notifications page); a failure is audited (`alert_mail`), a mail sent isn't, nothing is retried |
 | `internal/mailtemplate/` | The mails' wording, as editable files: built-in ones embedded, one per mail and language (`alert.*.html` and `audit-report.*.html`, Go `html/template`s whose `<title>` is the subject, see `RenderHTML` -- never an IP address in them, Gmail files that as spam; `test-mail.*.txt`, plain text), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
@@ -221,7 +223,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
-| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp > 62 / fan > 75) > ok |
+| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp / fan above the miner's thresholds, `tempThreshold`/`fanThreshold` from `/api/miners`, a board's off each pushed sample -- 62 / 75 when absent) > ok |
 | `src/hooks/useMiners.ts` | TanStack Query: `GET /api/miners`, Zod validation, staleTime=Infinity |
 | `src/hooks/useMinersHistory.ts` | `GET /api/miners/history` -- the fleet chart and every sparkline |
 | `src/hooks/useMinerActions.ts` | Local state (isExecuting, error); restart + pool switch mutations |
@@ -328,6 +330,9 @@ notifications:                  # Configuration > Notifications; never pushed to
     skipIfEmpty: true
   alerts:
     mail: true                  # one mail per feeder poll that raises alerts (the feeder calls the mailer)
+alerts:                         # Configuration > System: the thresholds every miner follows unless it has its own
+  tempHigh: 62                  # °C -- unset (0) = the built-in 62; cleared 2 °C under
+  fanHigh: 75                   # %  -- unset (0) = the built-in 75; cleared 5 % under
 ```
 
 ```yaml
@@ -354,6 +359,8 @@ bitaxes:
         action: switch_fallback   # switch_primary | switch_fallback | restart
       - cron: "59 59 23 * * SUN"
         action: switch_primary
+    alerts:                    # optional: this miner's own thresholds, overriding settings.yml's
+      fanHigh: 95              # a value left unset follows every miner's
 ```
 
 Override dashboard-api/remote-dashboard-api port: `server.port` in the config YAML (default `8080`/`8081`) — no env var for this.

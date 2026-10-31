@@ -52,6 +52,10 @@ les retire tous.
 ## ⚠️ Types d'alertes
 {: #types }
 
+Les seuils de température et de ventilateur se règlent pour tous les
+mineurs dans [Configuration › Système]({{ '/configuration.html#systeme' | relative_url }}),
+et pour un mineur en particulier dans sa ligne de Configuration › Mineurs.
+
 <table class="data-table">
   <thead>
     <tr>
@@ -63,13 +67,13 @@ les retire tous.
   <tbody>
     <tr>
       <td>Température haute</td>
-      <td>Puce &gt; 62°C</td>
-      <td>Puce &lt; 60°C</td>
+      <td>Puce au-dessus du seuil (62 °C par défaut)</td>
+      <td>Puce 2 °C sous le seuil</td>
     </tr>
     <tr>
       <td>Ventilateur haut</td>
-      <td>Vitesse &gt; 75%</td>
-      <td>Vitesse &lt; 70%</td>
+      <td>Vitesse au-dessus du seuil (75 % par défaut)</td>
+      <td>Vitesse 5 % sous le seuil</td>
     </tr>
     <tr>
       <td>Mise à jour firmware</td>

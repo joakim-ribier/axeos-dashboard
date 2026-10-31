@@ -87,6 +87,12 @@ type MinerInfo struct {
 
 	// Electricity cost
 	ElectricityRatePerKwh float64 `json:"electricityRatePerKwh,omitempty"`
+
+	// The miner's alert thresholds, its own or the ones every miner
+	// follows (config.AlertThresholdsFor) -- absent on a board, which then
+	// shows the built-in ones.
+	TempThreshold float64 `json:"tempThreshold,omitempty"` // °C
+	FanThreshold  float64 `json:"fanThreshold,omitempty"`  // %
 }
 
 // MinersResponse is the top‑level JSON structure returned by GET /api/miners.

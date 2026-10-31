@@ -158,6 +158,22 @@ func validateBitaxe(b config.Bitaxe) error {
 	if err := validateSchedule(b.Schedule); err != nil {
 		return err
 	}
+	if err := validateAlertThresholds("alerts", b.Alerts); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateAlertThresholds checks thresholds a person can mean: a chip
+// temperature from 30 to 100 °C, a fan speed from 1 to 100 % -- or zero,
+// unset.
+func validateAlertThresholds(field string, t config.AlertThresholds) error {
+	if t.TempHigh != 0 && (t.TempHigh < 30 || t.TempHigh > 100) {
+		return fmt.Errorf("%s.tempHigh %v: want 30 to 100 (°C), or unset", field, t.TempHigh)
+	}
+	if t.FanHigh != 0 && (t.FanHigh < 1 || t.FanHigh > 100) {
+		return fmt.Errorf("%s.fanHigh %v: want 1 to 100 (%%), or unset", field, t.FanHigh)
+	}
 	return nil
 }
 
@@ -402,12 +418,15 @@ func nonNil(s []string) []string {
 type appSettingsDefaults struct {
 	Pools    config.PoolsConfig         `json:"pools"`
 	Firmware config.AppSettingsFirmware `json:"firmware"`
+	// Alerts is the built-in thresholds, what an unset one falls back to.
+	Alerts config.AlertThresholds `json:"alerts"`
 }
 
 func defaultAppSettings() appSettingsDefaults {
 	return appSettingsDefaults{
 		Pools:    config.PoolsConfig{Dashboards: config.DefaultPoolDashboards},
 		Firmware: config.AppSettingsFirmware{Repos: config.DefaultFirmwareRepos},
+		Alerts:   config.DefaultAlertThresholds,
 	}
 }
 
@@ -576,6 +595,9 @@ func validateAppSettings(s config.AppSettingsFile) error {
 		}
 	}
 	if err := validateNotifications(s.Notifications); err != nil {
+		return err
+	}
+	if err := validateAlertThresholds("alerts", s.Alerts); err != nil {
 		return err
 	}
 	for model, repo := range s.Firmware.Repos {

@@ -1,12 +1,13 @@
 import { type Miner } from "@/schemas/minerSchema";
 
-// The server's alert thresholds (alerts.TempThreshold/FanThreshold), with
-// the same > rule.
-export const TEMP_THRESHOLD = 62;
-export const FAN_THRESHOLD = 75;
+// A miner's alert thresholds, as the server sends them -- the built-in
+// ones on a board, which isn't told a miner's own -- with the server's
+// same > rule.
+export const tempThreshold = (miner: Miner) => miner.tempThreshold ?? 62;
+export const fanThreshold = (miner: Miner) => miner.fanThreshold ?? 75;
 
-export const isTempHigh = (miner: Miner) => miner.temp > TEMP_THRESHOLD;
-export const isFanHigh = (miner: Miner) => miner.fanspeed > FAN_THRESHOLD;
+export const isTempHigh = (miner: Miner) => miner.temp > tempThreshold(miner);
+export const isFanHigh = (miner: Miner) => miner.fanspeed > fanThreshold(miner);
 
 /** Most urgent first -- the order of the status chips, and of the miners
  * pinned at the top of the list. */

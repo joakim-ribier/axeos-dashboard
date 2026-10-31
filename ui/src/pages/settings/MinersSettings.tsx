@@ -38,6 +38,7 @@ import {
 } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { AlertThresholdsEditor } from "@/components/ui/AlertThresholdsEditor";
 import { AliasEditor } from "@/components/ui/AliasEditor";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
@@ -45,9 +46,11 @@ import { PoolEditor } from "@/components/ui/PoolEditor";
 import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
+import { commonAlertThresholds } from "@/schemas/appSettingsSchema";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
 import { displayName } from "@/utils/minerDisplay";
@@ -62,6 +65,38 @@ import { SectionTitle } from "./SectionTitle";
 const COMMON_HOME_CIDR = "192.168.1.0/24";
 
 /* ── Configured miners table ────────────────────────────────────── */
+/** One of a miner's thresholds: its own, highlighted, or every miner's,
+ * greyed -- the tooltip says which. */
+const ThresholdValue = ({
+  own,
+  common,
+  unit,
+}: {
+  own: number | undefined;
+  common: number;
+  unit: string;
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Tooltip
+      title={
+        own
+          ? t("settingsPage.configured.thresholdOwn")
+          : t("settingsPage.configured.thresholdCommon")
+      }
+    >
+      <Typography
+        component="span"
+        variant="body2"
+        color={own ? "primary.main" : "text.secondary"}
+        sx={{ fontWeight: own ? 700 : 400 }}
+      >
+        {own || common} {unit}
+      </Typography>
+    </Tooltip>
+  );
+};
+
 const ConfiguredMinersTable = ({
   miners,
   liveMinersByMac,
@@ -80,6 +115,11 @@ const ConfiguredMinersTable = ({
   readOnly: boolean;
 }) => {
   const { t } = useTranslation();
+  const { data: appSettings } = useAppSettings();
+  // What a miner with no thresholds of its own follows.
+  const alertDefaults = appSettings
+    ? commonAlertThresholds(appSettings)
+    : { tempHigh: 62, fanHigh: 75 };
   const enabledCount = miners.filter((m) => m.enabled).length;
   const [expandedMac, setExpandedMac] = useState<string | null>(null);
   const isEmpty = miners.length === 0;
@@ -127,8 +167,8 @@ const ConfiguredMinersTable = ({
               <TableCell sx={{ width: 40 }} />
               <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
               <TableCell>{t("settingsPage.configured.ip")}</TableCell>
-              <TableCell>{t("settingsPage.configured.mac")}</TableCell>
               <TableCell>{t("settingsPage.configured.model")}</TableCell>
+              <TableCell>{t("settingsPage.configured.thresholds")}</TableCell>
               <TableCell>{t("settingsPage.configured.status")}</TableCell>
               <Writable readOnly={readOnly}>
                 <TableCell align="right">
@@ -208,15 +248,31 @@ const ConfiguredMinersTable = ({
                     <TableCell sx={{ fontFamily: "monospace" }}>
                       {m.ip}
                     </TableCell>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {m.mac}
-                    </TableCell>
                     <TableCell>
                       <Chip
                         size="small"
                         variant="outlined"
                         label={m.model}
                         sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      <ThresholdValue
+                        own={m.alerts?.tempHigh}
+                        common={alertDefaults.tempHigh}
+                        unit="°C"
+                      />
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color="text.secondary"
+                      >
+                        {" · "}
+                      </Typography>
+                      <ThresholdValue
+                        own={m.alerts?.fanHigh}
+                        common={alertDefaults.fanHigh}
+                        unit="%"
                       />
                     </TableCell>
                     <TableCell>
@@ -317,6 +373,13 @@ const ConfiguredMinersTable = ({
                           <PoolEditor
                             miner={m}
                             liveMiner={liveMinersByMac.get(key)}
+                            saveMiners={saveMiners}
+                            readOnly={readOnly}
+                          />
+                          <SectionDivider sx={{ my: 1.5 }} />
+                          <AlertThresholdsEditor
+                            miner={m}
+                            defaults={alertDefaults}
                             saveMiners={saveMiners}
                             readOnly={readOnly}
                           />
@@ -606,10 +669,10 @@ export const MinersSettings = () => {
   // Re-selecting an already-configured device is how the operator forces a
   // refresh of its ip/hostname/model/pool from what the device reports
   // right now (e.g. after an IP change, or to recover from a bad manual
-  // edit) -- but a fresh probe never knows about enabled/schedule/alias
-  // (advanced, hand-edited-only fields), so all three are carried over from
-  // the existing entry rather than clobbered with the probe's own defaults
-  // (enabled: true, no schedule, no alias). alias in particular is the
+  // edit) -- but a fresh probe never knows about enabled/schedule/alias/
+  // alert thresholds (fields set from this page), so they're carried over
+  // from the existing entry rather than clobbered with the probe's own
+  // defaults (enabled: true, no schedule, no alias, no thresholds). alias in particular is the
   // whole point of the field: a discovery refresh must never silently wipe
   // out a custom display name.
   const devicesToSave = selectedDevices.map((d) => {
@@ -620,6 +683,7 @@ export const MinersSettings = () => {
       enabled: existing.enabled,
       schedule: existing.schedule,
       alias: existing.alias,
+      alerts: existing.alerts,
     };
   });
 

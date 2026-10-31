@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { makeMiner } from "@/test/miner";
 
-import { FAN_THRESHOLD, getMinerStatus, TEMP_THRESHOLD } from "./minerStatus";
+import { getMinerStatus } from "./minerStatus";
 
 describe("getMinerStatus", () => {
   it("is ok for a reachable, fresh, cool miner", () => {
@@ -10,17 +10,23 @@ describe("getMinerStatus", () => {
   });
 
   it("is a warning above the threshold, like the server's alerts", () => {
+    expect(getMinerStatus(makeMiner({ temp: 62.1 }), false)).toBe("warning");
+    expect(getMinerStatus(makeMiner({ fanspeed: 76 }), false)).toBe("warning");
+    // The built-in thresholds, when the server doesn't send the miner's.
+    expect(getMinerStatus(makeMiner({ temp: 62 }), false)).toBe("ok");
+    expect(getMinerStatus(makeMiner({ fanspeed: 75 }), false)).toBe("ok");
+  });
+
+  it("follows the miner's own thresholds", () => {
+    const own = { tempThreshold: 70, fanThreshold: 95 };
     expect(
-      getMinerStatus(makeMiner({ temp: TEMP_THRESHOLD + 0.1 }), false),
-    ).toBe("warning");
-    expect(
-      getMinerStatus(makeMiner({ fanspeed: FAN_THRESHOLD + 1 }), false),
-    ).toBe("warning");
-    expect(getMinerStatus(makeMiner({ temp: TEMP_THRESHOLD }), false)).toBe(
-      "ok",
+      getMinerStatus(makeMiner({ ...own, temp: 68, fanspeed: 90 }), false),
+    ).toBe("ok");
+    expect(getMinerStatus(makeMiner({ ...own, temp: 71 }), false)).toBe(
+      "warning",
     );
-    expect(getMinerStatus(makeMiner({ fanspeed: FAN_THRESHOLD }), false)).toBe(
-      "ok",
+    expect(getMinerStatus(makeMiner({ ...own, fanspeed: 96 }), false)).toBe(
+      "warning",
     );
   });
 

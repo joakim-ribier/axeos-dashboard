@@ -346,7 +346,9 @@
       "sentTo": "Sent to",
       "mailDashboardURL": "Dashboard address",
       "alertsMail": "Alerts by mail",
-      "alertPoll": "Alerts' poll"
+      "alertPoll": "Alerts' poll",
+      "alertTempHigh": "Temperature threshold (°C)",
+      "alertFanHigh": "Fan threshold (%)"
     },
     "values": {
       "auditReportEnabled": {
@@ -474,14 +476,14 @@
       },
       "system": {
         "title": "System",
-        "summary": "Pool dashboards and firmware"
+        "summary": "Alert thresholds, pool dashboards and firmware"
       }
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
     "configured": {
       "title": "Configured miners",
-      "description_one": "{{count}} miner — click a row to edit its alias, pools and scheduled tasks.",
-      "description_other": "{{count}} miners — click a row to edit its alias, pools and scheduled tasks.",
+      "description_one": "{{count}} miner — click a row to edit its alias, pools, alert thresholds and scheduled tasks.",
+      "description_other": "{{count}} miners — click a row to edit its alias, pools, alert thresholds and scheduled tasks.",
       "hostname": "Name",
       "ip": "IP",
       "mac": "MAC",
@@ -545,7 +547,16 @@
         "add": "Add",
         "adding": "Adding…",
         "removing": "Removing…"
-      }
+      },
+      "alerts": {
+        "title": "Alert thresholds",
+        "tempLabel": "Chip temperature (°C)",
+        "fanLabel": "Fan (%)",
+        "hint": "Empty: every miner's thresholds ({{temp}} °C, {{fan}} %), set in Configuration › System."
+      },
+      "thresholds": "Alert thresholds",
+      "thresholdOwn": "This miner's own",
+      "thresholdCommon": "Every miner's (Configuration › System)"
     },
     "appSettings": {
       "save": "Save",
@@ -694,6 +705,13 @@
         },
         "dashboardUrlLabel": "Dashboard address (for the links)",
         "invalidDashboardUrl": "The address must start with http:// or https://."
+      },
+      "alerts": {
+        "title": "Alert thresholds",
+        "description": "An alert is raised above these values, for every miner — each can have its own in Configuration › Miners. Empty: the built-in value.",
+        "tempLabel": "Chip temperature (°C)",
+        "fanLabel": "Fan (%)",
+        "clearHint": "An alert ends 2 °C (temperature) or 5 % (fan) under its threshold."
       }
     },
     "scan": {

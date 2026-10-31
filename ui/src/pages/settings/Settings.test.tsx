@@ -46,6 +46,7 @@ const miner = {
   fallbackUrl: "solo.example.com",
   fallbackPort: 3333,
   fallbackUser: "wallet.worker",
+  alerts: { tempHigh: 0, fanHigh: 95 },
 };
 
 const mockBackend = (settingsFlag: UIVisibility) => {
@@ -88,6 +89,11 @@ const renderAt = (path: string) =>
 const button = (name: string | RegExp) =>
   screen.queryByRole("button", { name });
 const field = (label: string) => screen.queryByLabelText(label);
+// The Save button on the same line as a field -- there are several Saves.
+const saveNextTo = (label: string) => {
+  const line = field(label)?.closest<HTMLElement>(".MuiStack-root");
+  return line ? within(line).queryByRole("button", { name: "Save" }) : null;
+};
 
 type Section = "miners" | "electricity" | "system";
 
@@ -165,6 +171,21 @@ const GATED: Gated[] = [
   },
   {
     section: "miners",
+    element: "the alert threshold fields",
+    ready: minersReady,
+    open: expandMinerRow,
+    find: () => field("Chip temperature (°C)"),
+    readOnly: "disabled",
+  },
+  {
+    section: "miners",
+    element: "the alert thresholds Save button",
+    ready: minersReady,
+    open: expandMinerRow,
+    find: () => saveNextTo("Chip temperature (°C)"),
+  },
+  {
+    section: "miners",
     element: "the scheduler's cron field",
     ready: minersReady,
     open: expandMinerRow,
@@ -233,6 +254,19 @@ const GATED: Gated[] = [
     find: () => button("Add"),
   },
   // System
+  {
+    section: "system",
+    element: "the alert threshold fields",
+    ready: systemReady,
+    find: () => field("Chip temperature (°C)"),
+    readOnly: "disabled",
+  },
+  {
+    section: "system",
+    element: "the alert thresholds Save button",
+    ready: systemReady,
+    find: () => saveNextTo("Chip temperature (°C)"),
+  },
   {
     section: "system",
     element: "a pool dashboard's Remove button",
@@ -352,4 +386,23 @@ describe("Configuration elements controlled by ui.page.settings", () => {
 
 beforeEach(() => {
   mockedAxios.get.mockReset();
+});
+
+describe("the configured miners table", () => {
+  it("shows each miner's alert thresholds, its own told apart, and no MAC", async () => {
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    expect(
+      screen.getByRole("columnheader", { name: "Alert thresholds" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("columnheader", { name: "MAC" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("This miner's own")).toHaveTextContent("95 %");
+    expect(
+      screen.getByLabelText("Every miner's (Configuration › System)"),
+    ).toHaveTextContent("62 °C");
+  });
 });

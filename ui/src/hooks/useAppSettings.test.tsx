@@ -28,7 +28,12 @@ const settings: AppSettings = {
     sendIP: false,
   },
   firmware: { repos: {} },
-  defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
+  defaults: {
+    pools: { dashboards: {} },
+    firmware: { repos: {} },
+    alerts: { tempHigh: 62, fanHigh: 75 },
+  },
+  alerts: { tempHigh: 0, fanHigh: 0 },
   readOnly: {
     feederInterval: "2m0s",
     healthCheckInterval: "1m0s",

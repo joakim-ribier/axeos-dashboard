@@ -50,6 +50,10 @@ below the bar: its cross removes it, **Clear all** removes them all.
 ## ⚠️ Alert types
 {: #types }
 
+The temperature and fan thresholds are set for every miner in
+[Configuration › System]({{ '/en/configuration.html#system' | relative_url }}),
+and for one miner in its row of Configuration › Miners.
+
 <table class="data-table">
   <thead>
     <tr>
@@ -61,13 +65,13 @@ below the bar: its cross removes it, **Clear all** removes them all.
   <tbody>
     <tr>
       <td>High temperature</td>
-      <td>Chip &gt; 62°C</td>
-      <td>Chip &lt; 60°C</td>
+      <td>Chip above the threshold (62 °C by default)</td>
+      <td>Chip 2 °C under the threshold</td>
     </tr>
     <tr>
       <td>High fan speed</td>
-      <td>Speed &gt; 75%</td>
-      <td>Speed &lt; 70%</td>
+      <td>Speed above the threshold (75 % by default)</td>
+      <td>Speed 5 % under the threshold</td>
     </tr>
     <tr>
       <td>Firmware update</td>

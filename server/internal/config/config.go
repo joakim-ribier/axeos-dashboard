@@ -48,7 +48,10 @@ type Config struct {
 	// Notifications only ever come from settings.yml (see AppSettingsFile)
 	// -- never read from dashboard.yml.
 	Notifications NotificationsConfig `yaml:"-"`
-	UI            UIConfig            `yaml:"ui"`
+	// Alerts only ever comes from settings.yml too: the thresholds every
+	// miner follows unless it has its own (see AlertThresholdsFor).
+	Alerts AlertThresholds `yaml:"-"`
+	UI     UIConfig        `yaml:"ui"`
 
 	// HashboardURL is the base URL of the hashboard instance backing this
 	// remote-dashboard-api (remote-dashboard-api only): where the "private
@@ -157,6 +160,42 @@ type Bitaxe struct {
 	FallbackUser string `yaml:"fallbackUser" json:"fallbackUser"`
 
 	Schedule []CronSchedule `yaml:"schedule,omitempty" json:"schedule,omitempty"`
+
+	// Alerts overrides, for this miner only, the thresholds set for every
+	// miner -- a value left at zero follows them (see AlertThresholdsFor).
+	Alerts AlertThresholds `yaml:"alerts,omitempty" json:"alerts"`
+}
+
+// AlertThresholds is when an alert is raised: the chip temperature (°C)
+// and the fan speed (%) above which. A zero value is unset -- the next
+// level down applies (see AlertThresholdsFor).
+type AlertThresholds struct {
+	TempHigh float64 `yaml:"tempHigh,omitempty" json:"tempHigh"`
+	FanHigh  float64 `yaml:"fanHigh,omitempty" json:"fanHigh"`
+}
+
+// over is t with every value set in o taking its place.
+func (t AlertThresholds) over(o AlertThresholds) AlertThresholds {
+	if o.TempHigh > 0 {
+		t.TempHigh = o.TempHigh
+	}
+	if o.FanHigh > 0 {
+		t.FanHigh = o.FanHigh
+	}
+	return t
+}
+
+// AlertThresholdsFor is when b's alerts are raised: its own thresholds,
+// else the ones settings.yml sets for every miner, else the built-in ones
+// (DefaultAlertThresholds).
+func (c Config) AlertThresholdsFor(b Bitaxe) AlertThresholds {
+	return c.AlertThresholds().over(b.Alerts)
+}
+
+// AlertThresholds is the thresholds every miner follows unless it has its
+// own: settings.yml's, else the built-in ones.
+func (c Config) AlertThresholds() AlertThresholds {
+	return DefaultAlertThresholds.over(c.Alerts)
 }
 
 // ScheduleAction is the action a scheduled job runs when its cron fires --
@@ -554,6 +593,9 @@ type AppSettingsFile struct {
 	Remote        RemoteConfig        `yaml:"remote" json:"remote"`
 	Firmware      AppSettingsFirmware `yaml:"firmware" json:"firmware"`
 	Notifications NotificationsConfig `yaml:"notifications,omitempty" json:"notifications"`
+	// Alerts is the thresholds every miner follows unless it has its own --
+	// a value left at zero is the built-in one (DefaultAlertThresholds).
+	Alerts AlertThresholds `yaml:"alerts,omitempty" json:"alerts"`
 }
 
 // AppSettingsFirmware only ever carries Repos -- CacheTTL is process-launch
@@ -580,6 +622,7 @@ func (a AppSettingsFile) ApplyTo(cfg *Config) {
 	cfg.Electricity = a.Electricity
 	cfg.Remote = a.Remote
 	cfg.Notifications = a.Notifications
+	cfg.Alerts = a.Alerts
 	cfg.Pools.Dashboards = mergePoolDashboards(a.Pools.Dashboards)
 	cfg.Firmware.Repos = mergeFirmwareRepos(a.Firmware.Repos)
 }

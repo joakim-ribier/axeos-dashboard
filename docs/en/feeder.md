@@ -102,8 +102,9 @@ default, in `dashboard.yml`).
       mismatch" alert starts. On to the next miner.
    5. **Track the alerts** — each one is compared with its state at the
       previous reading: an alert that starts or ends is recorded, one that
-      goes on isn't recorded again. Temperature: starts above 62 °C, ends
-      under 60 °C; fan: above 75 %, under 70 %; firmware: other than the
+      goes on isn't recorded again. Temperature: starts above the miner's
+      threshold, ends 2 °C under; fan: above its threshold, 5 % under
+      (62 °C and 75 % by default, set in Configuration); firmware: other than the
       latest release known for its model.
    6. **Store** — the reading's line (measurements, the kWh rate in
       effect) is added to the day's history, `latest.json` is

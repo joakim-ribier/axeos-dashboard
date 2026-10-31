@@ -346,7 +346,9 @@
       "sentTo": "Envoyé à",
       "mailDashboardURL": "Adresse du dashboard",
       "alertsMail": "Alertes par mail",
-      "alertPoll": "Relevé des alertes"
+      "alertPoll": "Relevé des alertes",
+      "alertTempHigh": "Seuil de température (°C)",
+      "alertFanHigh": "Seuil du ventilateur (%)"
     },
     "values": {
       "auditReportEnabled": {
@@ -474,14 +476,14 @@
       },
       "system": {
         "title": "Système",
-        "summary": "Dashboards de pool et firmware"
+        "summary": "Seuils d'alerte, dashboards de pool et firmware"
       }
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
     "configured": {
       "title": "Mineurs configurés",
-      "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
-      "description_other": "{{count}} mineurs — clique sur une ligne pour modifier son alias, ses pools et ses tâches planifiées.",
+      "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools, ses seuils d'alerte et ses tâches planifiées.",
+      "description_other": "{{count}} mineurs — clique sur une ligne pour modifier son alias, ses pools, ses seuils d'alerte et ses tâches planifiées.",
       "hostname": "Nom",
       "ip": "IP",
       "mac": "MAC",
@@ -545,7 +547,16 @@
         "add": "Ajouter",
         "adding": "Ajout…",
         "removing": "Suppression…"
-      }
+      },
+      "alerts": {
+        "title": "Seuils d'alerte",
+        "tempLabel": "Température de la puce (°C)",
+        "fanLabel": "Ventilateur (%)",
+        "hint": "Vide : les seuils de tous les mineurs ({{temp}} °C, {{fan}} %), réglés dans Configuration › Système."
+      },
+      "thresholds": "Seuils d'alerte",
+      "thresholdOwn": "Propre à ce mineur",
+      "thresholdCommon": "Celui de tous les mineurs (Configuration › Système)"
     },
     "appSettings": {
       "save": "Enregistrer",
@@ -694,6 +705,13 @@
         },
         "dashboardUrlLabel": "Adresse du dashboard (pour les liens)",
         "invalidDashboardUrl": "L'adresse doit commencer par http:// ou https://."
+      },
+      "alerts": {
+        "title": "Seuils d'alerte",
+        "description": "Une alerte se déclenche au-dessus de ces valeurs, pour tous les mineurs — chacun peut avoir les siens dans Configuration › Mineurs. Vide : la valeur d'origine.",
+        "tempLabel": "Température de la puce (°C)",
+        "fanLabel": "Ventilateur (%)",
+        "clearHint": "Une alerte se termine 2 °C (température) ou 5 % (ventilateur) sous son seuil."
       }
     },
     "scan": {

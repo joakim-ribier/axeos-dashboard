@@ -50,6 +50,9 @@ type latestFileStructure struct {
 	// board (see cmd/feeder.pushSample) -- local mode has no use for it,
 	// it already knows its own feeder.interval from config directly.
 	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
+	// AlertThresholds too (see cmd/feeder.pushSample) -- unset on data
+	// pushed before it, the UI then falls back to the built-in ones.
+	AlertThresholds config.AlertThresholds `json:"alertThresholds"`
 }
 
 type PayloadStructure struct {

@@ -5,7 +5,7 @@ import { type MinerStatus, STATUS_COLOR } from "@/utils/minerStatus";
 
 import { StatusChip } from "../StatusChip";
 
-import { FAN_GAUGE, MetricBar, TEMP_GAUGE } from "./MetricBar";
+import { fanGauge, MetricBar, tempGauge } from "./MetricBar";
 import { MinerIdentity } from "./MinerIdentity";
 import { PoolLabel } from "./PoolLabel";
 import { Sparkline } from "./Sparkline";
@@ -85,8 +85,8 @@ export const MinerTile = ({
           opacity: status === "offline" ? 0.45 : 1,
         }}
       >
-        <MetricBar value={miner.temp} {...TEMP_GAUGE} />
-        <MetricBar value={miner.fanspeed} {...FAN_GAUGE} />
+        <MetricBar value={miner.temp} {...tempGauge(miner)} />
+        <MetricBar value={miner.fanspeed} {...fanGauge(miner)} />
         <Box>
           <Typography variant="body2">{`${miner.power.toFixed(1)} W`}</Typography>
           <Typography variant="caption" color="text.secondary">

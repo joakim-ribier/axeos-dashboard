@@ -196,8 +196,8 @@ Sur téléphone, la barre garde l'essentiel :
      frappe).
    - **En retard** — le mineur répond, mais aucun relevé n'est arrivé
      depuis plus de 2 fois l'intervalle de sondage.
-   - **En alerte** — température de puce au-dessus de 62 °C, ou
-     ventilateur au-dessus de 75 %.
+   - **En alerte** — température de puce ou ventilateur au-dessus du
+     seuil du mineur (62 °C et 75 % par défaut).
    - **En ligne** — tout va bien.
 2. **Pools** — la part du hashrate de la flotte envoyée à chaque pool.
 
@@ -241,10 +241,10 @@ retire le filtre.
    actuelle. Les périodes où le mineur était injoignable apparaissent en
    rouge sur la ligne de base.
 3. **Temp. puce** — température des puces, sur une jauge verte qui passe
-   à l'orange à l'approche du seuil de 62 °C (marqué d'un trait), puis au
-   rouge une fois atteint.
+   à l'orange à l'approche du seuil du mineur (62 °C par défaut, marqué
+   d'un trait), puis au rouge une fois dépassé.
 4. **Ventilateur** — vitesse du ventilateur, sur la même jauge, avec un
-   seuil à 75 %.
+   seuil du mineur (75 % par défaut).
 5. **Conso.** — puissance (W) et rendement (J/TH).
 6. **Pool** — le pool actif, cliquable vers son tableau de bord quand un
    lien est connu pour lui (voir

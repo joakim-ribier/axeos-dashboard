@@ -224,7 +224,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		}
 
 		latestFW := fwCache.Models[string(bitaxe.Model)].Version
-		changes = append(changes, f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW))...)
+		changes = append(changes, f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW, f.config.AlertThresholdsFor(bitaxe)))...)
 
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
 		if err := store.Append(now, key, payload); err != nil {
@@ -236,7 +236,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			// all (single source of truth for that logic, here). A board only
 			// shows the miners' stats: the alerts stay local.
 			f.goPush(func() {
-				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), latestFW, remotePayload(payload, f.config.Remote), nil)
+				f.pushToRemote(pushSamplePath, now, key, addr, bitaxe, latestFW, remotePayload(payload, f.config.Remote), nil)
 			})
 
 			// totals.json was just (re)written by store.Append above -- push
@@ -321,15 +321,20 @@ func (f *Feeder) mailAlerts(changes []alerts.Event) {
 	})
 }
 
-// readingsPoll reads what the alerts need off a poll's raw payload.
-func readingsPoll(payload []byte, latestFirmwareVersion string) alerts.Poll {
+// readingsPoll reads what the alerts need off a poll's raw payload, to be
+// weighed against the miner's thresholds.
+func readingsPoll(payload []byte, latestFirmwareVersion string, thresholds config.AlertThresholds) alerts.Poll {
 	var p struct {
 		Temp     float64 `json:"temp"`
 		FanSpeed float64 `json:"fanspeed"`
 		Version  string  `json:"version"`
 	}
 	_ = json.Unmarshal(payload, &p)
-	return alerts.Poll{Temp: p.Temp, FanSpeed: p.FanSpeed, Version: p.Version, LatestVersion: latestFirmwareVersion}
+	return alerts.Poll{
+		Temp: p.Temp, FanSpeed: p.FanSpeed,
+		TempThreshold: thresholds.TempHigh, FanThreshold: thresholds.FanHigh,
+		Version: p.Version, LatestVersion: latestFirmwareVersion,
+	}
 }
 
 // extractDeviceMac pulls the macAddr field a device reports flat/top-level
@@ -444,6 +449,10 @@ type pushSample struct {
 	// handler.aliveFromTimestamp) -- a board has no config of its own to
 	// read it from otherwise.
 	FeederIntervalSeconds int `json:"feederIntervalSeconds,omitempty"`
+	// AlertThresholds is the miner's, as the feeder weighs it (its own,
+	// else every miner's) -- a board has no config to read them from, so
+	// it reads them back off the sample, like FeederIntervalSeconds.
+	AlertThresholds config.AlertThresholds `json:"alertThresholds"`
 }
 
 // pushOffline sends hashboard the offline line just stored locally, so a
@@ -463,11 +472,11 @@ func (f *Feeder) pushOffline(now time.Time, key, addr string, bitaxe config.Bita
 		}
 	}
 	f.goPush(func() {
-		f.pushToRemote(pushHistoryPath, now, key, addr, bitaxe.Hostname, bitaxe.Alias, string(bitaxe.Model), "", nil, alerts)
+		f.pushToRemote(pushHistoryPath, now, key, addr, bitaxe, "", nil, alerts)
 	})
 }
 
-func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip, hostname, alias, model, latestFirmware string, payload []byte, alerts []model.Alert) {
+func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip string, bitaxe config.Bitaxe, latestFirmware string, payload []byte, alerts []model.Alert) {
 	remoteIP := maskedIP(storageKey)
 	if f.config.Remote.SendIP {
 		remoteIP = ip
@@ -476,14 +485,15 @@ func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip, hostna
 		Timestamp:             now.UTC().Truncate(time.Second),
 		IP:                    remoteIP,
 		StorageKey:            storageKey,
-		Hostname:              hostname,
-		Alias:                 alias,
-		Model:                 model,
+		Hostname:              bitaxe.Hostname,
+		Alias:                 bitaxe.Alias,
+		Model:                 string(bitaxe.Model),
 		ElectricityRate:       f.config.Electricity.RatePerKwh,
 		LatestFirmware:        latestFirmware,
 		Payload:               json.RawMessage(payload),
 		Alerts:                alerts,
 		FeederIntervalSeconds: int(f.config.Feeder.Interval.Seconds()),
+		AlertThresholds:       f.config.AlertThresholdsFor(bitaxe),
 	}
 
 	body, err := json.Marshal(sample)

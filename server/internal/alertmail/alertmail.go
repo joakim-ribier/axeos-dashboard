@@ -132,7 +132,7 @@ func Build(settings config.NotificationsConfig, poll []alerts.Event, templatesDi
 func Sample(now time.Time) []alerts.Event {
 	now = now.UTC().Truncate(time.Second)
 	return []alerts.Event{
-		{Timestamp: now, Mac: "000000000001", IP: "192.168.1.10", Hostname: "Bitaxe-1", Type: alerts.TypeTempHigh, State: alerts.Raised, Value: 64.4, Threshold: alerts.TempThreshold},
+		{Timestamp: now, Mac: "000000000001", IP: "192.168.1.10", Hostname: "Bitaxe-1", Type: alerts.TypeTempHigh, State: alerts.Raised, Value: 64.4, Threshold: 62},
 		{Timestamp: now, Mac: "000000000002", IP: "192.168.1.11", Hostname: "Bitaxe-2", Type: alerts.TypeOffline, State: alerts.Raised, Message: "i/o timeout"},
 		{Timestamp: now, Mac: "000000000001", IP: "192.168.1.10", Hostname: "Bitaxe-1", Type: alerts.TypeFirmwareUpdate, State: alerts.Raised, Message: "v2.15.4"},
 	}
