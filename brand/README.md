@@ -30,7 +30,7 @@ Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashbo
 
 | Où | Fichiers | Déclarés dans |
 |---|---|---|
-| App (local et boards distants) — `ui/public/` | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `site.webmanifest` | `ui/index.html` |
+| App (local et boards distants) — `ui/public/` | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `site.webmanifest` | `ui/index.html` ; `favicon.svg` sert aussi de logo au menu replié (`Sidebar.tsx`) |
 | Site de doc — `docs/` | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | `docs/_includes/head_custom.html` (le thème déclare `favicon.ico` de lui-même) |
 | hashboard.live — `ui/public/` du dépôt hashboard | les mêmes que l'app, plus `og-image.png` | `ui/index.html` et `ui/scripts/prerender.mjs` (guides) |
 

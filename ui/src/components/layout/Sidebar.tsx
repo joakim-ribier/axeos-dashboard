@@ -43,15 +43,16 @@ import { ServicesStatusBlock } from "./ServicesStatus";
 
 const MONO = "'Courier New', 'Courier', monospace";
 
-/** "AxeOS · D#hashboard" -- or just its "#" in the folded sidebar rail. */
+/** "AxeOS · D#hashboard" -- or the app's icon in the folded sidebar rail
+ * (the pack's favicon.svg, drawn for small sizes). */
 const Brand = ({ collapsed = false }: { collapsed?: boolean }) =>
   collapsed ? (
-    <Typography
-      component="span"
-      sx={{ fontFamily: MONO, color: "primary.main", fontWeight: 800 }}
-    >
-      #
-    </Typography>
+    <Box
+      component="img"
+      src="/favicon.svg"
+      alt="AxeOS"
+      sx={{ width: 28, height: 28, display: "block" }}
+    />
   ) : (
     <>
       <Typography

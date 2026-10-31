@@ -454,6 +454,14 @@ describe("Sidebar", () => {
   });
 
   describe("collapsed rail (desktop)", () => {
+    it("shows the app's icon instead of the brand name", () => {
+      window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+      renderSidebar("/");
+
+      const icon = screen.getByRole("img", { name: "AxeOS" });
+      expect(icon).toHaveAttribute("src", "/favicon.svg");
+    });
+
     // queryAllByRole only sees accessible elements: the closed mobile
     // drawer stays mounted but hidden, so these are the desktop entries.
     const links = (name: string) => screen.queryAllByRole("link", { name });
