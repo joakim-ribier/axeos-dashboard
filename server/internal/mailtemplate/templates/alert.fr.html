@@ -1,0 +1,118 @@
+{{/*
+  Mail d'alertes -- envoyé à chaque relevé du feeder qui lève de nouvelles
+  alertes (Configuration › Notifications › Alertes). Un seul mail par
+  relevé, quel que soit le nombre d'alertes ; rien quand une alerte se
+  termine.
+
+  Le <title> est l'objet du mail. Le fichier est relu à chaque envoi ; s'il
+  ne passe pas, le modèle d'origine est utilisé (et l'erreur est dans les
+  logs du mailer). Supprimer le fichier le remet d'origine au prochain
+  démarrage du mailer.
+
+  Syntaxe : modèles Go (https://pkg.go.dev/html/template) -- {{.Champ}},
+  {{if ...}}...{{end}}, {{range .Alerts}}...{{end}}. Les valeurs sont
+  échappées pour le HTML.
+
+  Variables :
+    .Count         le nombre d'alertes
+    .Date          la date et l'heure du relevé (UTC)
+    .DashboardURL  l'adresse du dashboard (vide si elle n'est pas renseignée) --
+                   une IP, même en texte, devient un lien dans Gmail et fait
+                   classer le mail en spam
+    .AlertsURL     la page Alertes du dashboard -- vide si l'adresse n'est pas
+                   renseignée, ou si c'est une IP : un lien vers une IP fait
+                   classer le mail en spam
+    .Alerts        les alertes, chacune avec :
+      .Miner       le nom du mineur
+      .IP          son adresse IP
+      .Title       ce qui se passe (« Température élevée »...)
+      .Detail      la valeur et le seuil, ou le détail (« 64 °C — seuil 62 °C »)
+      .Color       sa couleur : rouge pour un problème, orange pour une mise à jour
+      .Type        tempHigh, fanHigh, offline, macMismatch ou firmwareUpdate
+      .Value       la valeur relevée (température, ventilateur), 0 sinon
+      .Threshold   le seuil dépassé, 0 sinon
+      .Message     la version disponible, la MAC qui répond ou l'erreur de connexion
+
+  L'image « cid:logo » est le logo, joint au mail.
+*/ -}}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{if eq .Count 1}}{{with index .Alerts 0}}{{.Miner}} : {{.Title}}{{end}}{{else}}{{.Count}} nouvelles alertes{{end}} — AxeOS Dashboard</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f2f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f2f6;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e1e2a;">
+
+        <!-- En-tête : le logo et le nom de l'app -->
+        <tr>
+          <td style="background-color:#1e1e2a;padding:20px 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;padding-right:12px;">
+                  <img src="cid:logo" width="40" height="40" alt="" style="display:block;border:0;border-radius:8px;">
+                </td>
+                <td style="vertical-align:middle;">
+                  <div style="font-size:18px;font-weight:700;color:#ffffff;">AxeOS Dashboard</div>
+                  <div style="font-size:13px;color:#00b4ff;">Alertes</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Le résumé -->
+        <tr>
+          <td style="padding:28px 24px 8px 24px;">
+            <div style="font-size:20px;font-weight:700;line-height:1.3;">
+              {{if eq .Count 1}}Une nouvelle alerte{{else}}{{.Count}} nouvelles alertes{{end}}
+            </div>
+            <div style="font-size:14px;color:#6b6b80;padding-top:6px;">Relevé du {{.Date}}</div>
+          </td>
+        </tr>
+
+        <!-- Les alertes -->
+        <tr>
+          <td style="padding:12px 24px 8px 24px;">
+            {{range .Alerts}}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;background-color:#f7f8fa;border-radius:8px;border-left:4px solid {{.Color}};">
+              <tr>
+                <td style="padding:14px 16px;">
+                  <div style="font-size:15px;font-weight:700;">{{.Miner}} <span style="font-weight:400;color:#6b6b80;font-size:13px;">· {{.IP}}</span></div>
+                  <div style="font-size:15px;padding-top:4px;color:{{.Color}};font-weight:600;">{{.Title}}</div>
+                  {{if .Detail}}<div style="font-size:14px;color:#3d3d4e;padding-top:2px;">{{.Detail}}</div>{{end}}
+                </td>
+              </tr>
+            </table>
+            {{end}}
+          </td>
+        </tr>
+
+        <!-- Le lien vers la page Alertes, quand l'adresse du dashboard est un nom (pas une IP) -->
+        {{if .AlertsURL}}
+        <tr>
+          <td align="center" style="padding:12px 24px 28px 24px;">
+            <a href="{{.AlertsURL}}" style="display:inline-block;background-color:#00b4ff;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 24px;border-radius:8px;">Voir les alertes</a>
+          </td>
+        </tr>
+        {{end}}
+
+        <!-- Pied de page -->
+        <tr>
+          <td style="padding:16px 24px 20px 24px;border-top:1px solid #e6e7ee;font-size:12px;line-height:1.5;color:#8a8aa0;">
+            Envoyé par AxeOS Dashboard à chaque nouvelle alerte.
+            Pour ne plus le recevoir : Configuration › Notifications › Alertes.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -7,12 +7,16 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"mime"
+	"mime/multipart"
 	"mime/quotedprintable"
 	"net"
 	"net/smtp"
+	"net/textproto"
 	"strconv"
 	"strings"
 	"time"
@@ -24,11 +28,23 @@ import (
 // silent firewall must fail the request, never hang it.
 const Timeout = 15 * time.Second
 
-// Message is one plain-text mail.
+// Message is one mail: its text, and an HTML version of it when HTML is
+// set -- the text then being what a client that doesn't show HTML reads.
 type Message struct {
 	To      []string
 	Subject string
 	Text    string
+	HTML    string
+	// Inline are the images the HTML shows by "cid:" + their ID (a logo):
+	// carried in the mail itself, so they show wherever it's read.
+	Inline []Inline
+}
+
+// Inline is an image carried in the mail.
+type Inline struct {
+	ID          string
+	ContentType string
+	Data        []byte
 }
 
 // Send delivers msg through the SMTP server s describes.
@@ -109,8 +125,10 @@ func Send(ctx context.Context, s config.SMTPConfig, msg Message) error {
 }
 
 // build renders msg as an RFC 5322 message: UTF-8 headers encoded for the
-// non-ASCII (accents) and a quoted-printable body, so it survives any
-// server whatever the text holds.
+// non-ASCII (accents) and quoted-printable text, so it survives any server
+// whatever the text holds. With HTML, the text and the HTML are the two
+// alternatives of a multipart/alternative, the HTML and its images
+// together in a multipart/related.
 func build(from string, msg Message, now time.Time) []byte {
 	var b bytes.Buffer
 	header := func(k, v string) { fmt.Fprintf(&b, "%s: %s\r\n", k, v) }
@@ -121,14 +139,72 @@ func build(from string, msg Message, now time.Time) []byte {
 	header("Date", now.Format(time.RFC1123Z))
 	header("Message-ID", messageID(from))
 	header("MIME-Version", "1.0")
-	header("Content-Type", "text/plain; charset=utf-8")
-	header("Content-Transfer-Encoding", "quoted-printable")
+
+	if msg.HTML == "" {
+		header("Content-Type", "text/plain; charset=utf-8")
+		header("Content-Transfer-Encoding", "quoted-printable")
+		b.WriteString("\r\n")
+		writeQP(&b, msg.Text)
+		return b.Bytes()
+	}
+
+	alternative := multipart.NewWriter(&b)
+	header("Content-Type", "multipart/alternative; boundary="+alternative.Boundary())
 	b.WriteString("\r\n")
 
-	qp := quotedprintable.NewWriter(&b)
-	_, _ = qp.Write([]byte(strings.ReplaceAll(msg.Text, "\n", "\r\n")))
-	_ = qp.Close()
+	text, _ := alternative.CreatePart(textproto.MIMEHeader{
+		"Content-Type":              {"text/plain; charset=utf-8"},
+		"Content-Transfer-Encoding": {"quoted-printable"},
+	})
+	writeQP(text, msg.Text)
+
+	htmlHeader := textproto.MIMEHeader{
+		"Content-Type":              {"text/html; charset=utf-8"},
+		"Content-Transfer-Encoding": {"quoted-printable"},
+	}
+	if len(msg.Inline) == 0 {
+		html, _ := alternative.CreatePart(htmlHeader)
+		writeQP(html, msg.HTML)
+		_ = alternative.Close()
+		return b.Bytes()
+	}
+
+	var rel bytes.Buffer
+	related := multipart.NewWriter(&rel)
+	html, _ := related.CreatePart(htmlHeader)
+	writeQP(html, msg.HTML)
+	for _, img := range msg.Inline {
+		part, _ := related.CreatePart(textproto.MIMEHeader{
+			"Content-Type":              {img.ContentType},
+			"Content-Transfer-Encoding": {"base64"},
+			"Content-ID":                {"<" + img.ID + ">"},
+			"Content-Disposition":       {"inline"},
+		})
+		writeBase64(part, img.Data)
+	}
+	_ = related.Close()
+	part, _ := alternative.CreatePart(textproto.MIMEHeader{
+		"Content-Type": {`multipart/related; type="text/html"; boundary=` + related.Boundary()},
+	})
+	_, _ = part.Write(rel.Bytes())
+	_ = alternative.Close()
 	return b.Bytes()
+}
+
+func writeQP(w io.Writer, s string) {
+	qp := quotedprintable.NewWriter(w)
+	_, _ = qp.Write([]byte(strings.ReplaceAll(s, "\n", "\r\n")))
+	_ = qp.Close()
+}
+
+// writeBase64 writes data in base64, 76 characters a line as MIME wants.
+func writeBase64(w io.Writer, data []byte) {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for len(encoded) > 76 {
+		_, _ = io.WriteString(w, encoded[:76]+"\r\n")
+		encoded = encoded[76:]
+	}
+	_, _ = io.WriteString(w, encoded+"\r\n")
 }
 
 func messageID(from string) string {

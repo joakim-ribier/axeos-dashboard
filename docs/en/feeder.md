@@ -111,7 +111,11 @@ default, in `dashboard.yml`).
       rejected shares and the electricity cost since the previous reading.
    7. **Push to hashboard** — the reading and the totals, if remote
       access is set up.
-3. **Check the firmware** — once per model present in the
+3. **Hand the new alerts to the mailer** — when the alerts mail is on
+   (Configuration › Notifications), every alert that started during this
+   cycle, in one call; the mailer turns them into a mail. The call goes in
+   the background: the cycle doesn't wait for it.
+4. **Check the firmware** — once per model present in the
    configuration, the latest release is fetched if the cached one is
    older than `firmware.cacheTTL`.
 

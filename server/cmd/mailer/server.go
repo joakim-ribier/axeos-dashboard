@@ -9,6 +9,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alertmail"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mailtemplate"
 )
@@ -20,6 +23,7 @@ func (m *Mailer) Handler() http.Handler {
 	router.Use(middleware.Recoverer)
 	router.Get("/api/mailer/status", m.status)
 	router.Post("/api/mailer/test", m.sendTestMail)
+	router.Post("/api/mailer/alerts", m.sendAlertsMail)
 	return router
 }
 
@@ -49,6 +53,9 @@ func (m *Mailer) status(w http.ResponseWriter, _ *http.Request) {
 type testMailRequest struct {
 	// Lang picks the mail's language, the dashboard's own ("fr" or "en").
 	Lang string `json:"lang"`
+	// Kind "alert" sends an example of the alerts mail instead, with
+	// made-up alerts.
+	Kind string `json:"kind"`
 }
 
 type testMailResponse struct {
@@ -66,10 +73,10 @@ var sentAtLayouts = map[string]string{
 // so a success means the saved setup, and the mailer itself, actually work.
 //
 // @Summary Send a test mail (mailer)
-// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server. Reached through dashboard-api's POST /api/config/mail/test.
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind "alert", an example of the alerts mail with made-up alerts. Reached through dashboard-api's POST /api/config/mail/test.
 // @Tags Mailer
 // @Accept json
-// @Param request body main.testMailRequest false "Mail language (fr or en, default en)"
+// @Param request body main.testMailRequest false "Mail language (fr or en, default en), and kind (alert for the alerts mail)"
 // @Produce json
 // @Success 200 {object} main.testMailResponse
 // @Failure 400 {object} object{error=string,message=string,code=int} "SMTP server or recipients not configured"
@@ -95,15 +102,25 @@ func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 		lang = "en"
 	}
 	smtp := settings.Mail.SMTP
-	subject, text := m.template(mailtemplate.TestMail, lang).Render(map[string]string{
-		"server":       smtp.Host + ":" + strconv.Itoa(smtp.Port),
-		"security":     string(smtp.Security),
-		"from":         smtp.From,
-		"to":           strings.Join(settings.Mail.To, ", "),
-		"date":         time.Now().UTC().Format(sentAtLayouts[lang]),
-		"dashboardURL": settings.DashboardURL,
-	})
-	msg := mail.Message{To: settings.Mail.To, Subject: subject, Text: text}
+	var msg mail.Message
+	if req.Kind == "alert" {
+		settings.Language = lang
+		var err error
+		msg, err = alertmail.Build(settings, alertmail.Sample(time.Now()), m.config.MailTemplatesDir)
+		if err != nil {
+			m.logger.Error("alerts mail template unusable, the built-in one is used instead", "error", err)
+		}
+	} else {
+		subject, text := m.template(mailtemplate.TestMail, lang).Render(map[string]string{
+			"server":       smtp.Host + ":" + strconv.Itoa(smtp.Port),
+			"security":     string(smtp.Security),
+			"from":         smtp.From,
+			"to":           strings.Join(settings.Mail.To, ", "),
+			"date":         time.Now().UTC().Format(sentAtLayouts[lang]),
+			"dashboardURL": settings.DashboardURL,
+		})
+		msg = mail.Message{To: settings.Mail.To, Subject: subject, Text: text}
+	}
 	if err := mail.Send(r.Context(), smtp, msg); err != nil {
 		m.logger.Error("failed to send the test mail", "error", err)
 		writeError(w, http.StatusBadGateway, err.Error())
@@ -111,6 +128,79 @@ func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 	}
 	m.logger.Info("Test mail sent", "to", settings.Mail.To)
 	writeJSON(w, http.StatusOK, testMailResponse{SentTo: settings.Mail.To})
+}
+
+type alertsMailRequest struct {
+	// Alerts are the ones a feeder poll just raised.
+	Alerts []alerts.Event `json:"alerts"`
+}
+
+// sendAlertsMail mails the alerts a feeder poll just raised -- one mail
+// for all of them -- through the SMTP server as saved in settings.yml, in
+// the notifications' language. How it went is kept for the Notifications
+// page; a failure is recorded in the audit, a mail sent isn't.
+//
+// @Summary Send an alerts mail (mailer)
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): mails the alerts a feeder poll just raised, all in one mail. Called by the feeder after a poll, when Configuration › Notifications turns the alerts mail on.
+// @Tags Mailer
+// @Accept json
+// @Param request body main.alertsMailRequest true "The alerts raised"
+// @Produce json
+// @Success 200 {object} main.testMailResponse
+// @Failure 400 {object} object{error=string,message=string,code=int} "no alert, or SMTP server or recipients not configured"
+// @Failure 502 {object} object{error=string,message=string,code=int} "the SMTP server refused or couldn't be reached"
+// @Router /api/mailer/alerts [post]
+func (m *Mailer) sendAlertsMail(w http.ResponseWriter, r *http.Request) {
+	var req alertsMailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.Alerts) == 0 {
+		writeError(w, http.StatusBadRequest, "no alert to mail")
+		return
+	}
+	settings := m.notifications()
+	if !settings.Mail.SMTP.Configured() || len(settings.Mail.To) == 0 {
+		writeError(w, http.StatusBadRequest, "no SMTP server or no recipient configured")
+		return
+	}
+
+	msg, err := alertmail.Build(settings, req.Alerts, m.config.MailTemplatesDir)
+	if err != nil {
+		m.logger.Error("alerts mail template unusable, the built-in one is used instead", "error", err)
+	}
+	now := time.Now()
+	state := alertmail.State{LastSentAt: alertmail.Load(m.config.Storage.MailDir()).LastSentAt}
+	err = mail.Send(r.Context(), settings.Mail.SMTP, msg)
+	if err != nil {
+		m.logger.Error("failed to send the alerts mail", "alerts", len(req.Alerts), "error", err)
+		state.LastError = err.Error()
+		m.recordAlertMailFailure(now, req.Alerts[0].Timestamp, err)
+	} else {
+		m.logger.Info("Alerts mail sent", "alerts", len(req.Alerts))
+		state.LastSentAt = now
+	}
+	if saveErr := alertmail.Save(m.config.Storage.MailDir(), state); saveErr != nil {
+		m.logger.Error("failed to save the alerts mail state", "error", saveErr)
+	}
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, testMailResponse{SentTo: settings.Mail.To})
+}
+
+// recordAlertMailFailure writes the audit entry of an alerts mail that
+// couldn't go out.
+func (m *Mailer) recordAlertMailFailure(now, poll time.Time, sendErr error) {
+	entry := audit.Entry{
+		Timestamp: now,
+		Source:    audit.SourceSystem,
+		Service:   audit.ServiceMailer,
+		Type:      audit.TypeAlertMail,
+		Changes:   []audit.Change{{Field: "alertPoll", Kind: audit.ChangeAdded, After: poll.UTC().Format(time.RFC3339)}},
+		Error:     sendErr.Error(),
+	}
+	if err := m.auditLog.Record(entry); err != nil {
+		m.logger.Error("failed to record audit entry", "type", audit.TypeAlertMail, "error", err)
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

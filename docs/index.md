@@ -60,7 +60,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
 - Réglage du tarif électrique et des autres appareils (ventilateur,
   routeur...) pour estimer le coût journalier de l'installation complète
 - Notifications par mail : serveur SMTP, destinataires, rapport d'audit
-  quotidien, hebdomadaire ou mensuel, mail de test, textes modifiables
+  quotidien, hebdomadaire ou mensuel, mail à chaque nouvelle alerte, mail
+  de test, textes modifiables
 
 [Voir le détail de Configuration]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
 
@@ -210,8 +211,9 @@ service, affiché en bas du menu (*État plateforme*).
 
 Le service qui envoie tous les mails, par le serveur SMTP réglé dans
 Configuration › Notifications : le rapport d'audit, à partir de l'audit
-et des réglages enregistrés sur le disque, et le mail de test, demandé
-par le dashboard.
+et des réglages enregistrés sur le disque, le mail des nouvelles alertes,
+que le feeder lui transmet après chaque relevé, et le mail de test,
+demandé par le dashboard.
 
 ---
 

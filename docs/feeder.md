@@ -113,7 +113,11 @@ par défaut, dans `dashboard.yml`).
       relevé précédent.
    7. **Envoyer à hashboard** — le relevé et les totaux, si l'accès
       distant est configuré.
-3. **Vérifier le firmware** — une fois par modèle présent dans la
+3. **Passer les nouvelles alertes au mailer** — si le mail des alertes
+   est activé (Configuration › Notifications), toutes les alertes qui ont
+   commencé pendant ce cycle, en un seul appel ; le mailer en fait un mail.
+   L'appel part en arrière-plan : le cycle ne l'attend pas.
+4. **Vérifier le firmware** — une fois par modèle présent dans la
    configuration, la dernière release est récupérée si celle en cache a
    plus de `firmware.cacheTTL`.
 

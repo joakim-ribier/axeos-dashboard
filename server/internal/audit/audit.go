@@ -52,6 +52,8 @@ const (
 	TypeBackup = "backup"
 	// The mailer's audit report, sent (or failed).
 	TypeAuditReport = "audit_report"
+	// An alerts mail the mailer couldn't send -- one sent isn't recorded.
+	TypeAlertMail = "alert_mail"
 )
 
 // Types is every entry type, in the order the dashboard offers them --
@@ -60,7 +62,7 @@ const (
 var Types = []string{
 	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback,
 	TypeSaveMiners, TypeSaveSettings,
-	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup, TypeAuditReport,
+	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup, TypeAuditReport, TypeAlertMail,
 	TypeMinerPool, TypeMinerSchedule, TypeMinerIdentity,
 	TypeMinerDisabled, TypeMinerEnabled, TypeMinerAdded, TypeRemotePush,
 	TypeMailSettings,

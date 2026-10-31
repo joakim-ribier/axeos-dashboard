@@ -60,6 +60,7 @@ const buildSettings = (devices: PowerDevice[]): AppSettings => ({
     healthCheckInterval: "1m0s",
     firmwareCacheTTL: "24h0m0s",
     auditReport: {},
+    alertsMail: {},
   },
   notifications: EMPTY_NOTIFICATIONS,
 });

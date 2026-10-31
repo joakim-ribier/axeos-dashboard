@@ -57,7 +57,8 @@ every commit.
   (derived from already-loaded miner data, color-coded stale/fresh) so a
   stuck feeder or health-check loop is visible without digging through
   logs.
-- ✅ **Remote-usable Settings page**: the feeder now also pushes the
+- ✅ **Remote-usable Settings page** *(since replaced: a board now shows
+  its miners' stats only, see below)*: the feeder now also pushes the
   managed miners list and app settings (electricity, custom pool
   dashboards, firmware repos -- `remote.pushURL`/`apiKey` themselves are
   never sent) every poll cycle, alongside its existing data push;
@@ -98,36 +99,53 @@ every commit.
   (last 24 h by default, filters by miner/type/day, copy an entry, JSON
   export). Alerts and Audit now share one filter bar with removable
   chips.
+- ✅ **Monthly backups**: each completed day of the miners' history goes
+  into its month's zip archive, frozen by its MD5 once the month is over,
+  listed and downloadable from a Backups page.
+- ✅ **Firmware quick filter**: the home screen filters the miners by
+  firmware version, with a count per version.
+- ✅ **Other power devices**: non-miner consumers (fan, router...) declared
+  in Settings count in the installation's estimated daily cost.
+- ✅ **One Configuration page**: its sections (Miners, Electricity,
+  Notifications, Remote, System) picked from a menu that flags the ones to
+  look at.
+- ✅ **Foldable sidebar**: on a desktop the sidebar folds into an icon rail,
+  the app's icon on top.
+- ✅ **Mails from a dedicated mailer service**: SMTP set up in
+  Configuration › Notifications with a test mail, the audit report sent at
+  night at the chosen frequency, and the mails' wording in editable
+  templates.
+- ✅ **Platform status**: a sidebar card says whether each service
+  (dashboard-api, feeder, health check, mailer, firmware cache) is running.
+- ✅ **Local dashboard linked to its board**: the menu and the home screen
+  show the hashboard board this instance pushes to.
+- ✅ **A board shows its miners' stats only**: the feeder pushes readings,
+  totals and offline polls, nothing of the configuration, and a board is
+  the fleet's home page alone.
+- ✅ **Personal data kept off hashboard**: the Wi-Fi name and IPv6 always,
+  and the pools' user, the pools and the miners' IPs unless shared from
+  Configuration › Remote, are masked before every push.
+- ✅ **Icon pack**: one set of icons in `brand/` for the app, the docs site
+  and hashboard.live.
+- ✅ **Alerts by mail**: one HTML mail (editable template, logo, text
+  version) per feeder poll that raises alerts, sent by the mailer when
+  turned on in Configuration › Notifications.
+- ✅ **Alerts on a change of state**: an alert is recorded once when it
+  starts and once when it ends (hysteresis on temperature and fan, offline
+  after 2 missed polls), the ones in progress stay on top of the Alerts
+  page with their current reading and a sidebar badge, and the bell's
+  "read" is shared by every device.
 
 ## To do
 
 ### Alerts
 
-- **Episode detail on click**: clicking an episode row on `/alerts` should
-  expand it into the individual alert occurrences it groups — today an
-  episode only shows `firstSeen`/`lastSeen`/`occurrences`/peak, with no way
-  to see the actual occurrences that make it up. Listing them would make
-  the frequency of the underlying condition visible (e.g. a fan alert that
-  flapped ten times in an hour vs. one that just stayed up continuously).
 - **Pool drift alert**: warn (bell, Alerts page) when a miner's live
   pools stop matching `miners.yml` -- e.g. a pool or user changed straight
   in its own AxeOS UI. An alert, not an audit entry: the audit only traces
   what was done through the dashboard. Same rule as the Settings page's
   drift badge (`poolMismatches`): a non-Bitaxe running its configured
   pools swapped is a switch, not a drift.
-- **Daily alerts email**: send an email each evening summarizing the
-  day's alerts.
-- **Alerts page filters are poorly designed**: `Alerts.tsx` calls
-  `useMiners()` (`/api/miners`) only to populate the IP filter's
-  dropdown — architecturally unrelated. On this page, **day** is the only
-  real query (hits the server via
-  `/api/miners/alerts/history?date=...`); the **IP** and **Type** filters
-  are just applied to the response already received for that day, so they
-  should be derived from `data.episodes` (which already carries
-  `minerIp`/`hostname`/`type` per episode) instead of a separate call to
-  the miners list. Extra benefit of dropping the `useMiners()` dependency:
-  the IP filter would no longer offer miners with no alert that day
-  (options that today filter nothing once selected).
 
 ### Audit
 
@@ -136,13 +154,7 @@ every commit.
   section of the sidebar. A group holding only Audit isn't worth it.
 - **New-IP security email**: when an API action comes from an IP never
   seen before (kept in a known-IPs list), send an email along the lines of
-  "we detected a new IP address, was it you?". Needs email sending, which
-  the project doesn't have yet.
-- **Audit on remote boards**: push audit entries to hashboard (feeder
-  reads the day's audit file and pushes new lines; hashboard stores them),
-  then serve them read-only from `remote-dashboard-api` and enable
-  `ui.page.audit` in `remote-dashboard.yml`. Decide first whether the
-  client IP/User-Agent are shown on a public board.
+  "we detected a new IP address, was it you?" -- through the mailer.
 
 ### Settings
 
@@ -160,39 +172,24 @@ every commit.
   presets like "every N minutes/hours" or "at a specific time on selected
   weekdays" that generate the cron string for you -- would remove that
   failure mode while still allowing the raw expression for advanced cases.
-- **Direct link to hashboard.live/me in the remote settings**: the
-  "Remote" section of `/settings` should link straight to
-  `hashboard.live/me` instead of only exposing the push URL/API key
-  fields.
-- **The operator decides what their board gets and shows, in
-  Configuration › Remote**: today the feeder pushes a fixed set, with no
-  say from the operator -- each poll (snapshots, offline polls via
-  `/api/push/history`), the miners config (`/api/push/config/miners`) and
-  part of `settings.yml` (electricity, pool dashboards, firmware repos via
-  `/api/push/config/settings`). A configurable part of the Remote section
-  should let them choose:
-  - **what** is pushed: each part of their data and configuration,
-    notifications included, turned on or off;
-  - **how**: fields left out or masked within what's pushed -- e.g. never
-    send the pools' BTC user;
-  - **what the board shows**: override its pages and sections -- e.g.
-    hide the Configuration page altogether, or only some of its sections
-    -- on top of what `remote-dashboard.yml`'s `ui:` sets for every board.
 
-  Applied from the next push cycle.
-- **Onboarding banner on first connection with no miners configured**: on
-  `/settings`, when there's no miner in the managed config yet, show an
-  orange banner pointing the user to the "auto detection" section
-  further down the page to add one. The "Configured miners" section can
-  stay in place, just empty, rather than being hidden.
+### Notifications
 
-### Documentation
-
-- **User manual**: write a user manual, possibly as the GitHub repo's
-  wiki section.
+- **The audit report triggered from outside the mailer**: the mailer still
+  plans it itself (checks every minute whether it's due, reads the audit
+  on disk, retries hourly). Like the alerts mail, the trigger should come
+  from elsewhere -- e.g. a nightly job in dashboard-api's scheduler working
+  out the period and calling the mailer -- so the mailer only builds and
+  sends mails.
+- **The other mails in HTML too**: the audit report and the test mail are
+  still plain text -- the alerts mail's HTML layout (header with the logo,
+  footer) could serve them as well.
 
 ### Release
 
+- **Deploy the Pi from releases only**: CI builds a `staging` prerelease
+  on every push to `staging`, the release ships its own start script, and
+  `make deploy` goes away.
 - **Cut a 1.0**: first stable tagged release.
 
 ## Known bugs
@@ -202,9 +199,10 @@ None at the moment.
 ## Cross-cutting guardrails
 
 - Scan/probe is always manually triggered, never run in the background.
-- YAML writes only ever target the managed miners file, never
-  `dashboard.yml`.
-- `remote-dashboard-api`'s `/api/{boardId}/config/*` routes are read-only --
-  they never accept a write, regardless of `ui.page.settings`.
+- YAML writes only ever target the managed files (`miners.yml`,
+  `settings.yml`), never `dashboard.yml`.
+- `remote-dashboard-api` is read-only: it never accepts a write.
 - `remote.pushURL`/`apiKey` are never included in what the feeder pushes
   to hashboard, under any circumstance.
+- What's personal (Wi-Fi name, IPv6, and the pools' user, the pools and
+  the IPs unless shared) is masked before every push, never after.

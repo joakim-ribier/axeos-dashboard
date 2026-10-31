@@ -36,4 +36,6 @@ Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashbo
 
 Le `site.webmanifest` de l'app prend la couleur de fond de l'app (`#1e1e2a`) ; celui de ce dossier et de hashboard.live garde `#0f0f1a`.
 
+`icon-192.png` est aussi le logo des mails HTML, embarqué dans le mailer sous `server/internal/mailtemplate/logo.png`.
+
 `icon.svg`, `icon-maskable.svg`, `favicon-16.png` et `favicon-32.png` ne sont copiés nulle part : ce sont les sources et les variantes à disposition.

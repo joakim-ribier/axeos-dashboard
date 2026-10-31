@@ -6,10 +6,12 @@
 package alerts
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 )
 
@@ -21,8 +23,9 @@ const (
 	TypeFirmwareUpdate = "firmwareUpdate"
 )
 
-// Types is every alert type, in the order the dashboard offers them.
-var Types = []string{TypeTempHigh, TypeFanHigh, TypeOffline, TypeMacMismatch, TypeFirmwareUpdate}
+// Types is every alert type, the most serious first -- the order the
+// dashboard offers them, and every list sorts them in (see Compare).
+var Types = []string{TypeOffline, TypeMacMismatch, TypeTempHigh, TypeFanHigh, TypeFirmwareUpdate}
 
 // An alert is raised above its threshold and only cleared once back under
 // a lower one, so a reading hovering around the threshold doesn't raise and
@@ -61,6 +64,19 @@ type Event struct {
 	// (temp/fan).
 	RaisedAt *time.Time `json:"raisedAt,omitempty"`
 	Peak     float64    `json:"peak,omitempty"`
+}
+
+// Compare orders events the one way every list shows them: most recent
+// first, then in Types' order -- the most serious first, the same one on
+// several miners together -- then by MAC. Only what never
+// changes: neither when they were written, nor a rename, nor the config's
+// order moves one.
+func Compare(a, b Event) int {
+	return cmp.Or(
+		b.Timestamp.Compare(a.Timestamp),
+		cmp.Compare(slices.Index(Types, a.Type), slices.Index(Types, b.Type)),
+		cmp.Compare(a.Mac, b.Mac),
+	)
 }
 
 // Poll is what one poll of a miner found. Err set: the miner didn't answer.

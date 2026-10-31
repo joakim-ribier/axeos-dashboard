@@ -271,6 +271,7 @@
       "discover": "Network discovery",
       "backup": "Backup updated",
       "audit_report": "Audit report sent",
+      "alert_mail": "Alerts mail not sent",
       "miner_pool": "Miner pool changed",
       "miner_schedule": "Schedule changed",
       "miner_identity": "Miner IP changed",
@@ -343,7 +344,9 @@
       "auditReportFrequency": "Audit report frequency",
       "reportPeriod": "Report period",
       "sentTo": "Sent to",
-      "mailDashboardURL": "Dashboard address"
+      "mailDashboardURL": "Dashboard address",
+      "alertsMail": "Alerts by mail",
+      "alertPoll": "Alerts' poll"
     },
     "values": {
       "auditReportEnabled": {
@@ -378,6 +381,10 @@
         "off": "off"
       },
       "sendIP": {
+        "on": "on",
+        "off": "off"
+      },
+      "alertsMail": {
         "on": "on",
         "off": "off"
       }
@@ -457,7 +464,8 @@
         "summary_one": "{{host}} · {{count}} recipient",
         "summary_other": "{{host}} · {{count}} recipients",
         "noRecipient": "No recipient",
-        "reportFailed": "Audit report sending failed"
+        "reportFailed": "Audit report sending failed",
+        "alertsMailFailed": "An alerts mail failed to send"
       },
       "remote": {
         "title": "Remote",
@@ -640,8 +648,6 @@
           "remove": "Remove"
         },
         "test": {
-          "title": "Test mail",
-          "description": "Sends a mail to the recipients through the saved server, to check everything works.",
           "send": "Send a test mail",
           "sending": "Sending…",
           "needsSmtp": "Save an SMTP server first.",
@@ -673,6 +679,16 @@
             "monthly": "Every month (the month gone by)"
           },
           "utc": "Sent every night around 1 a.m. UTC; the report's days and times are UTC, like the audit's."
+        },
+        "alerts": {
+          "title": "Alerts",
+          "description": "A mail on every feeder poll that raises new alerts, all of them together — nothing when an alert ends.",
+          "enabledLabel": "Send a mail on every new alert",
+          "sendExample": "Send an example",
+          "exampleSent": "Alerts mail example sent.",
+          "lastSent": "Last alerts mail sent on {{date}}.",
+          "lastFailed": "The last send failed: {{error}}",
+          "neverSent": "On — a mail will go out on the next new alert."
         },
         "dashboardUrlLabel": "Dashboard address (for the links)",
         "invalidDashboardUrl": "The address must start with http:// or https://."

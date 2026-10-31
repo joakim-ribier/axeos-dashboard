@@ -812,3 +812,67 @@ func TestFeeder_runOnce_nothingObfuscatedReachesHashboard(t *testing.T) {
 		}
 	})
 }
+
+func TestFeeder_runOnce_handsTheMailerThePollsNewAlerts(t *testing.T) {
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"hashRate":500000,"temp":70,"fanspeed":80}`))
+	}))
+	defer bitaxeServer.Close()
+
+	var calls [][]alerts.Event
+	var mu sync.Mutex
+	mailer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/mailer/alerts" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		var body struct {
+			Alerts []alerts.Event `json:"alerts"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		mu.Lock()
+		calls = append(calls, body.Alerts)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer mailer.Close()
+	_, port, _ := strings.Cut(strings.TrimPrefix(mailer.URL, "http://"), ":")
+
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: serverAddr(bitaxeServer), Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+		},
+		Endpoints:     config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:       config.StorageConfig{DataDir: t.TempDir()},
+		Firmware:      config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+		Mailer:        config.MailerConfig{Port: port},
+		Notifications: config.NotificationsConfig{Alerts: config.AlertsConfig{Mail: true}},
+	}
+	feeder := NewFeeder(testLogger(), cfg)
+
+	// The first poll raises 2 alerts -- one call for both; the second
+	// raises nothing new -- no call.
+	feeder.runOnce(context.Background())
+	feeder.runOnce(context.Background())
+	feeder.WaitForPushes()
+
+	if len(calls) != 1 || len(calls[0]) != 2 {
+		t.Fatalf("calls = %+v, want one with both alerts", calls)
+	}
+	for _, e := range calls[0] {
+		if e.State != alerts.Raised || e.Hostname != "bitaxe-1" || e.IP != serverAddr(bitaxeServer) {
+			t.Errorf("alert = %+v, want raised, the miner's", e)
+		}
+	}
+
+	// Off: the mailer isn't called.
+	off := cfg
+	off.Notifications.Alerts.Mail = false
+	off.Storage.DataDir = t.TempDir()
+	quiet := NewFeeder(testLogger(), off)
+	quiet.runOnce(context.Background())
+	quiet.WaitForPushes()
+	if len(calls) != 1 {
+		t.Errorf("calls = %d with the mail off, want none more", len(calls))
+	}
+}

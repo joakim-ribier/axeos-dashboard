@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"cmp"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -185,11 +184,7 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 // sortedWithCurrentNames labels each event with its miner's name as
 // configured now -- an alias set since keeps applying to its past alerts; a
 // miner no longer configured keeps the name it had then -- and sorts them
-// the one way every list shows them: most recent first, then in
-// alerts.Types' order -- the problems before a firmware update, the same
-// one on several miners together -- then by MAC. Only what never changes:
-// neither when they were written, nor a rename, nor the config's order
-// moves a line.
+// (see alerts.Compare).
 func sortedWithCurrentNames(cfg config.Config, events []alerts.Event) []alerts.Event {
 	names := make(map[string]string)
 	for _, miner := range cfg.Bitaxes {
@@ -200,13 +195,7 @@ func sortedWithCurrentNames(cfg config.Config, events []alerts.Event) []alerts.E
 			events[i].Hostname = name
 		}
 	}
-	slices.SortFunc(events, func(a, b alerts.Event) int {
-		return cmp.Or(
-			b.Timestamp.Compare(a.Timestamp),
-			cmp.Compare(slices.Index(alerts.Types, a.Type), slices.Index(alerts.Types, b.Type)),
-			cmp.Compare(a.Mac, b.Mac),
-		)
-	})
+	slices.SortFunc(events, alerts.Compare)
 	if events == nil {
 		events = []alerts.Event{}
 	}

@@ -66,6 +66,7 @@ describe("RemoteSettings -- push URL check", () => {
         healthCheckInterval: "1m0s",
         firmwareCacheTTL: "24h0m0s",
         auditReport: {},
+        alertsMail: {},
       },
       notifications: EMPTY_NOTIFICATIONS,
     };
@@ -127,6 +128,7 @@ describe("RemoteSettings -- sensitive data", () => {
         healthCheckInterval: "1m0s",
         firmwareCacheTTL: "24h0m0s",
         auditReport: {},
+        alertsMail: {},
       },
       notifications: EMPTY_NOTIFICATIONS,
     };

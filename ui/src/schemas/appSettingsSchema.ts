@@ -57,6 +57,13 @@ export const appSettingsReadOnlySchema = z.object({
       lastError: z.string().optional(),
     })
     .default({}),
+  // The mailer's record of the alerts mails.
+  alertsMail: z
+    .object({
+      lastSentAt: z.string().optional(),
+      lastError: z.string().optional(),
+    })
+    .default({}),
 });
 
 // The built-in registry (server/internal/config/defaults.go) shown
@@ -117,6 +124,8 @@ export const notificationsSettingsSchema = z.object({
     types: [],
     skipIfEmpty: false,
   }),
+  // A mail on every feeder poll that raises alerts.
+  alerts: z.object({ mail: z.boolean() }).default({ mail: false }),
 });
 
 // A board's pushed settings never carry notifications at all -- empty ones
@@ -142,6 +151,7 @@ export const EMPTY_NOTIFICATIONS: z.infer<typeof notificationsSettingsSchema> =
       types: [],
       skipIfEmpty: false,
     },
+    alerts: { mail: false },
   };
 
 export const appSettingsSchema = z.object({

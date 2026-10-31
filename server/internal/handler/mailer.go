@@ -20,7 +20,7 @@ var mailerTestClient = &http.Client{Timeout: 25 * time.Second}
 // @Description Has the mailer service send a test mail to every configured recipient through the saved SMTP server.
 // @Tags Notifications
 // @Accept json
-// @Param request body object{lang=string} false "Mail language (fr or en, default en)"
+// @Param request body object{lang=string,kind=string} false "Mail language (fr or en, default en), and kind (alert: an example of the alerts mail)"
 // @Produce json
 // @Success 200 {object} object{sentTo=[]string}
 // @Failure 400 {object} handler.ErrorResponse "SMTP server or recipients not configured"
