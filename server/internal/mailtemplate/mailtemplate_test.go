@@ -80,7 +80,7 @@ func TestInstall_writesWhatsMissingAndKeepsTheRest(t *testing.T) {
 		t.Fatal(err)
 	}
 	slices.Sort(written)
-	want := []string{"alert.en.html", "alert.fr.html", "audit-report.en.txt", "audit-report.fr.txt", "test-mail.en.txt"}
+	want := []string{"alert.en.html", "alert.fr.html", "audit-report.en.html", "audit-report.fr.html", "test-mail.en.txt"}
 	if !slices.Equal(written, want) {
 		t.Errorf("written = %v, want %v", written, want)
 	}
@@ -145,8 +145,7 @@ func TestRender(t *testing.T) {
 // fills -- the ones its own comments list.
 func TestBuiltInTemplates(t *testing.T) {
 	filled := map[string][]string{
-		TestMail:    {"server", "security", "from", "to", "date", "dashboardURL"},
-		AuditReport: {"title", "count", "events", "periodStart", "periodEnd", "link", "date", "sentTo"},
+		TestMail: {"server", "security", "from", "to", "date", "dashboardURL"},
 	}
 	files, err := fs.ReadDir(builtin, "templates")
 	if err != nil {

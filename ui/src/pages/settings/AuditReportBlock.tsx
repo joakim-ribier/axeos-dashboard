@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import SaveIcon from "@mui/icons-material/Save";
+import SendIcon from "@mui/icons-material/Send";
 import SummarizeIcon from "@mui/icons-material/Summarize";
 import {
   Autocomplete,
@@ -55,7 +56,15 @@ export const AuditReportBlock = ({
   isSaving,
   persist,
   serverBasePayload,
-}: AppSettingsFrameContext) => {
+  sending,
+  blocked,
+  onSendExample,
+}: AppSettingsFrameContext & {
+  sending: boolean;
+  // No mail can go out yet -- the test mail above says why.
+  blocked: boolean;
+  onSendExample: () => void;
+}) => {
   const { t } = useTranslation();
   const { data: auditTypes = [] } = useAuditTypes();
   const saved = data?.notifications.auditReport;
@@ -162,6 +171,16 @@ export const AuditReportBlock = ({
             }
             sx={{ flexGrow: 1, mr: 0 }}
           />
+          <ActionButton
+            icon={<SendIcon fontSize="small" />}
+            loading={sending}
+            disabled={blocked}
+            onClick={onSendExample}
+          >
+            {sending
+              ? t("settingsPage.appSettings.mail.test.sending")
+              : t("settingsPage.appSettings.mail.report.sendExample")}
+          </ActionButton>
           <ActionButton
             icon={<SaveIcon fontSize="small" />}
             loading={isSaving}

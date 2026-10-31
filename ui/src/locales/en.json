@@ -678,7 +678,9 @@
             "weekly": "Every week (Monday → Sunday)",
             "monthly": "Every month (the month gone by)"
           },
-          "utc": "Sent every night around 1 a.m. UTC; the report's days and times are UTC, like the audit's."
+          "utc": "Sent every night around 1 a.m. UTC; the report's days and times are UTC, like the audit's.",
+          "sendExample": "Send an example",
+          "exampleSent": "Audit report example sent."
         },
         "alerts": {
           "title": "Alerts",

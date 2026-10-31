@@ -1,0 +1,120 @@
+{{/*
+  Rapport d'audit -- envoyé par le mailer vers 1 h UTC, selon la fréquence
+  choisie dans Configuration › Notifications › Rapport d'audit.
+
+  Le <title> est l'objet du mail. Le fichier est relu à chaque envoi ; s'il
+  ne passe pas, le modèle d'origine est utilisé (et l'erreur est dans les
+  logs du mailer). Supprimer le fichier le remet d'origine au prochain
+  démarrage du mailer.
+
+  Syntaxe : modèles Go (https://pkg.go.dev/html/template) -- {{.Champ}},
+  {{if ...}}...{{end}}, {{range .Groups}}...{{end}}. Les valeurs sont
+  échappées pour le HTML.
+
+  Variables :
+    .Title        « Audit du jeudi 15 octobre 2026 », ou « Audit du 12/10/2026 au 18/10/2026 »
+    .Count        « 3 événements », « aucun événement »
+    .Empty        la phrase d'une période sans événement
+    .PeriodStart  le premier jour couvert
+    .PeriodEnd    le dernier jour couvert
+    .Date         la date et l'heure de l'envoi (UTC)
+    .AuditURL     la page Audit du dashboard sur la période -- vide si
+                  l'adresse du dashboard n'est pas renseignée, ou si c'est une
+                  IP : un lien vers une IP fait classer le mail en spam
+    .Groups       les événements, groupés par type, chaque groupe avec :
+      .Label      le type (« Redémarrage »...)
+      .Count      son nombre d'événements
+      .Entries    ses événements, chacun avec :
+        .Time     l'heure (le jour aussi sur plusieurs jours)
+        .Who      qui ou quoi : « Dashboard (192.168.1.10) », « Système · Planificateur »
+        .Miner    le mineur concerné, s'il y en a un
+        .Failure  l'échec et son motif, s'il a échoué
+        .Details  ce qu'il a changé, une ligne chacun
+
+  L'image « cid:logo » est le logo, joint au mail.
+*/ -}}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>AxeOS Dashboard — {{.Title}} : {{.Count}}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f2f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f2f6;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e1e2a;">
+
+        <!-- En-tête : le logo et le nom de l'app -->
+        <tr>
+          <td style="background-color:#1e1e2a;padding:20px 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;padding-right:12px;">
+                  <img src="cid:logo" width="40" height="40" alt="" style="display:block;border:0;border-radius:8px;">
+                </td>
+                <td style="vertical-align:middle;">
+                  <div style="font-size:18px;font-weight:700;color:#ffffff;">AxeOS Dashboard</div>
+                  <div style="font-size:13px;color:#00b4ff;">Rapport d'audit</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Le résumé -->
+        <tr>
+          <td style="padding:28px 24px 8px 24px;">
+            <div style="font-size:20px;font-weight:700;line-height:1.3;">{{.Title}}</div>
+            <div style="font-size:14px;color:#6b6b80;padding-top:6px;">{{.Count}} · jours et heures en UTC</div>
+          </td>
+        </tr>
+
+        <!-- Les événements, par type -->
+        <tr>
+          <td style="padding:12px 24px 8px 24px;">
+            {{if not .Groups}}
+            <div style="font-size:15px;color:#3d3d4e;padding:14px 16px;background-color:#f7f8fa;border-radius:8px;">{{.Empty}}</div>
+            {{end}}
+            {{range .Groups}}
+            <div style="font-size:13px;font-weight:700;color:#6b6b80;text-transform:uppercase;letter-spacing:0.04em;padding:14px 0 8px 0;">{{.Label}} · {{.Count}}</div>
+            {{range .Entries}}
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;background-color:#f7f8fa;border-radius:8px;border-left:4px solid {{if .Failure}}#e53935{{else}}#00b4ff{{end}};">
+              <tr>
+                <td style="padding:12px 16px;">
+                  <div style="font-size:14px;"><span style="font-weight:700;">{{.Time}}</span> <span style="color:#3d3d4e;">· {{.Who}}</span>{{if .Miner}} <span style="color:#3d3d4e;">· {{.Miner}}</span>{{end}}</div>
+                  {{if .Failure}}<div style="font-size:14px;color:#e53935;font-weight:600;padding-top:4px;">{{.Failure}}</div>{{end}}
+                  {{range .Details}}<div style="font-size:13px;color:#6b6b80;padding-top:3px;">{{.}}</div>{{end}}
+                </td>
+              </tr>
+            </table>
+            {{end}}
+            {{end}}
+          </td>
+        </tr>
+
+        <!-- Le lien vers la page Audit, quand l'adresse du dashboard est un nom (pas une IP) -->
+        {{if .AuditURL}}
+        <tr>
+          <td align="center" style="padding:12px 24px 28px 24px;">
+            <a href="{{.AuditURL}}" style="display:inline-block;background-color:#00b4ff;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 24px;border-radius:8px;">Voir dans le dashboard</a>
+          </td>
+        </tr>
+        {{end}}
+
+        <!-- Pied de page -->
+        <tr>
+          <td style="padding:16px 24px 20px 24px;border-top:1px solid #e6e7ee;font-size:12px;line-height:1.5;color:#8a8aa0;">
+            Envoyé par AxeOS Dashboard le {{.Date}} (UTC).
+            Pour ne plus le recevoir : Configuration › Notifications › Rapport d'audit.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

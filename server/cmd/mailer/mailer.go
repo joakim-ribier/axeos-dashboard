@@ -197,11 +197,13 @@ func (m *Mailer) runAuditReport(ctx context.Context, now time.Time) {
 	entries, err := m.auditLog.ReadRange(period.From, period.To)
 	if err == nil {
 		var msg mail.Message
-		msg, err = auditreport.Build(settings, period, entries, m.minerNames(), m.template(mailtemplate.AuditReport, settings.Language), now)
-		switch {
-		case errors.Is(err, auditreport.ErrNothingToSend):
+		msg, err = auditreport.Build(settings, period, entries, m.minerNames(), m.config.MailTemplatesDir, now)
+		if errors.Is(err, auditreport.ErrNothingToSend) {
 			err = nil
-		case err == nil:
+		} else {
+			if err != nil {
+				m.logger.Error("audit report template unusable, the built-in one is used instead", "error", err)
+			}
 			err = mail.Send(ctx, settings.Mail.SMTP, msg)
 			sent = err == nil
 		}

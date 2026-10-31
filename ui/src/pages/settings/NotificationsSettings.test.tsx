@@ -514,4 +514,32 @@ describe("NotificationsSettings", () => {
       ).toBeInTheDocument();
     });
   });
+
+  describe("audit report example", () => {
+    const exampleButton = () =>
+      screen.getByRole("button", { name: `${k}.report.sendExample` });
+
+    it("sends the example in the UI's language", async () => {
+      const user = userEvent.setup();
+      mockedAxios.post.mockResolvedValue({ data: { sentTo: [] } });
+      render(<NotificationsSettings />);
+
+      await user.click(exampleButton());
+
+      expect(mockedAxios.post).toHaveBeenCalledWith("/api/config/mail/test", {
+        lang: "fr",
+        kind: "audit",
+      });
+      expect(
+        await screen.findByText(`${k}.report.exampleSent`),
+      ).toBeInTheDocument();
+    });
+
+    it("can't send the example without a recipient", () => {
+      settings = buildSettings({ smtp: SAVED_SMTP, to: [] });
+      render(<NotificationsSettings />);
+
+      expect(exampleButton()).toBeDisabled();
+    });
+  });
 });
