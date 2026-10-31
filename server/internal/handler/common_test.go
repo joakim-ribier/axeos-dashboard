@@ -218,6 +218,14 @@ func TestToMinerInfo(t *testing.T) {
 			wantUpdateAvl:  true,
 		},
 		{
+			name: "no update when the device runs newer than the cached latest",
+			raw: latestFileStructure{
+				Payload: PayloadStructure{Version: "v1.1.1"},
+			},
+			latestFirmware: "v1.1.0.1",
+			wantUpdateAvl:  false,
+		},
+		{
 			name: "no update info when latest firmware unknown",
 			raw: latestFileStructure{
 				Payload: PayloadStructure{Version: "v1.0"},

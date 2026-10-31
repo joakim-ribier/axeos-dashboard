@@ -105,8 +105,9 @@ func TestObserve_firmware(t *testing.T) {
 		{Version: "v1"}, // latest unknown: left as it was
 		{Version: "v1", LatestVersion: "v2"},
 		{Version: "v2", LatestVersion: "v2"},
+		{Version: "v1.1.1", LatestVersion: "v1.1.0.1"}, // updated past a stale cached latest
 	})
-	assertChanges(t, got, []string{"firmwareUpdate raised", "", "", "firmwareUpdate cleared"})
+	assertChanges(t, got, []string{"firmwareUpdate raised", "", "", "firmwareUpdate cleared", ""})
 }
 
 func TestObserve_events(t *testing.T) {

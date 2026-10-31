@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 )
 
 const (
@@ -153,7 +155,7 @@ func (s *MinerState) Observe(now time.Time, p Poll) []Event {
 		Event{Value: p.FanSpeed, Threshold: p.FanThreshold})
 
 	if p.LatestVersion != "" && p.Version != "" {
-		set(TypeFirmwareUpdate, p.Version != p.LatestVersion, Event{Message: p.LatestVersion})
+		set(TypeFirmwareUpdate, firmware.IsNewer(p.LatestVersion, p.Version), Event{Message: p.LatestVersion})
 	}
 	return events
 }

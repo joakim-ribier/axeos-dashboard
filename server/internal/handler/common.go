@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
 
@@ -190,7 +191,7 @@ func toMinerInfo(raw latestFileStructure, miner config.Bitaxe, latestFirmwareVer
 
 	updateAvailable := latestFirmwareVersion != "" &&
 		raw.Payload.Version != "" &&
-		raw.Payload.Version != latestFirmwareVersion
+		firmware.IsNewer(latestFirmwareVersion, raw.Payload.Version)
 
 	return model.MinerInfo{
 		Timestamp: raw.Timestamp,
