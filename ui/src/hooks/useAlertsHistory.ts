@@ -2,6 +2,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
+import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import {
   type AlertHistoryResponse,
   alertHistoryResponseSchema,
@@ -44,12 +45,13 @@ export const fetchAlertsHistory = async (
  * on every click instead of staying on the current page's rows until the
  * next page's have arrived.
  *
- * No refetchInterval, unlike useMiners/useAlerts -- this is history, not a
- * live view: it only needs to be fetched when the page is (re)opened or a
- * filter/page changes, never on a timer just because auto-refresh happens
- * to be on.
+ * With auto-refresh on, fetched again every 90s so the day's new changes
+ * show up -- only while the Alerts page is open (the timer stops with its
+ * last observer) and its tab visible.
  * */
 export const useAlertsHistory = (filters: AlertHistoryFilters) => {
+  const { autoRefreshEnabled } = useRefreshSettings();
+
   return useQuery<AlertHistoryResponse, Error>({
     queryKey: ["alertsHistory", ALERTS_HISTORY_PATH, filters],
     queryFn: () => fetchAlertsHistory(ALERTS_HISTORY_PATH, filters),
@@ -60,6 +62,7 @@ export const useAlertsHistory = (filters: AlertHistoryFilters) => {
     // Alerts page always fetch current data, regardless of how you got
     // there.
     refetchOnMount: "always",
+    refetchInterval: autoRefreshEnabled ? 90_000 : false,
     refetchOnWindowFocus: false,
     retry: false,
     placeholderData: keepPreviousData,

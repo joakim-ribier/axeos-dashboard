@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -155,5 +156,120 @@ func TestListAlertsHistory(t *testing.T) {
 	empty := serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date=2020-01-01", "")
 	if !strings.Contains(empty.Body.String(), `"events":[]`) {
 		t.Errorf("a day with nothing = %s, want an empty list", empty.Body.String())
+	}
+}
+
+func TestListActiveAlerts(t *testing.T) {
+	cfg := config.Config{
+		Storage: config.StorageConfig{DataDir: t.TempDir()},
+		Bitaxes: []config.Bitaxe{
+			{Ip: "10.0.0.1", Mac: "aabbccddeeff", Hostname: "bitaxe-office", Alias: "Office", Enabled: true},
+			{Ip: "10.0.0.2", Mac: "112233445566", Hostname: "bitaxe-garage", Enabled: true},
+			{Ip: "10.0.0.3", Mac: "665544332211", Hostname: "bitaxe-off", Enabled: false},
+		},
+	}
+	threeDaysAgo := time.Now().UTC().AddDate(0, 0, -3).Truncate(time.Second)
+	save := func(mac string, ongoing ...alerts.Event) {
+		t.Helper()
+		state := alerts.MinerState{Ongoing: map[string]alerts.Event{}}
+		for _, e := range ongoing {
+			state.Ongoing[e.Type] = e
+		}
+		if err := alerts.SaveState(filepath.Join(cfg.Storage.BitaxesDir(), mac), state); err != nil {
+			t.Fatal(err)
+		}
+	}
+	save("aabbccddeeff",
+		alerts.Event{Timestamp: threeDaysAgo, Type: alerts.TypeFirmwareUpdate, State: alerts.Raised, Message: "v2.15.4"},
+		alerts.Event{Timestamp: threeDaysAgo.Add(time.Hour), Type: alerts.TypeFanHigh, State: alerts.Raised, Value: 84},
+	)
+	// Disabled: its alerts in progress aren't the fleet's.
+	save("665544332211", alerts.Event{Timestamp: threeDaysAgo, Type: alerts.TypeOffline, State: alerts.Raised})
+
+	w := serve(t, ListActiveAlerts(cfg), http.MethodGet, "/api/miners/alerts/active", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d", w.Code)
+	}
+	got := decode[[]alerts.Event](t, w)
+	if len(got) != 2 {
+		t.Fatalf("got %+v, want the office miner's 2 alerts in progress", got)
+	}
+	if got[0].Type != alerts.TypeFanHigh || got[0].Value != 84 || got[1].Type != alerts.TypeFirmwareUpdate || got[1].Message != "v2.15.4" {
+		t.Errorf("got %+v, want fanHigh then firmwareUpdate (most recent first), as raised", got)
+	}
+	for _, e := range got {
+		if e.Mac != "aabbccddeeff" || e.IP != "10.0.0.1" || e.Hostname != "Office" || !e.Timestamp.Equal(threeDaysAgo) && !e.Timestamp.Equal(threeDaysAgo.Add(time.Hour)) {
+			t.Errorf("event %+v, want the office miner's, raised 3 days ago", e)
+		}
+	}
+
+	none := serve(t, ListActiveAlerts(config.Config{Storage: cfg.Storage}), http.MethodGet, "/api/miners/alerts/active", "")
+	if body := strings.TrimSpace(none.Body.String()); body != "[]" {
+		t.Errorf("no miner: body = %s, want []", body)
+	}
+}
+
+// Alerts of the same poll come out the same way in every list -- by type,
+// then MAC -- whatever order they were written in, or the miners' names.
+func TestAlerts_sameOrderEverywhere(t *testing.T) {
+	cfg := config.Config{
+		Storage: config.StorageConfig{DataDir: t.TempDir()},
+		// Neither in MAC nor in name order, as miners.yml may well be.
+		Bitaxes: []config.Bitaxe{
+			{Ip: "10.0.0.3", Mac: "000000000003", Hostname: "Atchoum", Enabled: true},
+			{Ip: "10.0.0.1", Mac: "000000000001", Hostname: "Prof", Enabled: true},
+			{Ip: "10.0.0.2", Mac: "000000000002", Hostname: "Dormeur", Enabled: true},
+		},
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+	written := []alerts.Event{
+		{Mac: "000000000003", Type: alerts.TypeFirmwareUpdate},
+		{Mac: "000000000001", Type: alerts.TypeFirmwareUpdate},
+		{Mac: "000000000002", Type: alerts.TypeFirmwareUpdate},
+		{Mac: "000000000001", Type: alerts.TypeFanHigh},
+		{Mac: "000000000003", Type: alerts.TypeOffline},
+	}
+	ongoing := map[string]alerts.MinerState{}
+	for i := range written {
+		written[i].Timestamp, written[i].State = now, alerts.Raised
+		state := ongoing[written[i].Mac]
+		if state.Ongoing == nil {
+			state.Ongoing = map[string]alerts.Event{}
+		}
+		state.Ongoing[written[i].Type] = written[i]
+		ongoing[written[i].Mac] = state
+	}
+	if err := alerts.NewLog(cfg.Storage.AlertsDir()).Record(written); err != nil {
+		t.Fatal(err)
+	}
+	for mac, state := range ongoing {
+		if err := alerts.SaveState(filepath.Join(cfg.Storage.BitaxesDir(), mac), state); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	want := []string{"Prof fanHigh", "Atchoum offline", "Prof firmwareUpdate", "Dormeur firmwareUpdate", "Atchoum firmwareUpdate"}
+	order := func(events []alerts.Event) []string {
+		var got []string
+		for _, e := range events {
+			got = append(got, e.Hostname+" "+e.Type)
+		}
+		return got
+	}
+	date := now.Format("2006-01-02")
+	for name, got := range map[string][]alerts.Event{
+		"bell":        decode[AlertsResponse](t, serve(t, ListAlerts(cfg), http.MethodGet, "/api/miners/alerts", "")).Events,
+		"history":     decode[AlertHistoryResponse](t, serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date="+date, "")).Events,
+		"in progress": decode[[]alerts.Event](t, serve(t, ListActiveAlerts(cfg), http.MethodGet, "/api/miners/alerts/active", "")),
+	} {
+		if g := order(got); strings.Join(g, ", ") != strings.Join(want, ", ") {
+			t.Errorf("%s: %v, want %v", name, g, want)
+		}
+	}
+
+	// Paginated, the order is the whole day's, not each page's.
+	page2 := decode[AlertHistoryResponse](t, serve(t, ListAlertsHistory(cfg), http.MethodGet, "/api/miners/alerts/history?date="+date+"&pageSize=2&page=2", ""))
+	if g := order(page2.Events); strings.Join(g, ", ") != strings.Join(want[2:4], ", ") {
+		t.Errorf("page 2: %v, want %v", g, want[2:4])
 	}
 }

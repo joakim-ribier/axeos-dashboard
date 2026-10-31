@@ -2,10 +2,13 @@ import { type TFunction } from "i18next";
 import { describe, expect, it } from "vitest";
 
 import { type AlertEvent } from "@/schemas/minerSchema";
+import { formatTimestamp } from "@/utils/format";
 
 import {
   alertColor,
+  alertSince,
   alertText,
+  alertWhen,
   createAppUpdateAvailableNotification,
   createAutoRefreshToggledNotification,
 } from "./minerNotifications";
@@ -61,6 +64,57 @@ describe("alertText", () => {
     expect(
       alertText(t, event({ hostname: undefined, ip: undefined })),
     ).toContain('"miner":"aabbccddeeff"');
+  });
+});
+
+describe("alertWhen", () => {
+  it("is the time of a raised one", () => {
+    expect(alertWhen(t, event())).toBe(formatTimestamp("2026-10-28T10:00:00Z"));
+  });
+
+  it("is from when to when, and how long, for one that ended", () => {
+    const cleared = event({
+      ts: "2026-10-28T11:30:00Z",
+      state: "cleared",
+      raisedAt: "2026-10-28T10:00:00Z",
+    });
+    expect(alertWhen(t, cleared)).toBe(
+      `${formatTimestamp("2026-10-28T10:00:00Z")} → ${formatTimestamp("2026-10-28T11:30:00Z")} · alerts.lasted {"duration":"1h 30m"}`,
+    );
+  });
+});
+
+describe("alertWhen with a peak", () => {
+  it("adds the highest reading while it lasted", () => {
+    const cleared = event({
+      type: "fanHigh",
+      ts: "2026-10-28T11:30:00Z",
+      state: "cleared",
+      raisedAt: "2026-10-28T10:00:00Z",
+      peak: 98.6,
+    });
+    expect(alertWhen(t, cleared)).toBe(
+      `${formatTimestamp("2026-10-28T10:00:00Z")} → ${formatTimestamp("2026-10-28T11:30:00Z")} · alerts.lasted {"duration":"1h 30m"} · alerts.peak.fanHigh {"value":99}`,
+    );
+  });
+});
+
+describe("alertSince", () => {
+  it("is when it was raised, and for how long now", () => {
+    const ts = new Date(Date.now() - 90 * 60_000).toISOString();
+    expect(alertSince(t, event({ ts }))).toBe(
+      `${formatTimestamp(ts)} · alerts.ongoingFor {"duration":"1h 30m"}`,
+    );
+  });
+
+  it("adds the reading that raised it when asked", () => {
+    const ts = new Date(Date.now() - 90 * 60_000).toISOString();
+    expect(alertSince(t, event({ ts, value: 83.4 }), true)).toBe(
+      `${formatTimestamp(ts)} · alerts.ongoingFor {"duration":"1h 30m"} · alerts.atStart.tempHigh {"value":83}`,
+    );
+    expect(alertSince(t, event({ ts, type: "offline" }), true)).toBe(
+      `${formatTimestamp(ts)} · alerts.ongoingFor {"duration":"1h 30m"}`,
+    );
   });
 });
 

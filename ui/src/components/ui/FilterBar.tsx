@@ -1,6 +1,8 @@
 // src/components/ui/FilterBar.tsx
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import {
   Box,
@@ -8,6 +10,7 @@ import {
   Chip,
   Collapse,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -17,7 +20,14 @@ import {
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { format, isSameDay, isValid } from "date-fns";
+import {
+  addDays,
+  format,
+  isSameDay,
+  isValid,
+  startOfToday,
+  subDays,
+} from "date-fns";
 import { enUS, fr } from "date-fns/locale";
 
 const ALL_VALUE = "__all__";
@@ -44,6 +54,9 @@ export interface DateFilter {
   // filtering": null for an optional day, today for a page that always
   // shows one day.
   defaultValue: Date | null;
+  // Previous day / today / next day buttons beside it -- for a page that
+  // always shows one day.
+  dayNav?: boolean;
 }
 
 export type Filter = SelectFilter | DateFilter;
@@ -56,6 +69,41 @@ const isActive = (filter: Filter) =>
     ? filter.value !== ""
     : !sameDay(filter.value, filter.defaultValue);
 
+/** ‹ Today › -- a step back or forward, never past today. */
+const DayNav: React.FC<{ filter: DateFilter }> = ({ filter }) => {
+  const { t } = useTranslation();
+  const today = startOfToday();
+  const day = filter.value ?? today;
+  const isToday = isSameDay(day, today);
+
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      <IconButton
+        size="small"
+        aria-label={t("filterBar.previousDay")}
+        onClick={() => filter.onChange(subDays(day, 1))}
+      >
+        <ChevronLeftIcon fontSize="small" />
+      </IconButton>
+      <Button
+        size="small"
+        disabled={isToday}
+        onClick={() => filter.onChange(today)}
+      >
+        {t("filterBar.today")}
+      </Button>
+      <IconButton
+        size="small"
+        aria-label={t("filterBar.nextDay")}
+        disabled={isToday}
+        onClick={() => filter.onChange(addDays(day, 1))}
+      >
+        <ChevronRightIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
+};
+
 const clear = (filter: Filter) =>
   filter.kind === "select"
     ? filter.onChange("")
@@ -67,7 +115,7 @@ const clear = (filter: Filter) =>
  * each active filter as a removable chip, with the page's summary (a count)
  * on the right of that row.
  * On a phone the controls fold behind a "Filters (n)" toggle, the chips
- * staying visible.
+ * and a date's day buttons staying visible.
  */
 export const FilterBar: React.FC<{
   filters: Filter[];
@@ -81,6 +129,9 @@ export const FilterBar: React.FC<{
   const dateLocale = i18n.language.startsWith("fr") ? fr : enUS;
 
   const active = filters.filter(isActive);
+  const dayNav = filters.find(
+    (f): f is DateFilter => f.kind === "date" && !!f.dayNav,
+  );
 
   const chipLabel = (filter: Filter) => {
     if (filter.kind === "date") {
@@ -129,26 +180,31 @@ export const FilterBar: React.FC<{
             </Select>
           </FormControl>
         ) : (
-          <LocalizationProvider
+          <Box
             key={filter.id}
-            dateAdapter={AdapterDateFns}
-            adapterLocale={dateLocale}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
           >
-            <DatePicker
-              label={filter.label}
-              value={filter.value}
-              onChange={(value) =>
-                filter.onChange(
-                  value && isValid(value) ? value : filter.defaultValue,
-                )
-              }
-              disableFuture
-              // MUI closes on pick on desktop but waits for OK on mobile --
-              // forced so both close immediately.
-              closeOnSelect
-              slotProps={{ textField: { size: "small", sx: CONTROL_SX } }}
-            />
-          </LocalizationProvider>
+            <LocalizationProvider
+              dateAdapter={AdapterDateFns}
+              adapterLocale={dateLocale}
+            >
+              <DatePicker
+                label={filter.label}
+                value={filter.value}
+                onChange={(value) =>
+                  filter.onChange(
+                    value && isValid(value) ? value : filter.defaultValue,
+                  )
+                }
+                disableFuture
+                // MUI closes on pick on desktop but waits for OK on mobile --
+                // forced so both close immediately.
+                closeOnSelect
+                slotProps={{ textField: { size: "small", sx: CONTROL_SX } }}
+              />
+            </LocalizationProvider>
+            {filter.dayNav && !isMobile && <DayNav filter={filter} />}
+          </Box>
         ),
       )}
     </Box>
@@ -187,6 +243,11 @@ export const FilterBar: React.FC<{
             <FilterListIcon fontSize="small" sx={{ color: "text.secondary" }} />
             <Box sx={{ flex: 1 }}>{controls}</Box>
           </>
+        )}
+        {isMobile && dayNav && (
+          <Box sx={{ ml: "auto" }}>
+            <DayNav filter={dayNav} />
+          </Box>
         )}
         {actions && <Box sx={{ ml: "auto" }}>{actions}</Box>}
       </Box>

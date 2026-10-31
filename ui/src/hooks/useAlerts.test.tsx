@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
-import { useAlerts, useMarkAlertsSeen } from "./useAlerts";
+import { useActiveAlerts, useAlerts, useMarkAlertsSeen } from "./useAlerts";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
@@ -77,5 +77,26 @@ describe("useAlerts", () => {
       seenAt: "2026-10-28T11:00:00.000Z",
     });
     expect(result.current.alerts.data?.events).toHaveLength(1);
+  });
+
+  it("fetches the alerts in progress from /api/miners/alerts/active", async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: [
+        {
+          ts: "2026-10-25T11:00:00Z",
+          mac: "aabbccddeeff",
+          type: "firmwareUpdate",
+          state: "raised",
+          message: "v2.15.4",
+        },
+      ],
+    });
+    const { result } = renderHook(() => useActiveAlerts(), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.data).toHaveLength(1));
+    expect(mockedAxios.get).toHaveBeenCalledWith("/api/miners/alerts/active");
+    expect(result.current.data?.[0].message).toBe("v2.15.4");
   });
 });

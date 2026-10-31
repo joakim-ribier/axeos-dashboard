@@ -10,6 +10,7 @@ import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 import i18n from "@/i18n";
 import type { AlertEvent, AlertsResponse } from "@/schemas/minerSchema";
+import { formatTimestamp } from "@/utils/format";
 
 import { TopBar } from "./TopBar";
 
@@ -158,6 +159,31 @@ describe("TopBar", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
       expect(screen.getByRole("button", { name: "Clear" })).toBeInTheDocument();
+    });
+
+    it("shows from when to when an alert that ended lasted", async () => {
+      alertsResponse = {
+        events: [
+          alertEvent({
+            ts: "2026-10-28T11:00:00Z",
+            state: "cleared",
+            raisedAt: "2026-10-28T10:45:00Z",
+          }),
+        ],
+      };
+
+      const user = userEvent.setup();
+      renderTopBar();
+      await openBell(user);
+
+      expect(
+        screen.getByText("bitaxe-office is back online"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `${formatTimestamp("2026-10-28T10:45:00Z")} → ${formatTimestamp("2026-10-28T11:00:00Z")} · lasted 15m`,
+        ),
+      ).toBeInTheDocument();
     });
 
     it("counts what's newer than the server's seenAt", () => {

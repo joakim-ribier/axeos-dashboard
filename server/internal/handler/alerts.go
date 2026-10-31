@@ -2,9 +2,12 @@
 package handler
 
 import (
+	"cmp"
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"time"
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
@@ -47,11 +50,41 @@ func ListAlerts(cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		resp := AlertsResponse{Events: withCurrentNames(cfg, events)}
+		resp := AlertsResponse{Events: sortedWithCurrentNames(cfg, events)}
 		if !seenAt.IsZero() {
 			resp.SeenAt = &seenAt
 		}
 		writeJSON(w, resp)
+	}
+}
+
+// ListActiveAlerts handles GET /api/miners/alerts/active.
+//
+// @Summary List the alerts in progress
+// @Description Every alert raised and not cleared yet on an enabled miner, however long ago it was raised -- the event that raised it, most recent first.
+// @Tags Alerts
+// @Produce json
+// @Success 200 {array} alerts.Event
+// @Router /api/miners/alerts/active [get]
+func ListActiveAlerts(cfg config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		root := getDataRoot(cfg.Storage)
+		events := []alerts.Event{}
+		for _, miner := range cfg.GetMiners() {
+			key := miner.StorageKey()
+			if key == "" {
+				continue
+			}
+			state, err := alerts.LoadState(filepath.Join(root, key))
+			if err != nil {
+				continue
+			}
+			for _, e := range state.Ongoing {
+				e.Mac, e.IP, e.Hostname = key, miner.Ip, miner.DisplayName()
+				events = append(events, e)
+			}
+		}
+		writeJSON(w, sortedWithCurrentNames(cfg, events))
 	}
 }
 
@@ -134,13 +167,14 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 			}
 		}
 
+		filtered = sortedWithCurrentNames(cfg, filtered)
 		total := len(filtered)
 		page, pageSize := parsePagination(r)
 		start := min((page-1)*pageSize, total)
 		end := min(start+pageSize, total)
 
 		writeJSON(w, AlertHistoryResponse{
-			Events:   withCurrentNames(cfg, filtered[start:end]),
+			Events:   filtered[start:end],
 			Total:    total,
 			Page:     page,
 			PageSize: pageSize,
@@ -148,10 +182,15 @@ func ListAlertsHistory(cfg config.Config) http.HandlerFunc {
 	}
 }
 
-// withCurrentNames labels each event with its miner's name as configured
-// now -- an alias set since keeps applying to its past alerts. A miner no
-// longer configured keeps the name it had then.
-func withCurrentNames(cfg config.Config, events []alerts.Event) []alerts.Event {
+// sortedWithCurrentNames labels each event with its miner's name as
+// configured now -- an alias set since keeps applying to its past alerts; a
+// miner no longer configured keeps the name it had then -- and sorts them
+// the one way every list shows them: most recent first, then in
+// alerts.Types' order -- the problems before a firmware update, the same
+// one on several miners together -- then by MAC. Only what never changes:
+// neither when they were written, nor a rename, nor the config's order
+// moves a line.
+func sortedWithCurrentNames(cfg config.Config, events []alerts.Event) []alerts.Event {
 	names := make(map[string]string)
 	for _, miner := range cfg.Bitaxes {
 		names[miner.StorageKey()] = miner.DisplayName()
@@ -161,6 +200,13 @@ func withCurrentNames(cfg config.Config, events []alerts.Event) []alerts.Event {
 			events[i].Hostname = name
 		}
 	}
+	slices.SortFunc(events, func(a, b alerts.Event) int {
+		return cmp.Or(
+			b.Timestamp.Compare(a.Timestamp),
+			cmp.Compare(slices.Index(alerts.Types, a.Type), slices.Index(alerts.Types, b.Type)),
+			cmp.Compare(a.Mac, b.Mac),
+		)
+	})
 	if events == nil {
 		events = []alerts.Event{}
 	}

@@ -17,7 +17,9 @@ default, or any other day via the calendar. Available from the sidebar.
 
 An alert only shows up when its state changes: one row when it starts
 (red, orange for a firmware update), one row when it ends (green), with
-how long it lasted. Nothing in between: a temperature staying high for
+since when, how long it lasted and, for temperature and fan, the highest
+reading reached (e.g. "10/28 2:18 PM → 10/28 4:28 PM · lasted 2h 10m ·
+peak 99%"). Nothing in between: a temperature staying high for
 hours takes two rows.
 
 So that a reading hovering around a threshold doesn't raise an alert on
@@ -27,9 +29,20 @@ polls in a row.
 
 The same changes of state feed the bell's notifications.
 
-Filterable by miner, by type and by day. Each active filter shows up as
-a chip below the bar: its cross removes it, **Clear all** removes them
-all.
+Alerts **in progress** — started and not ended yet, however old — stay at
+the top of the page, above the history of the day picked, with since when
+they've lasted; for temperature and fan, the reading shown is the
+miner's latest one, with the one at the start (e.g. "Atchoum fan speed
+reached 99% · 10/26 2:18 PM · for 3j 2h 0m · 83% at the start"). Their count also
+shows as a badge on the menu's Alerts entry: red as soon as one is a
+problem, orange when only firmware updates are left, "9+" past 9. It only
+goes down when an alert ends.
+
+Filterable by miner, by type and by day (the alerts in progress follow
+the miner and the type). Beside the day, **‹** and **›** step to the
+previous or next day and **Today** goes back to it — on a phone, they stay
+in sight with the filters folded. Each active filter shows up as a chip
+below the bar: its cross removes it, **Clear all** removes them all.
 
 ## ⚠️ Alert types
 {: #types }

@@ -3,17 +3,23 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { format } from "date-fns";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { format, subDays } from "date-fns";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModeProvider } from "@/contexts/ModeContext";
 import i18n from "@/i18n";
+import { formatTimestamp } from "@/utils/format";
 
 import { Alerts } from "./Alerts";
 
 const mockUseAlertsHistory = vi.fn();
 vi.mock("@/hooks/useAlertsHistory", () => ({
   useAlertsHistory: (...args: unknown[]) => mockUseAlertsHistory(...args),
+}));
+
+let activeAlerts: unknown[] = [];
+vi.mock("@/hooks/useAlerts", () => ({
+  useActiveAlerts: () => ({ data: activeAlerts }),
 }));
 
 const mockUseMiners = vi.fn();
@@ -54,6 +60,7 @@ function renderAlerts(initialEntry = "/alerts") {
 
 describe("Alerts page", () => {
   beforeEach(() => {
+    activeAlerts = [];
     mockUseAppInfo.mockReturnValue({ hashboardUrl: null });
     mockUseMiners.mockReturnValue({
       data: [
@@ -120,11 +127,119 @@ describe("Alerts page", () => {
     expect(
       within(rows[0]).getByText("bitaxe-office temperature back to normal"),
     ).toBeInTheDocument();
-    expect(rows[0]).toHaveTextContent("lasted 1h 30m");
+    expect(rows[0]).toHaveTextContent(
+      `${formatTimestamp("2026-07-22T10:00:00Z")} → ${formatTimestamp("2026-07-22T11:30:00Z")} · lasted 1h 30m`,
+    );
     expect(
       within(rows[1]).getByText("bitaxe-office temperature reached 65°C"),
     ).toBeInTheDocument();
     expect(rows[1]).not.toHaveTextContent("lasted");
+  });
+
+  describe("in progress", () => {
+    const noHistory = () =>
+      mockUseAlertsHistory.mockReturnValue({
+        data: { events: [], total: 0, page: 1, pageSize: 50 },
+        isLoading: false,
+        isPlaceholderData: false,
+        error: null,
+      });
+    const threeDaysAgo = new Date(
+      Date.now() - (3 * 24 + 2) * 3600_000,
+    ).toISOString();
+
+    beforeEach(() => {
+      activeAlerts = [
+        {
+          ts: threeDaysAgo,
+          mac: "aabbccddeeff",
+          ip: "10.0.0.1",
+          hostname: "bitaxe-office",
+          type: "firmwareUpdate",
+          state: "raised",
+          message: "v2.15.4",
+        },
+        {
+          ts: threeDaysAgo,
+          mac: "112233445566",
+          ip: "10.0.0.2",
+          hostname: "bitaxe-garage",
+          type: "fanHigh",
+          state: "raised",
+          value: 84.4,
+        },
+      ];
+    });
+
+    it("lists what's still in progress on top, whatever the day, and since when", () => {
+      noHistory();
+      renderAlerts();
+
+      expect(screen.getByText("In progress (2)")).toBeInTheDocument();
+      const rows = screen.getAllByTestId("ongoing-alert-row");
+      expect(rows).toHaveLength(2);
+      expect(
+        within(rows[0]).getByText("bitaxe-office: firmware v2.15.4 available"),
+      ).toBeInTheDocument();
+      expect(rows[0]).toHaveTextContent(
+        `${formatTimestamp(threeDaysAgo)} · for 3j 2h 0m`,
+      );
+      expect(
+        within(rows[1]).getByText("bitaxe-garage fan speed reached 84%"),
+      ).toBeInTheDocument();
+      // The day's own history still follows.
+      expect(screen.getByText("History of the day picked")).toBeInTheDocument();
+      expect(
+        screen.getByText("No alerts match these filters."),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the miner's current reading, and the one it started at", () => {
+      mockUseMiners.mockReturnValue({
+        data: [
+          { ip: "10.0.0.1", hostname: "bitaxe-office" },
+          { ip: "10.0.0.2", hostname: "bitaxe-garage", fanspeed: 99, temp: 60 },
+        ],
+        isLoading: false,
+        error: null,
+      });
+      noHistory();
+      renderAlerts();
+
+      const fan = screen.getAllByTestId("ongoing-alert-row")[1];
+      expect(
+        within(fan).getByText("bitaxe-garage fan speed reached 99%"),
+      ).toBeInTheDocument();
+      expect(fan).toHaveTextContent("84% at the start");
+      // Nothing measured for a firmware update: as raised.
+      expect(
+        screen.getAllByTestId("ongoing-alert-row")[0],
+      ).not.toHaveTextContent("at the start");
+    });
+
+    it("follows the miner and type filters", async () => {
+      noHistory();
+      const user = userEvent.setup();
+      renderAlerts();
+
+      await user.click(screen.getByText("All alert types"));
+      const listbox = await screen.findByRole("listbox");
+      await user.click(within(listbox).getByText("Fan speed"));
+
+      expect(await screen.findByText("In progress (1)")).toBeInTheDocument();
+      expect(screen.getAllByTestId("ongoing-alert-row")).toHaveLength(1);
+    });
+
+    it("shows no section when nothing is in progress", () => {
+      activeAlerts = [];
+      noHistory();
+      renderAlerts();
+
+      expect(screen.queryByText(/In progress/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("History of the day picked"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   it("shows the summary and pagination when there is more than one page", () => {
@@ -315,6 +430,114 @@ describe("Alerts page", () => {
     expect(
       screen.queryByRole("button", { name: "Clear all" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("day buttons", () => {
+    const iso = (d: Date) => format(d, "yyyy-MM-dd");
+    const lastDate = () =>
+      (mockUseAlertsHistory.mock.lastCall?.[0] as { date: string }).date;
+
+    beforeEach(() => {
+      mockUseAlertsHistory.mockReturnValue({
+        data: { events: [], total: 0, page: 1, pageSize: 50 },
+        isLoading: false,
+        isPlaceholderData: false,
+        error: null,
+      });
+    });
+
+    it("steps back a day, then forward, and back to today -- never past it", async () => {
+      const user = userEvent.setup();
+      renderAlerts();
+      const previous = screen.getByRole("button", { name: "Previous day" });
+      const next = screen.getByRole("button", { name: "Next day" });
+      const today = screen.getByRole("button", { name: "Today" });
+
+      expect(next).toBeDisabled();
+      expect(today).toBeDisabled();
+
+      await user.click(previous);
+      await user.click(previous);
+      await waitFor(() => expect(lastDate()).toBe(iso(subDays(new Date(), 2))));
+      expect(next).toBeEnabled();
+
+      await user.click(next);
+      await waitFor(() => expect(lastDate()).toBe(iso(subDays(new Date(), 1))));
+
+      await user.click(today);
+      await waitFor(() => expect(lastDate()).toBe(iso(new Date())));
+      expect(next).toBeDisabled();
+    });
+
+    it("goes back to page 1", async () => {
+      mockUseAlertsHistory.mockReturnValue({
+        data: {
+          events: [
+            {
+              ts: "2026-07-22T10:00:00Z",
+              mac: "aabbccddeeff",
+              type: "offline",
+              state: "raised",
+            },
+          ],
+          total: 120,
+          page: 1,
+          pageSize: 50,
+        },
+        isLoading: false,
+        isPlaceholderData: false,
+        error: null,
+      });
+      const user = userEvent.setup();
+      renderAlerts();
+
+      await user.click(screen.getByRole("button", { name: /next page/i }));
+      await user.click(screen.getByRole("button", { name: "Previous day" }));
+
+      await waitFor(() =>
+        expect(mockUseAlertsHistory).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            page: 1,
+            date: iso(subDays(new Date(), 1)),
+          }),
+        ),
+      );
+    });
+
+    describe("on a phone", () => {
+      beforeEach(() => {
+        vi.spyOn(window, "matchMedia").mockImplementation(
+          (query) =>
+            ({
+              matches: true,
+              media: query,
+              addListener: () => {},
+              removeListener: () => {},
+              addEventListener: () => {},
+              removeEventListener: () => {},
+            }) as unknown as MediaQueryList,
+        );
+      });
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it("keeps them in sight, the other filters folded", async () => {
+        const user = userEvent.setup();
+        renderAlerts();
+
+        expect(screen.queryByText("All alert types")).not.toBeInTheDocument();
+        await user.click(screen.getByRole("button", { name: "Previous day" }));
+
+        await waitFor(() =>
+          expect(lastDate()).toBe(iso(subDays(new Date(), 1))),
+        );
+        // The day shown, as a chip.
+        expect(
+          screen.getByText(`Date: ${format(subDays(new Date(), 1), "P")}`),
+        ).toBeInTheDocument();
+      });
+    });
   });
 
   describe("date filter", () => {

@@ -30,6 +30,7 @@ import { formatTimestamp } from "@/utils/format";
 import {
   alertColor,
   alertText,
+  alertWhen,
   createAutoRefreshToggledNotification,
 } from "@/utils/minerNotifications";
 
@@ -108,6 +109,7 @@ interface BellItem {
   timestamp: number;
   color?: string;
   text: string;
+  when: string;
 }
 
 /**
@@ -131,11 +133,13 @@ const NotificationBell: React.FC = () => {
       timestamp: Date.parse(event.ts),
       color: alertColor(event),
       text: alertText(t, event),
+      when: alertWhen(t, event),
     })),
     ...local.map((n) => ({
       id: n.id,
       timestamp: n.timestamp,
       text: t(`notifications.${n.type}`, { value: n.detail }),
+      when: formatTimestamp(String(n.timestamp)),
     })),
   ]
     .filter((n) => n.timestamp > clearedAt)
@@ -252,7 +256,7 @@ const NotificationBell: React.FC = () => {
                     color="text.secondary"
                     sx={{ fontSize: "0.7rem" }}
                   >
-                    {formatTimestamp(String(n.timestamp))}
+                    {n.when}
                   </Typography>
                 </Box>
               </Box>

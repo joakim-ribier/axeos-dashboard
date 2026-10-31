@@ -15,6 +15,7 @@ import PublicIcon from "@mui/icons-material/Public";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {
+  Badge,
   Box,
   Chip,
   Drawer,
@@ -29,6 +30,7 @@ import {
 } from "@mui/material";
 
 import { useNotifications } from "@/contexts/NotificationsContext";
+import { useActiveAlerts } from "@/hooks/useAlerts";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import {
@@ -240,6 +242,8 @@ interface NavItemProps {
   disabledHint?: string;
   /** Icon only, its label moving to a tooltip -- the collapsed rail. */
   collapsed?: boolean;
+  /** A count on the icon, shown from 1 up to 9+. */
+  badge?: { count: number; color: "error" | "warning" };
 }
 
 const NavItem: React.FC<NavItemProps> = ({
@@ -251,6 +255,7 @@ const NavItem: React.FC<NavItemProps> = ({
   disabled = false,
   disabledHint,
   collapsed = false,
+  badge,
 }) => {
   const button = (
     <ListItemButton
@@ -287,7 +292,18 @@ const NavItem: React.FC<NavItemProps> = ({
           justifyContent: "center",
         }}
       >
-        {icon}
+        {badge ? (
+          <Badge
+            badgeContent={badge.count}
+            max={9}
+            color={badge.color}
+            data-testid={`${to}-badge`}
+          >
+            {icon}
+          </Badge>
+        ) : (
+          icon
+        )}
       </ListItemIcon>
       {!collapsed && (
         <ListItemText
@@ -519,6 +535,17 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   collapsed = false,
   onToggleCollapsed,
 }) => {
+  const { data: activeAlerts = [] } = useActiveAlerts();
+  const alertsBadge =
+    activeAlerts.length > 0
+      ? {
+          count: activeAlerts.length,
+          color: activeAlerts.some((a) => a.type !== "firmwareUpdate")
+            ? ("error" as const)
+            : ("warning" as const),
+        }
+      : undefined;
+
   const { t } = useTranslation();
   const location = useLocation();
   const { ui } = useUiFeatures();
@@ -612,6 +639,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           label={t("nav.alerts")}
           onClick={onItemClick}
           collapsed={collapsed}
+          badge={alertsBadge}
         />
         {/* Hidden outright (not just greyed out) when this instance's own
             config says so (ui.page.settings: hidden, see config.UIConfig)

@@ -21,6 +21,11 @@ vi.mock("@/hooks/useMiners", () => ({
   useUiFeatures: () => mockUseUiFeatures(),
 }));
 
+let activeAlerts: { type: string }[] = [];
+vi.mock("@/hooks/useAlerts", () => ({
+  useActiveAlerts: () => ({ data: activeAlerts }),
+}));
+
 const mockUseRemoteBoard = vi.fn();
 vi.mock("@/hooks/useRemoteBoard", () => ({
   useRemoteBoard: () => mockUseRemoteBoard(),
@@ -53,6 +58,7 @@ function renderSidebar(initialEntry: string) {
 describe("Sidebar", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    activeAlerts = [];
     mockUseRemoteBoard.mockReturnValue({ data: undefined });
     mockUseAppInfo.mockReturnValue({
       buildSHA: undefined,
@@ -401,6 +407,49 @@ describe("Sidebar", () => {
         window.localStorage.getItem("axeos.notifications") ?? "[]",
       );
       expect(stored).toHaveLength(1);
+    });
+  });
+
+  describe("alerts badge", () => {
+    // The closed mobile drawer stays mounted too: the desktop one is last.
+    const badge = () => screen.queryAllByTestId("/alerts-badge").at(-1);
+    const content = () =>
+      badge()?.querySelector(".MuiBadge-badge") as HTMLElement | null;
+
+    it("shows nothing when no alert is in progress", () => {
+      renderSidebar("/");
+
+      expect(badge()).toBeUndefined();
+    });
+
+    it("counts the alerts in progress, red as soon as one is a problem", () => {
+      activeAlerts = [{ type: "firmwareUpdate" }, { type: "fanHigh" }];
+      renderSidebar("/");
+
+      expect(content()?.textContent).toBe("2");
+      expect(content()?.className).toContain("MuiBadge-colorError");
+    });
+
+    it("is orange when only firmware updates are left", () => {
+      activeAlerts = [{ type: "firmwareUpdate" }, { type: "firmwareUpdate" }];
+      renderSidebar("/");
+
+      expect(content()?.className).toContain("MuiBadge-colorWarning");
+    });
+
+    it("stops at 9+", () => {
+      activeAlerts = Array.from({ length: 12 }, () => ({ type: "offline" }));
+      renderSidebar("/");
+
+      expect(content()?.textContent).toBe("9+");
+    });
+
+    it("stays on the icon in the collapsed rail", () => {
+      window.localStorage.setItem("axeos.sidebarCollapsed", "true");
+      activeAlerts = [{ type: "offline" }];
+      renderSidebar("/");
+
+      expect(content()?.textContent).toBe("1");
     });
   });
 

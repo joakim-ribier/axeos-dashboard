@@ -629,6 +629,29 @@
                 }
             }
         },
+        "/api/miners/alerts/active": {
+            "get": {
+                "description": "Every alert raised and not cleared yet on an enabled miner, however long ago it was raised -- the event that raised it, most recent first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Alerts"
+                ],
+                "summary": "List the alerts in progress",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/alerts.Event"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/miners/alerts/history": {
             "get": {
                 "description": "Every alert raised or cleared on the given UTC day, across every miner, most recent first, optionally filtered by ip/type.",
@@ -1037,8 +1060,11 @@
                 "message": {
                     "type": "string"
                 },
+                "peak": {
+                    "type": "number"
+                },
                 "raisedAt": {
-                    "description": "Cleared only: when it was raised.",
+                    "description": "Cleared only: when it was raised, and the highest reading meanwhile\n(temp/fan).",
                     "type": "string"
                 },
                 "state": {

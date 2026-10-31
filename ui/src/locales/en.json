@@ -186,12 +186,22 @@
       "offline": "{{miner}} is back online",
       "macMismatch": "{{miner}}: the right device answers again",
       "firmwareUpdate": "{{miner}} firmware is up to date"
+    },
+    "lasted": "lasted {{duration}}",
+    "ongoingFor": "for {{duration}}",
+    "peak": {
+      "tempHigh": "peak {{value}}°C",
+      "fanHigh": "peak {{value}}%"
+    },
+    "atStart": {
+      "tempHigh": "{{value}}°C at the start",
+      "fanHigh": "{{value}}% at the start"
     }
   },
   "alertsPage": {
     "header": {
       "title": "Alerts",
-      "description": "Alerts for the selected day, across every miner"
+      "description": "Alerts in progress and history of the day picked, across every miner"
     },
     "filters": {
       "ipLabel": "IP",
@@ -208,8 +218,9 @@
       "firmwareUpdate": "Firmware update"
     },
     "empty": "No alerts match these filters.",
+    "ongoing": "In progress ({{count}})",
+    "history": "History of the day picked",
     "shownCount": "{{count}} shown of {{total}}",
-    "lasted": "lasted {{duration}}",
     "summary": "{{from}}–{{to}} of {{total}}",
     "pagination": {
       "rowsPerPage": "Rows per page:"
@@ -401,7 +412,10 @@
   "filterBar": {
     "filters": "Filters",
     "clearAll": "Clear all",
-    "chip": "{{label}}: {{value}}"
+    "chip": "{{label}}: {{value}}",
+    "previousDay": "Previous day",
+    "today": "Today",
+    "nextDay": "Next day"
   },
   "topBar": {
     "autoRefreshOn": "Auto-refresh is on",

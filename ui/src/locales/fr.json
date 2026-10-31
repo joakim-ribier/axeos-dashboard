@@ -186,12 +186,22 @@
       "offline": "{{miner}} est de nouveau en ligne",
       "macMismatch": "{{miner}} : le bon appareil répond de nouveau",
       "firmwareUpdate": "{{miner}} : firmware à jour"
+    },
+    "lasted": "a duré {{duration}}",
+    "ongoingFor": "depuis {{duration}}",
+    "peak": {
+      "tempHigh": "pic à {{value}}°C",
+      "fanHigh": "pic à {{value}}%"
+    },
+    "atStart": {
+      "tempHigh": "{{value}}°C au début",
+      "fanHigh": "{{value}}% au début"
     }
   },
   "alertsPage": {
     "header": {
       "title": "Alertes",
-      "description": "Alertes du jour sélectionné, tous mineurs confondus"
+      "description": "Alertes en cours et historique du jour choisi, tous mineurs confondus"
     },
     "filters": {
       "ipLabel": "IP",
@@ -208,8 +218,9 @@
       "firmwareUpdate": "Mise à jour firmware"
     },
     "empty": "Aucune alerte ne correspond à ces filtres.",
+    "ongoing": "En cours ({{count}})",
+    "history": "Historique du jour choisi",
     "shownCount": "{{count}} affichées sur {{total}}",
-    "lasted": "a duré {{duration}}",
     "summary": "{{from}}–{{to}} sur {{total}}",
     "pagination": {
       "rowsPerPage": "Lignes par page :"
@@ -401,7 +412,10 @@
   "filterBar": {
     "filters": "Filtres",
     "clearAll": "Tout effacer",
-    "chip": "{{label}} : {{value}}"
+    "chip": "{{label}} : {{value}}",
+    "previousDay": "Jour précédent",
+    "today": "Aujourd'hui",
+    "nextDay": "Jour suivant"
   },
   "topBar": {
     "autoRefreshOn": "Actualisation auto activée",

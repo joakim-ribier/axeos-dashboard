@@ -5,6 +5,8 @@ import axios from "axios";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 
 import {
+  type AlertEvent,
+  alertEventSchema,
   type AlertsResponse,
   alertsResponseSchema,
 } from "../schemas/minerSchema";
@@ -28,6 +30,29 @@ export const useAlerts = () => {
     queryFn: fetchAlerts,
     staleTime: Infinity,
     refetchInterval: autoRefreshEnabled ? 90_000 : false,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+};
+
+const ACTIVE_ALERTS_PATH = `${ALERTS_PATH}/active`;
+
+export const fetchActiveAlerts = async (): Promise<AlertEvent[]> => {
+  const { data } = await axios.get<unknown[]>(ACTIVE_ALERTS_PATH);
+  return data.map((raw) => alertEventSchema.parse(raw));
+};
+
+/** The alerts in progress, however long ago they were raised -- the
+ * sidebar's badge and the top of the Alerts page. */
+export const useActiveAlerts = () => {
+  const { autoRefreshEnabled } = useRefreshSettings();
+
+  return useQuery<AlertEvent[], Error>({
+    queryKey: ["alerts", ACTIVE_ALERTS_PATH],
+    queryFn: fetchActiveAlerts,
+    staleTime: Infinity,
+    refetchInterval: autoRefreshEnabled ? 90_000 : false,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
     retry: false,
   });
