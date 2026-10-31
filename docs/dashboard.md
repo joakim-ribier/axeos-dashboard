@@ -81,8 +81,9 @@ subnav:
 9. **Version** — SHA du build actuellement déployé.
 10. **Mise à jour disponible** — n'apparaît que si une nouvelle version du
     dashboard est disponible sur GitHub ; clic pour ouvrir la release.
-11. **Replier** — réduit le menu à une colonne d'icônes, le nom de chaque
-    page en infobulle ; le choix est gardé par le navigateur.
+11. **Replier** — réduit le menu à une colonne d'icônes, l'icône de l'app
+    en haut et le nom de chaque page en infobulle ; le choix est gardé par
+    le navigateur.
 
 </div>
 

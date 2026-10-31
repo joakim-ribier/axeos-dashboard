@@ -82,8 +82,8 @@ subnav:
 9. **Version** — the currently deployed build's SHA.
 10. **Update available** — only shows up if a newer dashboard version is
     available on GitHub; click to open the release.
-11. **Fold** — narrows the sidebar to a column of icons, each page's name
-    in a tooltip; the browser keeps the choice.
+11. **Fold** — narrows the sidebar to a column of icons, the app's icon on
+    top and each page's name in a tooltip; the browser keeps the choice.
 
 </div>
 
