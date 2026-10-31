@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alertmail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
 
@@ -173,5 +174,33 @@ func TestGetAppSettings_neverReturnsTheSMTPPassword(t *testing.T) {
 	}
 	if smtp["passwordSet"] != true || smtp["host"] != "smtp.example.com" {
 		t.Errorf("smtp = %v, want the server shown with passwordSet: true", smtp)
+	}
+}
+
+func TestGetAppSettings_alertsMail(t *testing.T) {
+	dir := t.TempDir()
+	cfg := config.Config{Storage: config.StorageConfig{DataDir: dir}}
+	if err := alertmail.Save(cfg.Storage.MailDir(), alertmail.State{LastError: "535 bad credentials"}); err != nil {
+		t.Fatal(err)
+	}
+	settings := withSMTP(storedSMTP, "me@example.com")
+	settings.Notifications.Alerts.Mail = true
+	w := httptest.NewRecorder()
+
+	GetAppSettings(cfg, settings, w, httptest.NewRequest(http.MethodGet, "/api/config/settings", nil))
+
+	var resp struct {
+		Notifications struct {
+			Alerts config.AlertsConfig `json:"alerts"`
+		} `json:"notifications"`
+		ReadOnly struct {
+			AlertsMail alertsMailStatus `json:"alertsMail"`
+		} `json:"readOnly"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Notifications.Alerts.Mail || resp.ReadOnly.AlertsMail.LastError != "535 bad credentials" {
+		t.Errorf("got %+v, want the switch on and the mailer's last error", resp)
 	}
 }

@@ -131,17 +131,18 @@ Separate `cmd/` binaries sharing `internal/` packages:
 
 | Package | Role |
 |---|---|
-| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, track alerts (`internal/alerts`), push to hashboard; hourly, add any completed day not yet backed up to its month's archive |
+| `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, track alerts (`internal/alerts`), push to hashboard, hand the poll's new alerts to the mailer in the background (when `notifications.alerts.mail` is on); hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
-| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk; its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
+| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk, and the alerts mail the feeder hands it after a poll (`POST /api/mailer/alerts`: the alerts it raised, one HTML mail -- `alertmail`); its test route also sends an example alerts mail (`kind: "alert"`); its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
 | `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()`, `Restart()` — calls bitaxe client, always restarts to apply a config change |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
 | `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis (temp > 62 / < 60, fan > 75 / < 70), offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
 | `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
-| `internal/mailtemplate/` | The mails' wording, as editable text files: built-in ones embedded (`templates/*.txt`, one per mail and language), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
-| `internal/mail/` | SMTP sending, standard library only (`Send`: STARTTLS / TLS / plain, optional auth, 15s timeout, UTF-8 headers); `mailtest` is a fake SMTP server for tests |
+| `internal/alertmail/` | The alerts mail: `Build` (the HTML template filled + a generated text version + the logo inline), `State` on disk (`data/mail/alerts-mail.json`: last sent, last error, for the Notifications page); a failure is audited (`alert_mail`), a mail sent isn't, nothing is retried |
+| `internal/mailtemplate/` | The mails' wording, as editable files: built-in ones embedded (`templates/*.txt`, one per mail and language; `alert.*.html`, a Go `html/template` whose `<title>` is the subject, see `RenderHTML`), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
+| `internal/mail/` | SMTP sending, standard library only (`Send`: STARTTLS / TLS / plain, optional auth, 15s timeout, UTF-8 headers; with `HTML`, a multipart/alternative text + HTML, inline images by Content-ID); `mailtest` is a fake SMTP server for tests |
 | `internal/backup/` | Monthly zip archives (`ArchiveCompletedDays`, `List`, `Merge`); a past month becomes final once its MD5 is in `checksums.md5` |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
@@ -163,7 +164,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/info` | `Info()` | Build/version info |
 | `GET` | `/api/miners` | `ListMiners()` | All miners + latest snapshot |
 | `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alert changes (raised / cleared) across miners, and `seenAt` -- the bell |
-| `GET` | `/api/miners/alerts/active` | `ListActiveAlerts()` | Alerts in progress on enabled miners, however old; every alerts list is sorted date desc → type (`alerts.Types` order) → MAC (each miner's `alerts.json`) -- the Alerts page's top section and the sidebar's badge |
+| `GET` | `/api/miners/alerts/active` | `ListActiveAlerts()` | Alerts in progress on enabled miners, however old; every alerts list is sorted date desc → type (`alerts.Types` order, most serious first: offline, macMismatch, tempHigh, fanHigh, firmwareUpdate) → MAC (each miner's `alerts.json`) -- the Alerts page's top section and the sidebar's badge |
 | `POST` | `/api/miners/alerts/seen` | `MarkAlertsSeen()` | Marks the alerts read up to `seenAt` (`data/alerts/seen.json`, never moves back) -- for every browser |
 | `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One UTC day's alert changes, paginated, `ip`/`type` filters -- the Alerts page |
 | `GET` | `/api/miners/history` | `History()` | Last 24h of every miner's hashrate, in 96 buckets of 15 min (0 = offline, null = no reading) |
@@ -325,6 +326,8 @@ notifications:                  # Configuration > Notifications; never pushed to
     frequency: weekly           # daily | every2days | weekly | monthly
     types: []                   # empty = every audit type
     skipIfEmpty: true
+  alerts:
+    mail: true                  # one mail per feeder poll that raises alerts (the feeder calls the mailer)
 ```
 
 ```yaml

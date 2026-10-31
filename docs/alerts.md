@@ -27,7 +27,10 @@ alerte à chaque relevé, le retour à la normale se fait sous un seuil plus
 bas que le déclenchement (voir le tableau ci-dessous). Un mineur n'est
 déclaré hors ligne qu'après 2 relevés manqués de suite.
 
-Les mêmes changements d'état alimentent les notifications de la cloche.
+Les mêmes changements d'état alimentent les notifications de la cloche,
+et un mail à chaque nouvelle alerte si
+[Configuration › Notifications]({{ '/configuration.html#notifications' | relative_url }})
+l'active.
 
 Les alertes **en cours** — commencées et pas encore terminées, quel que
 soit leur âge — restent en haut de la page, au-dessus de l'historique du

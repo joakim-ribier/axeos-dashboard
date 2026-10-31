@@ -27,7 +27,10 @@ every poll, it clears under a lower threshold than the one that raised it
 (see the table below). A miner is only reported offline after 2 missed
 polls in a row.
 
-The same changes of state feed the bell's notifications.
+The same changes of state feed the bell's notifications, and a mail on
+every new alert when
+[Configuration › Notifications]({{ '/en/configuration.html#notifications' | relative_url }})
+turns it on.
 
 Alerts **in progress** — started and not ended yet, however old — stay at
 the top of the page, above the history of the day picked, with since when

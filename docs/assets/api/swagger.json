@@ -285,12 +285,15 @@
                 "summary": "Send a test mail",
                 "parameters": [
                     {
-                        "description": "Mail language (fr or en, default en)",
+                        "description": "Mail language (fr or en, default en), and kind (alert: an example of the alerts mail)",
                         "name": "request",
                         "in": "body",
                         "schema": {
                             "type": "object",
                             "properties": {
+                                "kind": {
+                                    "type": "string"
+                                },
                                 "lang": {
                                     "type": "string"
                                 }
@@ -494,6 +497,74 @@
                 }
             }
         },
+        "/api/mailer/alerts": {
+            "post": {
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): mails the alerts a feeder poll just raised, all in one mail. Called by the feeder after a poll, when Configuration › Notifications turns the alerts mail on.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mailer"
+                ],
+                "summary": "Send an alerts mail (mailer)",
+                "parameters": [
+                    {
+                        "description": "The alerts raised",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/main.alertsMailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.testMailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "no alert, or SMTP server or recipients not configured",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "the SMTP server refused or couldn't be reached",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/mailer/status": {
             "get": {
                 "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): since when it runs, and when its loop last looked for a mail to send (once a minute). Read through dashboard-api's GET /api/status.",
@@ -516,7 +587,7 @@
         },
         "/api/mailer/test": {
             "post": {
-                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server. Reached through dashboard-api's POST /api/config/mail/test.",
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind \"alert\", an example of the alerts mail with made-up alerts. Reached through dashboard-api's POST /api/config/mail/test.",
                 "consumes": [
                     "application/json"
                 ],
@@ -529,7 +600,7 @@
                 "summary": "Send a test mail (mailer)",
                 "parameters": [
                     {
-                        "description": "Mail language (fr or en, default en)",
+                        "description": "Mail language (fr or en, default en), and kind (alert for the alerts mail)",
                         "name": "request",
                         "in": "body",
                         "schema": {
@@ -1208,6 +1279,15 @@
                 }
             }
         },
+        "config.AlertsConfig": {
+            "type": "object",
+            "properties": {
+                "mail": {
+                    "description": "Mail sends one mail per feeder poll that raised alerts -- never for\none that ends.",
+                    "type": "boolean"
+                }
+            }
+        },
         "config.AppSettingsFile": {
             "type": "object",
             "properties": {
@@ -1365,6 +1445,9 @@
         "config.NotificationsConfig": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "$ref": "#/definitions/config.AlertsConfig"
+                },
                 "auditReport": {
                     "$ref": "#/definitions/config.AuditReportConfig"
                 },
@@ -1736,6 +1819,17 @@
                 }
             }
         },
+        "handler.alertsMailStatus": {
+            "type": "object",
+            "properties": {
+                "lastError": {
+                    "type": "string"
+                },
+                "lastSentAt": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.appSettingsDefaults": {
             "type": "object",
             "properties": {
@@ -1750,8 +1844,16 @@
         "handler.appSettingsReadOnly": {
             "type": "object",
             "properties": {
+                "alertsMail": {
+                    "description": "AlertsMail is the mailer's record of the alerts mails (see\nalertmail.State).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/handler.alertsMailStatus"
+                        }
+                    ]
+                },
                 "auditReport": {
-                    "description": "AuditReport is the feeder's record of the daily audit mail (see\nauditreport.State), read back from disk -- the feeder sends it.",
+                    "description": "AuditReport is the mailer's record of the audit report (see\nauditreport.State), read back from disk -- the mailer sends it.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/handler.auditReportStatus"
@@ -1881,6 +1983,9 @@
         "handler.notificationsResponse": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "$ref": "#/definitions/config.AlertsConfig"
+                },
                 "auditReport": {
                     "$ref": "#/definitions/handler.auditReportSettingsResponse"
                 },
@@ -1919,6 +2024,18 @@
                 }
             }
         },
+        "main.alertsMailRequest": {
+            "type": "object",
+            "properties": {
+                "alerts": {
+                    "description": "Alerts are the ones a feeder poll just raised.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/alerts.Event"
+                    }
+                }
+            }
+        },
         "main.statusResponse": {
             "type": "object",
             "properties": {
@@ -1934,6 +2051,10 @@
         "main.testMailRequest": {
             "type": "object",
             "properties": {
+                "kind": {
+                    "description": "Kind \"alert\" sends an example of the alerts mail instead, with\nmade-up alerts.",
+                    "type": "string"
+                },
                 "lang": {
                     "description": "Lang picks the mail's language, the dashboard's own (\"fr\" or \"en\").",
                     "type": "string"

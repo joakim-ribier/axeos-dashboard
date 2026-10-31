@@ -219,7 +219,8 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 
 // notificationsChanges is what changed in the notifications: the SMTP
 // server's fields (the password only ever as "changed"), the recipients
-// added or removed, how the messages read, and the audit report.
+// added or removed, how the messages read, the audit report and the alerts
+// mail.
 func notificationsChanges(before, after config.NotificationsConfig) []Change {
 	b, a := before.Mail.SMTP, after.Mail.SMTP
 	changes := compareFields([][3]string{
@@ -241,6 +242,7 @@ func notificationsChanges(before, after config.NotificationsConfig) []Change {
 		{"auditReportEnabled", onOff(br.Enabled), onOff(ar.Enabled)},
 		{"auditReportFrequency", string(br.Frequency), string(ar.Frequency)},
 		{"auditReportSkipIfEmpty", onOff(br.SkipIfEmpty), onOff(ar.SkipIfEmpty)},
+		{"alertsMail", onOff(before.Alerts.Mail), onOff(after.Alerts.Mail)},
 	})...)
 	return append(changes, listChanges(br.Types, ar.Types, "auditReportTypeAdded", "auditReportTypeRemoved")...)
 }

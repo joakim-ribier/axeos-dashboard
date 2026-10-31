@@ -176,6 +176,12 @@ failure with its error message). A failed action is recorded too.
       <td>at night, by the mailer, at the frequency chosen in Settings › Notifications</td>
       <td>the period covered and the recipients; the error if it failed</td>
     </tr>
+    <tr>
+      <td><code>alert_mail</code></td>
+      <td>Alerts mail not sent</td>
+      <td>by the mailer, when the mail of a poll's new alerts couldn't go out (only the failures are recorded)</td>
+      <td>the poll concerned and the error</td>
+    </tr>
   </tbody>
 </table>
 
@@ -353,6 +359,7 @@ The response of `GET /api/audit/types` — each type is explained in
     "discover",
     "backup",
     "audit_report",
+    "alert_mail",
     "miner_pool",
     "miner_schedule",
     "miner_identity",

@@ -248,7 +248,7 @@ func TestAlerts_sameOrderEverywhere(t *testing.T) {
 		}
 	}
 
-	want := []string{"Prof fanHigh", "Atchoum offline", "Prof firmwareUpdate", "Dormeur firmwareUpdate", "Atchoum firmwareUpdate"}
+	want := []string{"Atchoum offline", "Prof fanHigh", "Prof firmwareUpdate", "Dormeur firmwareUpdate", "Atchoum firmwareUpdate"}
 	order := func(events []alerts.Event) []string {
 		var got []string
 		for _, e := range events {

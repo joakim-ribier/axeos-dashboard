@@ -169,3 +169,15 @@ func TestSettingsChanges_mail(t *testing.T) {
 		t.Errorf("nothing changed: got %+v, want nothing", got)
 	}
 }
+
+func TestSettingsChanges_alertsMail(t *testing.T) {
+	var before, after config.AppSettingsFile
+	after.Notifications.Alerts.Mail = true
+
+	want := []Entry{{Type: TypeMailSettings, Changes: []Change{
+		{Field: "alertsMail", Kind: ChangeChanged, Before: "off", After: "on"},
+	}}}
+	if got := SettingsChanges(before, after); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}

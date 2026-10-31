@@ -43,8 +43,8 @@ subnav:
 
 One page, one section at a time: each section is picked from a menu that
 sums it up in one line, and flags with an orange dot what needs a look
-(no recipient, audit report failing, pool differing from the
-configuration...).
+(no recipient, audit report or alerts mail failing, pool differing from
+the configuration...).
 
 ![Configuration]({{ '/assets/images/settings.png' | relative_url }})
 
@@ -107,8 +107,8 @@ saved as soon as it's added or removed.
 ## ✉️ Notifications
 {: #notifications }
 
-Sending mails: the server they go out through, to whom, and the audit
-report. Every mail goes out from the **mailer**, a service of its own
+Sending mails: the server they go out through, to whom, the audit report
+and the alerts. Every mail goes out from the **mailer**, a service of its own
 running alongside the feeder (see [Installation]({{ '/en/installation.html#config-file' | relative_url }})).
 
 ![Notifications]({{ '/assets/images/settings-notifications.png' | relative_url }})
@@ -131,6 +131,11 @@ Just below, the **mails' language** (French or English) and the
 **dashboard's address**, used for the links in the mails — prefilled
 with the address the page is open at.
 
+Below, **Send a test mail** mails the recipients through the **saved**
+server, to check everything works — the mailer included. A small
+notification confirms it went out; on a failure, it gives the SMTP
+server's reason, with a button to copy it.
+
 ### Audit report
 
 A mail summing up the [audit]({{ '/en/audit.html' | relative_url }})
@@ -146,12 +151,20 @@ Below the setting, when it was last sent, or the last failure with its
 reason — a failure is retried every hour. Each report sent, or failing,
 also shows in the audit.
 
-### Test mail
+### Alerts
 
-Sends a mail to the recipients through the **saved** server, to check
-everything works — the mailer included. A small notification confirms
-it went out; on a failure, it gives the SMTP server's reason, with a
-button to copy it.
+**Send a mail on every new alert**: on every feeder poll that raises new
+[alerts]({{ '/en/alerts.html' | relative_url }}), one mail holds them all
+— once per alert, when it starts, and nothing when it ends. A firmware
+update available is mailed once, not every day. The switch saves itself;
+the alerts raised before don't go out.
+
+**Send an example** mails the recipients an alerts mail with made-up
+alerts, to see what it looks like.
+
+Below the setting, when the last mail went out, or the last failure with
+its reason — a failure shows in the audit too (a mail sent doesn't).
+Turning the setting on or off shows in the audit too.
 
 ### Mails' texts
 
@@ -162,6 +175,8 @@ language:
 
 ```text
 mail-templates/
+├── alert.fr.html
+├── alert.en.html
 ├── audit-report.fr.txt
 ├── audit-report.en.txt
 ├── test-mail.fr.txt
@@ -191,6 +206,16 @@ Open in the dashboard: {{link}}
   dashboard address).
 - To go back to the original text, delete the file: it's created again
   the next time the mailer starts.
+
+The alerts mail is HTML (`alert.*.html`): a header with the logo, a card
+per alert, a button to the Alerts page (only when the dashboard's
+address is a name, not an IP: a link to an IP gets the mail flagged as
+spam) and a footer. It's a Go template
+(`{{.Field}}`, `{{range .Alerts}}`...) whose `<title>` tag is the mail's
+subject; its variables are described at the top of the file. If it
+doesn't work, the built-in template is used and the error is in the
+mailer's logs. A text version is attached automatically for the mail
+clients that don't show HTML.
 {% endraw %}
 
 ---

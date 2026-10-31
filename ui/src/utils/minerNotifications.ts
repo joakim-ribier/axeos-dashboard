@@ -4,13 +4,12 @@ import { type TFunction } from "i18next";
 import { type AlertEvent } from "@/schemas/minerSchema";
 import { formatDuration, formatTimestamp } from "@/utils/format";
 
-// Every alert type, in the order the dashboard offers them -- the server's
-// alerts.Types.
+// Every alert type, the most serious first -- the server's alerts.Types.
 export const ALERT_TYPES = [
-  "tempHigh",
-  "fanHigh",
   "offline",
   "macMismatch",
+  "tempHigh",
+  "fanHigh",
   "firmwareUpdate",
 ] as const;
 

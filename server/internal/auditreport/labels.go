@@ -141,6 +141,7 @@ func (l labels) value(field, v string) string {
 var fr = labels{
 	values: map[string]map[string]string{
 		"auditReportEnabled":     {"on": "activé", "off": "désactivé"},
+		"alertsMail":             {"on": "activé", "off": "désactivé"},
 		"sendUser":               {"on": "activé", "off": "désactivé"},
 		"sendPools":              {"on": "activé", "off": "désactivé"},
 		"sendIP":                 {"on": "activé", "off": "désactivé"},
@@ -160,6 +161,7 @@ var fr = labels{
 		"discover":         "Détection réseau",
 		"backup":           "Sauvegarde mise à jour",
 		"audit_report":     "Rapport d'audit envoyé",
+		"alert_mail":       "Mail d'alertes non envoyé",
 		"miner_pool":       "Pool du mineur modifié",
 		"miner_schedule":   "Planification modifiée",
 		"miner_identity":   "IP du mineur modifiée",
@@ -208,6 +210,8 @@ var fr = labels{
 		"mailLanguage":           "Langue des mails",
 		"mailDashboardURL":       "Adresse du dashboard",
 		"auditReportEnabled":     "Rapport d'audit",
+		"alertsMail":             "Alertes par mail",
+		"alertPoll":              "Relevé des alertes",
 		"auditReportFrequency":   "Fréquence du rapport d'audit",
 		"auditReportSkipIfEmpty": "Rapport sauté si vide",
 		"auditReportTypeAdded":   "Type ajouté au rapport",
@@ -238,6 +242,7 @@ var fr = labels{
 var en = labels{
 	values: map[string]map[string]string{
 		"auditReportEnabled":     {"on": "on", "off": "off"},
+		"alertsMail":             {"on": "on", "off": "off"},
 		"sendUser":               {"on": "on", "off": "off"},
 		"sendPools":              {"on": "on", "off": "off"},
 		"sendIP":                 {"on": "on", "off": "off"},
@@ -257,6 +262,7 @@ var en = labels{
 		"discover":         "Network discovery",
 		"backup":           "Backup updated",
 		"audit_report":     "Audit report sent",
+		"alert_mail":       "Alerts mail not sent",
 		"miner_pool":       "Miner pool changed",
 		"miner_schedule":   "Schedule changed",
 		"miner_identity":   "Miner IP changed",
@@ -305,6 +311,8 @@ var en = labels{
 		"mailLanguage":           "Mail language",
 		"mailDashboardURL":       "Dashboard address",
 		"auditReportEnabled":     "Audit report",
+		"alertsMail":             "Alerts by mail",
+		"alertPoll":              "Alerts' poll",
 		"auditReportFrequency":   "Audit report frequency",
 		"auditReportSkipIfEmpty": "Report skipped when empty",
 		"auditReportTypeAdded":   "Type added to the report",

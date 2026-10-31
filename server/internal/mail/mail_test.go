@@ -2,8 +2,10 @@ package mail
 
 import (
 	"context"
+	"encoding/base64"
 	"io"
 	"mime"
+	"mime/multipart"
 	"mime/quotedprintable"
 	"net/mail"
 	"strings"
@@ -99,5 +101,65 @@ func TestSend_failsFastOnAnUnreachableServer(t *testing.T) {
 
 	if err := Send(context.Background(), smtp, Message{To: []string{"me@example.com"}}); err == nil {
 		t.Error("Send() to a closed port: want an error")
+	}
+}
+
+func TestSend_anHTMLMessage(t *testing.T) {
+	server := mailtest.NewServer(t)
+	logo := []byte("not really a png")
+
+	err := Send(context.Background(), plainSMTP(server), Message{
+		To:      []string{"me@example.com"},
+		Subject: "Alertes",
+		Text:    "En texte.",
+		HTML:    `<p>En <b>HTML</b> <img src="cid:logo"></p>`,
+		Inline:  []Inline{{ID: "logo", ContentType: "image/png", Data: logo}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg, err := mail.ReadMessage(strings.NewReader(server.Next(t).Data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mediaType, params, _ := mime.ParseMediaType(msg.Header.Get("Content-Type"))
+	if mediaType != "multipart/alternative" {
+		t.Fatalf("Content-Type = %q, want multipart/alternative", mediaType)
+	}
+	parts := multipart.NewReader(msg.Body, params["boundary"])
+
+	text, err := parts.NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body, _ := io.ReadAll(text); text.Header.Get("Content-Type") != "text/plain; charset=utf-8" || !strings.Contains(string(body), "En texte.") {
+		t.Errorf("first part = %q %q, want the text", text.Header.Get("Content-Type"), body)
+	}
+
+	related, err := parts.NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	mediaType, params, _ = mime.ParseMediaType(related.Header.Get("Content-Type"))
+	if mediaType != "multipart/related" {
+		t.Fatalf("second part = %q, want multipart/related", mediaType)
+	}
+	inner := multipart.NewReader(related, params["boundary"])
+	html, err := inner.NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body, _ := io.ReadAll(html); !strings.Contains(string(body), `<img src="cid:logo">`) {
+		t.Errorf("HTML = %q", body)
+	}
+	img, err := inner.NextPart()
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(img)
+	data, _ := base64.StdEncoding.DecodeString(strings.ReplaceAll(string(raw), "\r\n", ""))
+	if img.Header.Get("Content-Id") != "<logo>" || img.Header.Get("Content-Type") != "image/png" || string(data) != string(logo) {
+		t.Errorf("image = %v %q, want the logo by its Content-ID", img.Header, data)
 	}
 }

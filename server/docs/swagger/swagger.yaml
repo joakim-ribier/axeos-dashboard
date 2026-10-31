@@ -126,6 +126,14 @@ definitions:
       updatedAt:
         type: string
     type: object
+  config.AlertsConfig:
+    properties:
+      mail:
+        description: |-
+          Mail sends one mail per feeder poll that raised alerts -- never for
+          one that ends.
+        type: boolean
+    type: object
   config.AppSettingsFile:
     properties:
       electricity:
@@ -250,6 +258,8 @@ definitions:
     - ModelNerdaxe
   config.NotificationsConfig:
     properties:
+      alerts:
+        $ref: '#/definitions/config.AlertsConfig'
       auditReport:
         $ref: '#/definitions/config.AuditReportConfig'
       dashboardURL:
@@ -519,6 +529,13 @@ definitions:
       services:
         $ref: '#/definitions/handler.ServicesStatus'
     type: object
+  handler.alertsMailStatus:
+    properties:
+      lastError:
+        type: string
+      lastSentAt:
+        type: string
+    type: object
   handler.appSettingsDefaults:
     properties:
       firmware:
@@ -528,12 +545,18 @@ definitions:
     type: object
   handler.appSettingsReadOnly:
     properties:
+      alertsMail:
+        allOf:
+        - $ref: '#/definitions/handler.alertsMailStatus'
+        description: |-
+          AlertsMail is the mailer's record of the alerts mails (see
+          alertmail.State).
       auditReport:
         allOf:
         - $ref: '#/definitions/handler.auditReportStatus'
         description: |-
-          AuditReport is the feeder's record of the daily audit mail (see
-          auditreport.State), read back from disk -- the feeder sends it.
+          AuditReport is the mailer's record of the audit report (see
+          auditreport.State), read back from disk -- the mailer sends it.
       feederInterval:
         type: string
       firmwareCacheCheckedAt:
@@ -624,6 +647,8 @@ definitions:
     type: object
   handler.notificationsResponse:
     properties:
+      alerts:
+        $ref: '#/definitions/config.AlertsConfig'
       auditReport:
         $ref: '#/definitions/handler.auditReportSettingsResponse'
       dashboardURL:
@@ -649,6 +674,14 @@ definitions:
       username:
         type: string
     type: object
+  main.alertsMailRequest:
+    properties:
+      alerts:
+        description: Alerts are the ones a feeder poll just raised.
+        items:
+          $ref: '#/definitions/alerts.Event'
+        type: array
+    type: object
   main.statusResponse:
     properties:
       lastCheckAt:
@@ -661,6 +694,11 @@ definitions:
     type: object
   main.testMailRequest:
     properties:
+      kind:
+        description: |-
+          Kind "alert" sends an example of the alerts mail instead, with
+          made-up alerts.
+        type: string
       lang:
         description: Lang picks the mail's language, the dashboard's own ("fr" or
           "en").
@@ -1216,11 +1254,14 @@ paths:
       description: Has the mailer service send a test mail to every configured recipient
         through the saved SMTP server.
       parameters:
-      - description: Mail language (fr or en, default en)
+      - description: 'Mail language (fr or en, default en), and kind (alert: an example
+          of the alerts mail)'
         in: body
         name: request
         schema:
           properties:
+            kind:
+              type: string
             lang:
               type: string
           type: object
@@ -1363,6 +1404,53 @@ paths:
       summary: Server build/version info
       tags:
       - Info
+  /api/mailer/alerts:
+    post:
+      consumes:
+      - application/json
+      description: 'The mailer''s own API, on the loopback only (mailer.port, default
+        8082): mails the alerts a feeder poll just raised, all in one mail. Called
+        by the feeder after a poll, when Configuration › Notifications turns the alerts
+        mail on.'
+      parameters:
+      - description: The alerts raised
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/main.alertsMailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.testMailResponse'
+        "400":
+          description: no alert, or SMTP server or recipients not configured
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+        "502":
+          description: the SMTP server refused or couldn't be reached
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+      summary: Send an alerts mail (mailer)
+      tags:
+      - Mailer
   /api/mailer/status:
     get:
       description: 'The mailer''s own API, on the loopback only (mailer.port, default
@@ -1383,10 +1471,12 @@ paths:
       consumes:
       - application/json
       description: 'The mailer''s own API, on the loopback only (mailer.port, default
-        8082): sends a test mail to every recipient through the saved SMTP server.
+        8082): sends a test mail to every recipient through the saved SMTP server
+        -- or, with kind "alert", an example of the alerts mail with made-up alerts.
         Reached through dashboard-api''s POST /api/config/mail/test.'
       parameters:
-      - description: Mail language (fr or en, default en)
+      - description: Mail language (fr or en, default en), and kind (alert for the
+          alerts mail)
         in: body
         name: request
         schema:

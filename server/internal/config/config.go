@@ -458,7 +458,7 @@ func (r RemoteConfig) Enabled() bool {
 
 // NotificationsConfig is everything the dashboard sends on its own: how
 // its messages read (language, links), the channels they go through (mail
-// for now), and what goes out (the audit report; alerts next).
+// for now), and what goes out (the audit report, the alerts).
 type NotificationsConfig struct {
 	// Language is the messages' language: "fr" or "en" (the default).
 	Language string `yaml:"language,omitempty" json:"language"`
@@ -467,6 +467,14 @@ type NotificationsConfig struct {
 	DashboardURL string            `yaml:"dashboardURL,omitempty" json:"dashboardURL"`
 	Mail         MailConfig        `yaml:"mail,omitempty" json:"mail"`
 	AuditReport  AuditReportConfig `yaml:"auditReport,omitempty" json:"auditReport"`
+	Alerts       AlertsConfig      `yaml:"alerts,omitempty" json:"alerts"`
+}
+
+// AlertsConfig is how the alerts go out on their own.
+type AlertsConfig struct {
+	// Mail sends one mail per feeder poll that raised alerts -- never for
+	// one that ends.
+	Mail bool `yaml:"mail,omitempty" json:"mail"`
 }
 
 // MailConfig is the mail channel: where mails go out from, and to whom.

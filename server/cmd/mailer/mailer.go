@@ -20,9 +20,9 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mailtemplate"
 )
 
-// Mailer sends the dashboard's scheduled mails -- the audit report for now
-// -- from what the other processes leave on disk: the audit log
-// (dashboard-api) and settings.yml. A process of its own, so a slow or
+// Mailer sends the dashboard's mails: the audit report, from what
+// dashboard-api leaves on disk (the audit log, settings.yml), and the
+// alerts mail the feeder hands it after a poll (see server.go). A process of its own, so a slow or
 // failing SMTP server never touches the polling (feeder) nor the UI
 // (dashboard-api).
 type Mailer struct {

@@ -42,8 +42,8 @@ subnav:
 
 Une seule page, une section à la fois : chaque section se choisit dans un
 menu qui la résume en une ligne, et signale d'un point orange ce qui
-demande un coup d'œil (aucun destinataire, rapport d'audit en échec, pool
-différent de la configuration...).
+demande un coup d'œil (aucun destinataire, rapport d'audit ou mail
+d'alertes en échec, pool différent de la configuration...).
 
 ![Configuration]({{ '/assets/images/settings.png' | relative_url }})
 
@@ -108,8 +108,8 @@ qu'il est ajouté ou supprimé.
 ## ✉️ Notifications
 {: #notifications }
 
-L'envoi de mails : le serveur qui les envoie, à qui, et le rapport
-d'audit. Tous les mails partent du **mailer**, un service à part qui
+L'envoi de mails : le serveur qui les envoie, à qui, le rapport d'audit
+et les alertes. Tous les mails partent du **mailer**, un service à part qui
 tourne à côté du feeder (voir [Installation]({{ '/installation.html#parametrage' | relative_url }})).
 
 ![Notifications]({{ '/assets/images/settings-notifications.png' | relative_url }})
@@ -133,6 +133,12 @@ Juste en dessous, la **langue des mails** (français ou anglais) et
 l'**adresse du dashboard**, utilisée pour les liens dans les mails —
 préremplie avec l'adresse à laquelle la page est ouverte.
 
+En dessous, **Envoyer un mail de test** envoie un mail aux destinataires
+avec le serveur **enregistré**, pour vérifier que tout fonctionne — le
+mailer compris. Une petite notification confirme l'envoi ; en cas
+d'échec, elle donne le motif du serveur SMTP, avec un bouton pour le
+copier.
+
 ### Rapport d'audit
 
 Un mail qui résume l'[audit]({{ '/audit.html' | relative_url }}) depuis le
@@ -148,12 +154,22 @@ Sous le réglage, la date du dernier envoi, ou du dernier échec avec son
 motif — un échec est réessayé chaque heure. Chaque rapport envoyé, ou en
 échec, apparaît aussi dans l'audit.
 
-### Mail de test
+### Alertes
 
-Envoie un mail aux destinataires avec le serveur **enregistré**, pour
-vérifier que tout fonctionne — le mailer compris. Une petite notification
-confirme l'envoi ; en cas d'échec, elle donne le motif du serveur SMTP,
-avec un bouton pour le copier.
+**Envoyer un mail à chaque nouvelle alerte** : à chaque relevé du feeder
+qui lève de nouvelles [alertes]({{ '/alerts.html' | relative_url }}), un
+mail les regroupe toutes — une seule fois par alerte, au moment où elle
+commence, et rien quand elle se termine. Une mise à jour firmware
+disponible part donc une fois, pas chaque jour. Le réglage s'enregistre
+dès qu'on le bascule ; les alertes levées avant ne partent pas.
+
+**Envoyer un exemple** envoie aux destinataires un mail d'alertes avec
+des alertes fictives, pour voir à quoi il ressemble.
+
+Sous le réglage, la date du dernier mail envoyé, ou du dernier échec avec
+son motif — un échec apparaît aussi dans l'audit (un mail envoyé n'y
+apparaît pas). Activer ou couper le réglage
+apparaît aussi dans l'audit.
 
 ### Textes des mails
 
@@ -164,6 +180,8 @@ par mail et par langue :
 
 ```text
 mail-templates/
+├── alert.fr.html
+├── alert.en.html
 ├── audit-report.fr.txt
 ├── audit-report.en.txt
 ├── test-mail.fr.txt
@@ -192,6 +210,16 @@ Voir dans le dashboard : {{link}}
   dashboard).
 - Pour revenir au texte d'origine, supprimer le fichier : il est recréé
   au prochain démarrage du mailer.
+
+Le mail d'alertes est en HTML (`alert.*.html`) : un en-tête avec le logo,
+une carte par alerte, un bouton vers la page Alertes (seulement si
+l'adresse du dashboard est un nom, pas une IP : un lien vers une IP fait
+classer le mail en spam) et un pied de page.
+C'est un modèle Go (`{{.Champ}}`, `{{range .Alerts}}`...) dont la balise
+`<title>` est l'objet du mail ; ses variables sont décrites en tête de
+fichier. S'il ne passe pas, le modèle d'origine est utilisé et l'erreur
+est dans les logs du mailer. Une version texte est jointe automatiquement
+pour les messageries qui n'affichent pas le HTML.
 {% endraw %}
 
 ---

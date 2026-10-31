@@ -36,10 +36,11 @@ type Feeder struct {
 	minersStore      *config.MinersStore
 	appSettingsStore *config.AppSettingsStore
 
-	// pushWG tracks every in-flight push goroutine (see goPush) -- runOnce
-	// itself never waits on it (a hashboard hiccup must never block local
-	// polling, see postToRemote), but tests do via WaitForPushes, so every
-	// push has landed by the time a test checks what was sent.
+	// pushWG tracks every in-flight push goroutine (see goPush), the
+	// alerts mail's included -- runOnce itself never waits on it (a
+	// hashboard or SMTP hiccup must never block local polling, see
+	// postToRemote), but tests do via WaitForPushes, so every push has
+	// landed by the time a test checks what was sent.
 	pushWG sync.WaitGroup
 }
 
@@ -190,6 +191,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	store := storage.NewRawStorage(f.config.Storage.BitaxesDir(), f.config.Electricity.RatePerKwh)
 	fwCache := firmware.LoadCache(f.config.Storage.BitaxesDir())
 
+	var changes []alerts.Event
 	for _, bitaxe := range f.config.GetMiners() {
 		addr := bitaxe.Ip
 		key := bitaxe.StorageKey()
@@ -201,7 +203,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		payload, err := client.FetchSystemInfo(ctx, addr)
 		if err != nil {
 			f.logger.Error("bitaxe fetch error", "ip", addr, "error", err)
-			f.trackAlerts(now, bitaxe, alerts.Poll{Err: err})
+			changes = append(changes, f.trackAlerts(now, bitaxe, alerts.Poll{Err: err})...)
 			offline := []model.Alert{{Type: model.AlertOffline, Message: err.Error()}}
 			if err := store.AppendAlertOnly(now, key, offline); err != nil {
 				f.logger.Error("storage error (offline alert)", "ip", addr, "mac", key, "error", err)
@@ -217,12 +219,12 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		if reportedMac := config.NormalizeMac(extractDeviceMac(payload)); reportedMac != "" && reportedMac != key {
 			f.logger.Error("bitaxe: mac mismatch, refusing to store this poll",
 				"ip", addr, "configuredMac", key, "reportedMac", reportedMac)
-			f.trackAlerts(now, bitaxe, alerts.Poll{ReportedMac: reportedMac})
+			changes = append(changes, f.trackAlerts(now, bitaxe, alerts.Poll{ReportedMac: reportedMac})...)
 			continue
 		}
 
 		latestFW := fwCache.Models[string(bitaxe.Model)].Version
-		f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW))
+		changes = append(changes, f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW))...)
 
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
 		if err := store.Append(now, key, payload); err != nil {
@@ -246,6 +248,8 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		}
 	}
 
+	f.mailAlerts(changes)
+
 	models := make(map[string]struct{})
 	for _, b := range f.config.GetMiners() {
 		models[string(b.Model)] = struct{}{}
@@ -256,8 +260,8 @@ func (f *Feeder) runOnce(ctx context.Context) {
 }
 
 // trackAlerts updates the miner's alerts with this poll and records their
-// changes of state, if any.
-func (f *Feeder) trackAlerts(now time.Time, bitaxe config.Bitaxe, poll alerts.Poll) {
+// changes of state, if any -- returned once recorded.
+func (f *Feeder) trackAlerts(now time.Time, bitaxe config.Bitaxe, poll alerts.Poll) []alerts.Event {
 	key := bitaxe.StorageKey()
 	dir := filepath.Join(f.config.Storage.BitaxesDir(), key)
 	state, err := alerts.LoadState(dir)
@@ -272,11 +276,49 @@ func (f *Feeder) trackAlerts(now time.Time, bitaxe config.Bitaxe, poll alerts.Po
 
 	if err := f.alertsLog.Record(events); err != nil {
 		f.logger.Error("failed to record alerts", "mac", key, "error", err)
-		return
+		return nil
 	}
 	if err := alerts.SaveState(dir, state); err != nil {
 		f.logger.Error("failed to save alerts state", "mac", key, "error", err)
 	}
+	return events
+}
+
+// mailerTimeout bounds the call to the mailer, its SMTP send included
+// (mail.Timeout, 15s).
+const mailerTimeout = 30 * time.Second
+
+// mailAlerts hands the mailer the alerts this poll raised, when the alerts
+// mail is on -- one mail for all of them, never for one that ended. In the
+// background, like a push: the mailer sends it, and a slow SMTP server
+// must never hold up the polling.
+func (f *Feeder) mailAlerts(changes []alerts.Event) {
+	raised := slices.DeleteFunc(changes, func(e alerts.Event) bool { return e.State != alerts.Raised })
+	if len(raised) == 0 || !f.config.Notifications.Alerts.Mail {
+		return
+	}
+	body, err := json.Marshal(map[string][]alerts.Event{"alerts": raised})
+	if err != nil {
+		f.logger.Error("alerts mail: marshal error", "error", err)
+		return
+	}
+	url := "http://" + f.config.Mailer.Address() + "/api/mailer/alerts"
+	f.goPush(func() {
+		client := &http.Client{Timeout: mailerTimeout}
+		resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+		if err != nil {
+			f.logger.Error("alerts mail: mailer unreachable", "alerts", len(raised), "error", err)
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusOK {
+			var e struct {
+				Message string `json:"message"`
+			}
+			_ = json.NewDecoder(resp.Body).Decode(&e)
+			f.logger.Error("alerts mail not sent", "alerts", len(raised), "status", resp.StatusCode, "error", e.Message)
+		}
+	})
 }
 
 // readingsPoll reads what the alerts need off a poll's raw payload.

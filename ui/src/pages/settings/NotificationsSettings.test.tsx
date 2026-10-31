@@ -81,6 +81,7 @@ const buildSettings = (
     healthCheckInterval: "1m0s",
     firmwareCacheTTL: "24h0m0s",
     auditReport: {},
+    alertsMail: {},
   },
   notifications: { ...EMPTY_NOTIFICATIONS, ...rest, mail },
 });
@@ -434,7 +435,7 @@ describe("NotificationsSettings", () => {
         "authentication: 535 bad credentials",
       );
       // Copying, or a click elsewhere, leaves it there: only ✕ closes it.
-      await user.click(screen.getByText(`${k}.test.title`));
+      await user.click(screen.getByText(`${k}.smtp.title`));
       const toast = screen.getByRole("alert");
       expect(toast).toBeVisible();
 
@@ -442,6 +443,75 @@ describe("NotificationsSettings", () => {
       await waitFor(() =>
         expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
       );
+    });
+  });
+
+  describe("alerts mail", () => {
+    const toggle = () => screen.getByLabelText(`${k}.alerts.enabledLabel`);
+    const exampleButton = () =>
+      screen.getByRole("button", { name: `${k}.alerts.sendExample` });
+
+    it("saves the switch as soon as it's flipped, the rest as saved", async () => {
+      const user = userEvent.setup();
+      render(<NotificationsSettings />);
+
+      expect(toggle()).not.toBeChecked();
+      await user.click(toggle());
+
+      expect(lastSave().notifications.alerts).toEqual({ mail: true });
+      expect(lastSave().notifications.mail.to).toEqual(["me@example.com"]);
+      expect(lastSave().notifications.mail.smtp.password).toBe("");
+    });
+
+    it("sends the example in the UI's language", async () => {
+      const user = userEvent.setup();
+      mockedAxios.post.mockResolvedValue({ data: { sentTo: [] } });
+      render(<NotificationsSettings />);
+
+      await user.click(exampleButton());
+
+      expect(mockedAxios.post).toHaveBeenCalledWith("/api/config/mail/test", {
+        lang: "fr",
+        kind: "alert",
+      });
+      expect(
+        await screen.findByText(`${k}.alerts.exampleSent`),
+      ).toBeInTheDocument();
+    });
+
+    it("can't send the example before a server is saved", () => {
+      settings = buildSettings({
+        ...EMPTY_NOTIFICATIONS.mail,
+        to: ["me@example.com"],
+      });
+      render(<NotificationsSettings />);
+
+      expect(exampleButton()).toBeDisabled();
+    });
+
+    it("says how the last mail went, or that one will go out", () => {
+      settings = buildSettings(
+        { smtp: SAVED_SMTP, to: ["me@example.com"] },
+        { alerts: { mail: true } },
+      );
+      const { unmount } = render(<NotificationsSettings />);
+      expect(screen.getByText(`${k}.alerts.neverSent`)).toBeInTheDocument();
+      unmount();
+
+      settings.readOnly.alertsMail = { lastSentAt: "2026-10-30T08:53:00Z" };
+      const sent = render(<NotificationsSettings />);
+      expect(
+        screen.getByText(new RegExp(`^${k}.alerts.lastSent`)),
+      ).toBeInTheDocument();
+      sent.unmount();
+
+      settings.readOnly.alertsMail = { lastError: "535 bad credentials" };
+      render(<NotificationsSettings />);
+      expect(
+        screen.getByText(
+          `${k}.alerts.lastFailed ${JSON.stringify({ error: "535 bad credentials" })}`,
+        ),
+      ).toBeInTheDocument();
     });
   });
 });

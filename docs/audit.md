@@ -178,6 +178,12 @@ résultat** (réussite, ou échec avec le message d'erreur). Une action qui
       <td>la nuit, par le mailer, selon la fréquence choisie dans Configuration › Notifications</td>
       <td>la période couverte et les destinataires ; l'erreur en cas d'échec</td>
     </tr>
+    <tr>
+      <td><code>alert_mail</code></td>
+      <td>Mail d'alertes non envoyé</td>
+      <td>par le mailer, quand le mail des nouvelles alertes d'un relevé n'a pas pu partir (seuls les échecs sont tracés)</td>
+      <td>le relevé concerné et l'erreur</td>
+    </tr>
   </tbody>
 </table>
 
@@ -356,6 +362,7 @@ La réponse de `GET /api/audit/types` — chaque type est expliqué dans
     "discover",
     "backup",
     "audit_report",
+    "alert_mail",
     "miner_pool",
     "miner_schedule",
     "miner_identity",

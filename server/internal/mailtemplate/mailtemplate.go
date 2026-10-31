@@ -1,6 +1,7 @@
-// Package mailtemplate is the wording of the mailer's mails, in plain text
-// files the operator can edit: a "Subject:" line, a blank line, the text --
-// {{name}} placeholders replaced when the mail is sent.
+// Package mailtemplate is the wording of the mailer's mails, in files the
+// operator can edit: plain text ones -- a "Subject:" line, a blank line, the
+// text, {{name}} placeholders replaced when the mail is sent -- and HTML
+// ones, Go templates whose <title> is the subject (see RenderHTML).
 package mailtemplate
 
 import (
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-//go:embed templates/*.txt
+//go:embed templates/*.txt templates/*.html
 var builtin embed.FS
 
 // The mails there's a template of.

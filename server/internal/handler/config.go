@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alertmail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/auditreport"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
@@ -338,6 +339,7 @@ type notificationsResponse struct {
 	DashboardURL string                      `json:"dashboardURL"`
 	Mail         mailSettingsResponse        `json:"mail"`
 	AuditReport  auditReportSettingsResponse `json:"auditReport"`
+	Alerts       config.AlertsConfig         `json:"alerts"`
 }
 
 type mailSettingsResponse struct {
@@ -381,6 +383,7 @@ func toNotificationsResponse(n config.NotificationsConfig) notificationsResponse
 			AuditReportConfig: n.AuditReport,
 			Types:             nonNil(n.AuditReport.Types),
 		},
+		Alerts: n.Alerts,
 	}
 }
 
@@ -418,9 +421,25 @@ type appSettingsReadOnly struct {
 	// triggered a check). Lets the UI show "was this actually run" rather
 	// than just the configured TTL.
 	FirmwareCacheCheckedAt string `json:"firmwareCacheCheckedAt,omitempty"`
-	// AuditReport is the feeder's record of the daily audit mail (see
-	// auditreport.State), read back from disk -- the feeder sends it.
+	// AuditReport is the mailer's record of the audit report (see
+	// auditreport.State), read back from disk -- the mailer sends it.
 	AuditReport auditReportStatus `json:"auditReport"`
+	// AlertsMail is the mailer's record of the alerts mails (see
+	// alertmail.State).
+	AlertsMail alertsMailStatus `json:"alertsMail"`
+}
+
+type alertsMailStatus struct {
+	LastSentAt string `json:"lastSentAt,omitempty"`
+	LastError  string `json:"lastError,omitempty"`
+}
+
+func toAlertsMailStatus(s alertmail.State) alertsMailStatus {
+	status := alertsMailStatus{LastError: s.LastError}
+	if !s.LastSentAt.IsZero() {
+		status.LastSentAt = s.LastSentAt.UTC().Format(time.RFC3339)
+	}
+	return status
 }
 
 type auditReportStatus struct {
@@ -635,6 +654,7 @@ func writeAppSettingsResponse(w http.ResponseWriter, cfg config.Config, settings
 		readOnly.FirmwareCacheCheckedAt = checkedAt.UTC().Format(time.RFC3339)
 	}
 	readOnly.AuditReport = toAuditReportStatus(auditreport.Load(cfg.Storage.MailDir()))
+	readOnly.AlertsMail = toAlertsMailStatus(alertmail.Load(cfg.Storage.MailDir()))
 	resp := appSettingsResponse{
 		AppSettingsFile: settings,
 		Notifications:   toNotificationsResponse(settings.Notifications),

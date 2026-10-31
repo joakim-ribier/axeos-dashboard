@@ -111,7 +111,9 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
           : notif?.auditReport.enabled &&
               settings?.readOnly.auditReport.lastError
             ? t("settingsPage.toc.notifications.reportFailed")
-            : undefined,
+            : notif?.alerts.mail && settings?.readOnly.alertsMail.lastError
+              ? t("settingsPage.toc.notifications.alertsMailFailed")
+              : undefined,
     },
     // What it holds, once there's a push to set up.
     remote: {

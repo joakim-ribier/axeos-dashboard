@@ -271,6 +271,7 @@
       "discover": "Détection réseau",
       "backup": "Sauvegarde mise à jour",
       "audit_report": "Rapport d'audit envoyé",
+      "alert_mail": "Mail d'alertes non envoyé",
       "miner_pool": "Pool du mineur modifié",
       "miner_schedule": "Planification modifiée",
       "miner_identity": "IP du mineur modifiée",
@@ -343,7 +344,9 @@
       "auditReportFrequency": "Fréquence du rapport d'audit",
       "reportPeriod": "Période du rapport",
       "sentTo": "Envoyé à",
-      "mailDashboardURL": "Adresse du dashboard"
+      "mailDashboardURL": "Adresse du dashboard",
+      "alertsMail": "Alertes par mail",
+      "alertPoll": "Relevé des alertes"
     },
     "values": {
       "auditReportEnabled": {
@@ -378,6 +381,10 @@
         "off": "désactivé"
       },
       "sendIP": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "alertsMail": {
         "on": "activé",
         "off": "désactivé"
       }
@@ -457,7 +464,8 @@
         "summary_one": "{{host}} · {{count}} destinataire",
         "summary_other": "{{host}} · {{count}} destinataires",
         "noRecipient": "Aucun destinataire",
-        "reportFailed": "Échec de l'envoi du rapport d'audit"
+        "reportFailed": "Échec de l'envoi du rapport d'audit",
+        "alertsMailFailed": "Échec de l'envoi d'un mail d'alertes"
       },
       "remote": {
         "title": "Distant",
@@ -640,8 +648,6 @@
           "remove": "Retirer"
         },
         "test": {
-          "title": "Mail de test",
-          "description": "Envoie un mail aux destinataires avec le serveur enregistré, pour vérifier que tout fonctionne.",
           "send": "Envoyer un mail de test",
           "sending": "Envoi…",
           "needsSmtp": "Enregistre d'abord un serveur SMTP.",
@@ -673,6 +679,16 @@
             "monthly": "Chaque mois (le mois écoulé)"
           },
           "utc": "Envoyé chaque nuit vers 1 h UTC ; jours et heures du rapport en UTC, comme l'audit."
+        },
+        "alerts": {
+          "title": "Alertes",
+          "description": "Un mail à chaque relevé du feeder qui lève de nouvelles alertes, toutes regroupées — rien quand une alerte se termine.",
+          "enabledLabel": "Envoyer un mail à chaque nouvelle alerte",
+          "sendExample": "Envoyer un exemple",
+          "exampleSent": "Exemple de mail d'alertes envoyé.",
+          "lastSent": "Dernier mail d'alertes envoyé le {{date}}.",
+          "lastFailed": "Le dernier envoi a échoué : {{error}}",
+          "neverSent": "Activé — un mail partira à la prochaine nouvelle alerte."
         },
         "dashboardUrlLabel": "Adresse du dashboard (pour les liens)",
         "invalidDashboardUrl": "L'adresse doit commencer par http:// ou https://."

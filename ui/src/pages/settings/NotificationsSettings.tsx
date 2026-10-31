@@ -27,6 +27,7 @@ import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { type SmtpSecurity } from "@/schemas/appSettingsSchema";
 
+import { AlertsMailBlock } from "./AlertsMailBlock";
 import {
   AppSettingsFrame,
   type AppSettingsFrameContext,
@@ -66,6 +67,7 @@ const NotificationsSection = ({
   const [from, setFrom] = useState("");
   const [newRecipient, setNewRecipient] = useState("");
   const [testing, setTesting] = useState(false);
+  const [sendingExample, setSendingExample] = useState(false);
 
   const saved = data?.notifications;
 
@@ -200,13 +202,20 @@ const NotificationsSection = ({
       ? "needsRecipient"
       : null;
 
-  const handleSendTest = async () => {
-    setTesting(true);
+  // kind "alert": an example of the alerts mail, with made-up alerts.
+  const handleSendTest = async (kind?: "alert") => {
+    const setSending = kind ? setSendingExample : setTesting;
+    setSending(true);
     try {
       await axios.post("/api/config/mail/test", {
         lang: i18n.language.startsWith("fr") ? "fr" : "en",
+        kind,
       });
-      notify(t("settingsPage.appSettings.mail.test.sent"));
+      notify(
+        kind
+          ? t("settingsPage.appSettings.mail.alerts.exampleSent")
+          : t("settingsPage.appSettings.mail.test.sent"),
+      );
     } catch (err) {
       const body = axios.isAxiosError<{ error?: string; message?: string }>(err)
         ? err.response?.data
@@ -217,7 +226,7 @@ const NotificationsSection = ({
         t("settingsPage.appSettings.mail.test.unknownError");
       notify(t("settingsPage.appSettings.mail.test.failed", { error }), error);
     } finally {
-      setTesting(false);
+      setSending(false);
     }
   };
 
@@ -461,32 +470,13 @@ const NotificationsSection = ({
             {t("settingsPage.appSettings.mail.invalidDashboardUrl")}
           </Typography>
         )}
-      </Box>
 
-      <SectionDivider />
-
-      <AuditReportBlock
-        data={data}
-        readOnly={false}
-        isSaving={isSaving}
-        persist={persist}
-        serverBasePayload={serverBasePayload}
-        notify={notify}
-      />
-
-      <SectionDivider />
-
-      {/* Test mail */}
-      <Box>
-        <SectionTitle
-          icon={<SendIcon fontSize="small" />}
-          title={t("settingsPage.appSettings.mail.test.title")}
-          description={t("settingsPage.appSettings.mail.test.description")}
-        />
+        {/* Test mail: the server and recipients above, checked right away. */}
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
           alignItems={{ xs: "stretch", sm: "center" }}
+          sx={{ mt: 3 }}
         >
           <ActionButton
             icon={<SendIcon fontSize="small" />}
@@ -505,6 +495,31 @@ const NotificationsSection = ({
           )}
         </Stack>
       </Box>
+
+      <SectionDivider />
+
+      <AuditReportBlock
+        data={data}
+        readOnly={false}
+        isSaving={isSaving}
+        persist={persist}
+        serverBasePayload={serverBasePayload}
+        notify={notify}
+      />
+
+      <SectionDivider />
+
+      <AlertsMailBlock
+        data={data}
+        readOnly={false}
+        isSaving={isSaving}
+        persist={persist}
+        serverBasePayload={serverBasePayload}
+        notify={notify}
+        sending={sendingExample}
+        blocked={testBlocker !== null}
+        onSendExample={() => void handleSendTest("alert")}
+      />
     </Stack>
   );
 };

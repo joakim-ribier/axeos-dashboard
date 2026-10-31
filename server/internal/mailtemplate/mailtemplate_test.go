@@ -80,7 +80,7 @@ func TestInstall_writesWhatsMissingAndKeepsTheRest(t *testing.T) {
 		t.Fatal(err)
 	}
 	slices.Sort(written)
-	want := []string{"audit-report.en.txt", "audit-report.fr.txt", "test-mail.en.txt"}
+	want := []string{"alert.en.html", "alert.fr.html", "audit-report.en.txt", "audit-report.fr.txt", "test-mail.en.txt"}
 	if !slices.Equal(written, want) {
 		t.Errorf("written = %v, want %v", written, want)
 	}
@@ -100,8 +100,8 @@ func TestInstall_createsTheFolder(t *testing.T) {
 	if _, err := Install(dir); err != nil {
 		t.Fatal(err)
 	}
-	if entries, _ := os.ReadDir(dir); len(entries) != 4 {
-		t.Errorf("got %d files, want the 4 templates", len(entries))
+	if entries, _ := os.ReadDir(dir); len(entries) != 6 {
+		t.Errorf("got %d files, want the 6 templates", len(entries))
 	}
 }
 
@@ -152,8 +152,8 @@ func TestBuiltInTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(files) != 4 {
-		t.Errorf("got %d built-in templates, want 4", len(files))
+	if len(files) != 6 {
+		t.Errorf("got %d built-in templates, want 6 (the HTML ones in html_test.go)", len(files))
 	}
 	for name, keys := range filled {
 		for _, lang := range []string{"fr", "en"} {

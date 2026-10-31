@@ -59,7 +59,7 @@ No authentication required — internal LAN use only.
 - Electricity rate and other devices (fan, router...) to estimate the
   whole installation's daily cost
 - Mail notifications: SMTP server, recipients, daily, weekly or monthly
-  audit report, test mail, editable texts
+  audit report, a mail on every new alert, test mail, editable texts
 
 [See Configuration in detail]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
 
@@ -208,7 +208,8 @@ also gives each service's state, shown at the bottom of the menu
 
 The service that sends every mail, through the SMTP server set in
 Configuration › Notifications: the audit report, from the audit and the
-settings saved on disk, and the test mail, asked for by the dashboard.
+settings saved on disk, the new alerts' mail, the feeder hands it after
+each poll, and the test mail, asked for by the dashboard.
 
 ---
 
