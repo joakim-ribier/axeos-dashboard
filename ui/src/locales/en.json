@@ -556,7 +556,8 @@
       },
       "thresholds": "Alert thresholds",
       "thresholdOwn": "This miner's own",
-      "thresholdCommon": "Every miner's (Configuration › System)"
+      "thresholdCommon": "Every miner's (Configuration › System)",
+      "view": "View"
     },
     "appSettings": {
       "save": "Save",

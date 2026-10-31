@@ -71,7 +71,8 @@ Miners found appear below, ready to be added to the configuration.
 
 The list of already-configured miners, with their IP, model, alert
 thresholds (in color, a miner's own) and status — enable/disable in one
-click, per miner or all at once.
+click, per miner or all at once. The eye opens the miner's detail panel,
+the same as on the [dashboard]({{ '/en/dashboard.html' | relative_url }}).
 
 ![Configured miners]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
 
@@ -87,6 +88,8 @@ fallback pool (URL, port, user).
 This miner's own temperature and fan thresholds — handy for a model that
 naturally runs hotter or with a higher fan. An empty field follows every
 miner's thresholds (see [System](#system)), shown greyed out.
+
+![A miner's alert thresholds]({{ '/assets/images/settings-miner-alert-thresholds.png' | relative_url }})
 
 #### Scheduler
 
@@ -273,6 +276,8 @@ An alert is raised when the chip temperature or the fan speed goes above
 its threshold, and ends 2 °C or 5 % under. The thresholds set here apply to
 every miner — each can have its own in its row of [Miners](#miners).
 Empty, they're the built-in values: 62 °C and 75 %.
+
+![Alert thresholds]({{ '/assets/images/settings-alert-thresholds.png' | relative_url }})
 
 ### Pool dashboards
 

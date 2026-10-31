@@ -71,7 +71,8 @@ configuration.
 
 La liste des mineurs déjà configurés, avec leur IP, modèle, seuils
 d'alerte (en couleur ceux propres au mineur) et état — activation/
-désactivation en un clic, par mineur ou tous à la fois.
+désactivation en un clic, par mineur ou tous à la fois. L'œil ouvre le
+panneau de détail du mineur, le même que sur le [tableau de bord]({{ '/dashboard.html' | relative_url }}).
 
 ![Mineurs configurés]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
 
@@ -88,6 +89,8 @@ Les seuils de température et de ventilateur de ce mineur seulement —
 utile pour un modèle qui tourne naturellement plus chaud ou avec un
 ventilateur plus haut. Un champ vide suit les seuils de tous les mineurs
 (voir [Système](#systeme)), affichés en grisé.
+
+![Seuils d'alerte d'un mineur]({{ '/assets/images/settings-miner-alert-thresholds.png' | relative_url }})
 
 #### Planificateur
 
@@ -280,6 +283,8 @@ ventilateur dépasse son seuil, et se termine 2 °C ou 5 % en dessous. Les
 seuils réglés ici valent pour tous les mineurs — chacun peut avoir les
 siens dans sa ligne de [Mineurs](#mineurs). Vides, ce sont les valeurs
 d'origine : 62 °C et 75 %.
+
+![Seuils d'alerte]({{ '/assets/images/settings-alert-thresholds.png' | relative_url }})
 
 ### Dashboards des pools
 
