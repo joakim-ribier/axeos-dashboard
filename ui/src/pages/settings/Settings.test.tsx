@@ -10,6 +10,7 @@ import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "@/App";
+import { makeMiner } from "@/test/miner";
 import type { UIVisibility } from "@/types/uiFeatures";
 
 vi.mock("axios");
@@ -49,6 +50,9 @@ const miner = {
   alerts: { tempHigh: 0, fanHigh: 95 },
 };
 
+// What /api/miners reports -- none unless a test says otherwise.
+let liveMiners: unknown[] = [];
+
 const mockBackend = (settingsFlag: UIVisibility) => {
   mockedAxios.get.mockImplementation((url: string) => {
     if (url === "/api/info") {
@@ -73,7 +77,12 @@ const mockBackend = (settingsFlag: UIVisibility) => {
       return Promise.resolve({ data: { bitaxes: [miner] } });
     }
     if (url === "/api/miners") {
-      return Promise.resolve({ data: { configured: 1, total: 0, miners: [] } });
+      return Promise.resolve({
+        data: { configured: 1, total: liveMiners.length, miners: liveMiners },
+      });
+    }
+    if (url === "/api/miners/history") {
+      return Promise.resolve({ data: { buckets: [], miners: [] } });
     }
     return Promise.reject(new Error(`not mocked: ${url}`));
   });
@@ -123,12 +132,6 @@ const GATED: Gated[] = [
     element: "the Disable all button",
     ready: minersReady,
     find: () => button("Disable all"),
-  },
-  {
-    section: "miners",
-    element: "the table's Actions column",
-    ready: minersReady,
-    find: () => screen.queryByRole("columnheader", { name: "Actions" }),
   },
   {
     section: "miners",
@@ -404,5 +407,41 @@ describe("the configured miners table", () => {
     expect(
       screen.getByLabelText("Every miner's (Configuration › System)"),
     ).toHaveTextContent("62 °C");
+  });
+});
+
+describe("a configured miner's View button", () => {
+  beforeEach(() => {
+    liveMiners = [];
+  });
+
+  it.each(["enabled", "readonly"] as const)(
+    "opens the dashboard's miner panel (settings %s)",
+    async (flag) => {
+      liveMiners = [
+        makeMiner({
+          ip: "192.168.1.10",
+          macAddr: "AA:BB:CC:DD:EE:01",
+          hostname: "bitaxe-1",
+        }),
+      ];
+      mockBackend(flag);
+      renderAt("/settings/miners");
+      await minersReady();
+
+      await userEvent.setup().click(button("View") as HTMLElement);
+
+      expect(
+        await screen.findByRole("button", { name: "Close" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("is disabled while the miner has no reading yet", async () => {
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    expect(button("View")).toBeDisabled();
   });
 });

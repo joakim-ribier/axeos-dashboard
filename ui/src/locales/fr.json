@@ -556,7 +556,8 @@
       },
       "thresholds": "Seuils d'alerte",
       "thresholdOwn": "Propre à ce mineur",
-      "thresholdCommon": "Celui de tous les mineurs (Configuration › Système)"
+      "thresholdCommon": "Celui de tous les mineurs (Configuration › Système)",
+      "view": "Voir"
     },
     "appSettings": {
       "save": "Enregistrer",

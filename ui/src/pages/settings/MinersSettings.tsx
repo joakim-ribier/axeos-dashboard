@@ -13,6 +13,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import WifiFindIcon from "@mui/icons-material/WifiFind";
 import {
   Alert,
@@ -37,6 +38,7 @@ import {
   Typography,
 } from "@mui/material";
 
+import { MinerDrawer } from "@/components/dashboard/drawer/MinerDrawer";
 import { ActionButton } from "@/components/ui/ActionButton";
 import { AlertThresholdsEditor } from "@/components/ui/AlertThresholdsEditor";
 import { AliasEditor } from "@/components/ui/AliasEditor";
@@ -50,6 +52,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDiscovery } from "@/hooks/useDiscovery";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
+import { useMinersHistory } from "@/hooks/useMinersHistory";
+import { useMinerStatus } from "@/hooks/useMinerStatus";
 import { commonAlertThresholds } from "@/schemas/appSettingsSchema";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
@@ -123,6 +127,13 @@ const ConfiguredMinersTable = ({
   const enabledCount = miners.filter((m) => m.enabled).length;
   const [expandedMac, setExpandedMac] = useState<string | null>(null);
   const isEmpty = miners.length === 0;
+  const { statusOf } = useMinerStatus();
+  const { data: history } = useMinersHistory();
+  // Kept apart from the open flag so the panel still shows its miner while
+  // it slides out -- same as Home.
+  const [viewedMac, setViewedMac] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const viewed = viewedMac ? liveMinersByMac.get(viewedMac) : undefined;
 
   return (
     <Box>
@@ -170,11 +181,9 @@ const ConfiguredMinersTable = ({
               <TableCell>{t("settingsPage.configured.model")}</TableCell>
               <TableCell>{t("settingsPage.configured.thresholds")}</TableCell>
               <TableCell>{t("settingsPage.configured.status")}</TableCell>
-              <Writable readOnly={readOnly}>
-                <TableCell align="right">
-                  {t("settingsPage.configured.actions")}
-                </TableCell>
-              </Writable>
+              <TableCell align="right">
+                {t("settingsPage.configured.actions")}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -315,10 +324,26 @@ const ConfiguredMinersTable = ({
                         )}
                       </Stack>
                     </TableCell>
-                    <Writable readOnly={readOnly}>
-                      <TableCell align="right">
-                        {/* An icon, its word in the tooltip: the table
-                            fits its panel without scrolling sideways. */}
+                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                      {/* Icons, their word in the tooltip: the table fits
+                          its panel without scrolling sideways. */}
+                      <Tooltip title={t("settingsPage.configured.view")}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            disabled={!liveMinersByMac.has(key)}
+                            aria-label={t("settingsPage.configured.view")}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewedMac(key);
+                              setDrawerOpen(true);
+                            }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Writable readOnly={readOnly}>
                         <Tooltip
                           title={
                             m.enabled
@@ -351,12 +376,12 @@ const ConfiguredMinersTable = ({
                             </IconButton>
                           </span>
                         </Tooltip>
-                      </TableCell>
-                    </Writable>
+                      </Writable>
+                    </TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell
-                      colSpan={readOnly ? 6 : 7}
+                      colSpan={7}
                       sx={{
                         py: 0,
                         borderBottom: isExpanded ? undefined : "none",
@@ -399,6 +424,17 @@ const ConfiguredMinersTable = ({
           </TableBody>
         </DataTable>
       )}
+      <MinerDrawer
+        open={drawerOpen}
+        miner={viewed}
+        status={viewed && statusOf(viewed)}
+        hashRateHistory={
+          viewed
+            ? history?.miners.find((h) => h.ip === viewed.ip)?.hashRate
+            : undefined
+        }
+        onClose={() => setDrawerOpen(false)}
+      />
     </Box>
   );
 };
