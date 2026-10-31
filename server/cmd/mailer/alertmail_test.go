@@ -136,3 +136,20 @@ func TestSendTestMail_alertExample(t *testing.T) {
 		t.Errorf("subject = %q (html with logo: %v), want the French example", subject, html)
 	}
 }
+
+func TestSendTestMail_auditExample(t *testing.T) {
+	server := mailtest.NewServer(t)
+	m := mailerWithServer(t, server, "me@example.com")
+	// Neither the saved types nor "skip if empty" thin the example out.
+	m.config.Notifications.AuditReport = config.AuditReportConfig{Types: []string{audit.TypeDiscover}, SkipIfEmpty: true}
+
+	w := post(m, "/api/mailer/test", `{"lang":"fr","kind":"audit"}`)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	subject, html := subjectOf(t, server.Next(t))
+	if !strings.HasPrefix(subject, "AxeOS Dashboard — Audit du ") || !strings.HasSuffix(subject, " : 3 événements") || !html {
+		t.Errorf("subject = %q (html with logo: %v), want the French example, all 3 events", subject, html)
+	}
+}

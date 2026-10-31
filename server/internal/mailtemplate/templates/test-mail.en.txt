@@ -13,10 +13,19 @@
 #   {{dashboardURL}}  the dashboard's address (empty when not set)
 Subject: AxeOS Dashboard — test mail
 
-This mail confirms AxeOS Dashboard can send mails.
+Hello,
 
-Server: {{server}} ({{security}})
-Sender: {{from}}
+Good news: AxeOS Dashboard can send mails.
+
+It went out with these settings:
+  • SMTP server: {{server}} ({{security}})
+  • Sender: {{from}}
+  • Recipients: {{to}}
+
+These addresses will get every mail turned on in
+Configuration › Notifications.
+
 Sent on {{date}} (UTC).
-
 Dashboard: {{dashboardURL}}
+
+— AxeOS Dashboard

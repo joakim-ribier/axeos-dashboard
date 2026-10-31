@@ -12,6 +12,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alertmail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/auditreport"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mailtemplate"
 )
@@ -53,8 +54,8 @@ func (m *Mailer) status(w http.ResponseWriter, _ *http.Request) {
 type testMailRequest struct {
 	// Lang picks the mail's language, the dashboard's own ("fr" or "en").
 	Lang string `json:"lang"`
-	// Kind "alert" sends an example of the alerts mail instead, with
-	// made-up alerts.
+	// Kind "alert" or "audit" sends an example of the alerts mail or of the
+	// audit report instead, with made-up content.
 	Kind string `json:"kind"`
 }
 
@@ -73,10 +74,10 @@ var sentAtLayouts = map[string]string{
 // so a success means the saved setup, and the mailer itself, actually work.
 //
 // @Summary Send a test mail (mailer)
-// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind "alert", an example of the alerts mail with made-up alerts. Reached through dashboard-api's POST /api/config/mail/test.
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind "alert" or "audit", an example of the alerts mail or of the audit report with made-up content. Reached through dashboard-api's POST /api/config/mail/test.
 // @Tags Mailer
 // @Accept json
-// @Param request body main.testMailRequest false "Mail language (fr or en, default en), and kind (alert for the alerts mail)"
+// @Param request body main.testMailRequest false "Mail language (fr or en, default en), and kind (alert or audit for an example of that mail)"
 // @Produce json
 // @Success 200 {object} main.testMailResponse
 // @Failure 400 {object} object{error=string,message=string,code=int} "SMTP server or recipients not configured"
@@ -103,14 +104,26 @@ func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 	}
 	smtp := settings.Mail.SMTP
 	var msg mail.Message
-	if req.Kind == "alert" {
+	switch req.Kind {
+	case "alert":
 		settings.Language = lang
 		var err error
 		msg, err = alertmail.Build(settings, alertmail.Sample(time.Now()), m.config.MailTemplatesDir)
 		if err != nil {
 			m.logger.Error("alerts mail template unusable, the built-in one is used instead", "error", err)
 		}
-	} else {
+	case "audit":
+		// Whatever the saved types and "skip if empty": the whole example.
+		settings.Language = lang
+		settings.AuditReport.Types, settings.AuditReport.SkipIfEmpty = nil, false
+		now := time.Now()
+		period, entries, names := auditreport.Sample(now)
+		var err error
+		msg, err = auditreport.Build(settings, period, entries, names, m.config.MailTemplatesDir, now)
+		if err != nil {
+			m.logger.Error("audit report template unusable, the built-in one is used instead", "error", err)
+		}
+	default:
 		subject, text := m.template(mailtemplate.TestMail, lang).Render(map[string]string{
 			"server":       smtp.Host + ":" + strconv.Itoa(smtp.Port),
 			"security":     string(smtp.Security),

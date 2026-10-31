@@ -154,6 +154,10 @@ Sous le réglage, la date du dernier envoi, ou du dernier échec avec son
 motif — un échec est réessayé chaque heure. Chaque rapport envoyé, ou en
 échec, apparaît aussi dans l'audit.
 
+**Envoyer un exemple** envoie aux destinataires un rapport d'audit
+fictif sur la veille, quels que soient les types choisis, pour voir à quoi
+il ressemble sans attendre la nuit.
+
 ### Alertes
 
 **Envoyer un mail à chaque nouvelle alerte** : à chaque relevé du feeder
@@ -182,44 +186,52 @@ par mail et par langue :
 mail-templates/
 ├── alert.fr.html
 ├── alert.en.html
-├── audit-report.fr.txt
-├── audit-report.en.txt
+├── audit-report.fr.html
+├── audit-report.en.html
 ├── test-mail.fr.txt
 └── test-mail.en.txt
 ```
 
 Le mailer crée ceux qui manquent à son démarrage et ne touche jamais à un
-fichier existant ; il les relit à chaque envoi, sans redémarrage.
+fichier existant ; il les relit à chaque envoi, sans redémarrage. Pour
+revenir au texte d'origine, supprimer le fichier : il est recréé au
+prochain démarrage du mailer.
+
+**Le mail d'alertes et le rapport d'audit sont en HTML** : un en-tête avec
+le logo, une carte par alerte ou par événement, un bouton vers la page
+Alertes ou Audit, et un pied de page.
+
+- Ce sont des modèles Go (`{{.Champ}}`, `{{range ...}}`...) dont la
+  balise `<title>` est l'objet du mail ; leurs variables sont décrites en
+  tête de fichier.
+- S'ils ne passent pas, le modèle d'origine est utilisé et l'erreur est
+  dans les logs du mailer.
+- Une version texte est jointe automatiquement pour les messageries qui
+  n'affichent pas le HTML.
+- Le bouton n'apparaît que si l'adresse du dashboard est un nom, pas une
+  IP, et l'adresse elle-même n'est jamais écrite dans le HTML : un lien
+  vers une IP — même écrite en texte, que Gmail transforme en lien — fait
+  classer le mail en spam.
+
+**Le mail de test est en texte**, pour vérifier l'envoi sans mise en page :
 
 ```text
 # Les lignes qui commencent par # sont des commentaires
-Subject: AxeOS Dashboard — {{title}} : {{count}}
+Subject: AxeOS Dashboard — mail de test
 
-{{title}} — {{count}}
+Bonne nouvelle : AxeOS Dashboard sait envoyer des mails.
 
-{{events}}
+  • Serveur SMTP : {{server}} ({{security}})
+  • Destinataires : {{to}}
 
-Voir dans le dashboard : {{link}}
+Dashboard : {{dashboardURL}}
 ```
 
 - La ligne `Subject:` est l'objet du mail ; après la ligne vide, le texte.
-- Chaque `{{variable}}` est remplacée à l'envoi — la liste des variables
-  de chaque mail est en commentaire en tête de son fichier (`{{date}}`,
-  `{{events}}`, `{{link}}`...).
-- Une ligne dont la variable est vide disparaît (le lien, sans adresse du
-  dashboard).
-- Pour revenir au texte d'origine, supprimer le fichier : il est recréé
-  au prochain démarrage du mailer.
-
-Le mail d'alertes est en HTML (`alert.*.html`) : un en-tête avec le logo,
-une carte par alerte, un bouton vers la page Alertes (seulement si
-l'adresse du dashboard est un nom, pas une IP : un lien vers une IP fait
-classer le mail en spam) et un pied de page.
-C'est un modèle Go (`{{.Champ}}`, `{{range .Alerts}}`...) dont la balise
-`<title>` est l'objet du mail ; ses variables sont décrites en tête de
-fichier. S'il ne passe pas, le modèle d'origine est utilisé et l'erreur
-est dans les logs du mailer. Une version texte est jointe automatiquement
-pour les messageries qui n'affichent pas le HTML.
+- Chaque `{{variable}}` est remplacée à l'envoi — la liste est en
+  commentaire en tête du fichier.
+- Une ligne dont la variable est vide disparaît (l'adresse, sans adresse
+  du dashboard).
 {% endraw %}
 
 ---

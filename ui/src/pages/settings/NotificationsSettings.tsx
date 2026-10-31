@@ -37,6 +37,15 @@ import { SectionTitle } from "./SectionTitle";
 
 const SECURITIES: SmtpSecurity[] = ["starttls", "tls", "none"];
 
+type MailKind = "test" | "alert" | "audit";
+
+// The confirmation of each kind of mail sent from this page.
+const SENT: Record<MailKind, string> = {
+  test: "settingsPage.appSettings.mail.test.sent",
+  alert: "settingsPage.appSettings.mail.alerts.exampleSent",
+  audit: "settingsPage.appSettings.mail.report.exampleSent",
+};
+
 const MAIL_LANGUAGES = ["fr", "en"] as const;
 
 // The port each mode almost always goes with -- picked for the operator
@@ -66,8 +75,9 @@ const NotificationsSection = ({
   const [password, setPassword] = useState("");
   const [from, setFrom] = useState("");
   const [newRecipient, setNewRecipient] = useState("");
-  const [testing, setTesting] = useState(false);
-  const [sendingExample, setSendingExample] = useState(false);
+  // The mail being sent from this page, if any: the test mail, or an
+  // example of the alerts mail or of the audit report.
+  const [sending, setSending] = useState<MailKind | null>(null);
 
   const saved = data?.notifications;
 
@@ -203,19 +213,14 @@ const NotificationsSection = ({
       : null;
 
   // kind "alert": an example of the alerts mail, with made-up alerts.
-  const handleSendTest = async (kind?: "alert") => {
-    const setSending = kind ? setSendingExample : setTesting;
-    setSending(true);
+  const handleSendTest = async (kind: MailKind) => {
+    setSending(kind);
     try {
       await axios.post("/api/config/mail/test", {
         lang: i18n.language.startsWith("fr") ? "fr" : "en",
-        kind,
+        kind: kind === "test" ? undefined : kind,
       });
-      notify(
-        kind
-          ? t("settingsPage.appSettings.mail.alerts.exampleSent")
-          : t("settingsPage.appSettings.mail.test.sent"),
-      );
+      notify(t(SENT[kind]));
     } catch (err) {
       const body = axios.isAxiosError<{ error?: string; message?: string }>(err)
         ? err.response?.data
@@ -226,7 +231,7 @@ const NotificationsSection = ({
         t("settingsPage.appSettings.mail.test.unknownError");
       notify(t("settingsPage.appSettings.mail.test.failed", { error }), error);
     } finally {
-      setSending(false);
+      setSending(null);
     }
   };
 
@@ -480,11 +485,11 @@ const NotificationsSection = ({
         >
           <ActionButton
             icon={<SendIcon fontSize="small" />}
-            loading={testing}
+            loading={sending === "test"}
             disabled={testBlocker !== null}
-            onClick={() => void handleSendTest()}
+            onClick={() => void handleSendTest("test")}
           >
-            {testing
+            {sending === "test"
               ? t("settingsPage.appSettings.mail.test.sending")
               : t("settingsPage.appSettings.mail.test.send")}
           </ActionButton>
@@ -505,6 +510,9 @@ const NotificationsSection = ({
         persist={persist}
         serverBasePayload={serverBasePayload}
         notify={notify}
+        sending={sending === "audit"}
+        blocked={testBlocker !== null}
+        onSendExample={() => void handleSendTest("audit")}
       />
 
       <SectionDivider />
@@ -516,7 +524,7 @@ const NotificationsSection = ({
         persist={persist}
         serverBasePayload={serverBasePayload}
         notify={notify}
-        sending={sendingExample}
+        sending={sending === "alert"}
         blocked={testBlocker !== null}
         onSendExample={() => void handleSendTest("alert")}
       />

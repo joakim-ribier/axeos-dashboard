@@ -18,11 +18,8 @@ import (
 //go:embed templates/*.txt templates/*.html
 var builtin embed.FS
 
-// The mails there's a template of.
-const (
-	TestMail    = "test-mail"
-	AuditReport = "audit-report"
-)
+// TestMail is the test mail -- the plain text one.
+const TestMail = "test-mail"
 
 // Template is one mail's wording: its subject and its text.
 type Template struct {

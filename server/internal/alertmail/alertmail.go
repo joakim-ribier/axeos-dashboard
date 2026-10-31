@@ -7,8 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -99,7 +97,7 @@ func Build(settings config.NotificationsConfig, poll []alerts.Event, templatesDi
 		Date:         poll[0].Timestamp.UTC().Format(dateLayouts[lang]),
 		DashboardURL: strings.TrimRight(settings.DashboardURL, "/"),
 	}
-	if linkable(data.DashboardURL) {
+	if mailtemplate.Linkable(data.DashboardURL) {
 		data.AlertsURL = data.DashboardURL + "/alerts"
 	}
 	poll = slices.SortedFunc(slices.Values(poll), alerts.Compare)
@@ -127,17 +125,6 @@ func Build(settings config.NotificationsConfig, poll []alerts.Event, templatesDi
 		HTML:    html,
 		Inline:  []mail.Inline{{ID: "logo", ContentType: "image/png", Data: mailtemplate.Logo}},
 	}, err
-}
-
-// linkable reports whether the dashboard's address can be a link in the
-// mail: a link to a bare IP address (http://192.168.1.60) is one of the
-// first things spam filters flag -- that address then only shows as text.
-func linkable(address string) bool {
-	u, err := url.Parse(address)
-	if err != nil || u.Hostname() == "" {
-		return false
-	}
-	return net.ParseIP(u.Hostname()) == nil && u.Hostname() != "localhost"
 }
 
 // Sample is a made-up poll -- the example mail sent from the Notifications

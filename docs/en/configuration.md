@@ -151,6 +151,10 @@ Below the setting, when it was last sent, or the last failure with its
 reason — a failure is retried every hour. Each report sent, or failing,
 also shows in the audit.
 
+**Send an example** mails the recipients a made-up audit report on the
+day before, whatever the types picked, to see what it looks like without
+waiting for the night.
+
 ### Alerts
 
 **Send a mail on every new alert**: on every feeder poll that raises new
@@ -177,45 +181,53 @@ language:
 mail-templates/
 ├── alert.fr.html
 ├── alert.en.html
-├── audit-report.fr.txt
-├── audit-report.en.txt
+├── audit-report.fr.html
+├── audit-report.en.html
 ├── test-mail.fr.txt
 └── test-mail.en.txt
 ```
 
 The mailer creates the missing ones when it starts and never touches an
-existing file; it reads them again on every send, no restart needed.
+existing file; it reads them again on every send, no restart needed. To
+go back to the original text, delete the file: it's created again the next
+time the mailer starts.
+
+**The alerts mail and the audit report are HTML**: a header with the
+logo, a card per alert or per event, a button to the Alerts or Audit page,
+and a footer.
+
+- They're Go templates (`{{.Field}}`, `{{range ...}}`...) whose `<title>`
+  tag is the mail's subject; their variables are described at the top of
+  the file.
+- If they don't work, the built-in template is used and the error is in
+  the mailer's logs.
+- A text version is attached automatically for the mail clients that
+  don't show HTML.
+- The button only shows when the dashboard's address is a name, not an
+  IP, and the address itself is never written in the HTML: a link to an IP
+  — even written out as text, which Gmail turns into a link — gets the mail
+  flagged as spam.
+
+**The test mail is plain text**, to check the sending with no layout:
 
 ```text
 # Lines starting with # are comments
-Subject: AxeOS Dashboard — {{title}}: {{count}}
+Subject: AxeOS Dashboard — test mail
 
-{{title}} — {{count}}
+Good news: AxeOS Dashboard can send mails.
 
-{{events}}
+  • SMTP server: {{server}} ({{security}})
+  • Recipients: {{to}}
 
-Open in the dashboard: {{link}}
+Dashboard: {{dashboardURL}}
 ```
 
 - The `Subject:` line is the mail's subject; after the blank line, its
   text.
-- Each `{{variable}}` is replaced on sending — each mail's variables are
-  listed in comments at the top of its file (`{{date}}`, `{{events}}`,
-  `{{link}}`...).
-- A line whose variable is empty disappears (the link, with no
+- Each `{{variable}}` is replaced on sending — the list is in comments at
+  the top of the file.
+- A line whose variable is empty disappears (the address, with no
   dashboard address).
-- To go back to the original text, delete the file: it's created again
-  the next time the mailer starts.
-
-The alerts mail is HTML (`alert.*.html`): a header with the logo, a card
-per alert, a button to the Alerts page (only when the dashboard's
-address is a name, not an IP: a link to an IP gets the mail flagged as
-spam) and a footer. It's a Go template
-(`{{.Field}}`, `{{range .Alerts}}`...) whose `<title>` tag is the mail's
-subject; its variables are described at the top of the file. If it
-doesn't work, the built-in template is used and the error is in the
-mailer's logs. A text version is attached automatically for the mail
-clients that don't show HTML.
 {% endraw %}
 
 ---

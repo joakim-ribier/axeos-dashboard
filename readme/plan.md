@@ -130,6 +130,8 @@ every commit.
 - ✅ **Alerts by mail**: one HTML mail (editable template, logo, text
   version) per feeder poll that raises alerts, sent by the mailer when
   turned on in Configuration › Notifications.
+- ✅ **Audit report in HTML**: the same layout as the alerts mail, a card
+  per event grouped by type, the test mail staying plain text.
 - ✅ **Alerts on a change of state**: an alert is recorded once when it
   starts and once when it ends (hysteresis on temperature and fan, offline
   after 2 missed polls), the ones in progress stay on top of the Alerts
@@ -181,9 +183,6 @@ every commit.
   from elsewhere -- e.g. a nightly job in dashboard-api's scheduler working
   out the period and calling the mailer -- so the mailer only builds and
   sends mails.
-- **The other mails in HTML too**: the audit report and the test mail are
-  still plain text -- the alerts mail's HTML layout (header with the logo,
-  footer) could serve them as well.
 
 ### Release
 

@@ -20,6 +20,8 @@ type labels struct {
 	values map[string]map[string]string
 
 	failed, changed, query, nothing string
+	// utc and open close the text version: the time zone, and the link.
+	utc, open string
 	// colon is ": " -- " : " in French typography.
 	colon            string
 	weekdays, months []string
@@ -27,7 +29,7 @@ type labels struct {
 	// title names the period, for the template's {{title}}.
 	title func(Period) string
 	// dayTime is an entry's day and time, for a period of several days;
-	// day a day ({{periodStart}}...), sentAt the send's date and time.
+	// day a day (.PeriodStart...), sentAt the send's date and time.
 	dayTime, day, sentAt string
 }
 
@@ -46,11 +48,17 @@ func (l labels) label(m map[string]string, key string) string {
 	return key
 }
 
-// line is one entry: its time, who or what did it (the dashboard from which
-// address, or which service), on which miner (by name, from names: IP ->
-// display name), how it ended -- then what it changed, one item per line.
-func (l labels) line(e audit.Entry, withDay bool, names map[string]string) string {
-	var b strings.Builder
+// Entry is one entry as the report shows it: its time, who or what did it
+// (the dashboard from which address, or which service), on which miner (by
+// name), how it failed if it did, and what it changed, one item each.
+type Entry struct {
+	Time, Who, Miner, Failure string
+	Details                   []string
+}
+
+// entry words e -- its day too for a period of several days; miners named
+// after names (IP -> display name).
+func (l labels) entry(e audit.Entry, withDay bool, names map[string]string) Entry {
 	who := l.label(l.sources, string(e.Source))
 	switch {
 	case e.Service != "":
@@ -62,20 +70,19 @@ func (l labels) line(e audit.Entry, withDay bool, names map[string]string) strin
 	if withDay {
 		layout = l.dayTime
 	}
-	fmt.Fprintf(&b, "  %s  %s", e.Timestamp.UTC().Format(layout), who)
+	out := Entry{Time: e.Timestamp.UTC().Format(layout), Who: who}
 	if e.Target != "" {
-		b.WriteString(" · " + miner(e.Target, names))
+		out.Miner = miner(e.Target, names)
 	}
 	if e.Status >= 400 || e.Error != "" {
-		b.WriteString(" · " + l.failed)
+		out.Failure = l.failed
 		if e.Status >= 400 {
-			b.WriteString(" (" + strconv.Itoa(e.Status) + ")")
+			out.Failure += " (" + strconv.Itoa(e.Status) + ")"
 		}
 		if e.Error != "" {
-			b.WriteString(l.colon + e.Error)
+			out.Failure += l.colon + e.Error
 		}
 	}
-	b.WriteString("\n")
 
 	// A report's own entry reads as one line -- its period and recipients
 	// aren't changes to the config, just what it covered and who got it.
@@ -93,28 +100,44 @@ func (l labels) line(e audit.Entry, withDay bool, names map[string]string) strin
 			parts = append(parts, l.label(l.fields, "sentTo")+l.colon+strings.Join(to, ", "))
 		}
 		if len(parts) > 0 {
-			fmt.Fprintf(&b, "         %s\n", strings.Join(parts, " · "))
+			out.Details = []string{strings.Join(parts, " · ")}
 		}
-		return b.String()
+		return out
 	}
 
 	for _, c := range e.Changes {
 		field := l.label(l.fields, c.Field)
-		switch c.Kind {
-		case audit.ChangeAdded:
-			fmt.Fprintf(&b, "         + %s%s%s\n", field, l.colon, c.After)
-		case audit.ChangeRemoved:
-			fmt.Fprintf(&b, "         − %s%s%s\n", field, l.colon, c.Before)
+		switch {
+		case c.Kind == audit.ChangeAdded:
+			out.Details = append(out.Details, "+ "+field+l.colon+c.After)
+		case c.Kind == audit.ChangeRemoved:
+			out.Details = append(out.Details, "− "+field+l.colon+c.Before)
+		case c.Before == "" && c.After == "":
+			out.Details = append(out.Details, field+l.colon+l.changed)
 		default:
-			if c.Before == "" && c.After == "" {
-				fmt.Fprintf(&b, "         %s%s%s\n", field, l.colon, l.changed)
-			} else {
-				fmt.Fprintf(&b, "         %s%s%s → %s\n", field, l.colon, l.value(c.Field, c.Before), l.value(c.Field, c.After))
-			}
+			out.Details = append(out.Details, field+l.colon+l.value(c.Field, c.Before)+" → "+l.value(c.Field, c.After))
 		}
 	}
 	if len(e.Changes) == 0 && e.Query != "" {
-		fmt.Fprintf(&b, "         %s%s%s\n", l.query, l.colon, e.Query)
+		out.Details = append(out.Details, l.query+l.colon+e.Query)
+	}
+	return out
+}
+
+// text is the entry as the text version shows it: one line, then its
+// details indented.
+func (e Entry) text() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "  %s  %s", e.Time, e.Who)
+	if e.Miner != "" {
+		b.WriteString(" · " + e.Miner)
+	}
+	if e.Failure != "" {
+		b.WriteString(" · " + e.Failure)
+	}
+	b.WriteString("\n")
+	for _, d := range e.Details {
+		fmt.Fprintf(&b, "         %s\n", d)
 	}
 	return b.String()
 }
@@ -224,6 +247,8 @@ var fr = labels{
 	changed:  "valeur modifiée",
 	query:    "Paramètres",
 	nothing:  "Aucun événement ce jour-là.",
+	utc:      "Jours et heures en UTC.",
+	open:     "Voir dans le dashboard",
 	colon:    " : ",
 	weekdays: []string{"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"},
 	months: []string{"janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -325,6 +350,8 @@ var en = labels{
 	changed:  "value changed",
 	query:    "Parameters",
 	nothing:  "Nothing recorded that day.",
+	utc:      "Days and times in UTC.",
+	open:     "Open in the dashboard",
 	colon:    ": ",
 	weekdays: []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"},
 	months: []string{"January", "February", "March", "April", "May", "June", "July",

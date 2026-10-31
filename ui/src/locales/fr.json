@@ -678,7 +678,9 @@
             "weekly": "Chaque semaine (lundi → dimanche)",
             "monthly": "Chaque mois (le mois écoulé)"
           },
-          "utc": "Envoyé chaque nuit vers 1 h UTC ; jours et heures du rapport en UTC, comme l'audit."
+          "utc": "Envoyé chaque nuit vers 1 h UTC ; jours et heures du rapport en UTC, comme l'audit.",
+          "sendExample": "Envoyer un exemple",
+          "exampleSent": "Exemple de rapport d'audit envoyé."
         },
         "alerts": {
           "title": "Alertes",

@@ -8,19 +8,36 @@ import (
 	"html"
 	"html/template"
 	"io/fs"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-// Alert is the alerts mail -- an HTML template.
-const Alert = "alert"
+// The mails there's an HTML template of.
+const (
+	Alert       = "alert"
+	AuditReport = "audit-report"
+)
 
 // Logo is the app's icon, shown in an HTML mail's header as "cid:logo".
 //
 //go:embed logo.png
 var Logo []byte
+
+// Linkable reports whether the dashboard's address can be a link in a mail:
+// a link to a bare IP address (http://192.168.1.60) -- even written out as
+// text, which Gmail turns into one -- gets the mail filed as spam. Only a
+// name can then show in the HTML.
+func Linkable(address string) bool {
+	u, err := url.Parse(address)
+	if err != nil || u.Hostname() == "" {
+		return false
+	}
+	return net.ParseIP(u.Hostname()) == nil && u.Hostname() != "localhost"
+}
 
 var titlePattern = regexp.MustCompile(`(?is)<title>(.*?)</title>`)
 

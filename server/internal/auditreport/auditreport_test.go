@@ -13,7 +13,6 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mail"
-	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mailtemplate"
 )
 
 func day(s string) time.Time {
@@ -122,11 +121,7 @@ var oneDay = Period{From: day("2026-10-15"), To: day("2026-10-16")}
 // build is Build with the built-in template in n's language, sent at 01:00
 // the day after.
 func build(n config.NotificationsConfig, p Period, entries []audit.Entry, names map[string]string) (mail.Message, error) {
-	tmpl, err := mailtemplate.Load("", mailtemplate.AuditReport, n.Language)
-	if err != nil {
-		panic(err)
-	}
-	return Build(n, p, entries, names, tmpl, p.To.Add(time.Hour))
+	return Build(n, p, entries, names, "", p.To.Add(time.Hour))
 }
 
 func entries() []audit.Entry {
@@ -276,5 +271,76 @@ func TestLabels_matchTheDashboards(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestBuild_html(t *testing.T) {
+	n := notifications(config.ReportDaily)
+	n.Language = "fr"
+
+	msg, err := build(n, oneDay, entries(), map[string]string{"192.168.1.65": "salon"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(msg.Inline) != 1 || msg.Inline[0].ID != "logo" {
+		t.Errorf("inline = %+v, want the logo", msg.Inline)
+	}
+	for _, want := range []string{
+		`<img src="cid:logo"`,
+		"Redémarrage · 1",
+		"salon (192.168.1.65)",
+		// A failed one stands out.
+		"Échec (502) : device unreachable</div>",
+		"border-left:4px solid #e53935",
+		"Fréquence du rapport d&#39;audit : Tous les jours → Chaque semaine",
+		"16/10/2026 à 01:00 (UTC)",
+	} {
+		if !strings.Contains(msg.HTML, want) {
+			t.Errorf("HTML misses %q", want)
+		}
+	}
+}
+
+func TestBuild_noLinkToAnIP(t *testing.T) {
+	n := notifications(config.ReportDaily)
+	for address, link := range map[string]bool{
+		"http://192.168.1.60":        false,
+		"https://axeos.example.com/": true,
+	} {
+		n.DashboardURL = address
+		msg, err := build(n, oneDay, entries(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.Contains(msg.HTML, "href="); got != link {
+			t.Errorf("%s: a link in the HTML = %v, want %v", address, got, link)
+		}
+		if strings.Contains(msg.HTML, "192.168.1.60") {
+			t.Errorf("%s: the IP shows in the HTML -- Gmail turns it into a link", address)
+		}
+		// The text version keeps it, as text.
+		if !strings.Contains(msg.Text, "Open in the dashboard: "+strings.TrimRight(address, "/")+"/audit?") {
+			t.Errorf("%s: text = %q, want the link as text", address, msg.Text)
+		}
+	}
+}
+
+func TestSample(t *testing.T) {
+	p, entries, names := Sample(at("2026-10-16T14:00:00Z"))
+
+	if !p.OneDay() || p.From != day("2026-10-15") {
+		t.Errorf("period = %+v, want the day before", p)
+	}
+	for _, e := range entries {
+		if e.Timestamp.Before(p.From) || !e.Timestamp.Before(p.To) {
+			t.Errorf("entry at %v, outside the period", e.Timestamp)
+		}
+		if e.Target != "" && names[e.Target] == "" {
+			t.Errorf("miner %s has no name", e.Target)
+		}
+	}
+	n := notifications(config.ReportDaily)
+	if msg, err := Build(n, p, entries, names, "", p.To); err != nil || !strings.Contains(msg.Text, "Bitaxe-1 (192.168.1.10)") {
+		t.Errorf("Build() = %q, %v", msg.Text, err)
 	}
 }

@@ -134,11 +134,34 @@ func Due(now time.Time, n config.NotificationsConfig, s State) (Period, bool) {
 // on.
 var ErrNothingToSend = errors.New("nothing recorded in the period")
 
-// Build is the mail for p, worded by tmpl (see mailtemplate): every entry
-// recorded in it, of the configured types, grouped by type -- miners named
-// after names (IP -> display name) -- and a link to the same period in the
-// dashboard's audit page when its address is set.
-func Build(n config.NotificationsConfig, p Period, entries []audit.Entry, names map[string]string, tmpl mailtemplate.Template, now time.Time) (mail.Message, error) {
+// Data is what the HTML template is filled with -- see
+// templates/audit-report.*.html.
+type Data struct {
+	Title, Count, Empty    string
+	PeriodStart, PeriodEnd string
+	Date                   string
+	// AuditURL is the dashboard's audit page on the period -- empty
+	// without the dashboard's address, or when it's an IP (see
+	// mailtemplate.Linkable).
+	AuditURL string
+	Groups   []Group
+}
+
+// Group is one type's entries.
+type Group struct {
+	Label   string
+	Count   int
+	Entries []Entry
+}
+
+// Build is the mail for p: every entry recorded in it, of the configured
+// types, grouped by type -- miners named after names (IP -> display name)
+// -- the HTML template filled (from templatesDir, the built-in one if it's
+// missing or broken: that error is returned for the log, the mail still
+// built) with a text version alongside, and a link to the same period in
+// the dashboard's audit page. ErrNothingToSend for an empty period when
+// SkipIfEmpty is on.
+func Build(n config.NotificationsConfig, p Period, entries []audit.Entry, names map[string]string, templatesDir string, now time.Time) (mail.Message, error) {
 	if len(n.AuditReport.Types) > 0 {
 		entries = slices.DeleteFunc(slices.Clone(entries), func(e audit.Entry) bool {
 			return !slices.Contains(n.AuditReport.Types, e.Type)
@@ -149,37 +172,82 @@ func Build(n config.NotificationsConfig, p Period, entries []audit.Entry, names 
 	}
 
 	l := labelsFor(n.Language)
-	var events strings.Builder
-	if len(entries) == 0 {
-		events.WriteString(l.nothing)
+	link := auditLink(n.DashboardURL, p)
+	data := Data{
+		Title:       l.title(p),
+		Count:       l.count(len(entries)),
+		Empty:       l.nothing,
+		PeriodStart: p.From.Format(l.day),
+		PeriodEnd:   p.last().Format(l.day),
+		Date:        now.UTC().Format(l.sentAt),
 	}
-	for i, typ := range typesIn(entries) {
-		if i > 0 {
-			events.WriteString("\n")
-		}
-		var group []audit.Entry
+	if mailtemplate.Linkable(n.DashboardURL) {
+		data.AuditURL = link
+	}
+	for _, typ := range typesIn(entries) {
+		group := Group{Label: l.label(l.types, typ)}
 		for _, e := range entries {
 			if e.Type == typ {
-				group = append(group, e)
+				group.Entries = append(group.Entries, l.entry(e, !p.OneDay(), names))
 			}
 		}
-		fmt.Fprintf(&events, "%s (%d)\n", l.label(l.types, typ), len(group))
-		for _, e := range group {
-			events.WriteString(l.line(e, !p.OneDay(), names))
-		}
+		group.Count = len(group.Entries)
+		data.Groups = append(data.Groups, group)
 	}
 
-	subject, text := tmpl.Render(map[string]string{
-		"title":       l.title(p),
-		"count":       l.count(len(entries)),
-		"events":      strings.TrimRight(events.String(), "\n"),
-		"periodStart": p.From.Format(l.day),
-		"periodEnd":   p.last().Format(l.day),
-		"link":        auditLink(n.DashboardURL, p),
-		"date":        now.UTC().Format(l.sentAt),
-		"sentTo":      strings.Join(n.Mail.To, ", "),
-	})
-	return mail.Message{To: n.Mail.To, Subject: subject, Text: text}, nil
+	subject, html, err := mailtemplate.RenderHTML(templatesDir, mailtemplate.AuditReport, n.Language, data)
+	return mail.Message{
+		To:      n.Mail.To,
+		Subject: subject,
+		Text:    text(data, l, link),
+		HTML:    html,
+		Inline:  []mail.Inline{{ID: "logo", ContentType: "image/png", Data: mailtemplate.Logo}},
+	}, err
+}
+
+// text is the mail's text version: the title, the entries grouped by type,
+// the time zone, and the link to the dashboard -- as text, even to an IP.
+func text(d Data, l labels, link string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s — %s\n\n", d.Title, d.Count)
+	if len(d.Groups) == 0 {
+		b.WriteString(d.Empty + "\n")
+	}
+	for i, g := range d.Groups {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		fmt.Fprintf(&b, "%s (%d)\n", g.Label, g.Count)
+		for _, e := range g.Entries {
+			b.WriteString(e.text())
+		}
+	}
+	fmt.Fprintf(&b, "\n%s\n", l.utc)
+	if link != "" {
+		fmt.Fprintf(&b, "\n%s%s%s\n", l.open, l.colon, link)
+	}
+	return b.String()
+}
+
+// Sample is a made-up report on the day before now -- the example mail
+// sent from the Notifications page, to see what a report looks like
+// without waiting for the night: a period, its entries, and the miners'
+// names.
+func Sample(now time.Time) (Period, []audit.Entry, map[string]string) {
+	utc := now.UTC()
+	to := time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
+	from := to.AddDate(0, 0, -1)
+	at := func(h, m int) time.Time { return from.Add(time.Duration(h)*time.Hour + time.Duration(m)*time.Minute) }
+	return Period{From: from, To: to}, []audit.Entry{
+		{Timestamp: at(8, 12), Source: audit.SourceAPI, IP: "192.168.1.20", Type: audit.TypeRestart, Target: "192.168.1.10", Status: 204},
+		{Timestamp: at(23, 59), Source: audit.SourceSystem, Service: audit.ServiceScheduler, Type: audit.TypeSwitchFallback, Target: "192.168.1.11", Status: 502, Error: "device unreachable"},
+		{Timestamp: at(14, 30), Source: audit.SourceAPI, IP: "192.168.1.20", Type: audit.TypeMinerPool, Target: "192.168.1.10", Changes: []audit.Change{
+			{Field: "url", Kind: audit.ChangeChanged, Before: "stratum.braiins.com", After: "solo.atlaspool.io"},
+		}},
+	}, map[string]string{
+		"192.168.1.10": "Bitaxe-1",
+		"192.168.1.11": "Bitaxe-2",
+	}
 }
 
 // auditLink is the dashboard's audit page on p -- "" without an address.
