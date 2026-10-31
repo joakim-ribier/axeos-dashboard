@@ -79,6 +79,8 @@ export const alertEventSchema = z.object({
   threshold: z.number().optional(),
   message: z.string().optional(),
   raisedAt: z.string().optional(),
+  // Cleared only: the highest reading while it lasted (temp/fan).
+  peak: z.number().optional(),
 });
 
 export type AlertEvent = z.infer<typeof alertEventSchema>;

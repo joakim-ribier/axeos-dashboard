@@ -121,6 +121,11 @@ func TestObserve_events(t *testing.T) {
 	if e := raised[1]; e.Type != TypeFirmwareUpdate || e.Message != "v2" {
 		t.Errorf("firmwareUpdate raised = %+v, want the version available as its message", e)
 	}
+	withPeak := raised[0]
+	withPeak.Peak = 64.4
+	if s.Ongoing[TypeTempHigh] != withPeak || s.Ongoing[TypeFirmwareUpdate] != raised[1] {
+		t.Errorf("Ongoing = %+v, want the events that raised them (with the peak so far)", s.Ongoing)
+	}
 
 	cleared := s.Observe(t0.Add(time.Hour), Poll{Temp: 50, Version: "v2", LatestVersion: "v2"})
 	if len(cleared) != 2 {
@@ -130,6 +135,10 @@ func TestObserve_events(t *testing.T) {
 		if e.State != Cleared || e.RaisedAt == nil || !e.RaisedAt.Equal(t0) || e.Value != 0 || e.Message != "" {
 			t.Errorf("cleared = %+v, want only when it was raised", e)
 		}
+	}
+
+	if len(s.Ongoing) != 0 {
+		t.Errorf("Ongoing after both cleared = %+v, want none", s.Ongoing)
 	}
 
 	offline := MinerState{Failures: OfflineAfter - 1}
@@ -142,22 +151,52 @@ func TestObserve_events(t *testing.T) {
 	}
 }
 
+func TestObserve_peak(t *testing.T) {
+	var s MinerState
+	for _, fan := range []float64{80, 92, 99, 85, 72} {
+		if events := s.Observe(t0, reading(50, fan)); len(events) > 0 && events[0].Peak != 0 {
+			t.Errorf("raised = %+v, want no peak on it", events[0])
+		}
+	}
+	if peak := s.Ongoing[TypeFanHigh].Peak; peak != 99 {
+		t.Errorf("Ongoing peak = %v, want the highest reading so far, 99", peak)
+	}
+
+	cleared := s.Observe(t0, reading(50, 60))
+	if len(cleared) != 1 || cleared[0].State != Cleared || cleared[0].Peak != 99 {
+		t.Errorf("cleared = %+v, want it with its peak, 99", cleared)
+	}
+
+	// Raised again later: a peak of its own.
+	s.Observe(t0, reading(50, 77))
+	if cleared := s.Observe(t0, reading(50, 50)); len(cleared) != 1 || cleared[0].Peak != 77 {
+		t.Errorf("second cleared = %+v, want peak 77", cleared)
+	}
+
+	// Nothing to measure: no peak.
+	s.Observe(t0, Poll{Version: "v1", LatestVersion: "v2"})
+	if cleared := s.Observe(t0, Poll{Version: "v2", LatestVersion: "v2"}); len(cleared) != 1 || cleared[0].Peak != 0 {
+		t.Errorf("firmware cleared = %+v, want no peak", cleared)
+	}
+}
+
 func TestState_savedAndLoaded(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "aabbccddeeff")
 
 	empty, err := LoadState(dir)
-	if err != nil || empty.Failures != 0 || len(empty.Active) != 0 {
+	if err != nil || empty.Failures != 0 || len(empty.Ongoing) != 0 {
 		t.Fatalf("LoadState() with no file = %+v, %v; want an empty state", empty, err)
 	}
 
-	if err := SaveState(dir, MinerState{Failures: 1, Active: map[string]time.Time{TypeTempHigh: t0}}); err != nil {
+	raised := Event{Timestamp: t0, Type: TypeTempHigh, State: Raised, Value: 64}
+	if err := SaveState(dir, MinerState{Failures: 1, Ongoing: map[string]Event{TypeTempHigh: raised}}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := LoadState(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Failures != 1 || !got.Active[TypeTempHigh].Equal(t0) {
+	if got.Failures != 1 || got.Ongoing[TypeTempHigh].Value != 64 || !got.Ongoing[TypeTempHigh].Timestamp.Equal(t0) {
 		t.Errorf("LoadState() = %+v, want what was saved", got)
 	}
 	if _, err := os.Stat(filepath.Join(dir, stateFile+".tmp")); !os.IsNotExist(err) {

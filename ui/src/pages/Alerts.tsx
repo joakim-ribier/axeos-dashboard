@@ -7,12 +7,18 @@ import { format, parseISO } from "date-fns";
 
 import { FilterBar } from "@/components/ui/FilterBar";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { useActiveAlerts } from "@/hooks/useAlerts";
 import { useAlertsHistory } from "@/hooks/useAlertsHistory";
 import { useMiners } from "@/hooks/useMiners";
 import { type AlertEvent } from "@/schemas/minerSchema";
-import { formatDuration, formatTimestamp } from "@/utils/format";
 import { displayName } from "@/utils/minerDisplay";
-import { ALERT_TYPES, alertColor, alertText } from "@/utils/minerNotifications";
+import {
+  ALERT_TYPES,
+  alertColor,
+  alertSince,
+  alertText,
+  alertWhen,
+} from "@/utils/minerNotifications";
 
 const DEFAULT_PAGE_SIZE = 50;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
@@ -20,20 +26,18 @@ const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 const todayISO = (): string => format(new Date(), "yyyy-MM-dd");
 
 /* ── Row ─────────────────────────────────────────────────────── */
-const AlertRow: React.FC<{ event: AlertEvent }> = ({ event }) => {
+const AlertRow: React.FC<{
+  event: AlertEvent;
+  ongoing?: boolean;
+  // In progress: the miner's latest reading, shown instead of the one that
+  // raised it.
+  current?: number;
+}> = ({ event, ongoing = false, current }) => {
   const { t } = useTranslation();
   const dotColor = alertColor(event);
-  const lasted =
-    event.raisedAt &&
-    t("alertsPage.lasted", {
-      duration: formatDuration(
-        Date.parse(event.ts) - Date.parse(event.raisedAt),
-      ),
-    });
-
   return (
     <Box
-      data-testid="alert-row"
+      data-testid={ongoing ? "ongoing-alert-row" : "alert-row"}
       sx={{
         display: "flex",
         alignItems: "flex-start",
@@ -56,15 +60,22 @@ const AlertRow: React.FC<{ event: AlertEvent }> = ({ event }) => {
         }}
       />
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2">{alertText(t, event)}</Typography>
+        <Typography variant="body2">
+          {alertText(
+            t,
+            current !== undefined ? { ...event, value: current } : event,
+          )}
+        </Typography>
         <Typography
           variant="caption"
           color="text.secondary"
           sx={{ display: "block", mt: 0.25 }}
         >
           {t(`alertsPage.types.${event.type}`)}
-          {event.ip ? ` · ${event.ip}` : ""} · {formatTimestamp(event.ts)}
-          {lasted ? ` · ${lasted}` : ""}
+          {event.ip ? ` · ${event.ip}` : ""} ·{" "}
+          {ongoing
+            ? alertSince(t, event, current !== undefined)
+            : alertWhen(t, event)}
         </Typography>
       </Box>
     </Box>
@@ -120,6 +131,18 @@ export const Alerts = () => {
   });
 
   const events = data?.events ?? [];
+
+  // Whatever the day picked: what isn't solved yet stays on top.
+  const { data: active = [] } = useActiveAlerts();
+  const ongoing = active.filter(
+    (e) => (!ip || e.ip === ip) && (!type || e.type === type),
+  );
+  const currentReading = (event: AlertEvent): number | undefined => {
+    const miner = miners?.find((m) => m.ip === event.ip);
+    if (event.type === "tempHigh") return miner?.temp;
+    if (event.type === "fanHigh") return miner?.fanspeed;
+    return undefined;
+  };
 
   const minerOptions = useMemo(
     () =>
@@ -183,6 +206,7 @@ export const Alerts = () => {
               onChange: (value) =>
                 setDate(value ? format(value, "yyyy-MM-dd") : todayISO()),
               defaultValue: parseISO(todayISO()),
+              dayNav: true,
             },
           ]}
           summary={
@@ -197,6 +221,27 @@ export const Alerts = () => {
             )
           }
         />
+
+        {ongoing.length > 0 && (
+          <>
+            <Typography variant="subtitle2" component="h2">
+              {t("alertsPage.ongoing", { count: ongoing.length })}
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {ongoing.map((event) => (
+                <AlertRow
+                  key={`${event.mac}-${event.type}`}
+                  event={event}
+                  ongoing
+                  current={currentReading(event)}
+                />
+              ))}
+            </Box>
+            <Typography variant="subtitle2" component="h2" sx={{ mt: 2 }}>
+              {t("alertsPage.history")}
+            </Typography>
+          </>
+        )}
 
         {!isLoading && events.length === 0 ? (
           <Typography color="text.secondary" align="center" sx={{ py: 6 }}>

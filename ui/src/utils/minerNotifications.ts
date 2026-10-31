@@ -2,6 +2,7 @@
 import { type TFunction } from "i18next";
 
 import { type AlertEvent } from "@/schemas/minerSchema";
+import { formatDuration, formatTimestamp } from "@/utils/format";
 
 // Every alert type, in the order the dashboard offers them -- the server's
 // alerts.Types.
@@ -28,6 +29,35 @@ export const alertText = (t: TFunction, event: AlertEvent): string =>
     miner: alertMinerLabel(event),
     value: event.value !== undefined ? Math.round(event.value) : event.message,
   });
+
+/** When it happened -- for one that ended, from when to when, how long it
+ * lasted and its peak. */
+export const alertWhen = (t: TFunction, event: AlertEvent): string => {
+  if (!event.raisedAt) return formatTimestamp(event.ts);
+  const lasted = t("alerts.lasted", {
+    duration: formatDuration(Date.parse(event.ts) - Date.parse(event.raisedAt)),
+  });
+  const peak =
+    event.peak !== undefined
+      ? ` · ${t(`alerts.peak.${event.type}`, { value: Math.round(event.peak) })}`
+      : "";
+  return `${formatTimestamp(event.raisedAt)} → ${formatTimestamp(event.ts)} · ${lasted}${peak}`;
+};
+
+/** When one still in progress was raised, and for how long now -- with
+ * the reading that raised it when the miner's current one is shown instead. */
+export const alertSince = (
+  t: TFunction,
+  event: AlertEvent,
+  withStart = false,
+): string => {
+  const since = `${formatTimestamp(event.ts)} · ${t("alerts.ongoingFor", {
+    duration: formatDuration(Date.now() - Date.parse(event.ts)),
+  })}`;
+  return withStart && event.value !== undefined
+    ? `${since} · ${t(`alerts.atStart.${event.type}`, { value: Math.round(event.value) })}`
+    : since;
+};
 
 /** The bell's own events, not miners' -- kept in the browser (see
  * NotificationsContext). */

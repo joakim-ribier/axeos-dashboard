@@ -67,7 +67,8 @@ subnav:
    link to your hashboard account.
    [Go to Hashboard →]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 3. **Home** — overview of all your miners.
-4. **Alerts** — alert history (temperature, fan, offline...).
+4. **Alerts** — alerts in progress and history (temperature, fan,
+   offline...); the badge counts the alerts in progress.
    [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }
 5. **Settings** — miners, electricity, notifications, remote, system.
    [Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }

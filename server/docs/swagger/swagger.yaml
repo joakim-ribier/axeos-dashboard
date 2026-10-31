@@ -10,8 +10,12 @@ definitions:
         type: string
       message:
         type: string
+      peak:
+        type: number
       raisedAt:
-        description: 'Cleared only: when it was raised.'
+        description: |-
+          Cleared only: when it was raised, and the highest reading meanwhile
+          (temp/fan).
         type: string
       state:
         $ref: '#/definitions/alerts.State'
@@ -1499,6 +1503,22 @@ paths:
           schema:
             $ref: '#/definitions/handler.AlertsResponse'
       summary: List the most recent alert changes
+      tags:
+      - Alerts
+  /api/miners/alerts/active:
+    get:
+      description: Every alert raised and not cleared yet on an enabled miner, however
+        long ago it was raised -- the event that raised it, most recent first.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/alerts.Event'
+            type: array
+      summary: List the alerts in progress
       tags:
       - Alerts
   /api/miners/alerts/history:

@@ -66,7 +66,8 @@ subnav:
    lien vers votre compte hashboard.
    [Aller à Hashboard →]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 3. **Accueil** — vue d'ensemble de tous les mineurs.
-4. **Alertes** — historique des alertes (température, ventilation, hors-ligne...).
+4. **Alertes** — alertes en cours et historique (température, ventilation,
+   hors-ligne...) ; le badge compte les alertes en cours.
    [Aller à Alertes →]({{ '/alerts.html' | relative_url }}){: .btn .btn-primary }
 5. **Configuration** — mineurs, électricité, notifications, distant, système.
    [Aller à Configuration →]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }

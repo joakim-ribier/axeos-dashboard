@@ -2,7 +2,9 @@ import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import axios from "axios";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { RefreshSettingsProvider } from "@/contexts/RefreshSettingsContext";
 
 import { useAlertsHistory } from "./useAlertsHistory";
 
@@ -16,7 +18,9 @@ function makeWrapper() {
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <RefreshSettingsProvider>{children}</RefreshSettingsProvider>
+      </QueryClientProvider>
     );
   }
 
@@ -127,6 +131,49 @@ describe("useAlertsHistory", () => {
     expect(result.current.data?.events[0]).toMatchObject({
       state: "cleared",
       raisedAt: "2026-07-14T09:00:00Z",
+    });
+  });
+
+  describe("auto-refresh", () => {
+    beforeEach(() => {
+      window.localStorage.clear();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    const renderAndWait90s = async () => {
+      const { unmount } = renderHook(
+        () => useAlertsHistory({ page: 1, pageSize: 50, date: "2026-07-14" }),
+        { wrapper: makeWrapper() },
+      );
+      await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(90_000);
+      return unmount;
+    };
+
+    it("fetches the day again every 90s while the page is open", async () => {
+      await renderAndWait90s();
+
+      await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(2));
+    });
+
+    it("stops once the page is left", async () => {
+      const unmount = await renderAndWait90s();
+      await waitFor(() => expect(mockedAxios.get).toHaveBeenCalledTimes(2));
+
+      unmount();
+      await vi.advanceTimersByTimeAsync(180_000);
+
+      expect(mockedAxios.get).toHaveBeenCalledTimes(2);
+    });
+
+    it("doesn't with auto-refresh off", async () => {
+      window.localStorage.setItem("axeos.autoRefreshEnabled", "false");
+      await renderAndWait90s();
+
+      expect(mockedAxios.get).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -57,8 +57,10 @@ type Event struct {
 	Value     float64 `json:"value,omitempty"`
 	Threshold float64 `json:"threshold,omitempty"`
 	Message   string  `json:"message,omitempty"`
-	// Cleared only: when it was raised.
+	// Cleared only: when it was raised, and the highest reading meanwhile
+	// (temp/fan).
 	RaisedAt *time.Time `json:"raisedAt,omitempty"`
+	Peak     float64    `json:"peak,omitempty"`
 }
 
 // Poll is what one poll of a miner found. Err set: the miner didn't answer.
@@ -77,30 +79,36 @@ type Poll struct {
 
 // MinerState is one miner's alerts in progress, kept between polls.
 type MinerState struct {
-	Failures int                  `json:"failures,omitempty"`
-	Active   map[string]time.Time `json:"active,omitempty"` // type → raised at
+	Failures int `json:"failures,omitempty"`
+	// Ongoing is each alert in progress by type: the event that raised it,
+	// its Peak kept up to date.
+	Ongoing map[string]Event `json:"ongoing,omitempty"`
 }
 
 // Observe updates s with poll p and returns the changes it brings, if any.
 // An alert the poll can't tell anything about stays as it was: a miner
 // that doesn't answer keeps its temperature alert until it answers again.
 func (s *MinerState) Observe(now time.Time, p Poll) []Event {
-	if s.Active == nil {
-		s.Active = make(map[string]time.Time)
+	if s.Ongoing == nil {
+		s.Ongoing = make(map[string]Event)
 	}
 	now = now.UTC().Truncate(time.Second)
 
 	var events []Event
 	set := func(alertType string, on bool, raised Event) {
-		since, active := s.Active[alertType]
+		ongoing, active := s.Ongoing[alertType]
 		switch {
 		case on && !active:
-			s.Active[alertType] = now
 			raised.Timestamp, raised.Type, raised.State = now, alertType, Raised
 			events = append(events, raised)
+			raised.Peak = raised.Value
+			s.Ongoing[alertType] = raised
+		case on && raised.Value > ongoing.Peak:
+			ongoing.Peak = raised.Value
+			s.Ongoing[alertType] = ongoing
 		case !on && active:
-			delete(s.Active, alertType)
-			events = append(events, Event{Timestamp: now, Type: alertType, State: Cleared, RaisedAt: &since})
+			delete(s.Ongoing, alertType)
+			events = append(events, Event{Timestamp: now, Type: alertType, State: Cleared, RaisedAt: &ongoing.Timestamp, Peak: ongoing.Peak})
 		}
 	}
 
@@ -119,11 +127,11 @@ func (s *MinerState) Observe(now time.Time, p Poll) []Event {
 		return events
 	}
 
-	_, tempActive := s.Active[TypeTempHigh]
+	_, tempActive := s.Ongoing[TypeTempHigh]
 	set(TypeTempHigh, p.Temp > TempThreshold || tempActive && p.Temp >= TempClear,
 		Event{Value: p.Temp, Threshold: TempThreshold})
 
-	_, fanActive := s.Active[TypeFanHigh]
+	_, fanActive := s.Ongoing[TypeFanHigh]
 	set(TypeFanHigh, p.FanSpeed > FanThreshold || fanActive && p.FanSpeed >= FanClear,
 		Event{Value: p.FanSpeed, Threshold: FanThreshold})
 
