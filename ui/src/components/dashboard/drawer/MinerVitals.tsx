@@ -3,13 +3,13 @@ import { Box, Paper, Typography } from "@mui/material";
 
 import { type Miner } from "@/schemas/minerSchema";
 import {
-  FAN_THRESHOLD,
+  fanThreshold,
   isFanHigh,
   isTempHigh,
-  TEMP_THRESHOLD,
+  tempThreshold,
 } from "@/utils/minerStatus";
 
-import { FAN_GAUGE, TEMP_GAUGE, ThresholdBar } from "../miners/MetricBar";
+import { fanGauge, tempGauge, ThresholdBar } from "../miners/MetricBar";
 import { Sparkline } from "../miners/Sparkline";
 import { type SectionIcon, SectionLabel } from "../SectionLabel";
 
@@ -105,9 +105,11 @@ export const MinerVitals = ({ miner, hashRateHistory }: MinerVitalsProps) => {
         unit="°C"
         alert={isTempHigh(miner)}
       >
-        <ThresholdBar value={miner.temp} {...TEMP_GAUGE} />
+        <ThresholdBar value={miner.temp} {...tempGauge(miner)} />
         <Typography variant="caption" color="text.secondary">
-          {t("dashboard.drawer.threshold", { value: `${TEMP_THRESHOLD} °C` })}
+          {t("dashboard.drawer.threshold", {
+            value: `${tempThreshold(miner)} °C`,
+          })}
         </Typography>
       </Vital>
       <Vital
@@ -117,9 +119,11 @@ export const MinerVitals = ({ miner, hashRateHistory }: MinerVitalsProps) => {
         unit="%"
         alert={isFanHigh(miner)}
       >
-        <ThresholdBar value={miner.fanspeed} {...FAN_GAUGE} />
+        <ThresholdBar value={miner.fanspeed} {...fanGauge(miner)} />
         <Typography variant="caption" color="text.secondary">
-          {t("dashboard.drawer.threshold", { value: `${FAN_THRESHOLD} %` })}
+          {t("dashboard.drawer.threshold", {
+            value: `${fanThreshold(miner)} %`,
+          })}
         </Typography>
       </Vital>
     </Box>

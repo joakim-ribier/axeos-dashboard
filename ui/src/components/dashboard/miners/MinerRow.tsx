@@ -6,7 +6,7 @@ import { SxProps, Theme } from "@mui/material/styles";
 import { type Miner } from "@/schemas/minerSchema";
 import { type MinerStatus, STATUS_COLOR } from "@/utils/minerStatus";
 
-import { FAN_GAUGE, MetricBar, TEMP_GAUGE } from "./MetricBar";
+import { fanGauge, MetricBar, tempGauge } from "./MetricBar";
 import { MinerIdentity } from "./MinerIdentity";
 import { PoolLabel } from "./PoolLabel";
 import { Sparkline } from "./Sparkline";
@@ -111,10 +111,10 @@ export const MinerRow = ({
           </Typography>
         </Box>
         <Box sx={{ ...readingsSx, gridArea: "temp" }}>
-          <MetricBar value={miner.temp} {...TEMP_GAUGE} />
+          <MetricBar value={miner.temp} {...tempGauge(miner)} />
         </Box>
         <Box sx={{ ...readingsSx, gridArea: "fan" }}>
-          <MetricBar value={miner.fanspeed} {...FAN_GAUGE} />
+          <MetricBar value={miner.fanspeed} {...fanGauge(miner)} />
         </Box>
         <Box sx={{ ...readingsSx, ...wideOnly, gridArea: "power" }}>
           <Typography

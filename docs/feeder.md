@@ -103,8 +103,9 @@ par défaut, dans `dashboard.yml`).
    5. **Suivre les alertes** — chacune est comparée à son état au relevé
       précédent : une alerte qui commence ou se termine est enregistrée,
       une alerte qui dure ne l'est pas de nouveau. Température : commence
-      au-dessus de 62 °C, se termine sous 60 °C ; ventilateur : au-dessus
-      de 75 %, sous 70 % ; firmware : différent de la dernière release
+      au-dessus du seuil du mineur, se termine 2 °C en dessous ; ventilateur :
+      au-dessus de son seuil, 5 % en dessous (62 °C et 75 % par défaut,
+      réglables dans Configuration) ; firmware : différent de la dernière release
       connue pour son modèle.
    6. **Enregistrer** — la ligne du relevé (mesures, tarif du kWh en
       vigueur) est ajoutée à l'historique du jour, `latest.json`

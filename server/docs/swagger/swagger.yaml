@@ -126,6 +126,13 @@ definitions:
       updatedAt:
         type: string
     type: object
+  config.AlertThresholds:
+    properties:
+      fanHigh:
+        type: number
+      tempHigh:
+        type: number
+    type: object
   config.AlertsConfig:
     properties:
       mail:
@@ -136,6 +143,12 @@ definitions:
     type: object
   config.AppSettingsFile:
     properties:
+      alerts:
+        allOf:
+        - $ref: '#/definitions/config.AlertThresholds'
+        description: |-
+          Alerts is the thresholds every miner follows unless it has its own --
+          a value left at zero is the built-in one (DefaultAlertThresholds).
       electricity:
         $ref: '#/definitions/config.ElectricityConfig'
       firmware:
@@ -172,6 +185,12 @@ definitions:
     type: object
   config.Bitaxe:
     properties:
+      alerts:
+        allOf:
+        - $ref: '#/definitions/config.AlertThresholds'
+        description: |-
+          Alerts overrides, for this miner only, the thresholds set for every
+          miner -- a value left at zero follows them (see AlertThresholdsFor).
       alias:
         description: |-
           Alias is an optional operator-set override for the display name shown
@@ -538,6 +557,11 @@ definitions:
     type: object
   handler.appSettingsDefaults:
     properties:
+      alerts:
+        allOf:
+        - $ref: '#/definitions/config.AlertThresholds'
+        description: Alerts is the built-in thresholds, what an unset one falls back
+          to.
       firmware:
         $ref: '#/definitions/config.AppSettingsFirmware'
       pools:
@@ -574,6 +598,12 @@ definitions:
     type: object
   handler.appSettingsResponse:
     properties:
+      alerts:
+        allOf:
+        - $ref: '#/definitions/config.AlertThresholds'
+        description: |-
+          Alerts is the thresholds every miner follows unless it has its own --
+          a value left at zero is the built-in one (DefaultAlertThresholds).
       defaults:
         $ref: '#/definitions/handler.appSettingsDefaults'
       electricity:
@@ -802,6 +832,9 @@ definitions:
         type: string
       fallbackStratumUser:
         type: string
+      fanThreshold:
+        description: '%'
+        type: number
       fanspeed:
         description: Fan speed (linked to the Temp field)
         type: number
@@ -858,6 +891,12 @@ definitions:
         type: string
       temp:
         description: Primary temperature sensor reading (°C)
+        type: number
+      tempThreshold:
+        description: |-
+          The miner's alert thresholds, its own or the ones every miner
+          follows (config.AlertThresholdsFor) -- absent on a board, which then
+          shows the built-in ones.
         type: number
       timestamp:
         type: string

@@ -390,6 +390,26 @@ func TestListRemoteMiners(t *testing.T) {
 		}
 	})
 
+	t.Run("each miner's thresholds, as pushed", func(t *testing.T) {
+		pushed := t.TempDir()
+		writeTestFile(t, filepath.Join(pushed, "data", "boards", "demo", "bitaxes", "aabbccddee01", "latest.json"),
+			`{"ts":"2026-07-14T10:00:00Z","ip":"10.0.0.1","alertThresholds":{"tempHigh":65,"fanHigh":95},"payload":{}}`)
+		cfg := config.Config{Storage: config.StorageConfig{DataDir: pushed}}
+
+		w := httptest.NewRecorder()
+		r := withURLParams(httptest.NewRequest(http.MethodGet, "/api/demo/miners/", nil), map[string]string{"boardId": "demo"})
+
+		ListRemoteMiners(cfg, testAccessChecker(t))(w, r)
+
+		var got model.MinersResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if len(got.Miners) != 1 || got.Miners[0].TempThreshold != 65 || got.Miners[0].FanThreshold != 95 {
+			t.Errorf("got %+v, want thresholds 65 / 95", got.Miners)
+		}
+	})
+
 	// What a board pushed before only its stats were: still on disk, never read.
 	t.Run("ignores the settings a board pushed before", func(t *testing.T) {
 		withSettings := t.TempDir()
@@ -564,4 +584,35 @@ func TestRemoteStats(t *testing.T) {
 			t.Errorf("resp = %+v, want an empty result", got)
 		}
 	})
+}
+
+func TestListMiners_eachMinersAlertThresholds(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(envDataRoot, dir)
+	writeTestFile(t, filepath.Join(dir, "aabbccddee01", "latest.json"), `{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":500000}}`)
+	writeTestFile(t, filepath.Join(dir, "aabbccddee02", "latest.json"), `{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":500000}}`)
+
+	var cfg config.Config
+	config.AppSettingsFile{Alerts: config.AlertThresholds{TempHigh: 65}}.ApplyTo(&cfg)
+	cfg.Bitaxes = []config.Bitaxe{
+		{Ip: "10.0.0.1", Mac: "aabbccddee01", Enabled: true},
+		{Ip: "10.0.0.2", Mac: "aabbccddee02", Enabled: true, Alerts: config.AlertThresholds{FanHigh: 95}},
+	}
+
+	w := httptest.NewRecorder()
+	ListMiners(cfg, healtcheck.NewWatcher(testLogger(), cfg), w, httptest.NewRequest(http.MethodGet, "/api/miners", nil))
+
+	var got model.MinersResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	want := map[string][2]float64{"10.0.0.1": {65, 75}, "10.0.0.2": {65, 95}}
+	if len(got.Miners) != 2 {
+		t.Fatalf("Miners = %+v, want 2", got.Miners)
+	}
+	for _, m := range got.Miners {
+		if th := [2]float64{m.TempThreshold, m.FanThreshold}; th != want[m.IP] {
+			t.Errorf("%s thresholds = %v, want %v", m.IP, th, want[m.IP])
+		}
+	}
 }

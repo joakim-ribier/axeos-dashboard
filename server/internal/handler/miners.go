@@ -74,6 +74,8 @@ func ListMiners(cfg config.Config, watcher *healtcheck.Watcher, w http.ResponseW
 
 		latestVersion := fwCache.Models[string(miner.Model)].Version
 		info := toMinerInfo(raw, miner, latestVersion, cfg.Firmware.Repos[string(miner.Model)], cfg.Pools.Dashboards)
+		thresholds := cfg.AlertThresholdsFor(miner)
+		info.TempThreshold, info.FanThreshold = thresholds.TempHigh, thresholds.FanHigh
 
 		if totals, err := decodeTotalsJSON(filepath.Join(root, key, "totals.json")); err == nil {
 			info.TotalUptimeSeconds = totals.TotalUptimeSeconds

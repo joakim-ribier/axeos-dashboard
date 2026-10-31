@@ -27,14 +27,12 @@ const (
 // dashboard offers them, and every list sorts them in (see Compare).
 var Types = []string{TypeOffline, TypeMacMismatch, TypeTempHigh, TypeFanHigh, TypeFirmwareUpdate}
 
-// An alert is raised above its threshold and only cleared once back under
-// a lower one, so a reading hovering around the threshold doesn't raise and
-// clear it on every poll.
+// An alert is raised above its threshold (the miner's, see Poll) and only
+// cleared once back this far under it, so a reading hovering around the
+// threshold doesn't raise and clear it on every poll.
 const (
-	TempThreshold = 62.0 // °C
-	TempClear     = 60.0
-	FanThreshold  = 75.0 // %
-	FanClear      = 70.0
+	TempMargin = 2.0 // °C
+	FanMargin  = 5.0 // %
 )
 
 // OfflineAfter is how many polls in a row must fail before a miner is
@@ -87,7 +85,10 @@ type Poll struct {
 	ReportedMac string
 	Temp        float64
 	FanSpeed    float64
-	Version     string
+	// TempThreshold/FanThreshold are the miner's thresholds -- an alert is
+	// raised above, cleared under minus TempMargin/FanMargin.
+	TempThreshold, FanThreshold float64
+	Version                     string
 	// LatestVersion is the latest firmware release -- empty when unknown,
 	// which leaves the firmware alert as it was.
 	LatestVersion string
@@ -144,12 +145,12 @@ func (s *MinerState) Observe(now time.Time, p Poll) []Event {
 	}
 
 	_, tempActive := s.Ongoing[TypeTempHigh]
-	set(TypeTempHigh, p.Temp > TempThreshold || tempActive && p.Temp >= TempClear,
-		Event{Value: p.Temp, Threshold: TempThreshold})
+	set(TypeTempHigh, p.Temp > p.TempThreshold || tempActive && p.Temp >= p.TempThreshold-TempMargin,
+		Event{Value: p.Temp, Threshold: p.TempThreshold})
 
 	_, fanActive := s.Ongoing[TypeFanHigh]
-	set(TypeFanHigh, p.FanSpeed > FanThreshold || fanActive && p.FanSpeed >= FanClear,
-		Event{Value: p.FanSpeed, Threshold: FanThreshold})
+	set(TypeFanHigh, p.FanSpeed > p.FanThreshold || fanActive && p.FanSpeed >= p.FanThreshold-FanMargin,
+		Event{Value: p.FanSpeed, Threshold: p.FanThreshold})
 
 	if p.LatestVersion != "" && p.Version != "" {
 		set(TypeFirmwareUpdate, p.Version != p.LatestVersion, Event{Message: p.LatestVersion})

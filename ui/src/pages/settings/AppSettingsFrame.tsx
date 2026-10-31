@@ -87,6 +87,7 @@ export const AppSettingsFrame = ({
     // Firmware repos are built-in and not editable from this UI (see the
     // System section's read-only table) -- never send an override.
     firmware: { repos: {} },
+    alerts: data?.alerts ?? { tempHigh: 0, fanHigh: 0 },
   });
 
   const persist = async (payload: AppSettingsInput) => {

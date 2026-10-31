@@ -23,6 +23,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { Writable } from "@/components/ui/Writable";
 
+import { AlertThresholdsBlock } from "./AlertThresholdsBlock";
 import {
   AppSettingsFrame,
   type AppSettingsFrameContext,
@@ -40,6 +41,7 @@ const SystemSection = ({
   isSaving,
   persist,
   serverBasePayload,
+  notify,
 }: AppSettingsFrameContext) => {
   const { t } = useTranslation();
   const [poolDashboards, setPoolDashboards] = useState<PoolDashboardRow[]>([]);
@@ -96,6 +98,17 @@ const SystemSection = ({
 
   return (
     <Stack spacing={4}>
+      <AlertThresholdsBlock
+        data={data}
+        readOnly={readOnly}
+        isSaving={isSaving}
+        persist={persist}
+        serverBasePayload={serverBasePayload}
+        notify={notify}
+      />
+
+      <SectionDivider />
+
       {/* Pool dashboards */}
       <Box>
         <SectionTitle

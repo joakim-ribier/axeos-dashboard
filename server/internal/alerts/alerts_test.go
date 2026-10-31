@@ -11,8 +11,9 @@ import (
 
 var t0 = time.Date(2026, 10, 28, 10, 0, 0, 0, time.UTC)
 
+// reading is a poll of a miner with the built-in thresholds: 62 °C, 75 %.
 func reading(temp, fan float64) Poll {
-	return Poll{Temp: temp, FanSpeed: fan, Version: "v2", LatestVersion: "v2"}
+	return Poll{Temp: temp, FanSpeed: fan, TempThreshold: 62, FanThreshold: 75, Version: "v2", LatestVersion: "v2"}
 }
 
 // observeAll runs polls 2 minutes apart and returns each one's changes, as
@@ -111,11 +112,11 @@ func TestObserve_firmware(t *testing.T) {
 func TestObserve_events(t *testing.T) {
 	var s MinerState
 
-	raised := s.Observe(t0, Poll{Temp: 64.4, Version: "v1", LatestVersion: "v2"})
+	raised := s.Observe(t0, Poll{Temp: 64.4, TempThreshold: 62, FanThreshold: 75, Version: "v1", LatestVersion: "v2"})
 	if len(raised) != 2 {
 		t.Fatalf("got %+v, want tempHigh and firmwareUpdate raised", raised)
 	}
-	if e := raised[0]; e.Type != TypeTempHigh || e.State != Raised || e.Value != 64.4 || e.Threshold != TempThreshold || !e.Timestamp.Equal(t0) {
+	if e := raised[0]; e.Type != TypeTempHigh || e.State != Raised || e.Value != 64.4 || e.Threshold != 62 || !e.Timestamp.Equal(t0) {
 		t.Errorf("tempHigh raised = %+v", e)
 	}
 	if e := raised[1]; e.Type != TypeFirmwareUpdate || e.Message != "v2" {
@@ -127,7 +128,7 @@ func TestObserve_events(t *testing.T) {
 		t.Errorf("Ongoing = %+v, want the events that raised them (with the peak so far)", s.Ongoing)
 	}
 
-	cleared := s.Observe(t0.Add(time.Hour), Poll{Temp: 50, Version: "v2", LatestVersion: "v2"})
+	cleared := s.Observe(t0.Add(time.Hour), Poll{Temp: 50, TempThreshold: 62, FanThreshold: 75, Version: "v2", LatestVersion: "v2"})
 	if len(cleared) != 2 {
 		t.Fatalf("got %+v, want both cleared", cleared)
 	}
@@ -174,8 +175,8 @@ func TestObserve_peak(t *testing.T) {
 	}
 
 	// Nothing to measure: no peak.
-	s.Observe(t0, Poll{Version: "v1", LatestVersion: "v2"})
-	if cleared := s.Observe(t0, Poll{Version: "v2", LatestVersion: "v2"}); len(cleared) != 1 || cleared[0].Peak != 0 {
+	s.Observe(t0, Poll{TempThreshold: 62, FanThreshold: 75, Version: "v1", LatestVersion: "v2"})
+	if cleared := s.Observe(t0, Poll{TempThreshold: 62, FanThreshold: 75, Version: "v2", LatestVersion: "v2"}); len(cleared) != 1 || cleared[0].Peak != 0 {
 		t.Errorf("firmware cleared = %+v, want no peak", cleared)
 	}
 }
@@ -202,4 +203,12 @@ func TestState_savedAndLoaded(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, stateFile+".tmp")); !os.IsNotExist(err) {
 		t.Errorf("temp file left behind: %v", err)
 	}
+}
+
+func TestObserve_theMinersOwnThresholds(t *testing.T) {
+	poll := func(fan float64) Poll {
+		return Poll{FanSpeed: fan, TempThreshold: 62, FanThreshold: 95, Version: "v2", LatestVersion: "v2"}
+	}
+	got := observeAll(&MinerState{}, []Poll{poll(90), poll(96), poll(91), poll(89)})
+	assertChanges(t, got, []string{"", "fanHigh raised", "", "fanHigh cleared"})
 }

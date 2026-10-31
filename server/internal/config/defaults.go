@@ -25,6 +25,10 @@ var DefaultFirmwareRepos = map[Model]string{
 	ModelNerdaxe: "https://api.github.com/repos/shufps/ESP-Miner-NerdQAxePlus/releases/latest",
 }
 
+// DefaultAlertThresholds is when an alert is raised when neither
+// settings.yml nor the miner itself says otherwise (see AlertThresholdsFor).
+var DefaultAlertThresholds = AlertThresholds{TempHigh: 62, FanHigh: 75}
+
 // mergePoolDashboards returns a fresh map: DefaultPoolDashboards overlaid
 // by overrides (overrides win on hostname collision). Never mutates
 // either input, so it's safe to call on every hot-reload tick -- an

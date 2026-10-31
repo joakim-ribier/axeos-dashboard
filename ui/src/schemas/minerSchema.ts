@@ -60,6 +60,10 @@ export const minerSchema = z.object({
   isUsingFallbackStratum: z.number().int().min(0).max(1).optional(),
 
   electricityRatePerKwh: z.number().optional(),
+  // The miner's alert thresholds (°C, %), its own or every miner's --
+  // absent on a board (see tempThreshold/fanThreshold).
+  tempThreshold: z.number().optional(),
+  fanThreshold: z.number().optional(),
 });
 
 export type Miner = z.infer<typeof minerSchema>;

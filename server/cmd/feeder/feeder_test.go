@@ -80,7 +80,7 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 	minerAddr := serverAddr(bitaxeServer)
 	cfg := config.Config{
 		Bitaxes: []config.Bitaxe{
-			{Ip: minerAddr, Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true},
+			{Ip: minerAddr, Mac: "aabbccddeeff", Model: "bitaxe", Hostname: "bitaxe-1", Enabled: true, Alerts: config.AlertThresholds{FanHigh: 95}},
 		},
 		Endpoints:   config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
 		Storage:     config.StorageConfig{DataDir: dir},
@@ -122,6 +122,11 @@ func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
 		}
 		if p.body["hostname"] != "bitaxe-1" {
 			t.Errorf("push body hostname = %v, want %q", p.body["hostname"], "bitaxe-1")
+		}
+		// The miner's thresholds as the feeder weighs them: its own fan
+		// one, the built-in temperature one.
+		if th, want := p.body["alertThresholds"], map[string]any{"tempHigh": 62.0, "fanHigh": 95.0}; !reflect.DeepEqual(th, want) {
+			t.Errorf("push body alertThresholds = %v, want %v", th, want)
 		}
 		// A board only shows the miners' stats: the poll's tempHigh alert
 		// stays local.
@@ -874,5 +879,13 @@ func TestFeeder_runOnce_handsTheMailerThePollsNewAlerts(t *testing.T) {
 	quiet.WaitForPushes()
 	if len(calls) != 1 {
 		t.Errorf("calls = %d with the mail off, want none more", len(calls))
+	}
+}
+
+func TestReadingsPoll_weighedAgainstTheMinersThresholds(t *testing.T) {
+	got := readingsPoll([]byte(`{"temp":64.5,"fanspeed":90,"version":"v2.1"}`), "v2.2", config.AlertThresholds{TempHigh: 65, FanHigh: 95})
+	want := alerts.Poll{Temp: 64.5, FanSpeed: 90, TempThreshold: 65, FanThreshold: 95, Version: "v2.1", LatestVersion: "v2.2"}
+	if got != want {
+		t.Errorf("readingsPoll() = %+v, want %+v", got, want)
 	}
 }

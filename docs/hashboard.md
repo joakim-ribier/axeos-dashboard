@@ -58,8 +58,8 @@ Une fois l'envoi configuré, le feeder envoie à hashboard, à chaque cycle
 et pour chaque mineur :
 
 - **le relevé** — les mesures, le nom (ou l'alias), le modèle, le tarif du
-  kWh, la dernière release du firmware et l'intervalle du feeder, avec
-  les données personnelles offusquées ;
+  kWh, la dernière release du firmware, l'intervalle du feeder et les
+  seuils d'alerte du mineur, avec les données personnelles offusquées ;
 - **les totaux** — temps de fonctionnement, parts acceptées et rejetées,
   coût d'électricité ;
 - **une ligne « hors ligne »** quand le mineur ne répond pas : le graphe

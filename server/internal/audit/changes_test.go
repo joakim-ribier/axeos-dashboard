@@ -181,3 +181,32 @@ func TestSettingsChanges_alertsMail(t *testing.T) {
 		t.Errorf("got %+v, want %+v", got, want)
 	}
 }
+
+func TestMinerChanges_alertThresholds(t *testing.T) {
+	before := miner()
+	before.Alerts.TempHigh = 70
+	after := miner()
+	after.Alerts.FanHigh = 95
+
+	want := []Entry{{Type: TypeSaveMiners, Target: "10.0.0.1", Changes: []Change{
+		{Field: "alertTempHigh", Kind: ChangeChanged, Before: "70"},
+		{Field: "alertFanHigh", Kind: ChangeChanged, After: "95"},
+	}}}
+	if got := MinerChanges([]config.Bitaxe{before}, []config.Bitaxe{after}); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestSettingsChanges_alertThresholds(t *testing.T) {
+	var before, after config.AppSettingsFile
+	before.Alerts = config.AlertThresholds{TempHigh: 62}
+	after.Alerts = config.AlertThresholds{TempHigh: 65, FanHigh: 80}
+
+	want := []Entry{{Type: TypeSaveSettings, Changes: []Change{
+		{Field: "alertTempHigh", Kind: ChangeChanged, Before: "62", After: "65"},
+		{Field: "alertFanHigh", Kind: ChangeChanged, After: "80"},
+	}}}
+	if got := SettingsChanges(before, after); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}

@@ -133,7 +133,17 @@ func minerDetails(was, now config.Bitaxe) []Change {
 		{"alias", was.Alias, now.Alias},
 		{"hostname", was.Hostname, now.Hostname},
 		{"model", string(was.Model), string(now.Model)},
+		{"alertTempHigh", threshold(was.Alerts.TempHigh), threshold(now.Alerts.TempHigh)},
+		{"alertFanHigh", threshold(was.Alerts.FanHigh), threshold(now.Alerts.FanHigh)},
 	})
+}
+
+// threshold is an alert threshold as written down -- "" when unset.
+func threshold(v float64) string {
+	if v == 0 {
+		return ""
+	}
+	return number(v)
 }
 
 // listChanges is each item removed from before (Before) and added in after
@@ -202,6 +212,10 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 	if b, a := before.Electricity.RatePerKwh, after.Electricity.RatePerKwh; b != a {
 		details = append(details, Change{Field: "ratePerKwh", Kind: ChangeChanged, Before: number(b), After: number(a)})
 	}
+	details = append(details, compareFields([][3]string{
+		{"alertTempHigh", threshold(before.Alerts.TempHigh), threshold(after.Alerts.TempHigh)},
+		{"alertFanHigh", threshold(before.Alerts.FanHigh), threshold(after.Alerts.FanHigh)},
+	})...)
 	details = append(details, listChanges(
 		mapList(before.Electricity.Devices, device), mapList(after.Electricity.Devices, device),
 		"deviceAdded", "deviceRemoved")...)

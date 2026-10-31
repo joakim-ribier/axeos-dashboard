@@ -1279,6 +1279,17 @@
                 }
             }
         },
+        "config.AlertThresholds": {
+            "type": "object",
+            "properties": {
+                "fanHigh": {
+                    "type": "number"
+                },
+                "tempHigh": {
+                    "type": "number"
+                }
+            }
+        },
         "config.AlertsConfig": {
             "type": "object",
             "properties": {
@@ -1291,6 +1302,14 @@
         "config.AppSettingsFile": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "description": "Alerts is the thresholds every miner follows unless it has its own --\na value left at zero is the built-in one (DefaultAlertThresholds).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/config.AlertThresholds"
+                        }
+                    ]
+                },
                 "electricity": {
                     "$ref": "#/definitions/config.ElectricityConfig"
                 },
@@ -1344,6 +1363,14 @@
         "config.Bitaxe": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "description": "Alerts overrides, for this miner only, the thresholds set for every\nminer -- a value left at zero follows them (see AlertThresholdsFor).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/config.AlertThresholds"
+                        }
+                    ]
+                },
                 "alias": {
                     "description": "Alias is an optional operator-set override for the display name shown\nin the UI wherever Hostname would otherwise be shown (see\nDisplayName). Unlike Hostname -- which a network discovery re-probe\n(see internal/discovery, and the \"select an already-configured\ndevice\" refresh flow in the Settings UI) silently overwrites with\nwhatever the device itself reports -- Alias is never touched by\ndiscovery, so it's the one place a custom, human-chosen name survives\na refresh.",
                     "type": "string"
@@ -1833,6 +1860,14 @@
         "handler.appSettingsDefaults": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "description": "Alerts is the built-in thresholds, what an unset one falls back to.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/config.AlertThresholds"
+                        }
+                    ]
+                },
                 "firmware": {
                     "$ref": "#/definitions/config.AppSettingsFirmware"
                 },
@@ -1878,6 +1913,14 @@
         "handler.appSettingsResponse": {
             "type": "object",
             "properties": {
+                "alerts": {
+                    "description": "Alerts is the thresholds every miner follows unless it has its own --\na value left at zero is the built-in one (DefaultAlertThresholds).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/config.AlertThresholds"
+                        }
+                    ]
+                },
                 "defaults": {
                     "$ref": "#/definitions/handler.appSettingsDefaults"
                 },
@@ -2158,6 +2201,10 @@
                 "fallbackStratumUser": {
                     "type": "string"
                 },
+                "fanThreshold": {
+                    "description": "%",
+                    "type": "number"
+                },
                 "fanspeed": {
                     "description": "Fan speed (linked to the Temp field)",
                     "type": "number"
@@ -2225,6 +2272,10 @@
                 },
                 "temp": {
                     "description": "Primary temperature sensor reading (°C)",
+                    "type": "number"
+                },
+                "tempThreshold": {
+                    "description": "The miner's alert thresholds, its own or the ones every miner\nfollows (config.AlertThresholdsFor) -- absent on a board, which then\nshows the built-in ones.",
                     "type": "number"
                 },
                 "timestamp": {

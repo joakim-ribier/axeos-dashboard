@@ -293,3 +293,27 @@ func TestStorageConfig_ResolveBoardsDir(t *testing.T) {
 		})
 	}
 }
+
+func TestConfig_AlertThresholdsFor(t *testing.T) {
+	common := AlertThresholds{TempHigh: 65}
+	tests := []struct {
+		name   string
+		common AlertThresholds
+		own    AlertThresholds
+		want   AlertThresholds
+	}{
+		{"nothing set: the built-in ones", AlertThresholds{}, AlertThresholds{}, DefaultAlertThresholds},
+		{"settings.yml's, the other built-in", common, AlertThresholds{}, AlertThresholds{TempHigh: 65, FanHigh: 75}},
+		{"the miner's own over settings.yml's", common, AlertThresholds{TempHigh: 70, FanHigh: 95}, AlertThresholds{TempHigh: 70, FanHigh: 95}},
+		{"the miner's own for one only", common, AlertThresholds{FanHigh: 95}, AlertThresholds{TempHigh: 65, FanHigh: 95}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			AppSettingsFile{Alerts: tt.common}.ApplyTo(&cfg)
+			if got := cfg.AlertThresholdsFor(Bitaxe{Alerts: tt.own}); got != tt.want {
+				t.Errorf("AlertThresholdsFor() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}

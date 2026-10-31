@@ -70,9 +70,20 @@ export const appSettingsReadOnlySchema = z.object({
 // read-only next to the editable override lists below -- adding a
 // well-known pool or fixing a firmware repo URL is a code change, not
 // something this page ever writes to.
+// When an alert is raised: the chip temperature (°C) and the fan speed (%)
+// above which -- 0 is unset, the next level down applies.
+export const alertThresholdsSchema = z.object({
+  tempHigh: z.number(),
+  fanHigh: z.number(),
+});
+
+export type AlertThresholds = z.infer<typeof alertThresholdsSchema>;
+
 export const appSettingsDefaultsSchema = z.object({
   pools: poolsSchema,
   firmware: firmwareReposSchema,
+  // The built-in thresholds, what an unset one falls back to.
+  alerts: alertThresholdsSchema.default({ tempHigh: 62, fanHigh: 75 }),
 });
 
 export const smtpSecuritySchema = z.enum(["starttls", "tls", "none"]);
@@ -165,7 +176,16 @@ export const appSettingsSchema = z.object({
   defaults: appSettingsDefaultsSchema,
   readOnly: appSettingsReadOnlySchema,
   notifications: notificationsSettingsSchema.default(EMPTY_NOTIFICATIONS),
+  // The thresholds every miner follows unless it has its own.
+  alerts: alertThresholdsSchema.default({ tempHigh: 0, fanHigh: 0 }),
   lastUpdated: z.string().optional(),
+});
+
+/** The thresholds every miner follows: settings.yml's, else the built-in
+ * ones. */
+export const commonAlertThresholds = (s: AppSettings): AlertThresholds => ({
+  tempHigh: s.alerts.tempHigh || s.defaults.alerts.tempHigh,
+  fanHigh: s.alerts.fanHigh || s.defaults.alerts.fanHigh,
 });
 
 export type PowerDevice = z.infer<typeof powerDeviceSchema>;
@@ -175,7 +195,7 @@ export type AppSettings = z.infer<typeof appSettingsSchema>;
 // (mirrors config.AppSettingsFile server-side, no readOnly/lastUpdated).
 export type AppSettingsInput = Pick<
   AppSettings,
-  "electricity" | "pools" | "remote" | "firmware"
+  "electricity" | "pools" | "remote" | "firmware" | "alerts"
 > & {
   notifications: Omit<AppSettings["notifications"], "mail"> & {
     mail: {

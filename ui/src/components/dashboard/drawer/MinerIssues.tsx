@@ -5,11 +5,11 @@ import { AlertList } from "@/components/ui/AlertList";
 import { type Miner } from "@/schemas/minerSchema";
 import { formatTimestamp } from "@/utils/format";
 import {
-  FAN_THRESHOLD,
+  fanThreshold,
   isFanHigh,
   isTempHigh,
   type MinerStatus,
-  TEMP_THRESHOLD,
+  tempThreshold,
 } from "@/utils/minerStatus";
 
 /** Everything about the miner that needs a look, in the app's usual alert
@@ -36,12 +36,12 @@ export const MinerIssues = ({
     isTempHigh(miner) &&
       t("dashboard.issues.tempHigh", {
         value: miner.temp.toFixed(0),
-        threshold: TEMP_THRESHOLD,
+        threshold: tempThreshold(miner),
       }),
     isFanHigh(miner) &&
       t("dashboard.issues.fanHigh", {
         value: miner.fanspeed.toFixed(0),
-        threshold: FAN_THRESHOLD,
+        threshold: fanThreshold(miner),
       }),
   ].filter((p) => typeof p === "string");
 

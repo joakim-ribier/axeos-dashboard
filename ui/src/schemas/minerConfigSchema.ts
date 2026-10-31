@@ -31,6 +31,8 @@ export const minerConfigSchema = z.object({
   fallbackPort: z.number(),
   fallbackUser: z.string(),
   schedule: z.array(cronScheduleSchema).optional(),
+  // This miner's own alert thresholds -- 0 follows every miner's.
+  alerts: z.object({ tempHigh: z.number(), fanHigh: z.number() }).optional(),
 });
 
 export type MinerConfig = z.infer<typeof minerConfigSchema>;
