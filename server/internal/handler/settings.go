@@ -84,7 +84,7 @@ type PoolSwitchResponse struct {
 // @Router /api/miners/pool/switch [put]
 func SwitchToPool(logger *slog.Logger, cfg config.Config, w http.ResponseWriter, r *http.Request) []audit.Entry {
 	port, err := strconv.Atoi(r.URL.Query().Get("port"))
-	pool := axeos.Pool{URL: r.URL.Query().Get("url"), Port: port}
+	pool := config.Pool{URL: r.URL.Query().Get("url"), Port: port}
 	if pool.URL == "" || err != nil || port <= 0 {
 		writeErrorResponse(w, "url and port are required", http.StatusBadRequest)
 		return nil

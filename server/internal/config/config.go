@@ -2,6 +2,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -239,37 +240,58 @@ type BitaxeServerSettings struct {
 	UseFallbackStratum bool `json:"useFallbackStratum"`
 }
 
-// DevicePools is what a device's GET /api/system/info tells of its two
-// pools, its MAC, and which pool it mines on -- the one shape every reader
-// of a device's pools decodes. Never decode that response into
-// BitaxeServerSettings: a bitaxe reports useFallbackStratum as a number
-// (0/1), where a PATCH takes it as a bool, and the decode fails.
-type DevicePools struct {
-	Url                    string `json:"stratumURL"`
-	Port                   int    `json:"stratumPort"`
-	User                   string `json:"stratumUser"`
-	FallbackURL            string `json:"fallbackStratumURL"`
-	FallbackPort           int    `json:"fallbackStratumPort"`
-	FallbackUser           string `json:"fallbackStratumUser"`
-	MacAddr                string `json:"macAddr"`
-	IsUsingFallbackStratum int    `json:"isUsingFallbackStratum"` // bitaxe
-	Stratum                struct {
-		UsingFallback bool `json:"usingFallback"`
-	} `json:"stratum"` // nerdaxe
+// Pool is where a miner mines: a stratum URL and its port, whoever mines
+// on it -- what a switch of the whole fleet picks.
+type Pool struct {
+	URL  string `json:"url"`
+	Port int    `json:"port"`
 }
 
-// Settings is the two slots as a PATCH /api/system sends them.
-func (d DevicePools) Settings() BitaxeServerSettings {
-	return BitaxeServerSettings{
-		Url: d.Url, Port: d.Port, User: d.User,
-		FallbackURL: d.FallbackURL, FallbackPort: d.FallbackPort, FallbackUser: d.FallbackUser,
+func (p Pool) String() string {
+	return fmt.Sprintf("%s:%d", p.URL, p.Port)
+}
+
+// Slot is one of a miner's two pools, and the user it mines on it as.
+type Slot struct {
+	Pool
+	User string
+}
+
+func (s BitaxeServerSettings) Primary() Slot {
+	return Slot{Pool: Pool{URL: s.Url, Port: s.Port}, User: s.User}
+}
+
+func (s BitaxeServerSettings) Fallback() Slot {
+	return Slot{Pool: Pool{URL: s.FallbackURL, Port: s.FallbackPort}, User: s.FallbackUser}
+}
+
+// Slot is target's slot.
+func (s BitaxeServerSettings) Slot(target PoolTarget) Slot {
+	if target == Fallback {
+		return s.Fallback()
 	}
+	return s.Primary()
 }
 
-// GetPoolsSettings builds the PATCH /api/system payload that makes target
-// the active pool -- the two supported models need genuinely different
-// payloads, because they select the active pool in genuinely different
-// ways:
+// Holding is the slot pool sits in -- false when it's in neither.
+func (s BitaxeServerSettings) Holding(pool Pool) (PoolTarget, bool) {
+	switch pool {
+	case s.Primary().Pool:
+		return Primary, true
+	case s.Fallback().Pool:
+		return Fallback, true
+	}
+	return "", false
+}
+
+// Swapped is s with its two slots the other way round.
+func (s BitaxeServerSettings) Swapped() BitaxeServerSettings {
+	return slots(s.Fallback(), s.Primary())
+}
+
+// Select is the PATCH /api/system payload that makes target's pool of s
+// the active one on a model's device -- the two supported models select it
+// in genuinely different ways:
 //
 //   - bitaxe (ESP-Miner firmware): primary/fallback URLs always stay in
 //     their own fixed slots; UseFallbackStratum is the only thing that
@@ -279,45 +301,120 @@ func (d DevicePools) Settings() BitaxeServerSettings {
 //     always tries whichever pool is in the *primary* slot first, and
 //     only falls back to the secondary slot if the primary is actually
 //     unreachable. The only way to make a specific pool active is to put
-//     its settings in the primary slot, so target's pool is swapped into
-//     Url/Port/User here and the other one into the Fallback* fields.
+//     it in the primary slot: its fallback is selected by swapping them.
+func (s BitaxeServerSettings) Select(model Model, target PoolTarget) BitaxeServerSettings {
+	if model != ModelBitaxe && target == Fallback {
+		return s.Swapped()
+	}
+	selected := slots(s.Primary(), s.Fallback())
+	selected.UseFallbackStratum = model == ModelBitaxe && target == Fallback
+	return selected
+}
+
+func slots(primary, fallback Slot) BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: primary.URL, Port: primary.Port, User: primary.User,
+		FallbackURL: fallback.URL, FallbackPort: fallback.Port, FallbackUser: fallback.User,
+	}
+}
+
+// DevicePools is what a device's GET /api/system/info tells of its two
+// pools and its MAC, whatever its model -- the part every reader of a
+// device's pools decodes. Never decode that response into
+// BitaxeServerSettings: a bitaxe reports useFallbackStratum as a number
+// (0/1), where a PATCH takes it as a bool, and the decode fails.
+type DevicePools struct {
+	Url          string `json:"stratumURL"`
+	Port         int    `json:"stratumPort"`
+	User         string `json:"stratumUser"`
+	FallbackURL  string `json:"fallbackStratumURL"`
+	FallbackPort int    `json:"fallbackStratumPort"`
+	FallbackUser string `json:"fallbackStratumUser"`
+	MacAddr      string `json:"macAddr"`
+}
+
+// Slots is the device's two slots, as a PATCH /api/system sends them.
+func (d DevicePools) Slots() BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: d.Url, Port: d.Port, User: d.User,
+		FallbackURL: d.FallbackURL, FallbackPort: d.FallbackPort, FallbackUser: d.FallbackUser,
+	}
+}
+
+func (d DevicePools) Pools() DevicePools {
+	return d
+}
+
+// MinerPools is a device's pools, read according to its model: the part
+// they share, and the slot it mines on, each model telling it its own way.
+type MinerPools interface {
+	Pools() DevicePools
+	Active() PoolTarget
+}
+
+type BitaxePools struct {
+	DevicePools
+	IsUsingFallbackStratum int `json:"isUsingFallbackStratum"`
+}
+
+func (b BitaxePools) Active() PoolTarget {
+	if b.IsUsingFallbackStratum == 1 {
+		return Fallback
+	}
+	return Primary
+}
+
+type NerdaxePools struct {
+	DevicePools
+	Stratum struct {
+		UsingFallback bool `json:"usingFallback"`
+	} `json:"stratum"`
+}
+
+func (n NerdaxePools) Active() PoolTarget {
+	if n.Stratum.UsingFallback {
+		return Fallback
+	}
+	return Primary
+}
+
+// ParseMinerPools decodes a device's GET /api/system/info as its model's.
+func ParseMinerPools(model Model, info []byte) (MinerPools, error) {
+	if model == ModelBitaxe {
+		var pools BitaxePools
+		err := json.Unmarshal(info, &pools)
+		return pools, err
+	}
+	var pools NerdaxePools
+	err := json.Unmarshal(info, &pools)
+	return pools, err
+}
+
+// Slots is the miner's two pools as saved in miners.yml.
+func (b Bitaxe) Slots() BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: b.Url, Port: b.Port, User: b.User,
+		FallbackURL: b.FallbackURL, FallbackPort: b.FallbackPort, FallbackUser: b.FallbackUser,
+	}
+}
+
+// WithSlots is b with s for its two pools, the rest of it untouched.
+func (b Bitaxe) WithSlots(s BitaxeServerSettings) Bitaxe {
+	b.Url, b.Port, b.User = s.Url, s.Port, s.User
+	b.FallbackURL, b.FallbackPort, b.FallbackUser = s.FallbackURL, s.FallbackPort, s.FallbackUser
+	return b
+}
+
+// GetPoolsSettings builds the PATCH /api/system payload that makes target,
+// of the miner's pools in miners.yml, the active one (see Select).
 func (b Bitaxe) GetPoolsSettings(target PoolTarget) (*BitaxeServerSettings, error) {
 	switch target {
 	case Primary, Fallback:
 	default:
 		return nil, fmt.Errorf("pool type '%v' not managed", target)
 	}
-
-	if b.Model != ModelBitaxe {
-		if target == Fallback {
-			return &BitaxeServerSettings{
-				Url:          b.FallbackURL,
-				Port:         b.FallbackPort,
-				User:         b.FallbackUser,
-				FallbackURL:  b.Url,
-				FallbackPort: b.Port,
-				FallbackUser: b.User,
-			}, nil
-		}
-		return &BitaxeServerSettings{
-			Url:          b.Url,
-			Port:         b.Port,
-			User:         b.User,
-			FallbackURL:  b.FallbackURL,
-			FallbackPort: b.FallbackPort,
-			FallbackUser: b.FallbackUser,
-		}, nil
-	}
-
-	return &BitaxeServerSettings{
-		Url:                b.Url,
-		Port:               b.Port,
-		User:               b.User,
-		FallbackURL:        b.FallbackURL,
-		FallbackPort:       b.FallbackPort,
-		FallbackUser:       b.FallbackUser,
-		UseFallbackStratum: target == Fallback,
-	}, nil
+	settings := b.Slots().Select(b.Model, target)
+	return &settings, nil
 }
 
 // macSeparators strips the colon/hyphen separators a MAC address is

@@ -65,18 +65,12 @@ func (r deviceProbeResponse) guessModel() config.Model {
 // often already has one), so the operator only has to review, not retype.
 func (r deviceProbeResponse) toBitaxe(ip string) config.Bitaxe {
 	return config.Bitaxe{
-		Ip:           ip,
-		Mac:          r.MacAddr,
-		Hostname:     r.Hostname,
-		Model:        r.guessModel(),
-		Enabled:      true,
-		Url:          r.Url,
-		Port:         r.Port,
-		User:         r.User,
-		FallbackURL:  r.FallbackURL,
-		FallbackPort: r.FallbackPort,
-		FallbackUser: r.FallbackUser,
-	}
+		Ip:       ip,
+		Mac:      r.MacAddr,
+		Hostname: r.Hostname,
+		Model:    r.guessModel(),
+		Enabled:  true,
+	}.WithSlots(r.Slots())
 }
 
 // Probe checks a single IP for an AxeOS device. On success it returns a

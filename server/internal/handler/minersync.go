@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -50,26 +51,7 @@ func MinersSync(logger *slog.Logger, cfg config.Config, w http.ResponseWriter, r
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			results[i] = MinerSync{Ip: miner.Ip, Mac: miner.Mac}
-			device, err := axeOs.ReadPools(r.Context(), miner)
-			// Another device at this IP: its pools aren't this miner's.
-			if err == nil && config.NormalizeMac(device.MacAddr) != config.NormalizeMac(miner.Mac) {
-				err = fmt.Errorf("the device at %s reports MAC %s, not %s", miner.Ip, device.MacAddr, miner.Mac)
-			}
-			if err != nil {
-				results[i].Error = err.Error()
-				return
-			}
-			results[i].Device = &device
-			now := miner
-			now.Url, now.Port, now.User = device.Url, device.Port, device.User
-			now.FallbackURL, now.FallbackPort, now.FallbackUser = device.FallbackURL, device.FallbackPort, device.FallbackUser
-			for _, e := range audit.MinerChanges([]config.Bitaxe{miner}, []config.Bitaxe{now}) {
-				if e.Type == audit.TypeMinerPool {
-					results[i].Changes = e.Changes
-					synced[i] = &now
-				}
-			}
+			results[i], synced[i] = checkMiner(r.Context(), axeOs, miner)
 		}()
 	}
 	wg.Wait()
@@ -81,4 +63,27 @@ func MinersSync(logger *slog.Logger, cfg config.Config, w http.ResponseWriter, r
 		}
 	}
 	writeJSON(w, resp)
+}
+
+// checkMiner is how miner's pools in miners.yml differ from its device's,
+// and its entry to save to sync it -- nil when there's nothing to.
+func checkMiner(ctx context.Context, axeOs axeos.AxeOs, miner config.Bitaxe) (MinerSync, *config.Bitaxe) {
+	device, err := axeOs.ReadPools(ctx, miner)
+	if err != nil {
+		return MinerSync{Ip: miner.Ip, Mac: miner.Mac, Error: err.Error()}, nil
+	}
+	pools := device.Pools()
+	// Another device at this IP: its pools aren't this miner's.
+	if config.NormalizeMac(pools.MacAddr) != config.NormalizeMac(miner.Mac) {
+		err := fmt.Errorf("the device at %s reports MAC %s, not %s", miner.Ip, pools.MacAddr, miner.Mac)
+		return MinerSync{Ip: miner.Ip, Mac: miner.Mac, Error: err.Error()}, nil
+	}
+
+	changes := audit.PoolChanges(miner.Slots(), pools.Slots())
+	result := MinerSync{Ip: miner.Ip, Mac: miner.Mac, Device: &pools, Changes: changes}
+	if len(changes) == 0 {
+		return result, nil
+	}
+	synced := miner.WithSlots(pools.Slots())
+	return result, &synced
 }

@@ -250,17 +250,8 @@ definitions:
         type: string
       fallbackStratumUser:
         type: string
-      isUsingFallbackStratum:
-        description: bitaxe
-        type: integer
       macAddr:
         type: string
-      stratum:
-        description: nerdaxe
-        properties:
-          usingFallback:
-            type: boolean
-        type: object
       stratumPort:
         type: integer
       stratumURL:

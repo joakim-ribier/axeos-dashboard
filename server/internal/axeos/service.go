@@ -2,7 +2,6 @@ package axeos
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -73,92 +72,51 @@ func (a AxeOs) SwapPools(ctx context.Context, miner config.Bitaxe) (before, afte
 	if err != nil {
 		return before, after, fmt.Errorf("swap pools for %s: %w", miner.Ip, err)
 	}
-	before = device.Settings()
+	before = device.Pools().Slots()
 	if before.Url == "" || before.FallbackURL == "" {
 		return before, after, fmt.Errorf("swap pools for %s: the device doesn't report two pools", miner.Ip)
 	}
 
-	after = swapped(before)
+	after = before.Swapped()
 	return before, after, a.applyPools(miner, after, "swapped")
-}
-
-func swapped(s config.BitaxeServerSettings) config.BitaxeServerSettings {
-	return config.BitaxeServerSettings{
-		Url:          s.FallbackURL,
-		Port:         s.FallbackPort,
-		User:         s.FallbackUser,
-		FallbackURL:  s.Url,
-		FallbackPort: s.Port,
-		FallbackUser: s.User,
-	}
-}
-
-// Pool is a stratum pool, as a miner's slots hold it -- each miner keeps
-// its own user on it.
-type Pool struct {
-	URL  string `json:"url"`
-	Port int    `json:"port"`
-}
-
-func (p Pool) String() string {
-	return fmt.Sprintf("%s:%d", p.URL, p.Port)
 }
 
 // ErrPoolNotHeld is a miner holding the pool asked for in neither slot.
 var ErrPoolNotHeld = errors.New("the miner doesn't have this pool")
 
-// ReadPools reads miner's pools off its device, now.
-func (a AxeOs) ReadPools(ctx context.Context, miner config.Bitaxe) (config.DevicePools, error) {
-	var device config.DevicePools
+// ReadPools reads miner's pools off its device, now, as its model tells
+// them.
+func (a AxeOs) ReadPools(ctx context.Context, miner config.Bitaxe) (config.MinerPools, error) {
 	info, err := bitaxe.NewClient(a.logger, a.cfg.Endpoints.Info, a.cfg.Endpoints.Timeout).FetchSystemInfo(ctx, miner.Ip)
 	if err != nil {
-		return device, err
+		return nil, err
 	}
-	err = json.Unmarshal(info, &device)
-	return device, err
+	return config.ParseMinerPools(miner.Model, info)
 }
 
 // SwitchToPool makes pool the one miner mines on, in whichever slot the
 // device holds it: a switch of the whole fleet picks a pool, not a slot,
-// since the slots needn't be in the same order on every miner. A bitaxe
-// selects it with useFallbackStratum, a nerdaxe gets it in its primary
-// slot. Returns the pool it was on, and whether anything was sent --
-// nothing is to a miner already on pool, nor to one that doesn't have it
+// since the slots needn't be in the same order on every miner (see
+// config.BitaxeServerSettings.Select for how each model selects it).
+// Returns the pool it was on, and whether anything was sent -- nothing is
+// to a miner already on pool, nor to one that doesn't have it
 // (ErrPoolNotHeld).
-func (a AxeOs) SwitchToPool(ctx context.Context, miner config.Bitaxe, pool Pool) (was Pool, switched bool, err error) {
+func (a AxeOs) SwitchToPool(ctx context.Context, miner config.Bitaxe, pool config.Pool) (was config.Pool, switched bool, err error) {
 	device, err := a.ReadPools(ctx, miner)
 	if err != nil {
 		return was, false, fmt.Errorf("switch %s to %s: %w", miner.Ip, pool, err)
 	}
 
-	slots := device.Settings()
-	primary := Pool{URL: slots.Url, Port: slots.Port}
-	fallback := Pool{URL: slots.FallbackURL, Port: slots.FallbackPort}
-	onFallback := device.Stratum.UsingFallback
-	if miner.Model == config.ModelBitaxe {
-		onFallback = device.IsUsingFallbackStratum == 1
-	}
-	was = primary
-	if onFallback {
-		was = fallback
-	}
+	slots := device.Pools().Slots()
+	was = slots.Slot(device.Active()).Pool
 	if was == pool {
 		return was, false, nil
 	}
-
-	switch {
-	case pool == primary:
-		// A nerdaxe gets the same slots: the restart brings it back to its
-		// primary one.
-		slots.UseFallbackStratum = false
-	case pool == fallback && miner.Model == config.ModelBitaxe:
-		slots.UseFallbackStratum = true
-	case pool == fallback:
-		slots = swapped(slots)
-	default:
+	target, held := slots.Holding(pool)
+	if !held {
 		return was, false, ErrPoolNotHeld
 	}
-	return was, true, a.applyPools(miner, slots, pool.String())
+	return was, true, a.applyPools(miner, slots.Select(miner.Model, target), pool.String())
 }
 
 func (a AxeOs) applyPools(miner config.Bitaxe, settings config.BitaxeServerSettings, pool string) error {

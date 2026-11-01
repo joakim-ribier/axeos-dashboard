@@ -45,9 +45,9 @@ const (
 	ChangeRemoved ChangeKind = "removed"
 )
 
-// poolChanges is the stratum slots that changed, under the names the UI
+// PoolChanges is the stratum slots that changed, under the names the UI
 // labels them by.
-func poolChanges(was, now config.Bitaxe) []Change {
+func PoolChanges(was, now config.BitaxeServerSettings) []Change {
 	return compareFields([][3]string{
 		{"url", was.Url, now.Url},
 		{"port", portString(was.Port), portString(now.Port)},
@@ -90,7 +90,7 @@ func MinerChanges(before, after []config.Bitaxe) []Entry {
 		was, existed := previous[now.StorageKey()]
 		if !existed {
 			// Where its hashrate goes and what it runs, from the start.
-			changes := append(poolChanges(config.Bitaxe{}, now), scheduleChanges(nil, now.Schedule)...)
+			changes := append(PoolChanges(config.BitaxeServerSettings{}, now.Slots()), scheduleChanges(nil, now.Schedule)...)
 			entries = append(entries, Entry{Type: TypeMinerAdded, Target: now.Ip, Changes: changes})
 			continue
 		}
@@ -105,7 +105,7 @@ func MinerChanges(before, after []config.Bitaxe) []Entry {
 			}
 			entries = append(entries, Entry{Type: typ, Target: now.Ip})
 		}
-		if changes := poolChanges(was, now); changes != nil {
+		if changes := PoolChanges(was.Slots(), now.Slots()); changes != nil {
 			entries = append(entries, Entry{Type: TypeMinerPool, Target: now.Ip, Changes: changes})
 		}
 		if changes := scheduleChanges(was.Schedule, now.Schedule); changes != nil {
@@ -304,40 +304,41 @@ func repos(m map[config.Model]string) []string {
 // that's neither of miners.yml's keeps the route's type.
 func PoolSwap(miner config.Bitaxe, before, after config.BitaxeServerSettings) Entry {
 	entryType := TypeSwitchFallback
-	if after.Url == miner.Url && after.Port == miner.Port && after.User == miner.User {
+	if after.Primary() == miner.Slots().Primary() {
 		entryType = TypeSwitchPrimary
 	}
 	return Entry{
 		Type:    entryType,
 		Target:  miner.Ip,
 		Status:  http.StatusNoContent,
-		Changes: poolChanges(slots(before), slots(after)),
+		Changes: PoolChanges(before, after),
 	}
 }
 
-func slots(s config.BitaxeServerSettings) config.Bitaxe {
-	return config.Bitaxe{
-		Url: s.Url, Port: s.Port, User: s.User,
-		FallbackURL: s.FallbackURL, FallbackPort: s.FallbackPort, FallbackUser: s.FallbackUser,
-	}
-}
-
-// RecordChanges records entries (from MinerChanges/SettingsChanges/PoolSwap) as made
-// through r, once its save succeeded: client IP, User-Agent and request ID
-// filled in, as for any API entry. They then stand in for the route's generic save_miners /
-// save_settings entry, which would only repeat the same save -- that one is
-// left for a failed save. A save that changed nothing records nothing.
+// RecordChanges records entries (from MinerChanges/SettingsChanges) as made
+// through r, once its save succeeded -- hence each one's 200. They then
+// stand in for the route's generic save_miners / save_settings entry, which
+// would only repeat the same save -- that one is left for a failed save. A
+// save that changed nothing records nothing.
 func (l *Log) RecordChanges(r *http.Request, entries []Entry, logger *slog.Logger) {
+	saved := make([]Entry, len(entries))
+	for i, e := range entries {
+		e.Status = http.StatusOK
+		saved[i] = e
+	}
+	l.RecordResults(r, saved, logger)
+}
+
+// RecordResults records entries as made through r, each with its own
+// outcome (status, error) -- one per miner an action went to, a fleet
+// switch's failures included: client IP, User-Agent and request ID filled
+// in, as for any API entry. They then stand in for the route's generic
+// entry, which is left for when nothing was recorded.
+func (l *Log) RecordResults(r *http.Request, entries []Entry, logger *slog.Logger) {
 	recorded := len(entries) == 0
 	for _, e := range entries {
 		entry := requestEntry(e.Type, r)
-		entry.Target, entry.Changes, entry.Error = e.Target, e.Changes, e.Error
-		// Only ever called once the save succeeded -- an entry of its own
-		// aside (one miner of a fleet switch that failed).
-		entry.Status = e.Status
-		if entry.Status == 0 {
-			entry.Status = http.StatusOK
-		}
+		entry.Target, entry.Changes, entry.Status, entry.Error = e.Target, e.Changes, e.Status, e.Error
 		if err := l.Record(entry); err != nil {
 			logger.Error("failed to record audit entry", "type", e.Type, "error", err)
 			continue

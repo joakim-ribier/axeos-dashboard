@@ -65,8 +65,8 @@ const nerdaxeFailedOver = `{"stratumURL":"solo.pool","stratumPort":3333,"stratum
 	`"stratum":{"usingFallback":true},"macAddr":"AA:BB:CC:DD:EE:02"}`
 
 var (
-	solo = Pool{URL: "solo.pool", Port: 3333}
-	pps  = Pool{URL: "pps.pool", Port: 3333}
+	solo = config.Pool{URL: "solo.pool", Port: 3333}
+	pps  = config.Pool{URL: "pps.pool", Port: 3333}
 )
 
 func TestAxeOs_SwitchToPool(t *testing.T) {
@@ -85,8 +85,8 @@ func TestAxeOs_SwitchToPool(t *testing.T) {
 		name     string
 		model    config.Model
 		info     string
-		pool     Pool
-		wantWas  Pool
+		pool     config.Pool
+		wantWas  config.Pool
 		wantSent *config.BitaxeServerSettings // nil: nothing sent, no restart
 	}{
 		{
@@ -155,7 +155,7 @@ func TestAxeOs_SwitchToPool(t *testing.T) {
 		device := newFakeMiner(t, bitaxeOnPrimary)
 		miner := config.Bitaxe{Ip: device.addr, Model: config.ModelBitaxe}
 
-		_, switched, err := NewAxeOs(testLogger(), switchTestConfig()).SwitchToPool(context.Background(), miner, Pool{URL: "other.pool", Port: 3333})
+		_, switched, err := NewAxeOs(testLogger(), switchTestConfig()).SwitchToPool(context.Background(), miner, config.Pool{URL: "other.pool", Port: 3333})
 
 		if !errors.Is(err, ErrPoolNotHeld) {
 			t.Errorf("error = %v, want ErrPoolNotHeld", err)
@@ -169,7 +169,7 @@ func TestAxeOs_SwitchToPool(t *testing.T) {
 		device := newFakeMiner(t, bitaxeOnPrimary)
 		miner := config.Bitaxe{Ip: device.addr, Model: config.ModelBitaxe}
 
-		_, _, err := NewAxeOs(testLogger(), switchTestConfig()).SwitchToPool(context.Background(), miner, Pool{URL: "pps.pool", Port: 4444})
+		_, _, err := NewAxeOs(testLogger(), switchTestConfig()).SwitchToPool(context.Background(), miner, config.Pool{URL: "pps.pool", Port: 4444})
 
 		if !errors.Is(err, ErrPoolNotHeld) {
 			t.Errorf("error = %v, want ErrPoolNotHeld", err)
@@ -194,15 +194,32 @@ func TestAxeOs_SwitchToPool(t *testing.T) {
 }
 
 func TestAxeOs_ReadPools(t *testing.T) {
-	// Regression: a bitaxe reports useFallbackStratum as a number (0/1),
-	// which used to fail the decode into config.BitaxeServerSettings.
-	device := newFakeMiner(t, bitaxeOnFallback)
-
-	got, err := NewAxeOs(testLogger(), switchTestConfig()).ReadPools(context.Background(), config.Bitaxe{Ip: device.addr})
-	if err != nil {
-		t.Fatalf("ReadPools() error = %v, want nil", err)
+	tests := []struct {
+		name    string
+		model   config.Model
+		info    string
+		wantMac string
+	}{
+		// Regression: a bitaxe reports useFallbackStratum as a number (0/1),
+		// which used to fail the decode into config.BitaxeServerSettings.
+		{"a bitaxe tells its active slot with isUsingFallbackStratum", config.ModelBitaxe, bitaxeOnFallback, "AA:BB:CC:DD:EE:01"},
+		{"a nerdaxe tells it under stratum", config.ModelNerdaxe, nerdaxeFailedOver, "AA:BB:CC:DD:EE:02"},
 	}
-	if got.Url != "solo.pool" || got.FallbackUser != "acct.pps" || got.MacAddr != "AA:BB:CC:DD:EE:01" || got.IsUsingFallbackStratum != 1 {
-		t.Errorf("ReadPools() = %+v, want the device's pools, MAC and active slot", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			device := newFakeMiner(t, tt.info)
+
+			got, err := NewAxeOs(testLogger(), switchTestConfig()).ReadPools(context.Background(), config.Bitaxe{Ip: device.addr, Model: tt.model})
+			if err != nil {
+				t.Fatalf("ReadPools() error = %v, want nil", err)
+			}
+			pools := got.Pools()
+			if pools.Url != "solo.pool" || pools.FallbackUser != "acct.pps" || pools.MacAddr != tt.wantMac {
+				t.Errorf("Pools() = %+v, want the device's pools and MAC", pools)
+			}
+			if got.Active() != config.Fallback {
+				t.Errorf("Active() = %q, want fallback", got.Active())
+			}
+		})
 	}
 }

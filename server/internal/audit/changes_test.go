@@ -47,7 +47,7 @@ func TestPoolSwap(t *testing.T) {
 			if e.Type != tc.wantType || e.Target != m.Ip {
 				t.Errorf("entry = %s on %q, want %s on %q", e.Type, e.Target, tc.wantType, m.Ip)
 			}
-			want := poolChanges(slots(tc.before), slots(tc.after))
+			want := PoolChanges(tc.before, tc.after)
 			if len(e.Changes) == 0 || !reflect.DeepEqual(e.Changes, want) {
 				t.Errorf("changes = %+v, want the slots before → after: %+v", e.Changes, want)
 			}

@@ -1499,21 +1499,8 @@
                 "fallbackStratumUser": {
                     "type": "string"
                 },
-                "isUsingFallbackStratum": {
-                    "description": "bitaxe",
-                    "type": "integer"
-                },
                 "macAddr": {
                     "type": "string"
-                },
-                "stratum": {
-                    "description": "nerdaxe",
-                    "type": "object",
-                    "properties": {
-                        "usingFallback": {
-                            "type": "boolean"
-                        }
-                    }
                 },
                 "stratumPort": {
                     "type": "integer"
