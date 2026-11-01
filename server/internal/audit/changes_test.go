@@ -16,6 +16,45 @@ func miner() config.Bitaxe {
 	}
 }
 
+func TestPoolSwap(t *testing.T) {
+	m := miner() // pool.a primary, pool.b fallback
+	slotsOf := func(url, user, fallbackURL, fallbackUser string) config.BitaxeServerSettings {
+		return config.BitaxeServerSettings{
+			Url: url, Port: 3333, User: user,
+			FallbackURL: fallbackURL, FallbackPort: 3333, FallbackUser: fallbackUser,
+		}
+	}
+	inOrder := slotsOf("pool.a", "bc1qa.w1", "pool.b", "bc1qb.w1")
+	swapped := slotsOf("pool.b", "bc1qb.w1", "pool.a", "bc1qa.w1")
+
+	cases := []struct {
+		name          string
+		before, after config.BitaxeServerSettings
+		wantType      string
+	}{
+		{"ending on miners.yml's primary is a switch to primary", swapped, inOrder, TypeSwitchPrimary},
+		{"ending on miners.yml's fallback is a switch to fallback", inOrder, swapped, TypeSwitchFallback},
+		{
+			"ending on a pool that's neither keeps the route's type",
+			slotsOf("pool.b", "bc1qb.w1", "pool.c", "bc1qc.w1"),
+			slotsOf("pool.c", "bc1qc.w1", "pool.b", "bc1qb.w1"),
+			TypeSwitchFallback,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := PoolSwap(m, tc.before, tc.after)
+			if e.Type != tc.wantType || e.Target != m.Ip {
+				t.Errorf("entry = %s on %q, want %s on %q", e.Type, e.Target, tc.wantType, m.Ip)
+			}
+			want := poolChanges(slots(tc.before), slots(tc.after))
+			if len(e.Changes) == 0 || !reflect.DeepEqual(e.Changes, want) {
+				t.Errorf("changes = %+v, want the slots before → after: %+v", e.Changes, want)
+			}
+		})
+	}
+}
+
 func TestMinerChanges(t *testing.T) {
 	cases := []struct {
 		name   string

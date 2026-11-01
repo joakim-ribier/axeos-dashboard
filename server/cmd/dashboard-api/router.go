@@ -234,7 +234,13 @@ func (f *Router) Handler() http.Handler {
 		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Primary, w, r)
 	})
 	router.With(f.audited(audit.TypeSwitchFallback)).Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
-		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
+		swaps := handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
+		// One miner's swap stands in for the route's entry, typed by the pool
+		// it ended on. A switch of every miner keeps the route's one entry,
+		// which the others' switches need.
+		if r.URL.Query().Get("miner") != "" && len(swaps) > 0 {
+			f.auditLog.RecordChanges(r, swaps, f.logger)
+		}
 	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {

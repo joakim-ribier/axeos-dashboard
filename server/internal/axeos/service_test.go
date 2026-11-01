@@ -1,6 +1,7 @@
 package axeos
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -264,6 +265,137 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 
 		if err == nil {
 			t.Error("SwitchPool() error = nil, want an error when the restart itself fails")
+		}
+	})
+
+	t.Run("succeeds when the restart goes unanswered after the device took the new pools", func(t *testing.T) {
+		// A nerdaxe reconnecting to its new pool was seen rebooting without
+		// answering the restart in time.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/system/restart" {
+				time.Sleep(200 * time.Millisecond)
+			}
+		}))
+		defer server.Close()
+
+		cfg := config.Config{Endpoints: config.EndpointConfig{
+			System: "api/system", Restart: "api/system/restart", Timeout: 50 * time.Millisecond,
+		}}
+		miner := config.Bitaxe{Ip: serverAddr(server), Model: "bitaxe", Url: "primary.pool"}
+
+		if err := NewAxeOs(testLogger(), cfg).SwitchPool(miner, config.Primary); err != nil {
+			t.Errorf("SwitchPool() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("an unanswered restart on its own is still an error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(200 * time.Millisecond)
+		}))
+		defer server.Close()
+
+		cfg := config.Config{Endpoints: config.EndpointConfig{Restart: "api/system/restart", Timeout: 50 * time.Millisecond}}
+
+		if err := NewAxeOs(testLogger(), cfg).Restart(config.Bitaxe{Ip: serverAddr(server)}); err == nil {
+			t.Error("Restart() error = nil, want an error: nothing tells it the miner is rebooting")
+		}
+	})
+}
+
+func TestAxeOs_SwapPools(t *testing.T) {
+	cfg := config.Config{Endpoints: config.EndpointConfig{
+		Info: "api/system/info", System: "api/system", Restart: "api/system/restart", Timeout: time.Second,
+	}}
+
+	t.Run("swaps the two pools the device holds, whatever miners.yml says, then restarts", func(t *testing.T) {
+		var patched config.BitaxeServerSettings
+		restarted := false
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/api/system/info":
+				_, _ = w.Write([]byte(`{"stratumURL":"pps.pool","stratumPort":3333,"stratumUser":"acct.pps",` +
+					`"fallbackStratumURL":"solo.pool","fallbackStratumPort":4444,"fallbackStratumUser":"acct.solo",` +
+					`"stratum":{"usingFallback":false}}`))
+			case "/api/system":
+				_ = json.NewDecoder(r.Body).Decode(&patched)
+			case "/api/system/restart":
+				restarted = true
+			default:
+				t.Errorf("unexpected request path %q", r.URL.Path)
+			}
+		}))
+		defer server.Close()
+
+		// miners.yml has solo as primary: the device runs them the other
+		// way round, so a switch built from it would send pps again.
+		miner := config.Bitaxe{
+			Ip: serverAddr(server), Model: "nerdaxe",
+			Url: "solo.pool", Port: 4444, User: "acct.solo",
+			FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+		}
+
+		before, after, err := NewAxeOs(testLogger(), cfg).SwapPools(context.Background(), miner)
+		if err != nil {
+			t.Fatalf("SwapPools() error = %v, want nil", err)
+		}
+
+		want := config.BitaxeServerSettings{
+			Url: "solo.pool", Port: 4444, User: "acct.solo",
+			FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+		}
+		if patched != want {
+			t.Errorf("settings = %+v, want %+v", patched, want)
+		}
+		if after != want {
+			t.Errorf("after = %+v, want what was sent: %+v", after, want)
+		}
+		if before.Url != "pps.pool" || before.FallbackURL != "solo.pool" {
+			t.Errorf("before = %+v, want the device's slots as read", before)
+		}
+		if !restarted {
+			t.Error("expected a restart after the swap to apply it")
+		}
+	})
+
+	t.Run("sends nothing when the device doesn't report two pools", func(t *testing.T) {
+		patchedCalled := false
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/system/info" {
+				_, _ = w.Write([]byte(`{"stratumURL":"pps.pool","stratumPort":3333,"fallbackStratumURL":""}`))
+				return
+			}
+			patchedCalled = true
+		}))
+		defer server.Close()
+
+		_, _, err := NewAxeOs(testLogger(), cfg).SwapPools(context.Background(), config.Bitaxe{Ip: serverAddr(server), Model: "nerdaxe"})
+
+		if err == nil {
+			t.Error("SwapPools() error = nil, want an error")
+		}
+		if patchedCalled {
+			t.Error("nothing should be sent to the device when it has a single pool")
+		}
+	})
+
+	t.Run("sends nothing when the device can't be read", func(t *testing.T) {
+		patchedCalled := false
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/system/info" {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			patchedCalled = true
+		}))
+		defer server.Close()
+
+		_, _, err := NewAxeOs(testLogger(), cfg).SwapPools(context.Background(), config.Bitaxe{Ip: serverAddr(server), Model: "nerdaxe"})
+
+		if err == nil {
+			t.Error("SwapPools() error = nil, want an error")
+		}
+		if patchedCalled {
+			t.Error("nothing should be sent to the device when its pools can't be read")
 		}
 	})
 }

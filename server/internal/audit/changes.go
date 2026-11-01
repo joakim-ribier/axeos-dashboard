@@ -297,7 +297,32 @@ func repos(m map[config.Model]string) []string {
 	return out
 }
 
-// RecordChanges records entries (from MinerChanges/SettingsChanges) as made
+// PoolSwap is a non-Bitaxe's pool switch by swapping its two slots (see
+// axeos.SwapPools), with the slots before and after: it's typed by the pool
+// it mines on now, which the route it came through (always the fallback
+// one) doesn't tell -- its slots needn't be in miners.yml's order. A pool
+// that's neither of miners.yml's keeps the route's type.
+func PoolSwap(miner config.Bitaxe, before, after config.BitaxeServerSettings) Entry {
+	entryType := TypeSwitchFallback
+	if after.Url == miner.Url && after.Port == miner.Port && after.User == miner.User {
+		entryType = TypeSwitchPrimary
+	}
+	return Entry{
+		Type:    entryType,
+		Target:  miner.Ip,
+		Status:  http.StatusNoContent,
+		Changes: poolChanges(slots(before), slots(after)),
+	}
+}
+
+func slots(s config.BitaxeServerSettings) config.Bitaxe {
+	return config.Bitaxe{
+		Url: s.Url, Port: s.Port, User: s.User,
+		FallbackURL: s.FallbackURL, FallbackPort: s.FallbackPort, FallbackUser: s.FallbackUser,
+	}
+}
+
+// RecordChanges records entries (from MinerChanges/SettingsChanges/PoolSwap) as made
 // through r, once its save succeeded: client IP, User-Agent and request ID
 // filled in, as for any API entry. They then stand in for the route's generic save_miners /
 // save_settings entry, which would only repeat the same save -- that one is
@@ -308,7 +333,10 @@ func (l *Log) RecordChanges(r *http.Request, entries []Entry, logger *slog.Logge
 		entry := requestEntry(e.Type, r)
 		entry.Target, entry.Changes = e.Target, e.Changes
 		// Only ever called once the save succeeded.
-		entry.Status = http.StatusOK
+		entry.Status = e.Status
+		if entry.Status == 0 {
+			entry.Status = http.StatusOK
+		}
 		if err := l.Record(entry); err != nil {
 			logger.Error("failed to record audit entry", "type", e.Type, "error", err)
 			continue
