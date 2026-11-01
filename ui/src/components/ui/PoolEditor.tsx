@@ -21,6 +21,7 @@ import { Writable } from "@/components/ui/Writable";
 import { type MinerConfig } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
 import { extractErrorMessage } from "@/utils/apiError";
+import { formatTimeOnly } from "@/utils/format";
 import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
 
 interface PoolEditorProps {
@@ -156,7 +157,9 @@ export const PoolEditor = ({
       <Box sx={{ width: "100%" }}>
         <AlertList
           severity="warning"
-          title={t("settingsPage.configured.pool.driftWarning")}
+          title={t("settingsPage.configured.pool.driftWarning", {
+            value: formatTimeOnly(liveMiner?.timestamp),
+          })}
           items={mismatches.map((m) =>
             t("settingsPage.configured.pool.driftItem", {
               field: fieldLabel(m.field),

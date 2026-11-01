@@ -38,7 +38,7 @@ import { summarizeUserAgent } from "@/utils/userAgent";
 
 const DEFAULT_PAGE_SIZE = 50;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
-const POOL_SWITCH_TYPES = ["switch_primary", "switch_fallback"];
+const POOL_SWITCH_TYPES = ["switch_primary", "switch_fallback", "switch_pool"];
 
 // A scheduled job's value is "<cron> <action>", read out (see describeJob).
 const SCHEDULE_FIELDS = ["scheduleAdded", "scheduleRemoved"];

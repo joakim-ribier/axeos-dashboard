@@ -124,6 +124,12 @@ const systemReady = () => screen.findByText("mypool.example.com");
 const expandMinerRow = async () => {
   await userEvent.setup().click(screen.getByText("bitaxe-1"));
 };
+// The fleet's actions sit in the panel the Actions button unfolds -- a
+// button gone itself when none of them is left.
+const openActions = async () => {
+  const actions = screen.queryByRole("button", { name: "Actions" });
+  if (actions) await userEvent.setup().click(actions);
+};
 
 const GATED: Gated[] = [
   // Miners -- the table
@@ -131,6 +137,7 @@ const GATED: Gated[] = [
     section: "miners",
     element: "the Disable all button",
     ready: minersReady,
+    open: openActions,
     find: () => button("Disable all"),
   },
   {

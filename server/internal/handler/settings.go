@@ -2,10 +2,14 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"sync"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/axeos"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
@@ -15,7 +19,8 @@ import (
 // ---------------------------------------------------------------------------
 
 // SwitchPool switches the given miner(s) to the primary or fallback stratum
-// pool and restarts each affected device to apply the change.
+// pool and restarts each affected device to apply the change. Returns the
+// audit entry of each non-Bitaxe whose slots were swapped.
 //
 // @Summary Switch stratum pool
 // @Description Switches miner(s) to the primary or fallback pool and restarts them to apply it.
@@ -25,19 +30,116 @@ import (
 // @Failure 502 {object} handler.ErrorResponse "one or more miners didn't apply the change (unreachable, or rejected the request)"
 // @Router /api/miners/pool/primary/enable [put]
 // @Router /api/miners/pool/fallback/enable [put]
-func SwitchPool(logger *slog.Logger, cfg config.Config, poolTarget config.PoolTarget, w http.ResponseWriter, r *http.Request) {
+func SwitchPool(logger *slog.Logger, cfg config.Config, poolTarget config.PoolTarget, w http.ResponseWriter, r *http.Request) []audit.Entry {
 	axeOs := axeos.NewAxeOs(logger, cfg)
 	var errs []error
+	var swaps []audit.Entry
 	for _, miner := range cfg.GetMinersFilterBy(r.URL.Query().Get("miner")) {
-		if err := axeOs.SwitchPool(miner, poolTarget); err != nil {
+		swap, err := switchMiner(r.Context(), axeOs, miner, poolTarget)
+		if err != nil {
 			errs = append(errs, err)
+		}
+		if swap != nil {
+			swaps = append(swaps, *swap)
 		}
 	}
 	if len(errs) > 0 {
 		writeErrorResponse(w, errors.Join(errs...).Error(), http.StatusBadGateway)
-		return
+		return swaps
 	}
 	w.WriteHeader(204)
+	return swaps
+}
+
+// switchMiner switches miner to target -- and, for a non-Bitaxe's swap,
+// returns its audit entry. The UI offers a non-Bitaxe a switch to its
+// fallback only (it never reports using it), which means swapping its two
+// slots.
+func switchMiner(ctx context.Context, axeOs axeos.AxeOs, miner config.Bitaxe, target config.PoolTarget) (*audit.Entry, error) {
+	if miner.Model == config.ModelBitaxe || target != config.Fallback {
+		return nil, axeOs.SwitchPool(miner, target)
+	}
+	before, after, err := axeOs.SwapPools(ctx, miner)
+	if err != nil {
+		return nil, err
+	}
+	swap := audit.PoolSwap(miner, before, after)
+	return &swap, nil
+}
+
+// PoolSwitchResult is what a switch of the fleet to a pool did on one
+// miner: switched, already (on it), missing (it doesn't have it), or failed.
+type PoolSwitchResult struct {
+	Ip     string `json:"ip"`
+	Status string `json:"status"`
+	Error  string `json:"error,omitempty"`
+}
+
+type PoolSwitchResponse struct {
+	Miners []PoolSwitchResult `json:"miners"`
+}
+
+// SwitchToPool switches every enabled miner that has the pool, in either
+// slot, to it -- all at once, each switch restarting its miner. Returns
+// the audit entry of each miner it sent something to.
+//
+// @Summary Switch every miner to a pool
+// @Description Switches every enabled miner holding this pool (in either slot) to it, then restarts it. A miner already on it, or without it, is left as it is.
+// @Tags Miner actions
+// @Param url query string true "The pool's URL"
+// @Param port query int true "The pool's port"
+// @Success 200 {object} handler.PoolSwitchResponse "what was done on each miner"
+// @Failure 400 {object} handler.ErrorResponse "url or port missing"
+// @Router /api/miners/pool/switch [put]
+func SwitchToPool(logger *slog.Logger, cfg config.Config, w http.ResponseWriter, r *http.Request) []audit.Entry {
+	port, err := strconv.Atoi(r.URL.Query().Get("port"))
+	pool := config.Pool{URL: r.URL.Query().Get("url"), Port: port}
+	if pool.URL == "" || err != nil || port <= 0 {
+		writeErrorResponse(w, "url and port are required", http.StatusBadRequest)
+		return nil
+	}
+
+	axeOs := axeos.NewAxeOs(logger, cfg)
+	miners := cfg.GetMiners()
+	results := make([]PoolSwitchResult, len(miners))
+	entries := make([]*audit.Entry, len(miners))
+	var wg sync.WaitGroup
+	for i, miner := range miners {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			results[i], entries[i] = switchMinerToPool(r.Context(), axeOs, miner, pool)
+		}()
+	}
+	wg.Wait()
+
+	writeJSON(w, PoolSwitchResponse{Miners: results})
+	var recorded []audit.Entry
+	for _, e := range entries {
+		if e != nil {
+			recorded = append(recorded, *e)
+		}
+	}
+	return recorded
+}
+
+// switchMinerToPool is what switching miner to pool did, and its audit
+// entry -- nil when nothing was sent to it.
+func switchMinerToPool(ctx context.Context, axeOs axeos.AxeOs, miner config.Bitaxe, pool config.Pool) (PoolSwitchResult, *audit.Entry) {
+	was, switched, err := axeOs.SwitchToPool(ctx, miner, pool)
+	switch {
+	case errors.Is(err, axeos.ErrPoolNotHeld):
+		return PoolSwitchResult{Ip: miner.Ip, Status: "missing"}, nil
+	case err != nil:
+		return PoolSwitchResult{Ip: miner.Ip, Status: "failed", Error: err.Error()},
+			&audit.Entry{Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusBadGateway, Error: err.Error()}
+	case !switched:
+		return PoolSwitchResult{Ip: miner.Ip, Status: "already"}, nil
+	}
+	return PoolSwitchResult{Ip: miner.Ip, Status: "switched"}, &audit.Entry{
+		Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusOK,
+		Changes: []audit.Change{{Field: "pool", Kind: audit.ChangeChanged, Before: was.String(), After: pool.String()}},
+	}
 }
 
 // Restart sends a restart command to the given device via its AxeOs restart endpoint.

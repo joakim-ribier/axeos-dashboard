@@ -104,6 +104,12 @@ failure with its error message). A failed action is recorded too.
       <td>same</td>
       <td>same</td>
     </tr>
+    <tr>
+      <td><code>switch_pool</code></td>
+      <td>Switch to a pool</td>
+      <td>Configuration › Miners › Actions › Switch to a pool: one entry per switched miner, with the pool it left and the one it joined</td>
+      <td>the switched miner — <strong>all miners</strong> when none had to switch</td>
+    </tr>
   </tbody>
 </table>
 
@@ -352,6 +358,7 @@ The response of `GET /api/audit/types` — each type is explained in
     "restart",
     "switch_primary",
     "switch_fallback",
+    "switch_pool",
     "save_miners",
     "save_settings",
     "export_audit",

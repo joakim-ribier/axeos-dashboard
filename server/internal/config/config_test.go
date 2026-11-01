@@ -5,6 +5,78 @@ import (
 	"testing"
 )
 
+func TestBitaxeServerSettings_slots(t *testing.T) {
+	s := BitaxeServerSettings{
+		Url: "solo.pool", Port: 3333, User: "acct.solo",
+		FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+	}
+	solo := Slot{Pool: Pool{URL: "solo.pool", Port: 3333}, User: "acct.solo"}
+	pps := Slot{Pool: Pool{URL: "pps.pool", Port: 3333}, User: "acct.pps"}
+
+	if s.Slot(Primary) != solo || s.Slot(Fallback) != pps {
+		t.Errorf("Slot() = %+v / %+v, want %+v / %+v", s.Slot(Primary), s.Slot(Fallback), solo, pps)
+	}
+	if got := s.Swapped(); got.Primary() != pps || got.Fallback() != solo {
+		t.Errorf("Swapped() = %+v, want the two slots the other way round", got)
+	}
+
+	holding := []struct {
+		pool   Pool
+		want   PoolTarget
+		wantOk bool
+	}{
+		{solo.Pool, Primary, true},
+		{pps.Pool, Fallback, true},
+		{Pool{URL: "pps.pool", Port: 4444}, "", false}, // another port, another pool
+		{Pool{URL: "other.pool", Port: 3333}, "", false},
+	}
+	for _, h := range holding {
+		if got, ok := s.Holding(h.pool); got != h.want || ok != h.wantOk {
+			t.Errorf("Holding(%s) = %q, %v, want %q, %v", h.pool, got, ok, h.want, h.wantOk)
+		}
+	}
+}
+
+func TestBitaxeServerSettings_Select(t *testing.T) {
+	s := BitaxeServerSettings{
+		Url: "solo.pool", Port: 3333, User: "acct.solo",
+		FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+		UseFallbackStratum: true, // whatever it held: Select decides it
+	}
+	inOrder := s
+	inOrder.UseFallbackStratum = false
+	onFallback := s
+
+	tests := []struct {
+		model  Model
+		target PoolTarget
+		want   BitaxeServerSettings
+	}{
+		{ModelBitaxe, Primary, inOrder},
+		{ModelBitaxe, Fallback, onFallback},
+		{ModelNerdaxe, Primary, inOrder},
+		{ModelNerdaxe, Fallback, inOrder.Swapped()},
+	}
+	for _, tt := range tests {
+		if got := s.Select(tt.model, tt.target); got != tt.want {
+			t.Errorf("Select(%s, %s) = %+v, want %+v", tt.model, tt.target, got, tt.want)
+		}
+	}
+}
+
+func TestBitaxe_WithSlots(t *testing.T) {
+	b := Bitaxe{Ip: "10.0.0.1", Alias: "Prof", Url: "old.pool", Port: 1}
+	s := BitaxeServerSettings{Url: "new.pool", Port: 3333, User: "u", FallbackURL: "fb.pool", FallbackPort: 4444, FallbackUser: "fu"}
+
+	got := b.WithSlots(s)
+	if got.Slots() != s || got.Ip != "10.0.0.1" || got.Alias != "Prof" {
+		t.Errorf("WithSlots() = %+v, want its pools replaced, the rest untouched", got)
+	}
+	if b.Url != "old.pool" {
+		t.Error("WithSlots() changed the miner it was called on")
+	}
+}
+
 func TestConfig_GetMiners(t *testing.T) {
 	cfg := Config{
 		Bitaxes: []Bitaxe{
