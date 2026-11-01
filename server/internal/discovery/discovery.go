@@ -39,25 +39,11 @@ const MaxProbeTimeout = 3 * time.Second
 
 // deviceProbeResponse is the minimal shape read back from a device's own
 // GET /api/system/info -- just enough to identify it and pre-fill a Bitaxe
-// entry. Mirrors the same field names other packages already decode from
-// this same endpoint (see handler.PayloadStructure, healtcheck.MinerCommon),
-// duplicated locally rather than imported to keep this package decoupled,
-// the same way feeder.go and watcher.go each keep their own minimal decode
-// structs instead of sharing one.
+// entry: its pools and MAC as every reader of them decodes them
+// (config.DevicePools), plus its hostname and model.
 type deviceProbeResponse struct {
+	config.DevicePools
 	Hostname string `json:"hostname"`
-	MacAddr  string `json:"macAddr"`
-
-	// Field names mirror config.BitaxeServerSettings (the shape this same
-	// device accepts back on a PATCH to update these settings) -- the
-	// device's own GET /api/system/info echoes its current pool config
-	// under the identical keys.
-	StratumURL          string `json:"stratumURL"`
-	StratumPort         int    `json:"stratumPort"`
-	StratumUser         string `json:"stratumUser"`
-	FallbackStratumURL  string `json:"fallbackStratumURL"`
-	FallbackStratumPort int    `json:"fallbackStratumPort"`
-	FallbackStratumUser string `json:"fallbackStratumUser"`
 
 	// DeviceModel is only ever present on a NerdAxe response (see
 	// handler.PayloadStructure.getDeviceModel) -- its absence is the
@@ -84,12 +70,12 @@ func (r deviceProbeResponse) toBitaxe(ip string) config.Bitaxe {
 		Hostname:     r.Hostname,
 		Model:        r.guessModel(),
 		Enabled:      true,
-		Url:          r.StratumURL,
-		Port:         r.StratumPort,
-		User:         r.StratumUser,
-		FallbackURL:  r.FallbackStratumURL,
-		FallbackPort: r.FallbackStratumPort,
-		FallbackUser: r.FallbackStratumUser,
+		Url:          r.Url,
+		Port:         r.Port,
+		User:         r.User,
+		FallbackURL:  r.FallbackURL,
+		FallbackPort: r.FallbackPort,
+		FallbackUser: r.FallbackUser,
 	}
 }
 

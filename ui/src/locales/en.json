@@ -264,6 +264,7 @@
       "restart": "Restart",
       "switch_primary": "Switch to primary pool",
       "switch_fallback": "Switch to fallback pool",
+      "switch_pool": "Switch to a pool",
       "save_miners": "Miners saved",
       "save_settings": "Settings saved",
       "export_audit": "Audit export",
@@ -309,6 +310,7 @@
       "fallbackUrl": "Fallback URL",
       "fallbackPort": "Fallback port",
       "fallbackUser": "Fallback user",
+      "pool": "Active pool",
       "ip": "IP",
       "pushURL": "Push URL",
       "apiKey": "API key",
@@ -480,6 +482,39 @@
       }
     },
     "readOnlyBanner": "Read-only view — settings are managed from the source dashboard.",
+    "toolbar": {
+      "title": "Actions",
+      "switchRow": "Switch to a pool",
+      "switchHint": "Every miner that has this pool switches to it, whichever slot holds it.",
+      "switchButton": "Switch",
+      "syncRow": "Check the pools",
+      "syncHint": "Compares the pools saved in the dashboard with the ones set on each miner.",
+      "disableAllHint": "No miner is polled nor scheduled any more.",
+      "pool": "Pool",
+      "poolOption": "{{pool}} — active on {{active}} / {{held}}",
+      "switch": "Switch every miner",
+      "switching": "Switching…",
+      "switchTitle": "Switch every miner to {{pool}}?",
+      "switchDescription_one": "{{count}} miner that has this pool without being on it will switch, then restart.",
+      "switchDescription_other": "{{count}} miners that have this pool without being on it will switch, then restart.",
+      "switchResult": "{{switched}} switched · {{already}} already on it · {{missing}} without this pool · {{failed}} failed",
+      "sync": "Check",
+      "syncTitle": "Pool check",
+      "syncDescription_one": "{{count}} miner has pools that differ from the ones saved in the dashboard.",
+      "syncDescription_other": "{{count}} miners have pools that differ from the ones saved in the dashboard.",
+      "syncStates": {
+        "ok": "{{count}} up to date",
+        "drift": "{{count}} to fix",
+        "unread": "{{count}} not read"
+      },
+      "syncState": {
+        "ok": "Up to date",
+        "drift": "To fix",
+        "unread": "Not read"
+      },
+      "syncConfirm": "Sync",
+      "syncSuccess": "{{count}} miner(s) synced."
+    },
     "configured": {
       "title": "Configured miners",
       "description_one": "{{count}} miner — click a row to edit its alias, pools, alert thresholds and scheduled tasks.",
@@ -523,7 +558,7 @@
         "reset": "Reset",
         "swap": "Swap primary and fallback",
         "swapTooltip": "Swap primary and fallback",
-        "driftWarning": "This doesn't match what the miner currently reports:",
+        "driftWarning": "At the feeder's last reading ({{value}}):",
         "driftItem": "{{field}}: saved \"{{configured}}\" ≠ miner \"{{live}}\"",
         "driftBadgeTooltip": "Pool config doesn't match the miner: {{fields}}"
       },

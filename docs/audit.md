@@ -106,6 +106,12 @@ résultat** (réussite, ou échec avec le message d'erreur). Une action qui
       <td>idem</td>
       <td>idem</td>
     </tr>
+    <tr>
+      <td><code>switch_pool</code></td>
+      <td>Bascule vers un pool</td>
+      <td>Configuration › Mineurs › Actions › Basculer sur un pool : une entrée par mineur basculé, avec le pool quitté et le pool rejoint</td>
+      <td>le mineur basculé — <strong>tous les mineurs</strong> quand aucun n'avait à basculer</td>
+    </tr>
   </tbody>
 </table>
 
@@ -355,6 +361,7 @@ La réponse de `GET /api/audit/types` — chaque type est expliqué dans
     "restart",
     "switch_primary",
     "switch_fallback",
+    "switch_pool",
     "save_miners",
     "save_settings",
     "export_audit",

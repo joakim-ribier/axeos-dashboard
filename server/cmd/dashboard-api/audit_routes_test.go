@@ -174,6 +174,65 @@ func TestRouter_auditKeepsOneEntryForAFleetSwitchWithANerdaxe(t *testing.T) {
 	}
 }
 
+func TestRouter_auditRecordsAFleetSwitchToAPoolPerMiner(t *testing.T) {
+	// A bitaxe on its primary, holding pps.pool in its fallback slot.
+	device := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/info" {
+			_, _ = w.Write([]byte(`{"stratumURL":"solo.pool","stratumPort":3333,` +
+				`"fallbackStratumURL":"pps.pool","fallbackStratumPort":3333,"useFallbackStratum":0,"isUsingFallbackStratum":0}`))
+		}
+	}))
+	defer device.Close()
+	cfg := config.Config{
+		Endpoints: config.EndpointConfig{Info: "info", System: "system", Restart: "restart", Timeout: time.Second},
+		Bitaxes:   []config.Bitaxe{{Ip: serverAddr(device), Enabled: true, Model: config.ModelBitaxe}},
+	}
+
+	t.Run("one entry per switched miner, with the pool it left", func(t *testing.T) {
+		router, log := newAuditedRouter(t, cfg)
+
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPut, "/api/miners/pool/switch?url=pps.pool&port=3333", nil))
+
+		entries := recordedEntries(t, log)
+		if len(entries) != 1 {
+			t.Fatalf("got %d entries, want 1: %+v", len(entries), entries)
+		}
+		e := entries[0]
+		want := []audit.Change{{Field: "pool", Kind: audit.ChangeChanged, Before: "solo.pool:3333", After: "pps.pool:3333"}}
+		if e.Type != audit.TypeSwitchPool || e.Target != serverAddr(device) || e.Status != http.StatusOK || !reflect.DeepEqual(e.Changes, want) {
+			t.Errorf("entry = %+v, want a switch_pool on the miner with %+v", e, want)
+		}
+		if e.IP != "192.0.2.1" || e.RequestID == "" {
+			t.Errorf("who = %q / %q, want the client's IP and a request ID", e.IP, e.RequestID)
+		}
+	})
+
+	t.Run("none to switch: the route's one entry tells the pool asked for", func(t *testing.T) {
+		router, log := newAuditedRouter(t, cfg)
+
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPut, "/api/miners/pool/switch?url=solo.pool&port=3333", nil))
+
+		entries := recordedEntries(t, log)
+		if len(entries) != 1 || entries[0].Type != audit.TypeSwitchPool || entries[0].Target != "" || entries[0].Query != "url=solo.pool&port=3333" {
+			t.Errorf("entries = %+v, want one switch_pool with the pool in its query", entries)
+		}
+	})
+}
+
+func TestRouter_minersSyncIsNotAudited(t *testing.T) {
+	router, log := newAuditedRouter(t, config.Config{})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/api/config/miners/sync", nil))
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+	if entries := recordedEntries(t, log); len(entries) != 0 {
+		t.Errorf("got %d entries, want none: the check writes nothing", len(entries))
+	}
+}
+
 func TestRouter_auditIgnoresReads(t *testing.T) {
 	router, log := newAuditedRouter(t, config.Config{})
 

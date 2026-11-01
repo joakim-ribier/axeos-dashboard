@@ -71,10 +71,36 @@ configuration.
 
 La liste des mineurs déjà configurés, avec leur IP, modèle, seuils
 d'alerte (en couleur ceux propres au mineur) et état — activation/
-désactivation en un clic, par mineur ou tous à la fois. L'œil ouvre le
-panneau de détail du mineur, le même que sur le [tableau de bord]({{ '/dashboard.html' | relative_url }}).
+désactivation en un clic par mineur. L'IP ouvre l'interface AxeOS du
+mineur, l'œil son panneau de détail, le même que sur le [tableau de bord]({{ '/dashboard.html' | relative_url }}).
 
 ![Mineurs configurés]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
+
+#### Actions
+
+Le bouton **Actions** déplie ce qui agit sur tous les mineurs à la fois :
+
+- **Basculer sur un pool** : la liste des pools que les mineurs ont en ce
+  moment, avec le nombre de mineurs actifs sur chacun. Chaque mineur qui
+  a le pool choisi bascule dessus, quel que soit le slot où il l'a —
+  ceux déjà dessus, ou sans ce pool, restent tels quels. Le résumé
+  s'affiche en bas à gauche ; chaque mineur basculé est tracé dans
+  l'[audit]({{ '/audit.html' | relative_url }}).
+- **Vérifier les pools** : interroge chaque mineur activé et compare ses
+  deux pools (URL, port, utilisateur) avec ceux enregistrés dans le
+  dashboard — voir ci-dessous.
+- **Tout désactiver** : plus aucun mineur n'est interrogé ni planifié.
+
+![Actions]({{ '/assets/images/settings-miners-actions.png' | relative_url }})
+
+La vérification rend un rapport pour chaque mineur : son nom et son
+alias, son IP et sa MAC, puis son pool primaire et son pool de secours
+tels que le mineur les a, ✅ quand le dashboard a les mêmes, ❌ avec
+chaque champ qui diffère sinon. Un mineur qui ne répond pas, ou dont la
+MAC n'est pas celle enregistrée, est **non lu**. **Synchroniser**
+enregistre dans le dashboard les pools de chaque mineur à corriger.
+
+![Vérification des pools]({{ '/assets/images/settings-miners-check.png' | relative_url }})
 
 #### Nom et pools
 

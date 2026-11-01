@@ -178,6 +178,10 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListMinersConfig(f.snapshotConfig(), w, r)
 	})
+	// Not audited: it writes nothing -- saving what it returns is the sync.
+	router.Get("/api/config/miners/sync", func(w http.ResponseWriter, r *http.Request) {
+		handler.MinersSync(f.logger, f.snapshotConfig(), w, r)
+	})
 	router.With(f.audited(audit.TypeSaveMiners)).Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		f.saveMu.Lock()
 		defer f.saveMu.Unlock()
@@ -240,6 +244,13 @@ func (f *Router) Handler() http.Handler {
 		// which the others' switches need.
 		if r.URL.Query().Get("miner") != "" && len(swaps) > 0 {
 			f.auditLog.RecordChanges(r, swaps, f.logger)
+		}
+	})
+	router.With(f.audited(audit.TypeSwitchPool)).Put("/api/miners/pool/switch", func(w http.ResponseWriter, r *http.Request) {
+		// One entry per miner it sent something to, with the pool it left;
+		// when none needed it, the route's own entry tells the pool asked for.
+		if entries := handler.SwitchToPool(f.logger, f.snapshotConfig(), w, r); len(entries) > 0 {
+			f.auditLog.RecordChanges(r, entries, f.logger)
 		}
 	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {

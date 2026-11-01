@@ -71,10 +71,33 @@ Miners found appear below, ready to be added to the configuration.
 
 The list of already-configured miners, with their IP, model, alert
 thresholds (in color, a miner's own) and status — enable/disable in one
-click, per miner or all at once. The eye opens the miner's detail panel,
-the same as on the [dashboard]({{ '/en/dashboard.html' | relative_url }}).
+click per miner. The IP opens the miner's AxeOS interface, the eye its
+detail panel, the same as on the [dashboard]({{ '/en/dashboard.html' | relative_url }}).
 
 ![Configured miners]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
+
+#### Actions
+
+The **Actions** button unfolds what acts on every miner at once:
+
+- **Switch to a pool**: the pools the miners hold right now, with how many
+  miners are active on each. Every miner that has the chosen pool switches
+  to it, whichever slot holds it — those already on it, or without it,
+  stay as they are. The summary shows at the bottom left; each switched
+  miner is recorded in the [audit]({{ '/en/audit.html' | relative_url }}).
+- **Check the pools**: asks every enabled miner and compares its two pools
+  (URL, port, user) with the ones saved in the dashboard — see below.
+- **Disable all**: no miner is polled nor scheduled any more.
+
+![Actions]({{ '/assets/images/settings-miners-actions.png' | relative_url }})
+
+The check reports on every miner: its name and alias, its IP and MAC, then
+its primary and fallback pools as the miner holds them, ✅ when the
+dashboard has the same, ❌ with each field that differs otherwise. A miner
+that doesn't answer, or whose MAC isn't the one saved, is **not read**.
+**Sync** saves in the dashboard the pools of each miner to fix.
+
+![Pool check]({{ '/assets/images/settings-miners-check.png' | relative_url }})
 
 #### Name and pools
 

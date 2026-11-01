@@ -331,8 +331,9 @@ func (l *Log) RecordChanges(r *http.Request, entries []Entry, logger *slog.Logge
 	recorded := len(entries) == 0
 	for _, e := range entries {
 		entry := requestEntry(e.Type, r)
-		entry.Target, entry.Changes = e.Target, e.Changes
-		// Only ever called once the save succeeded.
+		entry.Target, entry.Changes, entry.Error = e.Target, e.Changes, e.Error
+		// Only ever called once the save succeeded -- an entry of its own
+		// aside (one miner of a fleet switch that failed).
 		entry.Status = e.Status
 		if entry.Status == 0 {
 			entry.Status = http.StatusOK

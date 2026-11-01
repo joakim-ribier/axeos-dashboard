@@ -239,6 +239,33 @@ type BitaxeServerSettings struct {
 	UseFallbackStratum bool `json:"useFallbackStratum"`
 }
 
+// DevicePools is what a device's GET /api/system/info tells of its two
+// pools, its MAC, and which pool it mines on -- the one shape every reader
+// of a device's pools decodes. Never decode that response into
+// BitaxeServerSettings: a bitaxe reports useFallbackStratum as a number
+// (0/1), where a PATCH takes it as a bool, and the decode fails.
+type DevicePools struct {
+	Url                    string `json:"stratumURL"`
+	Port                   int    `json:"stratumPort"`
+	User                   string `json:"stratumUser"`
+	FallbackURL            string `json:"fallbackStratumURL"`
+	FallbackPort           int    `json:"fallbackStratumPort"`
+	FallbackUser           string `json:"fallbackStratumUser"`
+	MacAddr                string `json:"macAddr"`
+	IsUsingFallbackStratum int    `json:"isUsingFallbackStratum"` // bitaxe
+	Stratum                struct {
+		UsingFallback bool `json:"usingFallback"`
+	} `json:"stratum"` // nerdaxe
+}
+
+// Settings is the two slots as a PATCH /api/system sends them.
+func (d DevicePools) Settings() BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: d.Url, Port: d.Port, User: d.User,
+		FallbackURL: d.FallbackURL, FallbackPort: d.FallbackPort, FallbackUser: d.FallbackUser,
+	}
+}
+
 // GetPoolsSettings builds the PATCH /api/system payload that makes target
 // the active pool -- the two supported models need genuinely different
 // payloads, because they select the active pool in genuinely different

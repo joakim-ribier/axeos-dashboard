@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
 
 // fakeDevice starts an httptest server that answers a fixed AxeOS-shaped
@@ -33,14 +35,12 @@ func fakeDevice(t *testing.T, endpoint string, resp deviceProbeResponse) string 
 
 func TestProbe_bitaxe(t *testing.T) {
 	addr := fakeDevice(t, "api/system/info", deviceProbeResponse{
-		Hostname:            "my-bitaxe",
-		MacAddr:             "AA:BB:CC:DD:EE:FF",
-		StratumURL:          "solo.atlaspool.io",
-		StratumPort:         3333,
-		StratumUser:         "wallet.worker",
-		FallbackStratumURL:  "stratum.braiins.com",
-		FallbackStratumPort: 3334,
-		FallbackStratumUser: "wallet.worker2",
+		Hostname: "my-bitaxe",
+		DevicePools: config.DevicePools{
+			MacAddr: "AA:BB:CC:DD:EE:FF",
+			Url:     "solo.atlaspool.io", Port: 3333, User: "wallet.worker",
+			FallbackURL: "stratum.braiins.com", FallbackPort: 3334, FallbackUser: "wallet.worker2",
+		},
 	})
 
 	got, err := Probe(context.Background(), "api/system/info", time.Second, addr)
@@ -74,7 +74,7 @@ func TestProbe_bitaxe(t *testing.T) {
 func TestProbe_nerdaxe(t *testing.T) {
 	addr := fakeDevice(t, "api/system/info", deviceProbeResponse{
 		Hostname:    "my-nerdaxe",
-		MacAddr:     "11:22:33:44:55:66",
+		DevicePools: config.DevicePools{MacAddr: "11:22:33:44:55:66"},
 		DeviceModel: "NerdQAxe++",
 	})
 
