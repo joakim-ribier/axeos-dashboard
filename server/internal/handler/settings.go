@@ -2,6 +2,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -34,20 +35,12 @@ func SwitchPool(logger *slog.Logger, cfg config.Config, poolTarget config.PoolTa
 	var errs []error
 	var swaps []audit.Entry
 	for _, miner := range cfg.GetMinersFilterBy(r.URL.Query().Get("miner")) {
-		// The UI offers a non-Bitaxe a switch to its fallback only (it never
-		// reports using it), which means swapping its two slots.
-		var err error
-		if miner.Model != config.ModelBitaxe && poolTarget == config.Fallback {
-			var before, after config.BitaxeServerSettings
-			before, after, err = axeOs.SwapPools(r.Context(), miner)
-			if err == nil {
-				swaps = append(swaps, audit.PoolSwap(miner, before, after))
-			}
-		} else {
-			err = axeOs.SwitchPool(miner, poolTarget)
-		}
+		swap, err := switchMiner(r.Context(), axeOs, miner, poolTarget)
 		if err != nil {
 			errs = append(errs, err)
+		}
+		if swap != nil {
+			swaps = append(swaps, *swap)
 		}
 	}
 	if len(errs) > 0 {
@@ -56,6 +49,22 @@ func SwitchPool(logger *slog.Logger, cfg config.Config, poolTarget config.PoolTa
 	}
 	w.WriteHeader(204)
 	return swaps
+}
+
+// switchMiner switches miner to target -- and, for a non-Bitaxe's swap,
+// returns its audit entry. The UI offers a non-Bitaxe a switch to its
+// fallback only (it never reports using it), which means swapping its two
+// slots.
+func switchMiner(ctx context.Context, axeOs axeos.AxeOs, miner config.Bitaxe, target config.PoolTarget) (*audit.Entry, error) {
+	if miner.Model == config.ModelBitaxe || target != config.Fallback {
+		return nil, axeOs.SwitchPool(miner, target)
+	}
+	before, after, err := axeOs.SwapPools(ctx, miner)
+	if err != nil {
+		return nil, err
+	}
+	swap := audit.PoolSwap(miner, before, after)
+	return &swap, nil
 }
 
 // PoolSwitchResult is what a switch of the fleet to a pool did on one
@@ -99,24 +108,7 @@ func SwitchToPool(logger *slog.Logger, cfg config.Config, w http.ResponseWriter,
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			was, switched, err := axeOs.SwitchToPool(r.Context(), miner, pool)
-			result := PoolSwitchResult{Ip: miner.Ip}
-			switch {
-			case errors.Is(err, axeos.ErrPoolNotHeld):
-				result.Status = "missing"
-			case err != nil:
-				result.Status, result.Error = "failed", err.Error()
-				entries[i] = &audit.Entry{Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusBadGateway, Error: err.Error()}
-			case switched:
-				result.Status = "switched"
-				entries[i] = &audit.Entry{
-					Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusOK,
-					Changes: []audit.Change{{Field: "pool", Kind: audit.ChangeChanged, Before: was.String(), After: pool.String()}},
-				}
-			default:
-				result.Status = "already"
-			}
-			results[i] = result
+			results[i], entries[i] = switchMinerToPool(r.Context(), axeOs, miner, pool)
 		}()
 	}
 	wg.Wait()
@@ -129,6 +121,25 @@ func SwitchToPool(logger *slog.Logger, cfg config.Config, w http.ResponseWriter,
 		}
 	}
 	return recorded
+}
+
+// switchMinerToPool is what switching miner to pool did, and its audit
+// entry -- nil when nothing was sent to it.
+func switchMinerToPool(ctx context.Context, axeOs axeos.AxeOs, miner config.Bitaxe, pool config.Pool) (PoolSwitchResult, *audit.Entry) {
+	was, switched, err := axeOs.SwitchToPool(ctx, miner, pool)
+	switch {
+	case errors.Is(err, axeos.ErrPoolNotHeld):
+		return PoolSwitchResult{Ip: miner.Ip, Status: "missing"}, nil
+	case err != nil:
+		return PoolSwitchResult{Ip: miner.Ip, Status: "failed", Error: err.Error()},
+			&audit.Entry{Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusBadGateway, Error: err.Error()}
+	case !switched:
+		return PoolSwitchResult{Ip: miner.Ip, Status: "already"}, nil
+	}
+	return PoolSwitchResult{Ip: miner.Ip, Status: "switched"}, &audit.Entry{
+		Type: audit.TypeSwitchPool, Target: miner.Ip, Status: http.StatusOK,
+		Changes: []audit.Change{{Field: "pool", Kind: audit.ChangeChanged, Before: was.String(), After: pool.String()}},
+	}
 }
 
 // Restart sends a restart command to the given device via its AxeOs restart endpoint.
