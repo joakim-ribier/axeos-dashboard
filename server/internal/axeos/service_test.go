@@ -266,4 +266,37 @@ func TestAxeOs_SwitchPool(t *testing.T) {
 			t.Error("SwitchPool() error = nil, want an error when the restart itself fails")
 		}
 	})
+
+	t.Run("succeeds when the restart goes unanswered after the device took the new pools", func(t *testing.T) {
+		// A nerdaxe reconnecting to its new pool was seen rebooting without
+		// answering the restart in time.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/system/restart" {
+				time.Sleep(200 * time.Millisecond)
+			}
+		}))
+		defer server.Close()
+
+		cfg := config.Config{Endpoints: config.EndpointConfig{
+			System: "api/system", Restart: "api/system/restart", Timeout: 50 * time.Millisecond,
+		}}
+		miner := config.Bitaxe{Ip: serverAddr(server), Model: "bitaxe", Url: "primary.pool"}
+
+		if err := NewAxeOs(testLogger(), cfg).SwitchPool(miner, config.Primary); err != nil {
+			t.Errorf("SwitchPool() error = %v, want nil", err)
+		}
+	})
+
+	t.Run("an unanswered restart on its own is still an error", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(200 * time.Millisecond)
+		}))
+		defer server.Close()
+
+		cfg := config.Config{Endpoints: config.EndpointConfig{Restart: "api/system/restart", Timeout: 50 * time.Millisecond}}
+
+		if err := NewAxeOs(testLogger(), cfg).Restart(config.Bitaxe{Ip: serverAddr(server)}); err == nil {
+			t.Error("Restart() error = nil, want an error: nothing tells it the miner is rebooting")
+		}
+	})
 }

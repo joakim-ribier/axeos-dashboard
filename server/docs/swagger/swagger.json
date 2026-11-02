@@ -407,6 +407,26 @@
                 }
             }
         },
+        "/api/config/miners/sync": {
+            "get": {
+                "description": "Reads every enabled miner's pools from the device itself and returns, for each, the pools read and how miners.yml differs -- with the entries to save to sync it. Writes nothing.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Configuration"
+                ],
+                "summary": "Compare miners.yml with the miners",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.minersSyncResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/config/settings": {
             "get": {
                 "description": "Returns the settings.yml overrides, the built-in defaults for pool dashboards/firmware repos, and a read-only snapshot of process-launch settings (poll intervals, firmware cache TTL) shown for visibility only.",
@@ -885,6 +905,45 @@
                     },
                     "502": {
                         "description": "one or more miners didn't apply the change (unreachable, or rejected the request)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/miners/pool/switch": {
+            "put": {
+                "description": "Switches every enabled miner holding this pool (in either slot) to it, then restarts it. A miner already on it, or without it, is left as it is.",
+                "tags": [
+                    "Miner actions"
+                ],
+                "summary": "Switch every miner to a pool",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The pool's URL",
+                        "name": "url",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "The pool's port",
+                        "name": "port",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "what was done on each miner",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PoolSwitchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "url or port missing",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1428,6 +1487,32 @@
                 }
             }
         },
+        "config.DevicePools": {
+            "type": "object",
+            "properties": {
+                "fallbackStratumPort": {
+                    "type": "integer"
+                },
+                "fallbackStratumURL": {
+                    "type": "string"
+                },
+                "fallbackStratumUser": {
+                    "type": "string"
+                },
+                "macAddr": {
+                    "type": "string"
+                },
+                "stratumPort": {
+                    "type": "integer"
+                },
+                "stratumURL": {
+                    "type": "string"
+                },
+                "stratumUser": {
+                    "type": "string"
+                }
+            }
+        },
         "config.ElectricityConfig": {
             "type": "object",
             "properties": {
@@ -1772,6 +1857,54 @@
                 }
             }
         },
+        "handler.MinerSync": {
+            "type": "object",
+            "properties": {
+                "changes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/audit.Change"
+                    }
+                },
+                "device": {
+                    "$ref": "#/definitions/config.DevicePools"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "mac": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PoolSwitchResponse": {
+            "type": "object",
+            "properties": {
+                "miners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.PoolSwitchResult"
+                    }
+                }
+            }
+        },
+        "handler.PoolSwitchResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.ServiceStatus": {
             "type": "object",
             "properties": {
@@ -2019,6 +2152,24 @@
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "handler.minersSyncResponse": {
+            "type": "object",
+            "properties": {
+                "bitaxes": {
+                    "description": "Bitaxes is each miners.yml entry that differs, with its device's\npools -- what a POST /api/config/miners would save to sync it.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/config.Bitaxe"
+                    }
+                },
+                "miners": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.MinerSync"
                     }
                 }
             }
@@ -2296,7 +2447,7 @@
                     "type": "integer"
                 },
                 "updateAvailable": {
-                    "description": "True when LatestVersion != Version",
+                    "description": "True when LatestVersion is newer than Version",
                     "type": "boolean"
                 },
                 "uptimeSeconds": {

@@ -5,6 +5,7 @@ import BoltIcon from "@mui/icons-material/Bolt";
 import DeselectIcon from "@mui/icons-material/Deselect";
 import DeveloperBoardIcon from "@mui/icons-material/DeveloperBoard";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RouterIcon from "@mui/icons-material/Router";
@@ -13,6 +14,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import TuneIcon from "@mui/icons-material/Tune";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import WifiFindIcon from "@mui/icons-material/WifiFind";
 import {
@@ -25,6 +27,7 @@ import {
   Collapse,
   FormControlLabel,
   IconButton,
+  Link,
   Paper,
   Skeleton,
   Snackbar,
@@ -60,6 +63,7 @@ import { type Miner } from "@/schemas/minerSchema";
 import { displayName } from "@/utils/minerDisplay";
 import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
 
+import { ActionRow, MinersToolbar } from "./MinersToolbar";
 import { SectionTitle } from "./SectionTitle";
 
 // Prefilled by the quick-fill button next to the CIDR field -- the default
@@ -109,6 +113,7 @@ const ConfiguredMinersTable = ({
   onDisableAllClick,
   saveMiners,
   readOnly,
+  onSaved,
 }: {
   miners: MinerConfig[];
   liveMinersByMac: Map<string, Miner>;
@@ -117,8 +122,13 @@ const ConfiguredMinersTable = ({
   onDisableAllClick: () => void;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
   readOnly: boolean;
+  onSaved: (message: string) => void;
 }) => {
   const { t } = useTranslation();
+  const { ui } = useUiFeatures();
+  const [actionsOpen, setActionsOpen] = useState(false);
+  // Every action on the whole fleet is gated: none left, no Actions button.
+  const hasActions = !readOnly || ui.action.minerPoolSwitch !== "hidden";
   const { data: appSettings } = useAppSettings();
   // What a miner with no thresholds of its own follows.
   const alertDefaults = appSettings
@@ -157,20 +167,56 @@ const ConfiguredMinersTable = ({
                 })
           }
         />
-        {!isEmpty && (
-          <Writable readOnly={readOnly}>
-            <ActionButton
-              color="error"
-              icon={<PauseIcon fontSize="small" />}
-              disabled={enabledCount === 0}
-              onClick={onDisableAllClick}
-              sx={{ mb: 2 }}
-            >
-              {t("settingsPage.configured.disableAll")}
-            </ActionButton>
-          </Writable>
+        {!isEmpty && hasActions && (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<TuneIcon fontSize="small" />}
+            endIcon={
+              <KeyboardArrowDownIcon
+                sx={{
+                  transition: "transform 0.2s",
+                  transform: actionsOpen ? "rotate(180deg)" : "none",
+                }}
+              />
+            }
+            aria-expanded={actionsOpen}
+            onClick={() => setActionsOpen((open) => !open)}
+            sx={{ height: 40, flexShrink: 0, mb: 2 }}
+          >
+            {t("settingsPage.toolbar.title")}
+          </Button>
         )}
       </Box>
+      {!isEmpty && hasActions && (
+        <Collapse in={actionsOpen} unmountOnExit>
+          <MinersToolbar
+            miners={miners}
+            liveMinersByMac={liveMinersByMac}
+            saveMiners={saveMiners}
+            readOnly={readOnly}
+            onSaved={onSaved}
+          >
+            <Writable readOnly={readOnly}>
+              <ActionRow
+                icon={PauseIcon}
+                color="error"
+                title={t("settingsPage.configured.disableAll")}
+                description={t("settingsPage.toolbar.disableAllHint")}
+              >
+                <ActionButton
+                  color="error"
+                  icon={<PauseIcon fontSize="small" />}
+                  disabled={enabledCount === 0}
+                  onClick={onDisableAllClick}
+                >
+                  {t("settingsPage.configured.disableAll")}
+                </ActionButton>
+              </ActionRow>
+            </Writable>
+          </MinersToolbar>
+        </Collapse>
+      )}
       {!isEmpty && (
         <DataTable>
           <TableHead>
@@ -255,7 +301,24 @@ const ConfiguredMinersTable = ({
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontFamily: "monospace" }}>
-                      {m.ip}
+                      {/* Same link as the miner's panel header. */}
+                      <Link
+                        href={`http://${m.ip}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={t("miner.openDevice")}
+                        // The row opens its editors on click -- following
+                        // the link must not do that too.
+                        onClick={(e) => e.stopPropagation()}
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                        }}
+                      >
+                        {m.ip}
+                        <OpenInNewIcon sx={{ fontSize: 13 }} />
+                      </Link>
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -752,6 +815,7 @@ export const MinersSettings = () => {
               onDisableAllClick={() => setDisableAllOpen(true)}
               saveMiners={saveMiners}
               readOnly={readOnly}
+              onSaved={setSnackbarMessage}
             />
           )
         )}

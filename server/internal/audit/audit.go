@@ -39,8 +39,11 @@ const (
 	TypeRestart        = "restart"
 	TypeSwitchPrimary  = "switch_primary"
 	TypeSwitchFallback = "switch_fallback"
-	TypeSaveMiners     = "save_miners"
-	TypeSaveSettings   = "save_settings"
+	// A switch of the fleet to a pool picked by its URL and port, whichever
+	// slot each miner holds it in -- one entry per miner it sent something to.
+	TypeSwitchPool   = "switch_pool"
+	TypeSaveMiners   = "save_miners"
+	TypeSaveSettings = "save_settings"
 
 	// Data leaving the Pi, or a scan run from it -- not a change, but
 	// worth knowing who did it.
@@ -60,7 +63,7 @@ const (
 // the one list GET /api/audit/types serves, so nothing else keeps its own
 // copy.
 var Types = []string{
-	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback,
+	TypeRestart, TypeSwitchPrimary, TypeSwitchFallback, TypeSwitchPool,
 	TypeSaveMiners, TypeSaveSettings,
 	TypeExportAudit, TypeDownloadBackups, TypeDiscover, TypeBackup, TypeAuditReport, TypeAlertMail,
 	TypeMinerPool, TypeMinerSchedule, TypeMinerIdentity,

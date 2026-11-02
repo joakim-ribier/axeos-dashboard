@@ -1,9 +1,83 @@
 package config
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
+
+func TestBitaxeServerSettings_slots(t *testing.T) {
+	s := BitaxeServerSettings{
+		Url: "solo.pool", Port: 3333, User: "acct.solo",
+		FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+	}
+	solo := Slot{Pool: Pool{URL: "solo.pool", Port: 3333}, User: "acct.solo"}
+	pps := Slot{Pool: Pool{URL: "pps.pool", Port: 3333}, User: "acct.pps"}
+
+	if s.Slot(Primary) != solo || s.Slot(Fallback) != pps {
+		t.Errorf("Slot() = %+v / %+v, want %+v / %+v", s.Slot(Primary), s.Slot(Fallback), solo, pps)
+	}
+
+	holding := []struct {
+		pool    Pool
+		want    PoolTarget
+		wantErr error
+	}{
+		{solo.Pool, Primary, nil},
+		{pps.Pool, Fallback, nil},
+		{Pool{URL: "pps.pool", Port: 4444}, "", ErrPoolNotHeld}, // another port, another pool
+		{Pool{URL: "other.pool", Port: 3333}, "", ErrPoolNotHeld},
+	}
+	for _, h := range holding {
+		if got, err := s.Holding(h.pool); got != h.want || !errors.Is(err, h.wantErr) {
+			t.Errorf("Holding(%s) = %q, %v, want %q, %v", h.pool, got, err, h.want, h.wantErr)
+		}
+	}
+}
+
+func TestBitaxeServerSettings_Activating(t *testing.T) {
+	s := BitaxeServerSettings{
+		Url: "solo.pool", Port: 3333, User: "acct.solo",
+		FallbackURL: "pps.pool", FallbackPort: 3333, FallbackUser: "acct.pps",
+		UseFallbackStratum: true, // whatever it held: Activating decides it
+	}
+	inOrder := s
+	inOrder.UseFallbackStratum = false
+	onFallback := s
+
+	tests := []struct {
+		model  Model
+		target PoolTarget
+		want   BitaxeServerSettings
+	}{
+		{ModelBitaxe, Primary, inOrder},
+		{ModelBitaxe, Fallback, onFallback},
+		{ModelNerdaxe, Primary, inOrder},
+		// Its slots swapped, with the flag Activating decides -- not the one s held.
+		{ModelNerdaxe, Fallback, BitaxeServerSettings{
+			Url: "pps.pool", Port: 3333, User: "acct.pps",
+			FallbackURL: "solo.pool", FallbackPort: 3333, FallbackUser: "acct.solo",
+		}},
+	}
+	for _, tt := range tests {
+		if got := s.Activating(tt.model, tt.target); got != tt.want {
+			t.Errorf("Activating(%s, %s) = %+v, want %+v", tt.model, tt.target, got, tt.want)
+		}
+	}
+}
+
+func TestBitaxe_WithSlots(t *testing.T) {
+	b := Bitaxe{Ip: "10.0.0.1", Alias: "Prof", Url: "old.pool", Port: 1}
+	s := BitaxeServerSettings{Url: "new.pool", Port: 3333, User: "u", FallbackURL: "fb.pool", FallbackPort: 4444, FallbackUser: "fu"}
+
+	got := b.WithSlots(s)
+	if got.Slots() != s || got.Ip != "10.0.0.1" || got.Alias != "Prof" {
+		t.Errorf("WithSlots() = %+v, want its pools replaced, the rest untouched", got)
+	}
+	if b.Url != "old.pool" {
+		t.Error("WithSlots() changed the miner it was called on")
+	}
+}
 
 func TestConfig_GetMiners(t *testing.T) {
 	cfg := Config{
@@ -98,7 +172,7 @@ func TestBitaxe_GetPoolsSettings(t *testing.T) {
 			// Primary/fallback URL/port/user always stay in their own
 			// fixed slots -- switching pools is entirely carried by
 			// UseFallbackStratum, not by which pool's data sits in which
-			// slot (see GetPoolsSettings' doc comment on
+			// slot (see Activating's doc comment and
 			// BitaxeServerSettings.UseFallbackStratum for why).
 			name:   "primary requests useFallbackStratum=false",
 			target: Primary,
@@ -147,7 +221,7 @@ func TestBitaxe_GetPoolsSettings(t *testing.T) {
 func TestBitaxe_GetPoolsSettings_nerdaxeSwapsURLsInstead(t *testing.T) {
 	// NerdQAxePlus firmware has no useFallbackStratum-style field -- its
 	// failover manager always tries whichever pool is in the *primary*
-	// slot first (see GetPoolsSettings' doc comment), so switching pools
+	// slot first (see Activating's doc comment), so switching pools
 	// means swapping which pool's data sits in that slot.
 	miner := Bitaxe{
 		Model: "nerdaxe",

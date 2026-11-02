@@ -1,6 +1,8 @@
 package audit
 
 import (
+	"errors"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -14,6 +16,30 @@ func miner() config.Bitaxe {
 		FallbackURL: "pool.b", FallbackPort: 3333, FallbackUser: "bc1qb.w1",
 		Schedule: []config.CronSchedule{{Cron: "0 0 2 * * *", Action: config.ActionSwitchFallback}},
 	}
+}
+
+func TestPoolSwitched(t *testing.T) {
+	was := config.Pool{URL: "pool.a", Port: 3333}
+	now := config.Pool{URL: "pool.b", Port: 3333}
+
+	t.Run("a switch: the pool left and the one joined, with the route's status", func(t *testing.T) {
+		got := PoolSwitched(TypeSwitchFallback, "10.0.0.1", was, now, http.StatusNoContent, nil)
+		want := Entry{
+			Type: TypeSwitchFallback, Target: "10.0.0.1", Status: http.StatusNoContent,
+			Changes: []Change{{Field: "pool", Kind: ChangeChanged, Before: "pool.a:3333", After: "pool.b:3333"}},
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %+v, want %+v", got, want)
+		}
+	})
+
+	t.Run("a failure: why, as a 502", func(t *testing.T) {
+		got := PoolSwitched(TypeSwitchPool, "10.0.0.1", was, now, http.StatusOK, errors.New("unreachable"))
+		want := Entry{Type: TypeSwitchPool, Target: "10.0.0.1", Status: http.StatusBadGateway, Error: "unreachable"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %+v, want %+v", got, want)
+		}
+	})
 }
 
 func TestMinerChanges(t *testing.T) {

@@ -95,14 +95,20 @@ failure with its error message). A failed action is recorded too.
     <tr>
       <td><code>switch_primary</code></td>
       <td>Switch to primary pool</td>
-      <td>a miner's panel › Switch pool; or a scheduler job</td>
-      <td>the switched miner — <strong>all miners</strong> when the switch targets them all (direct API call)</td>
+      <td>a miner's panel › Switch pool: one entry per miner, with the pool it left and the one it joined; or a scheduler job</td>
+      <td>the switched miner</td>
     </tr>
     <tr>
       <td><code>switch_fallback</code></td>
       <td>Switch to fallback pool</td>
       <td>same</td>
       <td>same</td>
+    </tr>
+    <tr>
+      <td><code>switch_pool</code></td>
+      <td>Switch to a pool</td>
+      <td>Configuration › Miners › Actions › Switch to a pool: one entry per switched miner, with the pool it left and the one it joined</td>
+      <td>the switched miner — <strong>all miners</strong> when none had to switch</td>
     </tr>
   </tbody>
 </table>
@@ -352,6 +358,7 @@ The response of `GET /api/audit/types` — each type is explained in
     "restart",
     "switch_primary",
     "switch_fallback",
+    "switch_pool",
     "save_miners",
     "save_settings",
     "export_audit",

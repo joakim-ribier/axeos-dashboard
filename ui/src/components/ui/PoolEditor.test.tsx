@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { MinerConfig } from "@/schemas/minerConfigSchema";
 import type { Miner } from "@/schemas/minerSchema";
+import { formatTimeOnly } from "@/utils/format";
 
 import { PoolEditor } from "./PoolEditor";
 
@@ -216,9 +217,11 @@ describe("PoolEditor", () => {
       />,
     );
 
-    expect(
-      screen.getByText("settingsPage.configured.pool.driftWarning"),
-    ).toBeInTheDocument();
+    // Titled with the time of the feeder's reading it compares against.
+    const title = screen.getByText(
+      /settingsPage\.configured\.pool\.driftWarning/,
+    );
+    expect(title.textContent).toContain(formatTimeOnly(liveMiner.timestamp));
     const item = screen.getByText(/"configured":"stratum\.example\.com"/);
     expect(item.textContent).toContain('"live":"other-pool.example.com"');
   });
