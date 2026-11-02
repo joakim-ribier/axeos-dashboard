@@ -1178,6 +1178,10 @@
         "alerts.Event": {
             "type": "object",
             "properties": {
+                "clearBelow": {
+                    "description": "In progress only, as served: the reading it ends under (ClearLevel),\nfor the miner's current thresholds.",
+                    "type": "number"
+                },
                 "hostname": {
                     "type": "string"
                 },
@@ -1338,6 +1342,23 @@
                 }
             }
         },
+        "config.AlertSettings": {
+            "type": "object",
+            "properties": {
+                "fanHigh": {
+                    "type": "number"
+                },
+                "fanMargin": {
+                    "type": "number"
+                },
+                "tempHigh": {
+                    "type": "number"
+                },
+                "tempMargin": {
+                    "type": "number"
+                }
+            }
+        },
         "config.AlertThresholds": {
             "type": "object",
             "properties": {
@@ -1362,10 +1383,10 @@
             "type": "object",
             "properties": {
                 "alerts": {
-                    "description": "Alerts is the thresholds every miner follows unless it has its own --\na value left at zero is the built-in one (DefaultAlertThresholds).",
+                    "description": "Alerts is the thresholds every miner follows unless it has its own,\nand the margins every miner's alerts end under -- a value left at\nzero is the built-in one (DefaultAlertThresholds, DefaultAlertMargins).",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/config.AlertThresholds"
+                            "$ref": "#/definitions/config.AlertSettings"
                         }
                     ]
                 },
@@ -1994,10 +2015,10 @@
             "type": "object",
             "properties": {
                 "alerts": {
-                    "description": "Alerts is the built-in thresholds, what an unset one falls back to.",
+                    "description": "Alerts is the built-in thresholds and margins, what an unset one\nfalls back to.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/config.AlertThresholds"
+                            "$ref": "#/definitions/config.AlertSettings"
                         }
                     ]
                 },
@@ -2047,10 +2068,10 @@
             "type": "object",
             "properties": {
                 "alerts": {
-                    "description": "Alerts is the thresholds every miner follows unless it has its own --\na value left at zero is the built-in one (DefaultAlertThresholds).",
+                    "description": "Alerts is the thresholds every miner follows unless it has its own,\nand the margins every miner's alerts end under -- a value left at\nzero is the built-in one (DefaultAlertThresholds, DefaultAlertMargins).",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/config.AlertThresholds"
+                            "$ref": "#/definitions/config.AlertSettings"
                         }
                     ]
                 },
@@ -2266,6 +2287,17 @@
                 }
             }
         },
+        "model.ActiveAlert": {
+            "type": "object",
+            "properties": {
+                "clearBelow": {
+                    "type": "number"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
         "model.InfoResponse": {
             "type": "object",
             "properties": {
@@ -2305,6 +2337,13 @@
         "model.MinerInfo": {
             "type": "object",
             "properties": {
+                "activeAlerts": {
+                    "description": "The miner's alerts in progress, as the feeder keeps them (raised\nabove a threshold, ended a margin under it) -- always a list locally,\nnull on a board, which then judges a reading by its threshold alone.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ActiveAlert"
+                    }
+                },
                 "alias": {
                     "description": "Operator-set override for Hostname (see config.Bitaxe.DisplayName) -- empty when not set, UI falls back to Hostname",
                     "type": "string"

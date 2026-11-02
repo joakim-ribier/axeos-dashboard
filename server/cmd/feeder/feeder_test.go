@@ -883,8 +883,8 @@ func TestFeeder_runOnce_handsTheMailerThePollsNewAlerts(t *testing.T) {
 }
 
 func TestReadingsPoll_weighedAgainstTheMinersThresholds(t *testing.T) {
-	got := readingsPoll([]byte(`{"temp":64.5,"fanspeed":90,"version":"v2.1"}`), "v2.2", config.AlertThresholds{TempHigh: 65, FanHigh: 95})
-	want := alerts.Poll{Temp: 64.5, FanSpeed: 90, TempThreshold: 65, FanThreshold: 95, Version: "v2.1", LatestVersion: "v2.2"}
+	got := readingsPoll([]byte(`{"temp":64.5,"fanspeed":90,"version":"v2.1"}`), "v2.2", config.AlertThresholds{TempHigh: 65, FanHigh: 95}, config.AlertMargins{Temp: 2, Fan: 5})
+	want := alerts.Poll{Temp: 64.5, FanSpeed: 90, TempThreshold: 65, FanThreshold: 95, Margins: config.AlertMargins{Temp: 2, Fan: 5}, Version: "v2.1", LatestVersion: "v2.2"}
 	if got != want {
 		t.Errorf("readingsPoll() = %+v, want %+v", got, want)
 	}

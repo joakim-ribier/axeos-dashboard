@@ -79,11 +79,26 @@ export const alertThresholdsSchema = z.object({
 
 export type AlertThresholds = z.infer<typeof alertThresholdsSchema>;
 
+// settings.yml's alerts block: the thresholds every miner follows unless it
+// has its own, and how far under its threshold a reading must be back for
+// its alert to end (every miner's) -- 0 is unset.
+export const alertSettingsSchema = alertThresholdsSchema.extend({
+  tempMargin: z.number().default(0),
+  fanMargin: z.number().default(0),
+});
+
+export type AlertSettings = z.infer<typeof alertSettingsSchema>;
+
 export const appSettingsDefaultsSchema = z.object({
   pools: poolsSchema,
   firmware: firmwareReposSchema,
-  // The built-in thresholds, what an unset one falls back to.
-  alerts: alertThresholdsSchema.default({ tempHigh: 62, fanHigh: 75 }),
+  // The built-in thresholds and margins, what an unset one falls back to.
+  alerts: alertSettingsSchema.default({
+    tempHigh: 62,
+    fanHigh: 75,
+    tempMargin: 2,
+    fanMargin: 5,
+  }),
 });
 
 export const smtpSecuritySchema = z.enum(["starttls", "tls", "none"]);
@@ -176,8 +191,14 @@ export const appSettingsSchema = z.object({
   defaults: appSettingsDefaultsSchema,
   readOnly: appSettingsReadOnlySchema,
   notifications: notificationsSettingsSchema.default(EMPTY_NOTIFICATIONS),
-  // The thresholds every miner follows unless it has its own.
-  alerts: alertThresholdsSchema.default({ tempHigh: 0, fanHigh: 0 }),
+  // The thresholds every miner follows unless it has its own, and the
+  // margins every miner's alerts end under.
+  alerts: alertSettingsSchema.default({
+    tempHigh: 0,
+    fanHigh: 0,
+    tempMargin: 0,
+    fanMargin: 0,
+  }),
   lastUpdated: z.string().optional(),
 });
 
@@ -186,6 +207,13 @@ export const appSettingsSchema = z.object({
 export const commonAlertThresholds = (s: AppSettings): AlertThresholds => ({
   tempHigh: s.alerts.tempHigh || s.defaults.alerts.tempHigh,
   fanHigh: s.alerts.fanHigh || s.defaults.alerts.fanHigh,
+});
+
+/** The margins every miner's alerts end under: settings.yml's, else the
+ * built-in ones. */
+export const commonAlertMargins = (s: AppSettings) => ({
+  tempMargin: s.alerts.tempMargin || s.defaults.alerts.tempMargin,
+  fanMargin: s.alerts.fanMargin || s.defaults.alerts.fanMargin,
 });
 
 export type PowerDevice = z.infer<typeof powerDeviceSchema>;

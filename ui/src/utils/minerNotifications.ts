@@ -44,19 +44,26 @@ export const alertWhen = (t: TFunction, event: AlertEvent): string => {
 };
 
 /** When one still in progress was raised, and for how long now -- with
- * the reading that raised it when the miner's current one is shown instead. */
+ * the reading that raised it when the miner's current one is shown
+ * instead, and the level it ends under. */
 export const alertSince = (
   t: TFunction,
   event: AlertEvent,
   withStart = false,
-): string => {
-  const since = `${formatTimestamp(event.ts)} · ${t("alerts.ongoingFor", {
-    duration: formatDuration(Date.now() - Date.parse(event.ts)),
-  })}`;
-  return withStart && event.value !== undefined
-    ? `${since} · ${t(`alerts.atStart.${event.type}`, { value: Math.round(event.value) })}`
-    : since;
-};
+): string =>
+  [
+    formatTimestamp(event.ts),
+    t("alerts.ongoingFor", {
+      duration: formatDuration(Date.now() - Date.parse(event.ts)),
+    }),
+    withStart &&
+      event.value !== undefined &&
+      t(`alerts.atStart.${event.type}`, { value: Math.round(event.value) }),
+    event.clearBelow !== undefined &&
+      t(`alerts.endsBelow.${event.type}`, { value: event.clearBelow }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
 /** The bell's own events, not miners' -- kept in the browser (see
  * NotificationsContext). */

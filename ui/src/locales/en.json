@@ -72,6 +72,8 @@
       "unreachable": "Unreachable · checked {{value}}",
       "tempHigh": "Chip temperature {{value}} °C (threshold {{threshold}} °C)",
       "fanHigh": "Fan {{value}} % (threshold {{threshold}} %)",
+      "tempHighEnding": "Chip temperature {{value}} °C (threshold {{threshold}} °C, ends below {{clear}} °C)",
+      "fanHighEnding": "Fan {{value}} % (threshold {{threshold}} %, ends below {{clear}} %)",
       "update": "Firmware {{value}} available",
       "stale": "No reading since {{value}}"
     },
@@ -196,6 +198,10 @@
     "atStart": {
       "tempHigh": "{{value}}°C at the start",
       "fanHigh": "{{value}}% at the start"
+    },
+    "endsBelow": {
+      "tempHigh": "ends below {{value}}°C",
+      "fanHigh": "ends below {{value}}%"
     }
   },
   "alertsPage": {
@@ -350,7 +356,9 @@
       "alertsMail": "Alerts by mail",
       "alertPoll": "Alerts' poll",
       "alertTempHigh": "Temperature threshold (°C)",
-      "alertFanHigh": "Fan threshold (%)"
+      "alertFanHigh": "Fan threshold (%)",
+      "alertTempMargin": "Temperature return margin (°C)",
+      "alertFanMargin": "Fan return margin (%)"
     },
     "values": {
       "auditReportEnabled": {
@@ -583,16 +591,11 @@
         "adding": "Adding…",
         "removing": "Removing…"
       },
-      "alerts": {
-        "title": "Alert thresholds",
-        "tempLabel": "Chip temperature (°C)",
-        "fanLabel": "Fan (%)",
-        "hint": "Empty: every miner's thresholds ({{temp}} °C, {{fan}} %), set in Configuration › System."
-      },
       "thresholds": "Alert thresholds",
       "thresholdOwn": "This miner's own",
       "thresholdCommon": "Every miner's (Configuration › System)",
-      "view": "View"
+      "view": "View",
+      "saveSuccess": "Miner saved."
     },
     "appSettings": {
       "save": "Save",
@@ -743,11 +746,7 @@
         "invalidDashboardUrl": "The address must start with http:// or https://."
       },
       "alerts": {
-        "title": "Alert thresholds",
-        "description": "An alert is raised above these values, for every miner — each can have its own in Configuration › Miners. Empty: the built-in value.",
-        "tempLabel": "Chip temperature (°C)",
-        "fanLabel": "Fan (%)",
-        "clearHint": "An alert ends 2 °C (temperature) or 5 % (fan) under its threshold."
+        "description": "An alert is raised above the threshold, and ends once the reading is back the margin under it, for every miner — each can have its own thresholds in Configuration › Miners. Empty: the built-in value."
       }
     },
     "scan": {
@@ -816,5 +815,16 @@
       "min": "every minute",
       "h": "every hour"
     }
+  },
+  "alertThresholds": {
+    "title": "Alert thresholds",
+    "tempHigh": "Temperature (°C)",
+    "tempMargin": "Return margin (°C)",
+    "fanHigh": "Fan (%)",
+    "fanMargin": "Return margin (%)",
+    "backToNormal": "Back to normal below {{value}}",
+    "now": "Now {{value}}",
+    "save": "Save",
+    "saving": "Saving…"
   }
 }

@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/appversion"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/hashboardaccess"
@@ -593,7 +595,7 @@ func TestListMiners_eachMinersAlertThresholds(t *testing.T) {
 	writeTestFile(t, filepath.Join(dir, "aabbccddee02", "latest.json"), `{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":500000}}`)
 
 	var cfg config.Config
-	config.AppSettingsFile{Alerts: config.AlertThresholds{TempHigh: 65}}.ApplyTo(&cfg)
+	config.AppSettingsFile{Alerts: config.AlertSettings{AlertThresholds: config.AlertThresholds{TempHigh: 65}}}.ApplyTo(&cfg)
 	cfg.Bitaxes = []config.Bitaxe{
 		{Ip: "10.0.0.1", Mac: "aabbccddee01", Enabled: true},
 		{Ip: "10.0.0.2", Mac: "aabbccddee02", Enabled: true, Alerts: config.AlertThresholds{FanHigh: 95}},
@@ -613,6 +615,57 @@ func TestListMiners_eachMinersAlertThresholds(t *testing.T) {
 	for _, m := range got.Miners {
 		if th := [2]float64{m.TempThreshold, m.FanThreshold}; th != want[m.IP] {
 			t.Errorf("%s thresholds = %v, want %v", m.IP, th, want[m.IP])
+		}
+	}
+}
+
+func TestListMiners_activeAlerts(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(envDataRoot, dir)
+	writeTestFile(t, filepath.Join(dir, "aabbccddee01", "latest.json"), `{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":500000}}`)
+	writeTestFile(t, filepath.Join(dir, "aabbccddee02", "latest.json"), `{"ts":"2026-07-14T10:00:00Z","payload":{"hashRate":500000}}`)
+	state := alerts.MinerState{Ongoing: map[string]alerts.Event{
+		alerts.TypeFanHigh:        {Type: alerts.TypeFanHigh, State: alerts.Raised, Value: 96},
+		alerts.TypeFirmwareUpdate: {Type: alerts.TypeFirmwareUpdate, State: alerts.Raised},
+	}}
+	if err := alerts.SaveState(filepath.Join(dir, "aabbccddee02"), state); err != nil {
+		t.Fatal(err)
+	}
+
+	var cfg config.Config
+	config.AppSettingsFile{Alerts: config.AlertSettings{AlertMargins: config.AlertMargins{Fan: 10}}}.ApplyTo(&cfg)
+	cfg.Bitaxes = []config.Bitaxe{
+		{Ip: "10.0.0.1", Mac: "aabbccddee01", Enabled: true},
+		{Ip: "10.0.0.2", Mac: "aabbccddee02", Enabled: true, Alerts: config.AlertThresholds{FanHigh: 95}},
+	}
+
+	w := httptest.NewRecorder()
+	ListMiners(cfg, healtcheck.NewWatcher(testLogger(), cfg), w, httptest.NewRequest(http.MethodGet, "/api/miners", nil))
+
+	var got struct {
+		Miners []struct {
+			IP           string               `json:"ip"`
+			ActiveAlerts *[]model.ActiveAlert `json:"activeAlerts"`
+		} `json:"miners"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	// The miner's own 95 % threshold, settings.yml's 10 % margin.
+	want := map[string][]model.ActiveAlert{
+		"10.0.0.1": {},
+		"10.0.0.2": {{Type: alerts.TypeFanHigh, ClearBelow: 85}, {Type: alerts.TypeFirmwareUpdate}},
+	}
+	if len(got.Miners) != 2 {
+		t.Fatalf("Miners = %+v, want 2", got.Miners)
+	}
+	for _, m := range got.Miners {
+		if m.ActiveAlerts == nil {
+			t.Errorf("%s activeAlerts = null, want a list", m.IP)
+			continue
+		}
+		if g := *m.ActiveAlerts; !reflect.DeepEqual(g, want[m.IP]) {
+			t.Errorf("%s activeAlerts = %+v, want %+v", m.IP, g, want[m.IP])
 		}
 	}
 }

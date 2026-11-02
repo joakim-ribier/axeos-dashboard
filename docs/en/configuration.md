@@ -91,7 +91,10 @@ that reading.
 
 This miner's own temperature and fan thresholds — handy for a model that
 naturally runs hotter or with a higher fan. An empty field follows every
-miner's thresholds (see [System](#system)), shown greyed out.
+miner's thresholds (see [System](#system)), shown greyed out. Under each
+threshold, the same gauge as in System, plus the miner's current reading
+(the dot): green up to back to normal, yellow up to the threshold, red
+past it.
 
 ![A miner's alert thresholds]({{ '/assets/images/settings-miner-alert-thresholds.png' | relative_url }})
 
@@ -312,9 +315,16 @@ Each change is recorded in the audit, under *Remote push changed*.
 ### Alert thresholds
 
 An alert is raised when the chip temperature or the fan speed goes above
-its threshold, and ends 2 °C or 5 % under. The thresholds set here apply to
-every miner — each can have its own in its row of [Miners](#miners).
-Empty, they're the built-in values: 62 °C and 75 %.
+its threshold, and ends once the reading is back under the threshold minus
+its **return margin**: a reading hovering around the threshold doesn't
+raise an alert on every poll. The thresholds set here apply to every
+miner — each can have its own in its row of [Miners](#miners) — and the
+return margins to all. Empty, they're the built-in values: 62 °C and
+75 %, with margins of 2 °C and 5 %.
+
+Under each measure, a gauge shows the three zones — green up to back to
+normal, yellow up to the threshold (marked by a tick), red past it — and
+the back-to-normal value.
 
 ![Alert thresholds]({{ '/assets/images/settings-alert-thresholds.png' | relative_url }})
 

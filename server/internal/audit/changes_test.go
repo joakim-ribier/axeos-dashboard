@@ -225,12 +225,26 @@ func TestMinerChanges_alertThresholds(t *testing.T) {
 
 func TestSettingsChanges_alertThresholds(t *testing.T) {
 	var before, after config.AppSettingsFile
-	before.Alerts = config.AlertThresholds{TempHigh: 62}
-	after.Alerts = config.AlertThresholds{TempHigh: 65, FanHigh: 80}
+	before.Alerts.AlertThresholds = config.AlertThresholds{TempHigh: 62}
+	after.Alerts.AlertThresholds = config.AlertThresholds{TempHigh: 65, FanHigh: 80}
 
 	want := []Entry{{Type: TypeSaveSettings, Changes: []Change{
 		{Field: "alertTempHigh", Kind: ChangeChanged, Before: "62", After: "65"},
 		{Field: "alertFanHigh", Kind: ChangeChanged, After: "80"},
+	}}}
+	if got := SettingsChanges(before, after); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestSettingsChanges_alertMargins(t *testing.T) {
+	var before, after config.AppSettingsFile
+	before.Alerts.AlertMargins = config.AlertMargins{Temp: 2}
+	after.Alerts.AlertMargins = config.AlertMargins{Temp: 3, Fan: 10}
+
+	want := []Entry{{Type: TypeSaveSettings, Changes: []Change{
+		{Field: "alertTempMargin", Kind: ChangeChanged, Before: "2", After: "3"},
+		{Field: "alertFanMargin", Kind: ChangeChanged, After: "10"},
 	}}}
 	if got := SettingsChanges(before, after); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %+v, want %+v", got, want)

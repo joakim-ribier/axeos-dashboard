@@ -14,6 +14,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 )
 
@@ -29,13 +30,18 @@ const (
 // dashboard offers them, and every list sorts them in (see Compare).
 var Types = []string{TypeOffline, TypeMacMismatch, TypeTempHigh, TypeFanHigh, TypeFirmwareUpdate}
 
-// An alert is raised above its threshold (the miner's, see Poll) and only
-// cleared once back this far under it, so a reading hovering around the
-// threshold doesn't raise and clear it on every poll.
-const (
-	TempMargin = 2.0 // °C
-	FanMargin  = 5.0 // %
-)
+// ClearLevel is the reading an alert of alertType ends under: its threshold
+// (the miner's) less its margin (every miner's, see config.AlertMargins) --
+// 0 for a type that doesn't end on a reading.
+func ClearLevel(alertType string, t config.AlertThresholds, m config.AlertMargins) float64 {
+	switch alertType {
+	case TypeTempHigh:
+		return t.TempHigh - m.Temp
+	case TypeFanHigh:
+		return t.FanHigh - m.Fan
+	}
+	return 0
+}
 
 // OfflineAfter is how many polls in a row must fail before a miner is
 // reported offline -- a single timeout over WiFi isn't one.
@@ -64,6 +70,9 @@ type Event struct {
 	// (temp/fan).
 	RaisedAt *time.Time `json:"raisedAt,omitempty"`
 	Peak     float64    `json:"peak,omitempty"`
+	// In progress only, as served: the reading it ends under (ClearLevel),
+	// for the miner's current thresholds.
+	ClearBelow float64 `json:"clearBelow,omitempty"`
 }
 
 // Compare orders events the one way every list shows them: most recent
@@ -88,8 +97,11 @@ type Poll struct {
 	Temp        float64
 	FanSpeed    float64
 	// TempThreshold/FanThreshold are the miner's thresholds -- an alert is
-	// raised above, cleared under minus TempMargin/FanMargin.
+	// raised above, and only cleared once back Margins under, so a reading
+	// hovering around the threshold doesn't raise and clear it on every
+	// poll.
 	TempThreshold, FanThreshold float64
+	Margins                     config.AlertMargins
 	Version                     string
 	// LatestVersion is the latest firmware release -- empty when unknown,
 	// which leaves the firmware alert as it was.
@@ -147,11 +159,11 @@ func (s *MinerState) Observe(now time.Time, p Poll) []Event {
 	}
 
 	_, tempActive := s.Ongoing[TypeTempHigh]
-	set(TypeTempHigh, p.Temp > p.TempThreshold || tempActive && p.Temp >= p.TempThreshold-TempMargin,
+	set(TypeTempHigh, p.Temp > p.TempThreshold || tempActive && p.Temp >= p.TempThreshold-p.Margins.Temp,
 		Event{Value: p.Temp, Threshold: p.TempThreshold})
 
 	_, fanActive := s.Ongoing[TypeFanHigh]
-	set(TypeFanHigh, p.FanSpeed > p.FanThreshold || fanActive && p.FanSpeed >= p.FanThreshold-FanMargin,
+	set(TypeFanHigh, p.FanSpeed > p.FanThreshold || fanActive && p.FanSpeed >= p.FanThreshold-p.Margins.Fan,
 		Event{Value: p.FanSpeed, Threshold: p.FanThreshold})
 
 	if p.LatestVersion != "" && p.Version != "" {

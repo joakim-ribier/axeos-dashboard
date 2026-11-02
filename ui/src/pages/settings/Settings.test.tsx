@@ -184,7 +184,7 @@ const GATED: Gated[] = [
     element: "the alert threshold fields",
     ready: minersReady,
     open: expandMinerRow,
-    find: () => field("Chip temperature (°C)"),
+    find: () => field("Temperature (°C)"),
     readOnly: "disabled",
   },
   {
@@ -192,7 +192,7 @@ const GATED: Gated[] = [
     element: "the alert thresholds Save button",
     ready: minersReady,
     open: expandMinerRow,
-    find: () => saveNextTo("Chip temperature (°C)"),
+    find: () => saveNextTo("Temperature (°C)"),
   },
   {
     section: "miners",
@@ -268,14 +268,21 @@ const GATED: Gated[] = [
     section: "system",
     element: "the alert threshold fields",
     ready: systemReady,
-    find: () => field("Chip temperature (°C)"),
+    find: () => field("Temperature (°C)"),
+    readOnly: "disabled",
+  },
+  {
+    section: "system",
+    element: "the alert return margin fields",
+    ready: systemReady,
+    find: () => field("Return margin (°C)"),
     readOnly: "disabled",
   },
   {
     section: "system",
     element: "the alert thresholds Save button",
     ready: systemReady,
-    find: () => saveNextTo("Chip temperature (°C)"),
+    find: () => saveNextTo("Temperature (°C)"),
   },
   {
     section: "system",
@@ -396,6 +403,45 @@ describe("Configuration elements controlled by ui.page.settings", () => {
 
 beforeEach(() => {
   mockedAxios.get.mockReset();
+});
+
+describe("saving alert thresholds", () => {
+  beforeEach(() => {
+    mockedAxios.post.mockReset();
+    mockedAxios.post.mockImplementation((url: string) =>
+      Promise.resolve({
+        data:
+          url === "/api/config/miners"
+            ? { bitaxes: [{ ...miner, alerts: { tempHigh: 65, fanHigh: 95 } }] }
+            : settings,
+      }),
+    );
+  });
+
+  it("says so from a miner's row", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+    await expandMinerRow();
+
+    await user.type(screen.getByLabelText("Temperature (°C)"), "65");
+    await user.click(saveNextTo("Temperature (°C)")!);
+
+    expect(await screen.findByText("Miner saved.")).toBeInTheDocument();
+  });
+
+  it("says so from Configuration › System", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/system");
+    await systemReady();
+
+    await user.type(screen.getByLabelText("Return margin (%)"), "10");
+    await user.click(saveNextTo("Temperature (°C)")!);
+
+    expect(await screen.findByText("App settings saved.")).toBeInTheDocument();
+  });
 });
 
 describe("the configured miners table", () => {

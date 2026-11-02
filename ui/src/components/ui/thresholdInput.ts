@@ -1,9 +1,12 @@
 // src/components/ui/thresholdInput.ts
 
-// The bounds the server accepts (handler.validateAlertThresholds).
+// The bounds the server accepts (handler.validateAlertThresholds,
+// validateAlertMargins).
 export const THRESHOLD_BOUNDS = {
   tempHigh: { min: 30, max: 100 },
   fanHigh: { min: 1, max: 100 },
+  tempMargin: { min: 0, max: 20 },
+  fanMargin: { min: 0, max: 50 },
 } as const;
 
 export type ThresholdKey = keyof typeof THRESHOLD_BOUNDS;

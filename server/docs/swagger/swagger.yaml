@@ -2,6 +2,11 @@ basePath: /
 definitions:
   alerts.Event:
     properties:
+      clearBelow:
+        description: |-
+          In progress only, as served: the reading it ends under (ClearLevel),
+          for the miner's current thresholds.
+        type: number
       hostname:
         type: string
       ip:
@@ -126,6 +131,17 @@ definitions:
       updatedAt:
         type: string
     type: object
+  config.AlertSettings:
+    properties:
+      fanHigh:
+        type: number
+      fanMargin:
+        type: number
+      tempHigh:
+        type: number
+      tempMargin:
+        type: number
+    type: object
   config.AlertThresholds:
     properties:
       fanHigh:
@@ -145,10 +161,11 @@ definitions:
     properties:
       alerts:
         allOf:
-        - $ref: '#/definitions/config.AlertThresholds'
+        - $ref: '#/definitions/config.AlertSettings'
         description: |-
-          Alerts is the thresholds every miner follows unless it has its own --
-          a value left at zero is the built-in one (DefaultAlertThresholds).
+          Alerts is the thresholds every miner follows unless it has its own,
+          and the margins every miner's alerts end under -- a value left at
+          zero is the built-in one (DefaultAlertThresholds, DefaultAlertMargins).
       electricity:
         $ref: '#/definitions/config.ElectricityConfig'
       firmware:
@@ -607,9 +624,10 @@ definitions:
     properties:
       alerts:
         allOf:
-        - $ref: '#/definitions/config.AlertThresholds'
-        description: Alerts is the built-in thresholds, what an unset one falls back
-          to.
+        - $ref: '#/definitions/config.AlertSettings'
+        description: |-
+          Alerts is the built-in thresholds and margins, what an unset one
+          falls back to.
       firmware:
         $ref: '#/definitions/config.AppSettingsFirmware'
       pools:
@@ -648,10 +666,11 @@ definitions:
     properties:
       alerts:
         allOf:
-        - $ref: '#/definitions/config.AlertThresholds'
+        - $ref: '#/definitions/config.AlertSettings'
         description: |-
-          Alerts is the thresholds every miner follows unless it has its own --
-          a value left at zero is the built-in one (DefaultAlertThresholds).
+          Alerts is the thresholds every miner follows unless it has its own,
+          and the margins every miner's alerts end under -- a value left at
+          zero is the built-in one (DefaultAlertThresholds, DefaultAlertMargins).
       defaults:
         $ref: '#/definitions/handler.appSettingsDefaults'
       electricity:
@@ -803,6 +822,13 @@ definitions:
           type: string
         type: array
     type: object
+  model.ActiveAlert:
+    properties:
+      clearBelow:
+        type: number
+      type:
+        type: string
+    type: object
   model.InfoResponse:
     properties:
       appVersion:
@@ -855,6 +881,14 @@ definitions:
     type: object
   model.MinerInfo:
     properties:
+      activeAlerts:
+        description: |-
+          The miner's alerts in progress, as the feeder keeps them (raised
+          above a threshold, ended a margin under it) -- always a list locally,
+          null on a board, which then judges a reading by its threshold alone.
+        items:
+          $ref: '#/definitions/model.ActiveAlert'
+        type: array
       alias:
         description: Operator-set override for Hostname (see config.Bitaxe.DisplayName)
           -- empty when not set, UI falls back to Hostname

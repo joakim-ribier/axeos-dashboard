@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MinerConfig } from "@/schemas/minerConfigSchema";
+import { makeMiner } from "@/test/miner";
 
 import { AlertThresholdsEditor } from "./AlertThresholdsEditor";
 
@@ -27,21 +28,19 @@ const baseMiner: MinerConfig = {
   fallbackUser: "wallet.worker.fallback",
 };
 
-const defaults = { tempHigh: 65, fanHigh: 75 };
+const common = { tempHigh: 65, fanHigh: 75, tempMargin: 2, fanMargin: 5 };
 
-const tempInput = () =>
-  screen.getByLabelText("settingsPage.configured.alerts.tempLabel");
-const fanInput = () =>
-  screen.getByLabelText("settingsPage.configured.alerts.fanLabel");
+const tempInput = () => screen.getByLabelText("alertThresholds.tempHigh");
+const fanInput = () => screen.getByLabelText("alertThresholds.fanHigh");
 const saveButton = () =>
-  screen.getByRole("button", { name: "settingsPage.configured.alias.save" });
+  screen.getByRole("button", { name: "alertThresholds.save" });
 
 describe("AlertThresholdsEditor", () => {
   it("starts empty, every miner's thresholds as placeholders, when the miner has none", () => {
     render(
       <AlertThresholdsEditor
         miner={baseMiner}
-        defaults={defaults}
+        common={common}
         saveMiners={vi.fn()}
       />,
     );
@@ -56,7 +55,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={{ ...baseMiner, alerts: { tempHigh: 0, fanHigh: 95 } }}
-        defaults={defaults}
+        common={common}
         saveMiners={vi.fn()}
       />,
     );
@@ -72,7 +71,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={baseMiner}
-        defaults={defaults}
+        common={common}
         saveMiners={saveMiners}
       />,
     );
@@ -92,7 +91,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={miner}
-        defaults={defaults}
+        common={common}
         saveMiners={saveMiners}
       />,
     );
@@ -115,7 +114,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={baseMiner}
-        defaults={defaults}
+        common={common}
         saveMiners={vi.fn()}
       />,
     );
@@ -133,7 +132,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={baseMiner}
-        defaults={defaults}
+        common={common}
         saveMiners={saveMiners}
       />,
     );
@@ -148,7 +147,7 @@ describe("AlertThresholdsEditor", () => {
     render(
       <AlertThresholdsEditor
         miner={baseMiner}
-        defaults={defaults}
+        common={common}
         saveMiners={vi.fn()}
         readOnly
       />,
@@ -156,10 +155,34 @@ describe("AlertThresholdsEditor", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "settingsPage.configured.alias.save",
+        name: "alertThresholds.save",
       }),
     ).not.toBeInTheDocument();
     expect(tempInput()).toBeDisabled();
     expect(fanInput()).toBeDisabled();
+  });
+
+  it("has no margin of its own: every miner's draw its gauges", () => {
+    render(
+      <AlertThresholdsEditor
+        miner={{ ...baseMiner, alerts: { tempHigh: 0, fanHigh: 95 } }}
+        common={common}
+        liveMiner={makeMiner({ temp: 58, fanspeed: 91 })}
+        saveMiners={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByLabelText("alertThresholds.tempMargin"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText('alertThresholds.backToNormal {"value":"63 °C"}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('alertThresholds.backToNormal {"value":"90 %"}'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('alertThresholds.now {"value":"91 %"}'),
+    ).toBeInTheDocument();
   });
 });

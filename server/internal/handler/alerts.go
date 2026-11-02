@@ -11,6 +11,7 @@ import (
 
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/alerts"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 )
 
 const (
@@ -78,13 +79,32 @@ func ListActiveAlerts(cfg config.Config) http.HandlerFunc {
 			if err != nil {
 				continue
 			}
+			thresholds := cfg.AlertThresholdsFor(miner)
 			for _, e := range state.Ongoing {
 				e.Mac, e.IP, e.Hostname = key, miner.Ip, miner.DisplayName()
+				e.ClearBelow = alerts.ClearLevel(e.Type, thresholds, cfg.AlertMargins())
 				events = append(events, e)
 			}
 		}
 		writeJSON(w, sortedWithCurrentNames(cfg, events))
 	}
+}
+
+// activeAlerts is a miner's alerts in progress, most serious first, each
+// with the reading it ends under -- never nil: a local miner always tells
+// them.
+func activeAlerts(minerDir string, thresholds config.AlertThresholds, margins config.AlertMargins) []model.ActiveAlert {
+	list := []model.ActiveAlert{}
+	state, err := alerts.LoadState(minerDir)
+	if err != nil {
+		return list
+	}
+	for _, alertType := range alerts.Types {
+		if _, ongoing := state.Ongoing[alertType]; ongoing {
+			list = append(list, model.ActiveAlert{Type: alertType, ClearBelow: alerts.ClearLevel(alertType, thresholds, margins)})
+		}
+	}
+	return list
 }
 
 // AlertsSeen is up to when the alerts have been read.

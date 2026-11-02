@@ -5,6 +5,7 @@ import { AlertList } from "@/components/ui/AlertList";
 import { type Miner } from "@/schemas/minerSchema";
 import { formatTimestamp } from "@/utils/format";
 import {
+  clearBelow,
   fanThreshold,
   isFanHigh,
   isTempHigh,
@@ -24,6 +25,22 @@ export const MinerIssues = ({
   status: MinerStatus;
 }) => {
   const { t } = useTranslation();
+  // A temp/fan alert in progress -- with the level it ends under, once the
+  // reading is back under its threshold.
+  const reading = (
+    type: "tempHigh" | "fanHigh",
+    value: number,
+    threshold: number,
+  ) => {
+    const clear = clearBelow(miner, type);
+    return value > threshold || clear === undefined
+      ? t(`dashboard.issues.${type}`, { value: value.toFixed(0), threshold })
+      : t(`dashboard.issues.${type}Ending`, {
+          value: value.toFixed(0),
+          threshold,
+          clear,
+        });
+  };
 
   const problems = [
     miner.alive === false &&
@@ -33,16 +50,8 @@ export const MinerIssues = ({
     status === "stale" &&
       t("dashboard.issues.stale", { value: formatTimestamp(miner.timestamp) }),
     miner.error && `${t("miner.error.macMismatch")} · ${miner.error}`,
-    isTempHigh(miner) &&
-      t("dashboard.issues.tempHigh", {
-        value: miner.temp.toFixed(0),
-        threshold: tempThreshold(miner),
-      }),
-    isFanHigh(miner) &&
-      t("dashboard.issues.fanHigh", {
-        value: miner.fanspeed.toFixed(0),
-        threshold: fanThreshold(miner),
-      }),
+    isTempHigh(miner) && reading("tempHigh", miner.temp, tempThreshold(miner)),
+    isFanHigh(miner) && reading("fanHigh", miner.fanspeed, fanThreshold(miner)),
   ].filter((p) => typeof p === "string");
 
   const update = t("dashboard.issues.update", { value: miner.latestVersion });

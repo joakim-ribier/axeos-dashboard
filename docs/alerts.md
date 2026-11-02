@@ -23,8 +23,8 @@ pour la température et le ventilateur, la valeur la plus haute atteinte
 température qui reste haute pendant des heures tient en deux lignes.
 
 Pour qu'une valeur qui oscille autour du seuil ne déclenche pas une
-alerte à chaque relevé, le retour à la normale se fait sous un seuil plus
-bas que le déclenchement (voir le tableau ci-dessous). Un mineur n'est
+alerte à chaque relevé, le retour à la normale se fait sous le seuil
+moins une marge de retour (voir le tableau ci-dessous). Un mineur n'est
 déclaré hors ligne qu'après 2 relevés manqués de suite.
 
 Les mêmes changements d'état alimentent les notifications de la cloche,
@@ -36,8 +36,9 @@ Les alertes **en cours** — commencées et pas encore terminées, quel que
 soit leur âge — restent en haut de la page, au-dessus de l'historique du
 jour choisi, avec depuis quand elles durent ; pour la température et le
 ventilateur, la valeur affichée est celle du dernier relevé du mineur,
-avec celle du début (ex. « Atchoum : ventilateur à 99% · 26/10 14:18 ·
-depuis 3j 2h 0m · 83% au début »). Leur nombre s'affiche aussi en badge sur l'entrée Alertes du
+avec celle du début et la valeur sous laquelle elle se termine (ex.
+« Atchoum : ventilateur à 88% · 02/11 09:55 · depuis 3h 35m · 86% au
+début · se termine sous 85% »). Leur nombre s'affiche aussi en badge sur l'entrée Alertes du
 menu : rouge dès qu'une est un problème, orange s'il ne reste que des
 mises à jour firmware, « 9+ » au-delà de 9. Il ne baisse que lorsqu'une
 alerte se termine.
@@ -54,7 +55,8 @@ les retire tous.
 
 Les seuils de température et de ventilateur se règlent pour tous les
 mineurs dans [Configuration › Système]({{ '/configuration.html#systeme' | relative_url }}),
-et pour un mineur en particulier dans sa ligne de Configuration › Mineurs.
+et pour un mineur en particulier dans sa ligne de Configuration › Mineurs ;
+les marges de retour, communes à tous, dans Configuration › Système.
 
 <table class="data-table">
   <thead>
@@ -68,12 +70,12 @@ et pour un mineur en particulier dans sa ligne de Configuration › Mineurs.
     <tr>
       <td>Température haute</td>
       <td>Puce au-dessus du seuil (62 °C par défaut)</td>
-      <td>Puce 2 °C sous le seuil</td>
+      <td>Puce sous le seuil moins la marge de retour (2 °C par défaut)</td>
     </tr>
     <tr>
       <td>Ventilateur haut</td>
       <td>Vitesse au-dessus du seuil (75 % par défaut)</td>
-      <td>Vitesse 5 % sous le seuil</td>
+      <td>Vitesse sous le seuil moins la marge de retour (5 % par défaut)</td>
     </tr>
     <tr>
       <td>Mise à jour firmware</td>

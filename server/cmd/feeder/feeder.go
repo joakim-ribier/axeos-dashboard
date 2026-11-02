@@ -224,7 +224,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		}
 
 		latestFW := fwCache.Models[string(bitaxe.Model)].Version
-		changes = append(changes, f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW, f.config.AlertThresholdsFor(bitaxe)))...)
+		changes = append(changes, f.trackAlerts(now, bitaxe, readingsPoll(payload, latestFW, f.config.AlertThresholdsFor(bitaxe), f.config.AlertMargins()))...)
 
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
 		if err := store.Append(now, key, payload); err != nil {
@@ -323,7 +323,7 @@ func (f *Feeder) mailAlerts(changes []alerts.Event) {
 
 // readingsPoll reads what the alerts need off a poll's raw payload, to be
 // weighed against the miner's thresholds.
-func readingsPoll(payload []byte, latestFirmwareVersion string, thresholds config.AlertThresholds) alerts.Poll {
+func readingsPoll(payload []byte, latestFirmwareVersion string, thresholds config.AlertThresholds, margins config.AlertMargins) alerts.Poll {
 	var p struct {
 		Temp     float64 `json:"temp"`
 		FanSpeed float64 `json:"fanspeed"`
@@ -332,7 +332,7 @@ func readingsPoll(payload []byte, latestFirmwareVersion string, thresholds confi
 	_ = json.Unmarshal(payload, &p)
 	return alerts.Poll{
 		Temp: p.Temp, FanSpeed: p.FanSpeed,
-		TempThreshold: thresholds.TempHigh, FanThreshold: thresholds.FanHigh,
+		TempThreshold: thresholds.TempHigh, FanThreshold: thresholds.FanHigh, Margins: margins,
 		Version: p.Version, LatestVersion: latestFirmwareVersion,
 	}
 }

@@ -93,7 +93,10 @@ de ce relevé.
 Les seuils de température et de ventilateur de ce mineur seulement —
 utile pour un modèle qui tourne naturellement plus chaud ou avec un
 ventilateur plus haut. Un champ vide suit les seuils de tous les mineurs
-(voir [Système](#systeme)), affichés en grisé.
+(voir [Système](#systeme)), affichés en grisé. Sous chaque seuil, la même
+jauge que dans Système, avec en plus la valeur actuelle du mineur (le
+point) : verte jusqu'au retour à la normale, jaune jusqu'au seuil, rouge
+au-delà.
 
 ![Seuils d'alerte d'un mineur]({{ '/assets/images/settings-miner-alert-thresholds.png' | relative_url }})
 
@@ -321,10 +324,17 @@ modifié*.
 ### Seuils d'alerte
 
 Une alerte se déclenche quand la température de la puce ou la vitesse du
-ventilateur dépasse son seuil, et se termine 2 °C ou 5 % en dessous. Les
+ventilateur dépasse son seuil, et se termine une fois la valeur
+redescendue sous le seuil moins sa **marge de retour** : une valeur qui
+oscille autour du seuil ne déclenche pas une alerte à chaque relevé. Les
 seuils réglés ici valent pour tous les mineurs — chacun peut avoir les
-siens dans sa ligne de [Mineurs](#mineurs). Vides, ce sont les valeurs
-d'origine : 62 °C et 75 %.
+siens dans sa ligne de [Mineurs](#mineurs) — et les marges de retour
+pour tous. Vides, ce sont les valeurs d'origine : 62 °C et 75 %, avec des
+marges de 2 °C et 5 %.
+
+Sous chaque mesure, une jauge montre les trois zones — verte jusqu'au
+retour à la normale, jaune jusqu'au seuil (marqué d'un trait), rouge
+au-delà — et la valeur de retour à la normale.
 
 ![Seuils d'alerte]({{ '/assets/images/settings-alert-thresholds.png' | relative_url }})
 

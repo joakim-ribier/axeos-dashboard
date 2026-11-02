@@ -116,6 +116,13 @@ describe("alertSince", () => {
       `${formatTimestamp(ts)} · alerts.ongoingFor {"duration":"1h 30m"}`,
     );
   });
+
+  it("ends with the reading it ends under, when there's one", () => {
+    const ts = new Date(Date.now() - 90 * 60_000).toISOString();
+    expect(alertSince(t, event({ ts, type: "fanHigh", clearBelow: 85 }))).toBe(
+      `${formatTimestamp(ts)} · alerts.ongoingFor {"duration":"1h 30m"} · alerts.endsBelow.fanHigh {"value":85}`,
+    );
+  });
 });
 
 describe("createAutoRefreshToggledNotification", () => {

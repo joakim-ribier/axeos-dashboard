@@ -215,6 +215,8 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 	details = append(details, compareFields([][3]string{
 		{"alertTempHigh", threshold(before.Alerts.TempHigh), threshold(after.Alerts.TempHigh)},
 		{"alertFanHigh", threshold(before.Alerts.FanHigh), threshold(after.Alerts.FanHigh)},
+		{"alertTempMargin", threshold(before.Alerts.Temp), threshold(after.Alerts.Temp)},
+		{"alertFanMargin", threshold(before.Alerts.Fan), threshold(after.Alerts.Fan)},
 	})...)
 	details = append(details, listChanges(
 		mapList(before.Electricity.Devices, device), mapList(after.Electricity.Devices, device),
