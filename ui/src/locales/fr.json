@@ -72,6 +72,8 @@
       "unreachable": "Injoignable · vérifié {{value}}",
       "tempHigh": "Température puce {{value}} °C (seuil {{threshold}} °C)",
       "fanHigh": "Ventilateur {{value}} % (seuil {{threshold}} %)",
+      "tempHighEnding": "Température puce {{value}} °C (seuil {{threshold}} °C, se termine sous {{clear}} °C)",
+      "fanHighEnding": "Ventilateur {{value}} % (seuil {{threshold}} %, se termine sous {{clear}} %)",
       "update": "Firmware {{value}} disponible",
       "stale": "Aucun relevé depuis {{value}}"
     },
@@ -196,6 +198,10 @@
     "atStart": {
       "tempHigh": "{{value}}°C au début",
       "fanHigh": "{{value}}% au début"
+    },
+    "endsBelow": {
+      "tempHigh": "se termine sous {{value}}°C",
+      "fanHigh": "se termine sous {{value}}%"
     }
   },
   "alertsPage": {
@@ -350,7 +356,9 @@
       "alertsMail": "Alertes par mail",
       "alertPoll": "Relevé des alertes",
       "alertTempHigh": "Seuil de température (°C)",
-      "alertFanHigh": "Seuil du ventilateur (%)"
+      "alertFanHigh": "Seuil du ventilateur (%)",
+      "alertTempMargin": "Marge de retour de la température (°C)",
+      "alertFanMargin": "Marge de retour du ventilateur (%)"
     },
     "values": {
       "auditReportEnabled": {
@@ -583,16 +591,11 @@
         "adding": "Ajout…",
         "removing": "Suppression…"
       },
-      "alerts": {
-        "title": "Seuils d'alerte",
-        "tempLabel": "Température de la puce (°C)",
-        "fanLabel": "Ventilateur (%)",
-        "hint": "Vide : les seuils de tous les mineurs ({{temp}} °C, {{fan}} %), réglés dans Configuration › Système."
-      },
       "thresholds": "Seuils d'alerte",
       "thresholdOwn": "Propre à ce mineur",
       "thresholdCommon": "Celui de tous les mineurs (Configuration › Système)",
-      "view": "Voir"
+      "view": "Voir",
+      "saveSuccess": "Mineur enregistré."
     },
     "appSettings": {
       "save": "Enregistrer",
@@ -743,11 +746,7 @@
         "invalidDashboardUrl": "L'adresse doit commencer par http:// ou https://."
       },
       "alerts": {
-        "title": "Seuils d'alerte",
-        "description": "Une alerte se déclenche au-dessus de ces valeurs, pour tous les mineurs — chacun peut avoir les siens dans Configuration › Mineurs. Vide : la valeur d'origine.",
-        "tempLabel": "Température de la puce (°C)",
-        "fanLabel": "Ventilateur (%)",
-        "clearHint": "Une alerte se termine 2 °C (température) ou 5 % (ventilateur) sous son seuil."
+        "description": "Une alerte se déclenche au-dessus du seuil, et se termine une fois la valeur redescendue de la marge sous ce seuil, pour tous les mineurs — chacun peut avoir ses propres seuils dans Configuration › Mineurs. Vide : la valeur d'origine."
       }
     },
     "scan": {
@@ -816,5 +815,16 @@
       "min": "chaque minute",
       "h": "chaque heure"
     }
+  },
+  "alertThresholds": {
+    "title": "Seuils d'alerte",
+    "tempHigh": "Température (°C)",
+    "tempMargin": "Marge de retour (°C)",
+    "fanHigh": "Ventilateur (%)",
+    "fanMargin": "Marge de retour (%)",
+    "backToNormal": "Retour à la normale sous {{value}}",
+    "now": "Actuellement {{value}}",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…"
   }
 }

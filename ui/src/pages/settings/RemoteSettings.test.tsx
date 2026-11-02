@@ -63,9 +63,9 @@ describe("RemoteSettings -- push URL check", () => {
       defaults: {
         pools: { dashboards: {} },
         firmware: { repos: {} },
-        alerts: { tempHigh: 62, fanHigh: 75 },
+        alerts: { tempHigh: 62, fanHigh: 75, tempMargin: 2, fanMargin: 5 },
       },
-      alerts: { tempHigh: 0, fanHigh: 0 },
+      alerts: { tempHigh: 0, fanHigh: 0, tempMargin: 0, fanMargin: 0 },
       readOnly: {
         feederInterval: "2m0s",
         healthCheckInterval: "1m0s",
@@ -130,9 +130,9 @@ describe("RemoteSettings -- sensitive data", () => {
       defaults: {
         pools: { dashboards: {} },
         firmware: { repos: {} },
-        alerts: { tempHigh: 62, fanHigh: 75 },
+        alerts: { tempHigh: 62, fanHigh: 75, tempMargin: 2, fanMargin: 5 },
       },
-      alerts: { tempHigh: 0, fanHigh: 0 },
+      alerts: { tempHigh: 0, fanHigh: 0, tempMargin: 0, fanMargin: 0 },
       readOnly: {
         feederInterval: "2m0s",
         healthCheckInterval: "1m0s",

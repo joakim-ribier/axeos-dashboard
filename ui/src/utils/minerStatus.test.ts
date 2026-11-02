@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { makeMiner } from "@/test/miner";
 
-import { getMinerStatus } from "./minerStatus";
+import {
+  clearBelow,
+  getMinerStatus,
+  isFanHigh,
+  isTempHigh,
+} from "./minerStatus";
 
 describe("getMinerStatus", () => {
   it("is ok for a reachable, fresh, cool miner", () => {
@@ -43,5 +48,34 @@ describe("getMinerStatus", () => {
 
   it("treats a miner not checked yet as reachable", () => {
     expect(getMinerStatus(makeMiner({ alive: undefined }), false)).toBe("ok");
+  });
+
+  it("follows the alerts in progress, as the Alerts page does", () => {
+    // Back under the threshold, not yet under where its alert ends.
+    const ending = makeMiner({
+      fanspeed: 73,
+      activeAlerts: [{ type: "fanHigh", clearBelow: 70 }],
+    });
+    expect(getMinerStatus(ending, false)).toBe("warning");
+    expect(isFanHigh(ending)).toBe(true);
+    expect(isTempHigh(ending)).toBe(false);
+    // Above it, but the feeder hasn't raised it yet.
+    expect(
+      getMinerStatus(makeMiner({ temp: 63, activeAlerts: [] }), false),
+    ).toBe("ok");
+  });
+});
+
+describe("clearBelow", () => {
+  it("is where the miner's alert in progress ends", () => {
+    const miner = makeMiner({
+      activeAlerts: [
+        { type: "fanHigh", clearBelow: 85 },
+        { type: "firmwareUpdate" },
+      ],
+    });
+    expect(clearBelow(miner, "fanHigh")).toBe(85);
+    expect(clearBelow(miner, "tempHigh")).toBeUndefined();
+    expect(clearBelow(makeMiner(), "fanHigh")).toBeUndefined();
   });
 });

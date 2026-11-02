@@ -197,7 +197,8 @@ Sur téléphone, la barre garde l'essentiel :
    - **En retard** — le mineur répond, mais aucun relevé n'est arrivé
      depuis plus de 2 fois l'intervalle de sondage.
    - **En alerte** — température de puce ou ventilateur au-dessus du
-     seuil du mineur (62 °C et 75 % par défaut).
+     seuil du mineur (62 °C et 75 % par défaut), jusqu'au retour à la
+     normale.
    - **En ligne** — tout va bien.
 2. **Pools** — la part du hashrate de la flotte envoyée à chaque pool.
 
@@ -241,8 +242,9 @@ retire le filtre.
    actuelle. Les périodes où le mineur était injoignable apparaissent en
    rouge sur la ligne de base.
 3. **Temp. puce** — température des puces, sur une jauge verte qui passe
-   à l'orange à l'approche du seuil du mineur (62 °C par défaut, marqué
-   d'un trait), puis au rouge une fois dépassé.
+   au jaune à l'approche du seuil du mineur (62 °C par défaut, marqué
+   d'un trait), puis au rouge pendant l'alerte — jusqu'au retour sous le
+   seuil moins la marge de retour.
 4. **Ventilateur** — vitesse du ventilateur, sur la même jauge, avec un
    seuil du mineur (75 % par défaut).
 5. **Conso.** — puissance (W) et rendement (J/TH).
@@ -301,5 +303,7 @@ droite sur téléphone.
 
 Quand le mineur a un problème, un bandeau le détaille juste sous
 l'en-tête : injoignable, aucun relevé depuis une heure donnée, erreur de
-configuration, température ou ventilateur au seuil. Une nouvelle version
-firmware s'annonce dans un bandeau bleu, avec un lien vers sa release.
+configuration, température ou ventilateur au seuil — ou redescendus
+sous le seuil mais pas encore sous la valeur de retour à la normale,
+indiquée. Une nouvelle version firmware s'annonce dans un bandeau bleu,
+avec un lien vers sa release.

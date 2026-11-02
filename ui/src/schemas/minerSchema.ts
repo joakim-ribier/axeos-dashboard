@@ -64,6 +64,11 @@ export const minerSchema = z.object({
   // absent on a board (see tempThreshold/fanThreshold).
   tempThreshold: z.number().optional(),
   fanThreshold: z.number().optional(),
+  // Its alerts in progress, as the feeder keeps them (raised above a
+  // threshold, ended under clearBelow) -- null on a board.
+  activeAlerts: z
+    .array(z.object({ type: z.string(), clearBelow: z.number().optional() }))
+    .nullish(),
 });
 
 export type Miner = z.infer<typeof minerSchema>;
@@ -85,6 +90,8 @@ export const alertEventSchema = z.object({
   raisedAt: z.string().optional(),
   // Cleared only: the highest reading while it lasted (temp/fan).
   peak: z.number().optional(),
+  // In progress only: the reading it ends under (temp/fan).
+  clearBelow: z.number().optional(),
 });
 
 export type AlertEvent = z.infer<typeof alertEventSchema>;

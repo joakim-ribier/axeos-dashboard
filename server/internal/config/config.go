@@ -51,9 +51,10 @@ type Config struct {
 	// -- never read from dashboard.yml.
 	Notifications NotificationsConfig `yaml:"-"`
 	// Alerts only ever comes from settings.yml too: the thresholds every
-	// miner follows unless it has its own (see AlertThresholdsFor).
-	Alerts AlertThresholds `yaml:"-"`
-	UI     UIConfig        `yaml:"ui"`
+	// miner follows unless it has its own (see AlertThresholdsFor), and the
+	// margins every miner's alerts end under (see AlertMargins).
+	Alerts AlertSettings `yaml:"-"`
+	UI     UIConfig      `yaml:"ui"`
 
 	// HashboardURL is the base URL of the hashboard instance backing this
 	// remote-dashboard-api (remote-dashboard-api only): where the "private
@@ -197,7 +198,37 @@ func (c Config) AlertThresholdsFor(b Bitaxe) AlertThresholds {
 // AlertThresholds is the thresholds every miner follows unless it has its
 // own: settings.yml's, else the built-in ones.
 func (c Config) AlertThresholds() AlertThresholds {
-	return DefaultAlertThresholds.over(c.Alerts)
+	return DefaultAlertThresholds.over(c.Alerts.AlertThresholds)
+}
+
+// AlertMargins is how far under its threshold a reading must be back for
+// its alert to end -- so a reading hovering around the threshold doesn't
+// raise and end it on every poll: the chip temperature (°C) and the fan
+// speed (%). Every miner's, never its own. A zero value is unset.
+type AlertMargins struct {
+	Temp float64 `yaml:"tempMargin,omitempty" json:"tempMargin"`
+	Fan  float64 `yaml:"fanMargin,omitempty" json:"fanMargin"`
+}
+
+// AlertMargins is the margins every miner's alerts end under: settings.yml's,
+// else the built-in ones.
+func (c Config) AlertMargins() AlertMargins {
+	margins := DefaultAlertMargins
+	if c.Alerts.Temp > 0 {
+		margins.Temp = c.Alerts.Temp
+	}
+	if c.Alerts.Fan > 0 {
+		margins.Fan = c.Alerts.Fan
+	}
+	return margins
+}
+
+// AlertSettings is settings.yml's alerts block: the thresholds every miner
+// follows unless it has its own, and the margins every miner's alerts end
+// under -- a value left at zero is the built-in one.
+type AlertSettings struct {
+	AlertThresholds `yaml:",inline"`
+	AlertMargins    `yaml:",inline"`
 }
 
 // ScheduleAction is the action a scheduled job runs when its cron fires --
@@ -709,9 +740,10 @@ type AppSettingsFile struct {
 	Remote        RemoteConfig        `yaml:"remote" json:"remote"`
 	Firmware      AppSettingsFirmware `yaml:"firmware" json:"firmware"`
 	Notifications NotificationsConfig `yaml:"notifications,omitempty" json:"notifications"`
-	// Alerts is the thresholds every miner follows unless it has its own --
-	// a value left at zero is the built-in one (DefaultAlertThresholds).
-	Alerts AlertThresholds `yaml:"alerts,omitempty" json:"alerts"`
+	// Alerts is the thresholds every miner follows unless it has its own,
+	// and the margins every miner's alerts end under -- a value left at
+	// zero is the built-in one (DefaultAlertThresholds, DefaultAlertMargins).
+	Alerts AlertSettings `yaml:"alerts,omitempty" json:"alerts"`
 }
 
 // AppSettingsFirmware only ever carries Repos -- CacheTTL is process-launch

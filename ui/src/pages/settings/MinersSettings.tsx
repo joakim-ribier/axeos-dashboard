@@ -57,7 +57,10 @@ import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { useMinersHistory } from "@/hooks/useMinersHistory";
 import { useMinerStatus } from "@/hooks/useMinerStatus";
-import { commonAlertThresholds } from "@/schemas/appSettingsSchema";
+import {
+  commonAlertMargins,
+  commonAlertThresholds,
+} from "@/schemas/appSettingsSchema";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
 import { displayName } from "@/utils/minerDisplay";
@@ -130,10 +133,20 @@ const ConfiguredMinersTable = ({
   // Every action on the whole fleet is gated: none left, no Actions button.
   const hasActions = !readOnly || ui.action.minerPoolSwitch !== "hidden";
   const { data: appSettings } = useAppSettings();
+  // A save from a miner's row says so, like every other save.
+  const saveMiner = async (updated: MinerConfig[]) => {
+    const saved = await saveMiners(updated);
+    onSaved(t("settingsPage.configured.saveSuccess"));
+    return saved;
+  };
   // What a miner with no thresholds of its own follows.
   const alertDefaults = appSettings
     ? commonAlertThresholds(appSettings)
     : { tempHigh: 62, fanHigh: 75 };
+  // What every miner's alerts end under.
+  const alertMargins = appSettings
+    ? commonAlertMargins(appSettings)
+    : { tempMargin: 2, fanMargin: 5 };
   const enabledCount = miners.filter((m) => m.enabled).length;
   const [expandedMac, setExpandedMac] = useState<string | null>(null);
   const isEmpty = miners.length === 0;
@@ -454,27 +467,28 @@ const ConfiguredMinersTable = ({
                         <Box sx={{ px: 2 }}>
                           <AliasEditor
                             miner={m}
-                            saveMiners={saveMiners}
+                            saveMiners={saveMiner}
                             readOnly={readOnly}
                           />
                           <SectionDivider sx={{ my: 1.5 }} />
                           <PoolEditor
                             miner={m}
                             liveMiner={liveMinersByMac.get(key)}
-                            saveMiners={saveMiners}
+                            saveMiners={saveMiner}
                             readOnly={readOnly}
                           />
                           <SectionDivider sx={{ my: 1.5 }} />
                           <AlertThresholdsEditor
                             miner={m}
-                            defaults={alertDefaults}
-                            saveMiners={saveMiners}
+                            common={{ ...alertDefaults, ...alertMargins }}
+                            liveMiner={liveMinersByMac.get(key)}
+                            saveMiners={saveMiner}
                             readOnly={readOnly}
                           />
                           <SectionDivider sx={{ my: 1.5 }} />
                           <ScheduleEditor
                             miner={m}
-                            saveMiners={saveMiners}
+                            saveMiners={saveMiner}
                             readOnly={readOnly}
                           />
                         </Box>
@@ -695,6 +709,7 @@ export const MinersSettings = () => {
     setTogglingMac(key);
     try {
       await saveMiners([{ ...miner, enabled: !miner.enabled }]);
+      setSnackbarMessage(t("settingsPage.configured.saveSuccess"));
     } catch {
       // saveError from useMinersConfig already surfaces the message.
     } finally {

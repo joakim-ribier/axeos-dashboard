@@ -23,8 +23,8 @@ peak 99%"). Nothing in between: a temperature staying high for
 hours takes two rows.
 
 So that a reading hovering around a threshold doesn't raise an alert on
-every poll, it clears under a lower threshold than the one that raised it
-(see the table below). A miner is only reported offline after 2 missed
+every poll, it clears under the threshold minus a return margin (see the
+table below). A miner is only reported offline after 2 missed
 polls in a row.
 
 The same changes of state feed the bell's notifications, and a mail on
@@ -35,8 +35,9 @@ turns it on.
 Alerts **in progress** — started and not ended yet, however old — stay at
 the top of the page, above the history of the day picked, with since when
 they've lasted; for temperature and fan, the reading shown is the
-miner's latest one, with the one at the start (e.g. "Atchoum fan speed
-reached 99% · 10/26 2:18 PM · for 3j 2h 0m · 83% at the start"). Their count also
+miner's latest one, with the one at the start and the value it ends
+under (e.g. "Atchoum fan speed reached 88% · 11/02 9:55 AM · for 3h 35m ·
+86% at the start · ends below 85%"). Their count also
 shows as a badge on the menu's Alerts entry: red as soon as one is a
 problem, orange when only firmware updates are left, "9+" past 9. It only
 goes down when an alert ends.
@@ -52,7 +53,8 @@ below the bar: its cross removes it, **Clear all** removes them all.
 
 The temperature and fan thresholds are set for every miner in
 [Configuration › System]({{ '/en/configuration.html#system' | relative_url }}),
-and for one miner in its row of Configuration › Miners.
+and for one miner in its row of Configuration › Miners; the return
+margins, common to all, in Configuration › System.
 
 <table class="data-table">
   <thead>
@@ -66,12 +68,12 @@ and for one miner in its row of Configuration › Miners.
     <tr>
       <td>High temperature</td>
       <td>Chip above the threshold (62 °C by default)</td>
-      <td>Chip 2 °C under the threshold</td>
+      <td>Chip under the threshold minus the return margin (2 °C by default)</td>
     </tr>
     <tr>
       <td>High fan speed</td>
       <td>Speed above the threshold (75 % by default)</td>
-      <td>Speed 5 % under the threshold</td>
+      <td>Speed under the threshold minus the return margin (5 % by default)</td>
     </tr>
     <tr>
       <td>Firmware update</td>

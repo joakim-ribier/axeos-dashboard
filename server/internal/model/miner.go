@@ -93,6 +93,18 @@ type MinerInfo struct {
 	// shows the built-in ones.
 	TempThreshold float64 `json:"tempThreshold,omitempty"` // °C
 	FanThreshold  float64 `json:"fanThreshold,omitempty"`  // %
+
+	// The miner's alerts in progress, as the feeder keeps them (raised
+	// above a threshold, ended a margin under it) -- always a list locally,
+	// null on a board, which then judges a reading by its threshold alone.
+	ActiveAlerts []ActiveAlert `json:"activeAlerts"`
+}
+
+// ActiveAlert is an alert in progress on a miner, and the reading it ends
+// under (temp/fan).
+type ActiveAlert struct {
+	Type       string  `json:"type"`
+	ClearBelow float64 `json:"clearBelow,omitempty"`
 }
 
 // MinersResponse is the top‑level JSON structure returned by GET /api/miners.

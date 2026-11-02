@@ -140,7 +140,7 @@ Separate `cmd/` binaries sharing `internal/` packages:
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()` (pools from `miners.yml` -- the scheduler), `ActivateSlot()` (a switch from the UI: the device's own slots, read now, with `Activating` -- the miner, not `miners.yml`, is the truth there), `SwitchToPool()` (a pool picked by URL + port, whichever slot the device holds it in: `useFallbackStratum` on a bitaxe, the primary slot on a nerdaxe), `ReadPools()` (a device's pools, read now), `Restart()` — calls bitaxe client, always restarts to apply a config change; a restart left unanswered after the new pools were taken counts as done (the miner is already rebooting) |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
-| `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis: raised above the miner's thresholds (`config.AlertThresholdsFor`: its own in `miners.yml`, else `settings.yml`'s, else 62 °C / 75 %), cleared 2 °C / 5 % under; offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
+| `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis: raised above the miner's thresholds (`config.AlertThresholdsFor`: its own in `miners.yml`, else `settings.yml`'s, else 62 °C / 75 %), cleared under the threshold minus `settings.yml`'s margins (`config.AlertMargins`, common to every miner, else 2 °C / 5 % -- `ClearLevel`, also what the API sends as `clearBelow`); offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
 | `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*` -- the HTML template `audit-report.*.html` filled + a generated text version + the logo inline, the link to the Audit page only for a dashboard with a name: `mailtemplate.Linkable`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
 | `internal/alertmail/` | The alerts mail: `Build` (the HTML template filled + a generated text version + the logo inline), `State` on disk (`data/mail/alerts-mail.json`: last sent, last error, for the Notifications page); a failure is audited (`alert_mail`), a mail sent isn't, nothing is retried |
 | `internal/mailtemplate/` | The mails' wording, as editable files: built-in ones embedded, one per mail and language (`alert.*.html` and `audit-report.*.html`, Go `html/template`s whose `<title>` is the subject, see `RenderHTML` -- never an IP address in them, Gmail files that as spam; `test-mail.*.txt`, plain text), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
@@ -150,7 +150,7 @@ Separate `cmd/` binaries sharing `internal/` packages:
 | `internal/scheduler/` | robfig/cron v3 jobs for timed per-miner actions -- switch primary, switch fallback, or restart (seconds precision, configured per-miner in YAML) |
 | `internal/healtcheck/` | Periodic ping loop; `AxeOsModel` interface normalizes bitaxe vs nerdaxe response differences |
 | `internal/config/` | YAML config loader; resolves `~` paths, provides `GetPoolsSettings()` (a scheduled switch's PATCH, from the pools saved in `miners.yml`); a miner's two pools are `Slot`s (`Pool` = URL + port, plus the user): `BitaxeServerSettings.Primary()/Fallback()/Slot()/Holding()` (`ErrPoolNotHeld` when a pool is in neither slot), and `Activating(model, target)` -- the PATCH that makes target's pool the active one, for each model: `useFallbackStratum` on a bitaxe, the pool in the primary slot on a nerdaxe (every switch goes through it: scheduled, from the UI, the fleet's); `Bitaxe.Slots()/WithSlots()` read/replace its saved ones; a device's `/api/system/info` is read with `ParseMinerPools(model)`, which returns its `DevicePools` (pools + MAC, shared, also what discovery decodes) and its active slot -- decoded as `BitaxePools`/`NerdaxePools`, which extend `DevicePools`, each telling its `Active()` slot its own way -- never into `BitaxeServerSettings`, whose `useFallbackStratum` bool fails on a bitaxe's 0/1; `MinersStore`/`AppSettingsStore` (`live.go`) are the mtime-based hot-reload stores shared by dashboard-api and feeder for `miners.yml`/`settings.yml`; `defaults.go` holds the built-in pool-dashboard/firmware-repo registries, merged with `settings.yml`'s overrides on every load (`mergePoolDashboards`/`mergeFirmwareRepos`) |
-| `internal/model/` | `MinerInfo` (40 fields) / `MinersResponse` JSON types |
+| `internal/model/` | `MinerInfo` (43 fields) / `MinersResponse` JSON types |
 | `internal/handler/` | chi handlers; `toMinerInfo()` in `common.go` is single source of truth for unit conversions; `config.go` also serves `/api/config/miners` and `/api/config/settings` (read/write the two managed YAML files) |
 
 #### API Endpoints
@@ -166,7 +166,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/info` | `Info()` | Build/version info |
 | `GET` | `/api/miners` | `ListMiners()` | All miners + latest snapshot |
 | `GET` | `/api/miners/alerts` | `ListAlerts()` | Most recent alert changes (raised / cleared) across miners, and `seenAt` -- the bell |
-| `GET` | `/api/miners/alerts/active` | `ListActiveAlerts()` | Alerts in progress on enabled miners, however old; every alerts list is sorted date desc → type (`alerts.Types` order, most serious first: offline, macMismatch, tempHigh, fanHigh, firmwareUpdate) → MAC (each miner's `alerts.json`) -- the Alerts page's top section and the sidebar's badge |
+| `GET` | `/api/miners/alerts/active` | `ListActiveAlerts()` | Alerts in progress on enabled miners, however old; every alerts list is sorted date desc → type (`alerts.Types` order, most serious first: offline, macMismatch, tempHigh, fanHigh, firmwareUpdate) → MAC (each miner's `alerts.json`), each with the level it ends under (`clearBelow`) -- the Alerts page's top section and the sidebar's badge |
 | `POST` | `/api/miners/alerts/seen` | `MarkAlertsSeen()` | Marks the alerts read up to `seenAt` (`data/alerts/seen.json`, never moves back) -- for every browser |
 | `GET` | `/api/miners/alerts/history` | `ListAlertsHistory()` | One UTC day's alert changes, paginated, `ip`/`type` filters -- the Alerts page |
 | `GET` | `/api/miners/history` | `History()` | Last 24h of every miner's hashrate, in 96 buckets of 15 min (0 = offline, null = no reading) |
@@ -207,7 +207,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 #### MinerInfo Fields
 
-40 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals (including cumulative electricity cost), firmware version, response time, fallback flag, electricity rate.
+43 fields including: timestamp, IP, MAC, hostname, alias (display-name override), model, hashrate (TH/s), power (W), efficiency (J/TH), pool URLs + ports (main + fallback), temps (chip + VR), fan speed (RPM + %), uptime (seconds), shares (accepted/rejected), persistent totals (including cumulative electricity cost), firmware version, response time, fallback flag, electricity rate, alerts in progress (`activeAlerts`: type + `clearBelow`, from the feeder's `alerts.json` -- always a list locally, null on a board).
 
 ### React Frontend (`ui/`)
 
@@ -225,7 +225,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
-| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp / fan above the miner's thresholds, `tempThreshold`/`fanThreshold` from `/api/miners`, a board's off each pushed sample -- 62 / 75 when absent) > ok |
+| `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp / fan alert in progress -- `activeAlerts` from `/api/miners`, so the hysteresis matches the Alerts page; a board, which has none, falls back to above the thresholds pushed with each sample, 62 / 75 when absent) > ok |
 | `src/hooks/useMiners.ts` | TanStack Query: `GET /api/miners`, Zod validation, staleTime=Infinity |
 | `src/hooks/useMinersHistory.ts` | `GET /api/miners/history` -- the fleet chart and every sparkline |
 | `src/hooks/useMinerActions.ts` | Local state (isExecuting, error); restart + pool switch mutations |
@@ -333,8 +333,10 @@ notifications:                  # Configuration > Notifications; never pushed to
   alerts:
     mail: true                  # one mail per feeder poll that raises alerts (the feeder calls the mailer)
 alerts:                         # Configuration > System: the thresholds every miner follows unless it has its own
-  tempHigh: 62                  # °C -- unset (0) = the built-in 62; cleared 2 °C under
-  fanHigh: 75                   # %  -- unset (0) = the built-in 75; cleared 5 % under
+  tempHigh: 62                  # °C -- unset (0) = the built-in 62
+  fanHigh: 75                   # %  -- unset (0) = the built-in 75
+  tempMargin: 2                 # °C -- an alert ends under threshold - margin; unset (0) = 2, common to every miner
+  fanMargin: 5                  # %  -- same, unset (0) = 5
 ```
 
 ```yaml

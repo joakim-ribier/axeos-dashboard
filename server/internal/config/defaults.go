@@ -29,6 +29,10 @@ var DefaultFirmwareRepos = map[Model]string{
 // settings.yml nor the miner itself says otherwise (see AlertThresholdsFor).
 var DefaultAlertThresholds = AlertThresholds{TempHigh: 62, FanHigh: 75}
 
+// DefaultAlertMargins is how far under its threshold a reading must be back
+// for its alert to end, when settings.yml doesn't say (see AlertMargins).
+var DefaultAlertMargins = AlertMargins{Temp: 2, Fan: 5}
+
 // mergePoolDashboards returns a fresh map: DefaultPoolDashboards overlaid
 // by overrides (overrides win on hostname collision). Never mutates
 // either input, so it's safe to call on every hot-reload tick -- an

@@ -188,7 +188,7 @@ On a phone, the bar keeps what matters most:
    - **Delayed** — the miner answers, but no reading has come in for more
      than twice the polling interval.
    - **Alert** — chip temperature or fan above the miner's threshold
-     (62 °C and 75 % by default).
+     (62 °C and 75 % by default), until back to normal.
    - **Online** — all good.
 2. **Pools** — the share of the fleet's hashrate going to each pool.
 
@@ -229,9 +229,10 @@ filter.
 1. **Miner** — alias or hostname, then its IP and model.
 2. **Hashrate · 24 h** — the last 24 h of hashrate and its current value.
    Stretches where the miner was unreachable show in red on the baseline.
-3. **Chip temp** — chip temperature, on a green gauge that turns orange
+3. **Chip temp** — chip temperature, on a green gauge that turns yellow
    close to the miner's threshold (62 °C by default, marked by a tick),
-   then red once it's crossed.
+   then red during the alert — until it's back under the threshold minus
+   the return margin.
 4. **Fan** — fan speed, on the same gauge, with the miner's threshold (75 % by default).
 5. **Power** — draw (W) and efficiency (J/TH).
 6. **Pool** — the active pool, linking to its dashboard when a link is
@@ -287,5 +288,6 @@ phone.
 
 When the miner has a problem, a banner right under the header details
 it: unreachable, no reading since a given time, configuration error,
-temperature or fan at its threshold. A newer firmware version shows in a
+temperature or fan at its threshold — or back under it but not yet under
+the back-to-normal value, shown. A newer firmware version shows in a
 blue banner, with a link to its release.

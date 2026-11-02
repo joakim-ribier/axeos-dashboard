@@ -384,9 +384,30 @@ func TestConfig_AlertThresholdsFor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var cfg Config
-			AppSettingsFile{Alerts: tt.common}.ApplyTo(&cfg)
+			AppSettingsFile{Alerts: AlertSettings{AlertThresholds: tt.common}}.ApplyTo(&cfg)
 			if got := cfg.AlertThresholdsFor(Bitaxe{Alerts: tt.own}); got != tt.want {
 				t.Errorf("AlertThresholdsFor() = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConfig_AlertMargins(t *testing.T) {
+	tests := []struct {
+		name  string
+		saved AlertMargins
+		want  AlertMargins
+	}{
+		{"nothing set: the built-in ones", AlertMargins{}, DefaultAlertMargins},
+		{"settings.yml's", AlertMargins{Temp: 4, Fan: 10}, AlertMargins{Temp: 4, Fan: 10}},
+		{"one set, the other built-in", AlertMargins{Fan: 10}, AlertMargins{Temp: 2, Fan: 10}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cfg Config
+			AppSettingsFile{Alerts: AlertSettings{AlertMargins: tt.saved}}.ApplyTo(&cfg)
+			if got := cfg.AlertMargins(); got != tt.want {
+				t.Errorf("AlertMargins() = %+v, want %+v", got, tt.want)
 			}
 		})
 	}

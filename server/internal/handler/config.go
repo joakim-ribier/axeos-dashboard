@@ -177,6 +177,18 @@ func validateAlertThresholds(field string, t config.AlertThresholds) error {
 	return nil
 }
 
+// validateAlertMargins checks margins a person can mean: up to 20 °C under
+// a temperature threshold, up to 50 % under a fan one -- or zero, unset.
+func validateAlertMargins(m config.AlertMargins) error {
+	if m.Temp < 0 || m.Temp > 20 {
+		return fmt.Errorf("alerts.tempMargin %v: want 0 to 20 (°C), or unset", m.Temp)
+	}
+	if m.Fan < 0 || m.Fan > 50 {
+		return fmt.Errorf("alerts.fanMargin %v: want 0 to 50 (%%), or unset", m.Fan)
+	}
+	return nil
+}
+
 // validateSchedule checks every entry the same way the scheduler itself
 // would need to accept it -- a bad cron string or an unknown action must
 // be rejected here, at save time, rather than silently failing to register
@@ -418,15 +430,16 @@ func nonNil(s []string) []string {
 type appSettingsDefaults struct {
 	Pools    config.PoolsConfig         `json:"pools"`
 	Firmware config.AppSettingsFirmware `json:"firmware"`
-	// Alerts is the built-in thresholds, what an unset one falls back to.
-	Alerts config.AlertThresholds `json:"alerts"`
+	// Alerts is the built-in thresholds and margins, what an unset one
+	// falls back to.
+	Alerts config.AlertSettings `json:"alerts"`
 }
 
 func defaultAppSettings() appSettingsDefaults {
 	return appSettingsDefaults{
 		Pools:    config.PoolsConfig{Dashboards: config.DefaultPoolDashboards},
 		Firmware: config.AppSettingsFirmware{Repos: config.DefaultFirmwareRepos},
-		Alerts:   config.DefaultAlertThresholds,
+		Alerts:   config.AlertSettings{AlertThresholds: config.DefaultAlertThresholds, AlertMargins: config.DefaultAlertMargins},
 	}
 }
 
@@ -597,7 +610,10 @@ func validateAppSettings(s config.AppSettingsFile) error {
 	if err := validateNotifications(s.Notifications); err != nil {
 		return err
 	}
-	if err := validateAlertThresholds("alerts", s.Alerts); err != nil {
+	if err := validateAlertThresholds("alerts", s.Alerts.AlertThresholds); err != nil {
+		return err
+	}
+	if err := validateAlertMargins(s.Alerts.AlertMargins); err != nil {
 		return err
 	}
 	for model, repo := range s.Firmware.Repos {

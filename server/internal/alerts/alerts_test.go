@@ -7,13 +7,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 )
 
 var t0 = time.Date(2026, 10, 28, 10, 0, 0, 0, time.UTC)
 
 // reading is a poll of a miner with the built-in thresholds: 62 °C, 75 %.
 func reading(temp, fan float64) Poll {
-	return Poll{Temp: temp, FanSpeed: fan, TempThreshold: 62, FanThreshold: 75, Version: "v2", LatestVersion: "v2"}
+	return Poll{Temp: temp, FanSpeed: fan, TempThreshold: 62, FanThreshold: 75, Margins: config.DefaultAlertMargins, Version: "v2", LatestVersion: "v2"}
 }
 
 // observeAll runs polls 2 minutes apart and returns each one's changes, as
@@ -208,8 +210,32 @@ func TestState_savedAndLoaded(t *testing.T) {
 
 func TestObserve_theMinersOwnThresholds(t *testing.T) {
 	poll := func(fan float64) Poll {
-		return Poll{FanSpeed: fan, TempThreshold: 62, FanThreshold: 95, Version: "v2", LatestVersion: "v2"}
+		return Poll{FanSpeed: fan, TempThreshold: 62, FanThreshold: 95, Margins: config.DefaultAlertMargins, Version: "v2", LatestVersion: "v2"}
 	}
 	got := observeAll(&MinerState{}, []Poll{poll(90), poll(96), poll(91), poll(89)})
 	assertChanges(t, got, []string{"", "fanHigh raised", "", "fanHigh cleared"})
+}
+
+func TestObserve_settingsMargins(t *testing.T) {
+	poll := func(temp float64) Poll {
+		return Poll{Temp: temp, TempThreshold: 62, FanThreshold: 75, Margins: config.AlertMargins{Temp: 5, Fan: 5}, Version: "v2", LatestVersion: "v2"}
+	}
+	// 5 °C under 62: still on at 57, over at 56.9.
+	got := observeAll(&MinerState{}, []Poll{poll(63), poll(59), poll(57), poll(56.9)})
+	assertChanges(t, got, []string{"tempHigh raised", "", "", "tempHigh cleared"})
+}
+
+func TestClearLevel(t *testing.T) {
+	thresholds := config.AlertThresholds{TempHigh: 65, FanHigh: 90}
+	margins := config.AlertMargins{Temp: 3, Fan: 10}
+	for alertType, want := range map[string]float64{
+		TypeTempHigh:       62,
+		TypeFanHigh:        80,
+		TypeOffline:        0,
+		TypeFirmwareUpdate: 0,
+	} {
+		if got := ClearLevel(alertType, thresholds, margins); got != want {
+			t.Errorf("ClearLevel(%s) = %v, want %v", alertType, got, want)
+		}
+	}
 }

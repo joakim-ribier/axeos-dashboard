@@ -197,6 +197,10 @@ func TestListActiveAlerts(t *testing.T) {
 	if got[0].Type != alerts.TypeFanHigh || got[0].Value != 84 || got[1].Type != alerts.TypeFirmwareUpdate || got[1].Message != "v2.15.4" {
 		t.Errorf("got %+v, want fanHigh then firmwareUpdate (most recent first), as raised", got)
 	}
+	// The built-in 75 % threshold, 5 % margin; nothing for a firmware update.
+	if got[0].ClearBelow != 70 || got[1].ClearBelow != 0 {
+		t.Errorf("clearBelow = %v, %v, want 70, 0", got[0].ClearBelow, got[1].ClearBelow)
+	}
 	for _, e := range got {
 		if e.Mac != "aabbccddeeff" || e.IP != "10.0.0.1" || e.Hostname != "Office" || !e.Timestamp.Equal(threeDaysAgo) && !e.Timestamp.Equal(threeDaysAgo.Add(time.Hour)) {
 			t.Errorf("event %+v, want the office miner's, raised 3 days ago", e)

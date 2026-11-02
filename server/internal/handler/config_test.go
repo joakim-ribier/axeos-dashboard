@@ -546,12 +546,38 @@ func TestSaveAppSettings_alertThresholdsValidation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			w, saved, ok := postSaveAppSettings(t, config.AppSettingsFile{Alerts: tt.alerts})
+			w, saved, ok := postSaveAppSettings(t, config.AppSettingsFile{Alerts: config.AlertSettings{AlertThresholds: tt.alerts}})
 			if ok != tt.valid {
 				t.Fatalf("ok = %v, want %v (status %d: %s)", ok, tt.valid, w.Code, w.Body.String())
 			}
-			if tt.valid && saved.Alerts != tt.alerts {
+			if tt.valid && saved.Alerts.AlertThresholds != tt.alerts {
 				t.Errorf("saved alerts = %+v, want %+v", saved.Alerts, tt.alerts)
+			}
+		})
+	}
+}
+
+func TestSaveAppSettings_alertMarginsValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		margins config.AlertMargins
+		valid   bool
+	}{
+		{"unset", config.AlertMargins{}, true},
+		{"both set", config.AlertMargins{Temp: 3, Fan: 10}, true},
+		{"the bounds themselves", config.AlertMargins{Temp: 20, Fan: 50}, true},
+		{"negative temperature margin", config.AlertMargins{Temp: -1}, false},
+		{"temperature margin over 20 °C", config.AlertMargins{Temp: 21}, false},
+		{"fan margin over 50 %", config.AlertMargins{Fan: 51}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w, saved, ok := postSaveAppSettings(t, config.AppSettingsFile{Alerts: config.AlertSettings{AlertMargins: tt.margins}})
+			if ok != tt.valid {
+				t.Fatalf("ok = %v, want %v (status %d: %s)", ok, tt.valid, w.Code, w.Body.String())
+			}
+			if tt.valid && saved.Alerts.AlertMargins != tt.margins {
+				t.Errorf("saved margins = %+v, want %+v", saved.Alerts.AlertMargins, tt.margins)
 			}
 		})
 	}
@@ -560,21 +586,21 @@ func TestSaveAppSettings_alertThresholdsValidation(t *testing.T) {
 func TestGetAppSettings_builtInAlertThresholds(t *testing.T) {
 	cfg := config.Config{Storage: config.StorageConfig{DataDir: t.TempDir()}}
 	w := httptest.NewRecorder()
-	GetAppSettings(cfg, config.AppSettingsFile{Alerts: config.AlertThresholds{FanHigh: 80}}, w, httptest.NewRequest(http.MethodGet, "/api/config/settings", nil))
+	GetAppSettings(cfg, config.AppSettingsFile{Alerts: config.AlertSettings{AlertThresholds: config.AlertThresholds{FanHigh: 80}}}, w, httptest.NewRequest(http.MethodGet, "/api/config/settings", nil))
 
 	var got struct {
-		Alerts   config.AlertThresholds `json:"alerts"`
+		Alerts   config.AlertSettings `json:"alerts"`
 		Defaults struct {
-			Alerts config.AlertThresholds `json:"alerts"`
+			Alerts config.AlertSettings `json:"alerts"`
 		} `json:"defaults"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Defaults.Alerts != config.DefaultAlertThresholds {
-		t.Errorf("defaults.alerts = %+v, want %+v", got.Defaults.Alerts, config.DefaultAlertThresholds)
+	if want := (config.AlertSettings{AlertThresholds: config.DefaultAlertThresholds, AlertMargins: config.DefaultAlertMargins}); got.Defaults.Alerts != want {
+		t.Errorf("defaults.alerts = %+v, want %+v", got.Defaults.Alerts, want)
 	}
-	if want := (config.AlertThresholds{FanHigh: 80}); got.Alerts != want {
+	if want := (config.AlertSettings{AlertThresholds: config.AlertThresholds{FanHigh: 80}}); got.Alerts != want {
 		t.Errorf("alerts = %+v, want %+v (as saved, an unset one left at 0)", got.Alerts, want)
 	}
 }
