@@ -90,6 +90,17 @@ func (f *Router) audited(entryType string) func(http.Handler) http.Handler {
 	return f.auditLog.Middleware(entryType, f.minerIP, f.logger)
 }
 
+// switchPool switches the addressed miner(s) to target: each one's switch,
+// with the pool it left, stands in for the route's entry -- left for when
+// no miner was addressed.
+func (f *Router) switchPool(target config.PoolTarget) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if entries := handler.SwitchPool(f.logger, f.snapshotConfig(), target, w, r); len(entries) > 0 {
+			f.auditLog.RecordResults(r, entries, f.logger)
+		}
+	}
+}
+
 // minerIP is the IP of the configured miner a request addresses by IP or
 // hostname -- or what it was given, if that's no configured miner.
 func (f *Router) minerIP(hostnameOrIP string) string {
@@ -178,6 +189,10 @@ func (f *Router) Handler() http.Handler {
 	router.Get("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		handler.ListMinersConfig(f.snapshotConfig(), w, r)
 	})
+	// Not audited: it writes nothing -- saving what it returns is the sync.
+	router.Get("/api/config/miners/sync", func(w http.ResponseWriter, r *http.Request) {
+		handler.MinersSync(f.logger, f.snapshotConfig(), w, r)
+	})
 	router.With(f.audited(audit.TypeSaveMiners)).Post("/api/config/miners", func(w http.ResponseWriter, r *http.Request) {
 		f.saveMu.Lock()
 		defer f.saveMu.Unlock()
@@ -230,11 +245,14 @@ func (f *Router) Handler() http.Handler {
 	router.With(f.audited(audit.TypeDownloadBackups)).Get("/api/backups/download", func(w http.ResponseWriter, r *http.Request) {
 		handler.DownloadBackups(f.logger, f.config, w, r)
 	})
-	router.With(f.audited(audit.TypeSwitchPrimary)).Put("/api/miners/pool/primary/enable", func(w http.ResponseWriter, r *http.Request) {
-		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Primary, w, r)
-	})
-	router.With(f.audited(audit.TypeSwitchFallback)).Put("/api/miners/pool/fallback/enable", func(w http.ResponseWriter, r *http.Request) {
-		handler.SwitchPool(f.logger, f.snapshotConfig(), config.Fallback, w, r)
+	router.With(f.audited(audit.TypeSwitchPrimary)).Put("/api/miners/pool/primary/enable", f.switchPool(config.Primary))
+	router.With(f.audited(audit.TypeSwitchFallback)).Put("/api/miners/pool/fallback/enable", f.switchPool(config.Fallback))
+	router.With(f.audited(audit.TypeSwitchPool)).Put("/api/miners/pool/switch", func(w http.ResponseWriter, r *http.Request) {
+		// One entry per miner it sent something to, with the pool it left;
+		// when none needed it, the route's own entry tells the pool asked for.
+		if entries := handler.SwitchToPool(f.logger, f.snapshotConfig(), w, r); len(entries) > 0 {
+			f.auditLog.RecordResults(r, entries, f.logger)
+		}
 	})
 	router.Route("/api/miners/{hostnameOrIp}", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {

@@ -45,9 +45,9 @@ const (
 	ChangeRemoved ChangeKind = "removed"
 )
 
-// poolChanges is the stratum slots that changed, under the names the UI
+// PoolChanges is the stratum slots that changed, under the names the UI
 // labels them by.
-func poolChanges(was, now config.Bitaxe) []Change {
+func PoolChanges(was, now config.BitaxeServerSettings) []Change {
 	return compareFields([][3]string{
 		{"url", was.Url, now.Url},
 		{"port", portString(was.Port), portString(now.Port)},
@@ -90,7 +90,7 @@ func MinerChanges(before, after []config.Bitaxe) []Entry {
 		was, existed := previous[now.StorageKey()]
 		if !existed {
 			// Where its hashrate goes and what it runs, from the start.
-			changes := append(poolChanges(config.Bitaxe{}, now), scheduleChanges(nil, now.Schedule)...)
+			changes := append(PoolChanges(config.BitaxeServerSettings{}, now.Slots()), scheduleChanges(nil, now.Schedule)...)
 			entries = append(entries, Entry{Type: TypeMinerAdded, Target: now.Ip, Changes: changes})
 			continue
 		}
@@ -105,7 +105,7 @@ func MinerChanges(before, after []config.Bitaxe) []Entry {
 			}
 			entries = append(entries, Entry{Type: typ, Target: now.Ip})
 		}
-		if changes := poolChanges(was, now); changes != nil {
+		if changes := PoolChanges(was.Slots(), now.Slots()); changes != nil {
 			entries = append(entries, Entry{Type: TypeMinerPool, Target: now.Ip, Changes: changes})
 		}
 		if changes := scheduleChanges(was.Schedule, now.Schedule); changes != nil {
@@ -297,18 +297,43 @@ func repos(m map[config.Model]string) []string {
 	return out
 }
 
+// PoolSwitched is one miner's pool switch from the UI, as entryType: the
+// pool it left and the one it joined, with the route's success status -- or
+// why it failed.
+func PoolSwitched(entryType, ip string, was, now config.Pool, status int, err error) Entry {
+	if err != nil {
+		return Entry{Type: entryType, Target: ip, Status: http.StatusBadGateway, Error: err.Error()}
+	}
+	return Entry{
+		Type: entryType, Target: ip, Status: status,
+		Changes: []Change{{Field: "pool", Kind: ChangeChanged, Before: was.String(), After: now.String()}},
+	}
+}
+
 // RecordChanges records entries (from MinerChanges/SettingsChanges) as made
-// through r, once its save succeeded: client IP, User-Agent and request ID
-// filled in, as for any API entry. They then stand in for the route's generic save_miners /
-// save_settings entry, which would only repeat the same save -- that one is
-// left for a failed save. A save that changed nothing records nothing.
+// through r, once its save succeeded -- hence each one's 200. They then
+// stand in for the route's generic save_miners / save_settings entry, which
+// would only repeat the same save -- that one is left for a failed save. A
+// save that changed nothing records nothing.
 func (l *Log) RecordChanges(r *http.Request, entries []Entry, logger *slog.Logger) {
+	saved := make([]Entry, len(entries))
+	for i, e := range entries {
+		e.Status = http.StatusOK
+		saved[i] = e
+	}
+	l.RecordResults(r, saved, logger)
+}
+
+// RecordResults records entries as made through r, each with its own
+// outcome (status, error) -- one per miner an action went to, a fleet
+// switch's failures included: client IP, User-Agent and request ID filled
+// in, as for any API entry. They then stand in for the route's generic
+// entry, which is left for when nothing was recorded.
+func (l *Log) RecordResults(r *http.Request, entries []Entry, logger *slog.Logger) {
 	recorded := len(entries) == 0
 	for _, e := range entries {
 		entry := requestEntry(e.Type, r)
-		entry.Target, entry.Changes = e.Target, e.Changes
-		// Only ever called once the save succeeded.
-		entry.Status = http.StatusOK
+		entry.Target, entry.Changes, entry.Status, entry.Error = e.Target, e.Changes, e.Status, e.Error
 		if err := l.Record(entry); err != nil {
 			logger.Error("failed to record audit entry", "type", e.Type, "error", err)
 			continue

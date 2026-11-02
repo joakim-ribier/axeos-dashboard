@@ -137,6 +137,14 @@ every commit.
   after 2 missed polls), the ones in progress stay on top of the Alerts
   page with their current reading and a sidebar badge, and the bell's
   "read" is shared by every device.
+- ✅ **Fleet actions on the configured miners**: an Actions panel in
+  Configuration › Miners -- switch every miner to a pool picked by URL and
+  port, whichever slot each holds it in (audited per miner), and a check
+  of the pools saved in the dashboard against what each miner reports,
+  slot by slot, with a sync; a switch from a miner's panel goes by the
+  pools the miner itself holds (a nerdaxe's swapped, a bitaxe's flag
+  set), audited with the pool it left, and a miner's IP opens its AxeOS
+  interface.
 
 ## To do
 

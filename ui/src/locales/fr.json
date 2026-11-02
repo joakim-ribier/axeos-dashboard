@@ -264,6 +264,7 @@
       "restart": "Redémarrage",
       "switch_primary": "Bascule vers le pool principal",
       "switch_fallback": "Bascule vers le pool de secours",
+      "switch_pool": "Bascule vers un pool",
       "save_miners": "Enregistrement des mineurs",
       "save_settings": "Enregistrement des paramètres",
       "export_audit": "Export de l'audit",
@@ -309,6 +310,7 @@
       "fallbackUrl": "URL de secours",
       "fallbackPort": "Port de secours",
       "fallbackUser": "Utilisateur de secours",
+      "pool": "Pool actif",
       "ip": "IP",
       "pushURL": "URL de push",
       "apiKey": "Clé API",
@@ -480,6 +482,39 @@
       }
     },
     "readOnlyBanner": "Vue en lecture seule — les réglages sont gérés depuis le dashboard source.",
+    "toolbar": {
+      "title": "Actions",
+      "switchRow": "Basculer sur un pool",
+      "switchHint": "Chaque mineur qui a ce pool bascule dessus, quel que soit son slot.",
+      "switchButton": "Basculer",
+      "syncRow": "Vérifier les pools",
+      "syncHint": "Compare les pools enregistrés dans le dashboard avec ceux réglés sur chaque mineur.",
+      "disableAllHint": "Plus aucun mineur n'est interrogé ni planifié.",
+      "pool": "Pool",
+      "poolOption": "{{pool}} — actif sur {{active}} / {{held}}",
+      "switch": "Basculer tous les mineurs",
+      "switching": "Bascule en cours…",
+      "switchTitle": "Basculer tous les mineurs sur {{pool}} ?",
+      "switchDescription_one": "{{count}} mineur qui a ce pool sans être dessus va basculer puis redémarrer.",
+      "switchDescription_other": "{{count}} mineurs qui ont ce pool sans être dessus vont basculer puis redémarrer.",
+      "switchResult": "{{switched}} basculé(s) · {{already}} déjà dessus · {{missing}} sans ce pool · {{failed}} en échec",
+      "sync": "Vérifier",
+      "syncTitle": "Vérification des pools",
+      "syncDescription_one": "{{count}} mineur a des pools différents de ceux enregistrés dans le dashboard.",
+      "syncDescription_other": "{{count}} mineurs ont des pools différents de ceux enregistrés dans le dashboard.",
+      "syncStates": {
+        "ok": "{{count}} à jour",
+        "drift": "{{count}} à corriger",
+        "unread": "{{count}} non lu"
+      },
+      "syncState": {
+        "ok": "À jour",
+        "drift": "À corriger",
+        "unread": "Non lu"
+      },
+      "syncConfirm": "Synchroniser",
+      "syncSuccess": "{{count}} mineur(s) synchronisé(s)."
+    },
     "configured": {
       "title": "Mineurs configurés",
       "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools, ses seuils d'alerte et ses tâches planifiées.",
@@ -523,7 +558,7 @@
         "reset": "Réinitialiser",
         "swap": "Inverser primaire et secours",
         "swapTooltip": "Inverser primaire et secours",
-        "driftWarning": "Ne correspond pas à ce que le mineur reporte actuellement :",
+        "driftWarning": "Au dernier relevé du feeder ({{value}}) :",
         "driftItem": "{{field}} : enregistré « {{configured}} » ≠ mineur « {{live}} »",
         "driftBadgeTooltip": "Config pool différente du mineur : {{fields}}"
       },

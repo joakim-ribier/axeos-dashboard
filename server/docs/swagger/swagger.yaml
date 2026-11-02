@@ -242,6 +242,23 @@ definitions:
       cron:
         type: string
     type: object
+  config.DevicePools:
+    properties:
+      fallbackStratumPort:
+        type: integer
+      fallbackStratumURL:
+        type: string
+      fallbackStratumUser:
+        type: string
+      macAddr:
+        type: string
+      stratumPort:
+        type: integer
+      stratumURL:
+        type: string
+      stratumUser:
+        type: string
+    type: object
   config.ElectricityConfig:
     properties:
       devices:
@@ -496,6 +513,37 @@ definitions:
       ip:
         type: string
     type: object
+  handler.MinerSync:
+    properties:
+      changes:
+        items:
+          $ref: '#/definitions/audit.Change'
+        type: array
+      device:
+        $ref: '#/definitions/config.DevicePools'
+      error:
+        type: string
+      ip:
+        type: string
+      mac:
+        type: string
+    type: object
+  handler.PoolSwitchResponse:
+    properties:
+      miners:
+        items:
+          $ref: '#/definitions/handler.PoolSwitchResult'
+        type: array
+    type: object
+  handler.PoolSwitchResult:
+    properties:
+      error:
+        type: string
+      ip:
+        type: string
+      status:
+        type: string
+    type: object
   handler.ServiceStatus:
     properties:
       interval:
@@ -673,6 +721,20 @@ definitions:
       to:
         items:
           type: string
+        type: array
+    type: object
+  handler.minersSyncResponse:
+    properties:
+      bitaxes:
+        description: |-
+          Bitaxes is each miners.yml entry that differs, with its device's
+          pools -- what a POST /api/config/miners would save to sync it.
+        items:
+          $ref: '#/definitions/config.Bitaxe'
+        type: array
+      miners:
+        items:
+          $ref: '#/definitions/handler.MinerSync'
         type: array
     type: object
   handler.notificationsResponse:
@@ -924,7 +986,7 @@ definitions:
           miner, or until the backfill tool has run.
         type: integer
       updateAvailable:
-        description: True when LatestVersion != Version
+        description: True when LatestVersion is newer than Version
         type: boolean
       uptimeSeconds:
         description: Miner uptime in seconds
@@ -1379,6 +1441,21 @@ paths:
       summary: Add or update configured miners
       tags:
       - Configuration
+  /api/config/miners/sync:
+    get:
+      description: Reads every enabled miner's pools from the device itself and returns,
+        for each, the pools read and how miners.yml differs -- with the entries to
+        save to sync it. Writes nothing.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.minersSyncResponse'
+      summary: Compare miners.yml with the miners
+      tags:
+      - Configuration
   /api/config/settings:
     get:
       description: Returns the settings.yml overrides, the built-in defaults for pool
@@ -1766,6 +1843,34 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Switch stratum pool
+      tags:
+      - Miner actions
+  /api/miners/pool/switch:
+    put:
+      description: Switches every enabled miner holding this pool (in either slot)
+        to it, then restarts it. A miner already on it, or without it, is left as
+        it is.
+      parameters:
+      - description: The pool's URL
+        in: query
+        name: url
+        required: true
+        type: string
+      - description: The pool's port
+        in: query
+        name: port
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: what was done on each miner
+          schema:
+            $ref: '#/definitions/handler.PoolSwitchResponse'
+        "400":
+          description: url or port missing
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Switch every miner to a pool
       tags:
       - Miner actions
   /api/remote/board:

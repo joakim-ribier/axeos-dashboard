@@ -2,6 +2,8 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -17,7 +19,7 @@ const (
 
 // Model identifies which device family a miner is -- the two values this
 // project actually knows how to talk to. Response parsing, field naming,
-// and (see GetPoolsSettings) how a pool switch is even performed all
+// and (see BitaxeServerSettings.Activating) how a pool switch is even performed all
 // differ by model.
 type Model string
 
@@ -235,14 +237,61 @@ type BitaxeServerSettings struct {
 	// strictly honoring its own persisted value (bitaxeorg/ESP-Miner#1823,
 	// shipped in v2.15.0) -- the device just kept using whichever pool
 	// useFallbackStratum already pointed at. NerdQAxePlus (nerdaxe) has no
-	// equivalent field -- see GetPoolsSettings.
+	// equivalent field -- see BitaxeServerSettings.Activating.
 	UseFallbackStratum bool `json:"useFallbackStratum"`
 }
 
-// GetPoolsSettings builds the PATCH /api/system payload that makes target
-// the active pool -- the two supported models need genuinely different
-// payloads, because they select the active pool in genuinely different
-// ways:
+// Pool is where a miner mines: a stratum URL and its port, whoever mines
+// on it -- what a switch of the whole fleet picks.
+type Pool struct {
+	URL  string `json:"url"`
+	Port int    `json:"port"`
+}
+
+func (p Pool) String() string {
+	return fmt.Sprintf("%s:%d", p.URL, p.Port)
+}
+
+// Slot is one of a miner's two pools, and the user it mines on it as.
+type Slot struct {
+	Pool
+	User string
+}
+
+func (s BitaxeServerSettings) Primary() Slot {
+	return Slot{Pool: Pool{URL: s.Url, Port: s.Port}, User: s.User}
+}
+
+func (s BitaxeServerSettings) Fallback() Slot {
+	return Slot{Pool: Pool{URL: s.FallbackURL, Port: s.FallbackPort}, User: s.FallbackUser}
+}
+
+// Slot is target's slot.
+func (s BitaxeServerSettings) Slot(target PoolTarget) Slot {
+	if target == Fallback {
+		return s.Fallback()
+	}
+	return s.Primary()
+}
+
+// ErrPoolNotHeld is a pool asked for that sits in neither of a miner's
+// slots.
+var ErrPoolNotHeld = errors.New("the miner doesn't have this pool")
+
+// Holding is the slot pool sits in -- ErrPoolNotHeld when it's in neither.
+func (s BitaxeServerSettings) Holding(pool Pool) (PoolTarget, error) {
+	switch pool {
+	case s.Primary().Pool:
+		return Primary, nil
+	case s.Fallback().Pool:
+		return Fallback, nil
+	}
+	return "", ErrPoolNotHeld
+}
+
+// Activating is the PATCH /api/system payload that makes target's pool of s
+// the active one on a model's device -- the two supported models select it
+// in genuinely different ways:
 //
 //   - bitaxe (ESP-Miner firmware): primary/fallback URLs always stay in
 //     their own fixed slots; UseFallbackStratum is the only thing that
@@ -252,45 +301,112 @@ type BitaxeServerSettings struct {
 //     always tries whichever pool is in the *primary* slot first, and
 //     only falls back to the secondary slot if the primary is actually
 //     unreachable. The only way to make a specific pool active is to put
-//     its settings in the primary slot, so target's pool is swapped into
-//     Url/Port/User here and the other one into the Fallback* fields.
+//     it in the primary slot: its fallback is selected by swapping them.
+func (s BitaxeServerSettings) Activating(model Model, target PoolTarget) BitaxeServerSettings {
+	if model != ModelBitaxe && target == Fallback {
+		return slots(s.Fallback(), s.Primary(), false)
+	}
+	return slots(s.Primary(), s.Fallback(), model == ModelBitaxe && target == Fallback)
+}
+
+func slots(primary, fallback Slot, useFallback bool) BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: primary.URL, Port: primary.Port, User: primary.User,
+		FallbackURL: fallback.URL, FallbackPort: fallback.Port, FallbackUser: fallback.User,
+		UseFallbackStratum: useFallback,
+	}
+}
+
+// DevicePools is what a device's GET /api/system/info tells of its two
+// pools and its MAC, whatever its model -- the part every reader of a
+// device's pools decodes. Never decode that response into
+// BitaxeServerSettings: a bitaxe reports useFallbackStratum as a number
+// (0/1), where a PATCH takes it as a bool, and the decode fails.
+type DevicePools struct {
+	Url          string `json:"stratumURL"`
+	Port         int    `json:"stratumPort"`
+	User         string `json:"stratumUser"`
+	FallbackURL  string `json:"fallbackStratumURL"`
+	FallbackPort int    `json:"fallbackStratumPort"`
+	FallbackUser string `json:"fallbackStratumUser"`
+	MacAddr      string `json:"macAddr"`
+}
+
+// Slots is the device's two slots, as a PATCH /api/system sends them.
+func (d DevicePools) Slots() BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: d.Url, Port: d.Port, User: d.User,
+		FallbackURL: d.FallbackURL, FallbackPort: d.FallbackPort, FallbackUser: d.FallbackUser,
+	}
+}
+
+// BitaxePools and NerdaxePools are a device's pools as each model sends
+// them: the part they share, and the slot it mines on, each model telling
+// it its own way.
+type BitaxePools struct {
+	DevicePools
+	IsUsingFallbackStratum int `json:"isUsingFallbackStratum"`
+}
+
+func (b BitaxePools) Active() PoolTarget {
+	if b.IsUsingFallbackStratum == 1 {
+		return Fallback
+	}
+	return Primary
+}
+
+type NerdaxePools struct {
+	DevicePools
+	Stratum struct {
+		UsingFallback bool `json:"usingFallback"`
+	} `json:"stratum"`
+}
+
+func (n NerdaxePools) Active() PoolTarget {
+	if n.Stratum.UsingFallback {
+		return Fallback
+	}
+	return Primary
+}
+
+// ParseMinerPools decodes a device's GET /api/system/info as its model's:
+// its pools and MAC, and the slot it mines on.
+func ParseMinerPools(model Model, info []byte) (DevicePools, PoolTarget, error) {
+	if model == ModelBitaxe {
+		var pools BitaxePools
+		err := json.Unmarshal(info, &pools)
+		return pools.DevicePools, pools.Active(), err
+	}
+	var pools NerdaxePools
+	err := json.Unmarshal(info, &pools)
+	return pools.DevicePools, pools.Active(), err
+}
+
+// Slots is the miner's two pools as saved in miners.yml.
+func (b Bitaxe) Slots() BitaxeServerSettings {
+	return BitaxeServerSettings{
+		Url: b.Url, Port: b.Port, User: b.User,
+		FallbackURL: b.FallbackURL, FallbackPort: b.FallbackPort, FallbackUser: b.FallbackUser,
+	}
+}
+
+// WithSlots is b with s for its two pools, the rest of it untouched.
+func (b Bitaxe) WithSlots(s BitaxeServerSettings) Bitaxe {
+	b.Url, b.Port, b.User = s.Url, s.Port, s.User
+	b.FallbackURL, b.FallbackPort, b.FallbackUser = s.FallbackURL, s.FallbackPort, s.FallbackUser
+	return b
+}
+
+// GetPoolsSettings builds the PATCH /api/system payload that makes target,
+// of the miner's pools in miners.yml, the active one (see Activating).
 func (b Bitaxe) GetPoolsSettings(target PoolTarget) (*BitaxeServerSettings, error) {
 	switch target {
 	case Primary, Fallback:
 	default:
 		return nil, fmt.Errorf("pool type '%v' not managed", target)
 	}
-
-	if b.Model != ModelBitaxe {
-		if target == Fallback {
-			return &BitaxeServerSettings{
-				Url:          b.FallbackURL,
-				Port:         b.FallbackPort,
-				User:         b.FallbackUser,
-				FallbackURL:  b.Url,
-				FallbackPort: b.Port,
-				FallbackUser: b.User,
-			}, nil
-		}
-		return &BitaxeServerSettings{
-			Url:          b.Url,
-			Port:         b.Port,
-			User:         b.User,
-			FallbackURL:  b.FallbackURL,
-			FallbackPort: b.FallbackPort,
-			FallbackUser: b.FallbackUser,
-		}, nil
-	}
-
-	return &BitaxeServerSettings{
-		Url:                b.Url,
-		Port:               b.Port,
-		User:               b.User,
-		FallbackURL:        b.FallbackURL,
-		FallbackPort:       b.FallbackPort,
-		FallbackUser:       b.FallbackUser,
-		UseFallbackStratum: target == Fallback,
-	}, nil
+	settings := b.Slots().Activating(b.Model, target)
+	return &settings, nil
 }
 
 // macSeparators strips the colon/hyphen separators a MAC address is

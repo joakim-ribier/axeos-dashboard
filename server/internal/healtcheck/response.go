@@ -33,8 +33,10 @@ type MinerCommon struct {
 type Nerdaxe struct {
 	MinerCommon
 
-	Ping                   float64 `json:"lastpingrtt"`
-	IsUsingFallbackStratum bool    `json:"stratum.usingFallback"`
+	Ping    float64 `json:"lastpingrtt"`
+	Stratum struct {
+		UsingFallback bool `json:"usingFallback"`
+	} `json:"stratum"`
 }
 
 type Bitaxe struct {
@@ -58,7 +60,7 @@ func (m MinerCommon) toAxeOsBase() AxeOs {
 func (n Nerdaxe) ToAxeOs() AxeOs {
 	ax := n.toAxeOsBase()
 	ax.Ping = n.Ping
-	ax.UsingFallback = n.IsUsingFallbackStratum
+	ax.UsingFallback = n.Stratum.UsingFallback
 	return ax
 }
 
