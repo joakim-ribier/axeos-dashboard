@@ -4,7 +4,7 @@
 // real <App/>, so the whole chain (GET /api/info -> useUiFeatures ->
 // readOnly -> Writable) is what's under test, not a hand-passed prop.
 import { MemoryRouter } from "react-router-dom";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -121,25 +121,19 @@ interface Gated {
 const minersReady = () => screen.findByText("bitaxe-1");
 const electricityReady = () => screen.findByText("Fan");
 const systemReady = () => screen.findByText("mypool.example.com");
-const expandMinerRow = async () => {
-  await userEvent.setup().click(screen.getByText("bitaxe-1"));
+// A miner's configuration panel, open on one of its sections.
+const openMinerSection = (name: RegExp) => async () => {
+  const user = userEvent.setup();
+  await user.click(screen.getByText("bitaxe-1"));
+  await user.click(await screen.findByRole("button", { name }));
 };
-// The fleet's actions sit in the panel the Actions button unfolds -- a
-// button gone itself when none of them is left.
-const openActions = async () => {
-  const actions = screen.queryByRole("button", { name: "Actions" });
-  if (actions) await userEvent.setup().click(actions);
-};
+const aliasSection = openMinerSection(/^Display name/);
+const poolSection = openMinerSection(/^Pool/);
+const alertsSection = openMinerSection(/^Alert thresholds/);
+const scheduleSection = openMinerSection(/^Scheduler/);
 
 const GATED: Gated[] = [
   // Miners -- the table
-  {
-    section: "miners",
-    element: "the Disable all button",
-    ready: minersReady,
-    open: openActions,
-    find: () => button("Disable all"),
-  },
   {
     section: "miners",
     element: "a row's Disable button",
@@ -151,22 +145,29 @@ const GATED: Gated[] = [
     section: "miners",
     element: "the alias field",
     ready: minersReady,
-    open: expandMinerRow,
+    open: aliasSection,
     find: () => field("Alias"),
     readOnly: "disabled",
   },
   {
     section: "miners",
-    element: "the alias and pool Save buttons",
+    element: "the alias Save button",
     ready: minersReady,
-    open: expandMinerRow,
-    find: () => screen.queryAllByRole("button", { name: "Save" })[0] ?? null,
+    open: aliasSection,
+    find: () => button("Save"),
+  },
+  {
+    section: "miners",
+    element: "the pool Save button",
+    ready: minersReady,
+    open: poolSection,
+    find: () => button("Save"),
   },
   {
     section: "miners",
     element: "the pool swap button",
     ready: minersReady,
-    open: expandMinerRow,
+    open: poolSection,
     find: () => button("Swap primary and fallback"),
   },
   // (Reset only shows once a field changed -- covered by PoolEditor's own
@@ -175,7 +176,7 @@ const GATED: Gated[] = [
     section: "miners",
     element: "the pool fields",
     ready: minersReady,
-    open: expandMinerRow,
+    open: poolSection,
     find: () => screen.queryAllByLabelText("URL")[0] ?? null,
     readOnly: "disabled",
   },
@@ -183,7 +184,7 @@ const GATED: Gated[] = [
     section: "miners",
     element: "the alert threshold fields",
     ready: minersReady,
-    open: expandMinerRow,
+    open: alertsSection,
     find: () => field("Temperature (°C)"),
     readOnly: "disabled",
   },
@@ -191,14 +192,14 @@ const GATED: Gated[] = [
     section: "miners",
     element: "the alert thresholds Save button",
     ready: minersReady,
-    open: expandMinerRow,
+    open: alertsSection,
     find: () => saveNextTo("Temperature (°C)"),
   },
   {
     section: "miners",
     element: "the scheduler's cron field",
     ready: minersReady,
-    open: expandMinerRow,
+    open: scheduleSection,
     find: () => field("Cron expression"),
   },
   // Miners -- adding miners
@@ -423,7 +424,7 @@ describe("saving alert thresholds", () => {
     mockBackend("enabled");
     renderAt("/settings/miners");
     await minersReady();
-    await expandMinerRow();
+    await alertsSection();
 
     await user.type(screen.getByLabelText("Temperature (°C)"), "65");
     await user.click(saveNextTo("Temperature (°C)")!);
@@ -496,5 +497,160 @@ describe("a configured miner's View button", () => {
     await minersReady();
 
     expect(button("View")).toBeDisabled();
+  });
+});
+
+// The section a miner's panel shows -- the menu entries sit in its nav.
+const menuEntry = (name: RegExp) => screen.findByRole("button", { name });
+
+describe("a configured miner's panel", () => {
+  beforeEach(() => {
+    liveMiners = [];
+  });
+
+  it("opens from its row and from Configure, one section at a time", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    await user.click(screen.getByText("bitaxe-1"));
+    expect(await screen.findByLabelText("Alias")).toBeInTheDocument();
+    expect(field("URL")).not.toBeInTheDocument();
+
+    await user.click(await menuEntry(/^Pool/));
+    expect(screen.queryAllByLabelText("URL")).toHaveLength(2);
+    expect(field("Alias")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    // Once it has slid out, as a user would reopen it.
+    await waitFor(() =>
+      expect(screen.queryAllByLabelText("URL")).toHaveLength(0),
+    );
+    await user.click(button("Configure") as HTMLElement);
+    expect(await screen.findByLabelText("Alias")).toBeInTheDocument();
+  });
+
+  it("flags a pool that differs from the miner's on its Pool entry", async () => {
+    const user = userEvent.setup();
+    liveMiners = [
+      makeMiner({
+        ip: "192.168.1.10",
+        macAddr: "AA:BB:CC:DD:EE:01",
+        hostname: "bitaxe-1",
+        stratumURL: "stratum+tcp://elsewhere.example.com",
+      }),
+    ];
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    await user.click(screen.getByText("bitaxe-1"));
+
+    const pool = await menuEntry(/^Pool/);
+    expect(within(pool).getByRole("img")).toBeInTheDocument();
+    expect(
+      within(await menuEntry(/^Display name/)).queryByRole("img"),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe("disabling a configured miner", () => {
+  beforeEach(() => {
+    mockedAxios.post.mockReset();
+    mockedAxios.post.mockResolvedValue({
+      data: { bitaxes: [{ ...miner, enabled: false }] },
+    });
+  });
+
+  it("asks first, then saves it disabled", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    await user.click(button("Disable") as HTMLElement);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Disable bitaxe-1?")).toBeInTheDocument();
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Disable" }));
+
+    expect(mockedAxios.post).toHaveBeenCalledWith("/api/config/miners", {
+      bitaxes: [{ ...miner, enabled: false }],
+    });
+  });
+
+  it("saves nothing when cancelled", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    await user.click(button("Disable") as HTMLElement);
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+  });
+});
+
+describe("the configured miners on a phone", () => {
+  beforeEach(() => {
+    vi.spyOn(window, "matchMedia").mockImplementation(
+      (query) =>
+        ({
+          matches: query.includes("max-width"),
+          media: query,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList,
+    );
+  });
+
+  it("are rows rather than a table, one opening its panel", async () => {
+    const user = userEvent.setup();
+    mockBackend("enabled");
+    renderAt("/settings/miners");
+    await minersReady();
+
+    expect(
+      screen.queryByRole("columnheader", { name: "IP" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("192.168.1.10")).toBeInTheDocument();
+
+    await user.click(screen.getByText("bitaxe-1"));
+    expect(await screen.findByLabelText("Alias")).toBeInTheDocument();
+
+    vi.restoreAllMocks();
+  });
+});
+
+describe("the pool dashboards", () => {
+  it("show the ones added by hand, the built-in ones folded", async () => {
+    const user = userEvent.setup();
+    const builtIn = settings.defaults.pools.dashboards;
+    settings.defaults.pools.dashboards = {
+      "solo.example.io": "https://solo.example.io/{user}",
+    };
+    try {
+      mockBackend("enabled");
+      renderAt("/settings/system");
+      await systemReady();
+
+      expect(screen.queryByText("solo.example.io")).not.toBeInTheDocument();
+
+      await user.click(button("Show the built-in pool") as HTMLElement);
+
+      expect(await screen.findByText("solo.example.io")).toBeInTheDocument();
+      expect(screen.getByText("mypool.example.com")).toBeInTheDocument();
+    } finally {
+      settings.defaults.pools.dashboards = builtIn;
+    }
   });
 });

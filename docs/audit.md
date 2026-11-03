@@ -130,7 +130,7 @@ résultat** (réussite, ou échec avec le message d'erreur). Une action qui
     <tr>
       <td><code>save_miners</code></td>
       <td>Enregistrement des mineurs</td>
-      <td>page Configuration : enregistrer la détection, activer / désactiver, tout désactiver, alias, pools, planification</td>
+      <td>page Configuration : enregistrer la détection, activer / désactiver, alias, pools, planification</td>
       <td>par mineur modifié, ce qui a changé hors changements sensibles : alias, nom d'hôte, modèle (avant → après). En cas d'échec : une seule entrée, sans mineur</td>
     </tr>
     <tr>

@@ -53,7 +53,7 @@ below the bar: its cross removes it, **Clear all** removes them all.
 
 The temperature and fan thresholds are set for every miner in
 [Configuration › System]({{ '/en/configuration.html#system' | relative_url }}),
-and for one miner in its row of Configuration › Miners; the return
+and for one miner in its panel of Configuration › Miners; the return
 margins, common to all, in Configuration › System.
 
 <table class="data-table">

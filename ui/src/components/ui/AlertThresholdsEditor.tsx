@@ -1,10 +1,9 @@
 // src/components/ui/AlertThresholdsEditor.tsx
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import { Alert, Box, Typography } from "@mui/material";
+import { Alert } from "@mui/material";
 
 import { AlertThresholdsForm } from "@/components/ui/AlertThresholdsForm";
+import { SectionStack } from "@/components/ui/SectionLayout";
 import { Writable } from "@/components/ui/Writable";
 import { type AlertSettings } from "@/schemas/appSettingsSchema";
 import { type MinerConfig } from "@/schemas/minerConfigSchema";
@@ -32,7 +31,6 @@ export const AlertThresholdsEditor = ({
   saveMiners,
   readOnly = false,
 }: AlertThresholdsEditorProps) => {
-  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const own = miner.alerts ?? { tempHigh: 0, fanHigh: 0 };
 
@@ -46,16 +44,7 @@ export const AlertThresholdsEditor = ({
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, py: 1 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <NotificationsActiveIcon
-          fontSize="small"
-          sx={{ color: "text.secondary" }}
-        />
-        <Typography variant="subtitle2" fontWeight={700}>
-          {t("alertThresholds.title")}
-        </Typography>
-      </Box>
+    <SectionStack>
       <AlertThresholdsForm
         saved={{
           ...own,
@@ -74,6 +63,6 @@ export const AlertThresholdsEditor = ({
           </Alert>
         )}
       </Writable>
-    </Box>
+    </SectionStack>
   );
 };

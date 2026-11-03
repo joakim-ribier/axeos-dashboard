@@ -145,6 +145,16 @@ every commit.
   pools the miner itself holds (a nerdaxe's swapped, a bitaxe's flag
   set), audited with the pool it left, and a miner's IP opens its AxeOS
   interface.
+- ✅ **Alerts end where the Alerts page says**: a miner stays in alert
+  until back under its threshold minus a return margin set in
+  Configuration › System, shown in its gauges, drawer and alerts, with one
+  thresholds form for System and each miner.
+- ✅ **Every save confirms the same way**: each save from a miner's row
+  (alias, pools, thresholds, schedule, enable/disable) shows the snackbar.
+- ✅ **Configuration redesign**: a miner's settings in a side panel with
+  Configuration's menu, rows on a phone, one shared spacing for every
+  page, a confirmed disable (Disable all removed) and folded built-in
+  pools with one-line URLs.
 
 ## To do
 
@@ -168,12 +178,6 @@ every commit.
 
 ### Settings
 
-- **Same "saved" confirmation for every save**: the snackbar shows after
-  saving discovered miners, "disable all" and every App settings section,
-  but not after a miner's own edits -- alias (`AliasEditor`), pools
-  (`PoolEditor`, only its button spinner), schedule add/remove
-  (`ScheduleEditor`), or the enable/disable toggle. Every successful save
-  should confirm the same way.
 - **Assisted cron builder in the scheduler editor**: `ScheduleEditor`
   today only accepts a raw 6-field cron string (seconds included), typed
   by hand -- easy to get subtly wrong (e.g. `* */5 * * * *`, which fires

@@ -1,29 +1,17 @@
 // src/pages/settings/Settings.tsx
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link as RouterLink, Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
 import WifiFindIcon from "@mui/icons-material/WifiFind";
-import {
-  Alert,
-  Box,
-  Collapse,
-  List,
-  ListItemButton,
-  Paper,
-  Tooltip,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Alert, Box, Typography, useMediaQuery, useTheme } from "@mui/material";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SectionMenu, SectionPicker } from "@/components/ui/SectionMenu";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
@@ -126,171 +114,6 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
   };
 };
 
-const IssueDot = ({ issue }: { issue: string }) => (
-  <Tooltip title={issue}>
-    <Box
-      role="img"
-      aria-label={issue}
-      sx={{
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        flexShrink: 0,
-        bgcolor: "warning.main",
-        ml: "auto",
-      }}
-    />
-  </Tooltip>
-);
-
-/** Every section with its summary and dot -- folded under a bar on a
- * phone, a sticky column next to the open section everywhere else. */
-const SectionList = ({
-  keys,
-  current,
-  summaries,
-  onSelect,
-}: {
-  keys: SectionKey[];
-  current: SectionKey;
-  summaries: Record<SectionKey, SectionSummary>;
-  onSelect?: () => void;
-}) => {
-  const { t } = useTranslation();
-
-  return (
-    <List disablePadding>
-      {keys.map((k) => {
-        const Icon = SECTIONS[k].icon;
-        const { summary, issue } = summaries[k];
-        const selected = k === current;
-        return (
-          <ListItemButton
-            key={k}
-            component={RouterLink}
-            to={`../${k}`}
-            relative="path"
-            selected={selected}
-            aria-current={selected ? "page" : undefined}
-            onClick={onSelect}
-            sx={{
-              gap: 1.25,
-              py: 1.25,
-              "& + &": { borderTop: 1, borderColor: "divider" },
-              "&.Mui-selected": {
-                bgcolor: "rgba(0,180,255,0.12)",
-                "&:hover": { bgcolor: "rgba(0,180,255,0.16)" },
-              },
-            }}
-          >
-            <Icon
-              fontSize="small"
-              sx={{ color: selected ? "primary.main" : "text.secondary" }}
-            />
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="body2"
-                fontWeight={600}
-                color={selected ? "primary.main" : "text.primary"}
-              >
-                {t(`settingsPage.toc.${k}.title`)}
-              </Typography>
-              {summary && (
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  noWrap
-                  component="div"
-                >
-                  {summary}
-                </Typography>
-              )}
-            </Box>
-            {issue && <IssueDot issue={issue} />}
-          </ListItemButton>
-        );
-      })}
-    </List>
-  );
-};
-
-/** The phone version: a bar naming the open section, which unfolds the
- * full list. Its own dot flags a problem in another section, so it can't go
- * unnoticed while folded. */
-const SectionPicker = ({
-  keys,
-  current,
-  summaries,
-  footer,
-}: {
-  keys: SectionKey[];
-  current: SectionKey;
-  summaries: Record<SectionKey, SectionSummary>;
-  footer: React.ReactNode;
-}) => {
-  const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const CurrentIcon = SECTIONS[current].icon;
-  const otherIssues = keys
-    .filter((k) => k !== current)
-    .map((k) => summaries[k].issue)
-    .filter((issue): issue is string => Boolean(issue));
-
-  return (
-    <Paper
-      component="nav"
-      variant="outlined"
-      sx={{ borderRadius: 3, overflow: "hidden" }}
-    >
-      <ListItemButton
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        sx={{ gap: 1, py: 1.25 }}
-      >
-        <CurrentIcon fontSize="small" sx={{ color: "primary.main" }} />
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle2" fontWeight={700}>
-            {t(`settingsPage.toc.${current}.title`)}
-          </Typography>
-          {summaries[current].summary && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              noWrap
-              component="div"
-            >
-              {summaries[current].summary}
-            </Typography>
-          )}
-        </Box>
-        {!open && otherIssues.length > 0 && (
-          <IssueDot issue={otherIssues.join(" · ")} />
-        )}
-        <KeyboardArrowDownIcon
-          fontSize="small"
-          sx={{
-            ml: open || otherIssues.length === 0 ? "auto" : 0,
-            color: "text.secondary",
-            transition: "transform 0.15s ease",
-            transform: open ? "rotate(180deg)" : "none",
-          }}
-        />
-      </ListItemButton>
-      <Collapse in={open}>
-        <Box sx={{ borderTop: 1, borderColor: "divider" }}>
-          <SectionList
-            keys={keys}
-            current={current}
-            summaries={summaries}
-            onSelect={() => setOpen(false)}
-          />
-          {footer}
-        </Box>
-      </Collapse>
-    </Paper>
-  );
-};
-
 /**
  * Configuration: one page, one section shown at a time, picked from a list
  * whose entries each sum up their section (and flag what needs a look) --
@@ -320,6 +143,13 @@ export const Settings = () => {
   if (!current) return <Navigate to="../miners" relative="path" replace />;
 
   const { Component } = SECTIONS[current];
+  const items = keys.map((k) => ({
+    key: k,
+    icon: SECTIONS[k].icon,
+    title: t(`settingsPage.toc.${k}.title`),
+    ...summaries[k],
+  }));
+  const linkTo = (k: string) => `../${k}`;
 
   // One date for the whole configuration (miners.yml or settings.yml,
   // whichever changed last), rather than repeated atop every section.
@@ -366,9 +196,9 @@ export const Settings = () => {
       {isPhone ? (
         <>
           <SectionPicker
-            keys={keys}
+            items={items}
             current={current}
-            summaries={summaries}
+            linkTo={linkTo}
             footer={lastModifiedLine}
           />
           <Component />
@@ -385,18 +215,12 @@ export const Settings = () => {
               top: 80,
             }}
           >
-            <Paper
-              component="nav"
-              variant="outlined"
-              sx={{ borderRadius: 3, overflow: "hidden" }}
-            >
-              <SectionList
-                keys={keys}
-                current={current}
-                summaries={summaries}
-              />
-              {lastModifiedLine}
-            </Paper>
+            <SectionMenu
+              items={items}
+              current={current}
+              linkTo={linkTo}
+              footer={lastModifiedLine}
+            />
           </Box>
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Component />

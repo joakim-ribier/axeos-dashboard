@@ -1,6 +1,8 @@
 // src/pages/settings/SectionTitle.tsx
 import { Box, Typography } from "@mui/material";
 
+import { SECTION_GAP } from "@/components/ui/SectionLayout";
+
 /** Title + one-line description heading each block of a settings section. */
 export const SectionTitle = ({
   icon,
@@ -11,7 +13,7 @@ export const SectionTitle = ({
   title: string;
   description: string;
 }) => (
-  <Box sx={{ mb: 2 }}>
+  <Box sx={{ mb: SECTION_GAP }}>
     <Box
       sx={{
         display: "flex",

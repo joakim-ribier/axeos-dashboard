@@ -58,7 +58,7 @@ the configuration...).
 
 Scans the local network for AxeOS miners (bitaxe, nerdaxe). A miner that
 can't be found this way (different subnet, firewall...) can be added
-directly by IP, right next to it.
+directly by IP, right under it.
 
 ![Automatic detection]({{ '/assets/images/settings-scan-before.png' | relative_url }})
 
@@ -69,23 +69,47 @@ Miners found appear below, ready to be added to the configuration.
 ### Configured miners
 {: #configured-miners }
 
-The list of already-configured miners, with their IP, model, alert
-thresholds (in color, a miner's own) and status — enable/disable in one
-click per miner. The IP opens the miner's AxeOS interface in a new tab,
-the eye its detail panel, the same as on the [dashboard]({{ '/en/dashboard.html' | relative_url }}).
+The list of already-configured miners: name (the alias, and the hostname
+under it when they differ), IP, model, alert thresholds and status — a
+clock for a miner with scheduled tasks, **Disabled** for a disabled
+miner. On a phone, each miner takes a few short lines instead of a table.
+
+Each miner's actions:
+
+- ⚙ **Configure** opens its configuration panel, like a click on its row
+  (see [A miner's panel](#a-miners-panel)).
+- 👁 **View** opens its detail panel, the same as on the
+  [dashboard]({{ '/en/dashboard.html' | relative_url }}).
+- ⏸ **Disable**, once confirmed: the miner leaves the dashboard and stops
+  being polled — no more readings, alerts or scheduled tasks. Its
+  configuration and history are kept; ▶ enables it again.
+
 The **Actions** button unfolds what acts on every miner at once (see
 [Actions](#actions)).
 
 ![Configured miners]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
 
-#### Name and pools
+### A miner's panel
+{: #a-miners-panel }
 
-Clicking a miner expands its editor: display name, and primary /
-fallback pool (URL, port, user). When these pools differ from the
-feeder's last reading, a warning says so above them, with the time of
-that reading.
+A click on a miner opens its configuration panel, on the right (full
+screen on a phone). A menu, the same as Configuration's, sums up each
+section — display name, pool, alert thresholds, scheduler — and the one
+picked shows next to it, with its own **Save** button.
 
-![Name and pools]({{ '/assets/images/settings-alias-pools.png' | relative_url }})
+#### Display name
+
+The name the miner goes by everywhere in the dashboard; empty, its
+hostname. A new detection never changes it.
+
+#### Pool
+
+The miner's primary and fallback pools (URL, port, user). **Swap primary
+and fallback** exchanges the two before saving. When these pools differ
+from the feeder's last reading, a warning says so above them, with the
+time of that reading, and an orange dot marks the menu's **Pool** entry.
+
+![A miner's pool]({{ '/assets/images/settings-alias-pools.png' | relative_url }})
 
 #### Alert thresholds
 
@@ -100,7 +124,10 @@ past it.
 
 #### Scheduler
 
-Schedules a pool switch or a restart on a cron schedule.
+Schedules a pool switch or a restart on a cron schedule. Each task shows
+its action, when it runs in words and its cron expression; while typing
+a new one, the plain-words preview and the next runs show under the
+field.
 
 ![Scheduler]({{ '/assets/images/settings-schedule.png' | relative_url }})
 
@@ -133,11 +160,6 @@ the one saved, is **not read**. **Sync** saves in the dashboard the
 pools of the miners to fix.
 
 ![Pool check]({{ '/assets/images/settings-miners-check.png' | relative_url }})
-
-#### Disable all
-
-Disables every miner: none is polled nor scheduled any more, until
-they're enabled again one by one.
 
 ---
 
@@ -318,7 +340,7 @@ An alert is raised when the chip temperature or the fan speed goes above
 its threshold, and ends once the reading is back under the threshold minus
 its **return margin**: a reading hovering around the threshold doesn't
 raise an alert on every poll. The thresholds set here apply to every
-miner — each can have its own in its row of [Miners](#miners) — and the
+miner — each can have its own in its [panel](#a-miners-panel) — and the
 return margins to all. Empty, they're the built-in values: 62 °C and
 75 %, with margins of 2 °C and 5 %.
 
@@ -335,6 +357,10 @@ For a pool the app doesn't natively recognize, you can add your own
 mapping between its hostname and its dashboard URL, with `{user}` as a
 placeholder for the stratum user's account part — the link then becomes
 clickable in the list and details of the miners using that pool.
+
+Only the pools added by hand show at first: **Show the built-in pools**
+unfolds the others. A URL too long is cut short, and shows whole on hover
+(or on a tap on a phone).
 
 ![Pool dashboards]({{ '/assets/images/settings-pools.png' | relative_url }})
 

@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "@mui/material";
 
+import { SECTION_GAP } from "@/components/ui/SectionLayout";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useUiFeatures } from "@/hooks/useMiners";
 import {
@@ -111,7 +112,7 @@ export const AppSettingsFrame = ({
   return (
     <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, borderRadius: 3 }}>
       {saveError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: SECTION_GAP }}>
           {saveError}
         </Alert>
       )}

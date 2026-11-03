@@ -1,22 +1,24 @@
 // src/components/ui/PoolEditor.tsx
 import { type ChangeEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-import BoltIcon from "@mui/icons-material/Bolt";
 import SaveIcon from "@mui/icons-material/Save";
 import SwapVertIcon from "@mui/icons-material/SwapVert";
 import {
   Alert,
   Box,
   Button,
-  CircularProgress,
-  IconButton,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
 
+import { ActionButton } from "@/components/ui/ActionButton";
 import { AlertList } from "@/components/ui/AlertList";
+import {
+  SECTION_GAP,
+  SectionActions,
+  SectionStack,
+} from "@/components/ui/SectionLayout";
 import { Writable } from "@/components/ui/Writable";
 import { type MinerConfig } from "@/schemas/minerConfigSchema";
 import { type Miner } from "@/schemas/minerSchema";
@@ -146,15 +148,9 @@ export const PoolEditor = ({
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, py: 1 }}>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <BoltIcon fontSize="small" sx={{ color: "text.secondary" }} />
-        <Typography variant="subtitle2" fontWeight={700}>
-          {t("settingsPage.configured.pool.title")}
-        </Typography>
-      </Box>
-
-      <Box sx={{ width: "100%" }}>
+    <SectionStack>
+      {/* Only when there's a drift: an empty box would still take its gap. */}
+      {mismatches.length > 0 && (
         <AlertList
           severity="warning"
           title={t("settingsPage.configured.pool.driftWarning", {
@@ -168,9 +164,9 @@ export const PoolEditor = ({
             }),
           )}
         />
-      </Box>
+      )}
 
-      <Stack spacing={2} sx={{ width: "100%" }}>
+      <Stack spacing={SECTION_GAP} sx={{ width: "100%" }}>
         <Box>
           <Typography
             variant="caption"
@@ -179,10 +175,15 @@ export const PoolEditor = ({
           >
             {t("settingsPage.configured.pool.primary")}
           </Typography>
-          <Stack direction="row" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: "wrap" }}
+          >
             <TextField
               size="small"
-              fullWidth
+              sx={{ flex: "1 1 180px" }}
               label={t("settingsPage.configured.pool.urlLabel")}
               placeholder={t("settingsPage.configured.pool.urlPlaceholder")}
               value={form.url}
@@ -208,12 +209,12 @@ export const PoolEditor = ({
                   : undefined
               }
               disabled={readOnly}
-              sx={{ minWidth: { xs: 90, sm: 130 } }}
+              sx={{ flex: "0 0 110px" }}
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               size="small"
-              fullWidth
+              sx={{ flex: "1 1 180px" }}
               label={t("settingsPage.configured.pool.userLabel")}
               placeholder={t("settingsPage.configured.pool.userPlaceholder")}
               value={form.user}
@@ -232,10 +233,15 @@ export const PoolEditor = ({
           >
             {t("settingsPage.configured.pool.fallback")}
           </Typography>
-          <Stack direction="row" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{ flexWrap: "wrap" }}
+          >
             <TextField
               size="small"
-              fullWidth
+              sx={{ flex: "1 1 180px" }}
               label={t("settingsPage.configured.pool.urlLabel")}
               placeholder={t("settingsPage.configured.pool.urlPlaceholder")}
               value={form.fallbackUrl}
@@ -256,12 +262,12 @@ export const PoolEditor = ({
                   : undefined
               }
               disabled={readOnly}
-              sx={{ minWidth: { xs: 90, sm: 130 } }}
+              sx={{ flex: "0 0 110px" }}
               slotProps={{ inputLabel: { shrink: true } }}
             />
             <TextField
               size="small"
-              fullWidth
+              sx={{ flex: "1 1 180px" }}
               label={t("settingsPage.configured.pool.userLabel")}
               placeholder={t("settingsPage.configured.pool.userPlaceholder")}
               value={form.fallbackUser}
@@ -279,40 +285,33 @@ export const PoolEditor = ({
             {error}
           </Alert>
         )}
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Tooltip title={t("settingsPage.configured.pool.swapTooltip")}>
-            <IconButton
-              size="small"
-              onClick={handleSwap}
-              aria-label={t("settingsPage.configured.pool.swap")}
-            >
-              <SwapVertIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="contained"
-            size="small"
-            disabled={!canSave || isSaving}
+        <SectionActions>
+          <ActionButton
+            icon={<SaveIcon fontSize="small" />}
+            loading={isSaving}
+            disabled={!canSave}
             onClick={() => void handleSave()}
-            startIcon={
-              isSaving ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <SaveIcon fontSize="small" />
-              )
-            }
           >
             {isSaving
               ? t("settingsPage.configured.pool.saving")
               : t("settingsPage.configured.pool.save")}
+          </ActionButton>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<SwapVertIcon fontSize="small" />}
+            onClick={handleSwap}
+            sx={{ height: 40, flexShrink: 0 }}
+          >
+            {t("settingsPage.configured.pool.swap")}
           </Button>
           {isDirty && (
             <Button size="small" disabled={isSaving} onClick={handleReset}>
               {t("settingsPage.configured.pool.reset")}
             </Button>
           )}
-        </Stack>
+        </SectionActions>
       </Writable>
-    </Box>
+    </SectionStack>
   );
 };

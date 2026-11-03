@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { ROW_SPACING, SECTION_GAP } from "@/components/ui/SectionLayout";
 import { useAuditTypes } from "@/hooks/useAudit";
 import { type ReportFrequency } from "@/schemas/appSettingsSchema";
 import { formatTimestamp } from "@/utils/format";
@@ -103,7 +104,7 @@ export const AuditReportBlock = ({
         title={t("settingsPage.appSettings.mail.report.title")}
         description={t("settingsPage.appSettings.mail.report.description")}
       />
-      <Stack spacing={2}>
+      <Stack spacing={SECTION_GAP}>
         <FormControlLabel
           control={
             <Switch
@@ -113,7 +114,7 @@ export const AuditReportBlock = ({
           }
           label={t("settingsPage.appSettings.mail.report.enabledLabel")}
         />
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={ROW_SPACING}>
           <TextField
             select
             size="small"
@@ -153,7 +154,7 @@ export const AuditReportBlock = ({
         </Stack>
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={ROW_SPACING}
           alignItems={{ xs: "stretch", sm: "center" }}
         >
           <FormControlLabel

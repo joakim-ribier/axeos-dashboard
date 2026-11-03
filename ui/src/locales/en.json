@@ -497,7 +497,6 @@
       "switchButton": "Switch",
       "syncRow": "Check the pools",
       "syncHint": "Compares the pools saved in the dashboard with the ones set on each miner.",
-      "disableAllHint": "No miner is polled nor scheduled any more.",
       "pool": "Pool",
       "poolOption": "{{pool}} — active on {{active}} / {{held}}",
       "switch": "Switch every miner",
@@ -525,30 +524,23 @@
     },
     "configured": {
       "title": "Configured miners",
-      "description_one": "{{count}} miner — click a row to edit its alias, pools, alert thresholds and scheduled tasks.",
-      "description_other": "{{count}} miners — click a row to edit its alias, pools, alert thresholds and scheduled tasks.",
       "hostname": "Name",
       "ip": "IP",
       "mac": "MAC",
       "model": "Model",
       "status": "Status",
-      "enabled": "Enabled",
       "disabled": "Disabled",
       "actions": "Actions",
       "disable": "Disable",
       "enable": "Enable",
-      "disableAll": "Disable all",
-      "disableAllTitle": "Disable all miners?",
-      "disableAllDescription": "{{count}} active miner(s) will be disabled and stop being polled. Useful in case of a problem (network outage, power cut...). You can re-enable them individually afterwards.",
-      "disableAllConfirm": "Disable all",
-      "disableAllSuccess": "{{count}} miner(s) disabled.",
       "lastUpdated": "Last modified: {{date}}",
       "emptyAlert": "No miner configured yet: run a scan below to add some.",
       "alias": {
         "title": "Display name",
         "label": "Alias",
         "save": "Save",
-        "saving": "Saving…"
+        "saving": "Saving…",
+        "description": "The name this miner goes by everywhere in the dashboard; empty, its hostname."
       },
       "pool": {
         "title": "Pool",
@@ -565,10 +557,10 @@
         "saving": "Saving…",
         "reset": "Reset",
         "swap": "Swap primary and fallback",
-        "swapTooltip": "Swap primary and fallback",
         "driftWarning": "At the feeder's last reading ({{value}}):",
         "driftItem": "{{field}}: saved \"{{configured}}\" ≠ miner \"{{live}}\"",
-        "driftBadgeTooltip": "Pool config doesn't match the miner: {{fields}}"
+        "driftBadgeTooltip": "Pool config doesn't match the miner: {{fields}}",
+        "description": "The pools this miner mines on: the primary, and the fallback that takes over when the primary doesn't answer."
       },
       "schedule": {
         "title": "Scheduler",
@@ -581,12 +573,11 @@
         "restart": "Restart",
         "cronLabel": "Cron expression",
         "cronPlaceholder": "e.g. 59 59 23 * * FRI",
-        "cronHelp": "Seconds Minutes Hours DayOfMonth Month DayOfWeek",
+        "cronHelp": "Six fields: seconds, minutes, hours, day of month, month, day of week.",
         "invalidCron": "Invalid cron expression",
         "duplicateCron": "This cron expression is already scheduled for this miner",
         "nextRuns": "Next: {{dates}}",
         "countTooltip": "{{count}} schedule(s) configured",
-        "scheduledLabel": "Scheduled",
         "add": "Add",
         "adding": "Adding…",
         "removing": "Removing…"
@@ -595,7 +586,11 @@
       "thresholdOwn": "This miner's own",
       "thresholdCommon": "Every miner's (Configuration › System)",
       "view": "View",
-      "saveSuccess": "Miner saved."
+      "saveSuccess": "Miner saved.",
+      "alertsDescription": "The thresholds above which this miner raises an alert; an empty field follows every miner's.",
+      "disableTitle": "Disable {{name}}?",
+      "disableDescription": "{{name}} leaves the dashboard and stops being polled: no more readings, alerts or scheduled tasks. Its configuration and history are kept, so you can re-enable it afterwards.",
+      "configure": "Configure"
     },
     "appSettings": {
       "save": "Save",
@@ -625,12 +620,14 @@
       "pools": {
         "title": "Pool dashboards",
         "description": "Maps a stratum pool hostname to its web dashboard URL template. Use {user} as a placeholder for the account part of the stratum user.",
-        "empty": "No pool dashboard available.",
         "hostLabel": "Pool hostname",
         "urlLabel": "Dashboard URL",
         "missingUserPlaceholder": "Must contain {user}",
         "add": "Add",
-        "remove": "Remove"
+        "remove": "Remove",
+        "showBuiltIn_one": "Show the built-in pool",
+        "showBuiltIn_other": "Show the {{count}} built-in pools",
+        "hideBuiltIn": "Hide the built-in pools"
       },
       "remote": {
         "pushUrlLabel": "Push URL",

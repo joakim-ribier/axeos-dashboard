@@ -19,6 +19,7 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
+import { PAGE_GAP, SECTION_GAP } from "@/components/ui/SectionLayout";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { formatTimestamp } from "@/utils/format";
 
@@ -130,7 +131,7 @@ const RemoteSection = ({
   };
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing={PAGE_GAP}>
       {/* The board on hashboard's side -- only once it answered. */}
       {board?.boardId && (
         <>
@@ -222,7 +223,7 @@ const RemoteSection = ({
             "settingsPage.appSettings.remote.connection.description",
           )}
         />
-        <Stack spacing={2}>
+        <Stack spacing={SECTION_GAP}>
           <TextField
             size="small"
             label={t("settingsPage.appSettings.remote.pushUrlLabel")}

@@ -128,7 +128,7 @@ failure with its error message). A failed action is recorded too.
     <tr>
       <td><code>save_miners</code></td>
       <td>Miners saved</td>
-      <td>Settings page: save discovered miners, enable / disable, disable all, alias, pools, schedule</td>
+      <td>Settings page: save discovered miners, enable / disable, alias, pools, schedule</td>
       <td>per changed miner, what changed outside sensitive changes: alias, hostname, model (before → after). On failure: a single entry, with no miner</td>
     </tr>
     <tr>

@@ -1,18 +1,19 @@
 // src/pages/settings/MinersSettings.tsx
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import BoltIcon from "@mui/icons-material/Bolt";
 import DeselectIcon from "@mui/icons-material/Deselect";
 import DeveloperBoardIcon from "@mui/icons-material/DeveloperBoard";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import RouterIcon from "@mui/icons-material/Router";
 import SaveIcon from "@mui/icons-material/Save";
+import ScheduleIcon from "@mui/icons-material/Schedule";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SelectAllIcon from "@mui/icons-material/SelectAll";
+import SettingsIcon from "@mui/icons-material/Settings";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import TuneIcon from "@mui/icons-material/Tune";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -27,7 +28,6 @@ import {
   Collapse,
   FormControlLabel,
   IconButton,
-  Link,
   Paper,
   Skeleton,
   Snackbar,
@@ -39,17 +39,22 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import { MinerDrawer } from "@/components/dashboard/drawer/MinerDrawer";
 import { ActionButton } from "@/components/ui/ActionButton";
-import { AlertThresholdsEditor } from "@/components/ui/AlertThresholdsEditor";
-import { AliasEditor } from "@/components/ui/AliasEditor";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
-import { PoolEditor } from "@/components/ui/PoolEditor";
-import { ScheduleEditor } from "@/components/ui/ScheduleEditor";
+import { Row, RowList } from "@/components/ui/RowList";
 import { SectionDivider } from "@/components/ui/SectionDivider";
+import {
+  PAGE_GAP,
+  ROW_SPACING,
+  SECTION_GAP,
+} from "@/components/ui/SectionLayout";
+import { SidePanel } from "@/components/ui/SidePanel";
 import { Writable } from "@/components/ui/Writable";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useDiscovery } from "@/hooks/useDiscovery";
@@ -66,7 +71,8 @@ import { type Miner } from "@/schemas/minerSchema";
 import { displayName } from "@/utils/minerDisplay";
 import { poolFieldLabel, poolMismatches } from "@/utils/poolDrift";
 
-import { ActionRow, MinersToolbar } from "./MinersToolbar";
+import { MinerConfigPanel } from "./MinerConfigPanel";
+import { MinersToolbar } from "./MinersToolbar";
 import { SectionTitle } from "./SectionTitle";
 
 // Prefilled by the quick-fill button next to the CIDR field -- the default
@@ -76,8 +82,8 @@ import { SectionTitle } from "./SectionTitle";
 const COMMON_HOME_CIDR = "192.168.1.0/24";
 
 /* ── Configured miners table ────────────────────────────────────── */
-/** One of a miner's thresholds: its own, highlighted, or every miner's,
- * greyed -- the tooltip says which. */
+/** One of a miner's thresholds -- its own or every miner's, the tooltip
+ * says which. */
 const ThresholdValue = ({
   own,
   common,
@@ -96,14 +102,9 @@ const ThresholdValue = ({
           : t("settingsPage.configured.thresholdCommon")
       }
     >
-      <Typography
-        component="span"
-        variant="body2"
-        color={own ? "primary.main" : "text.secondary"}
-        sx={{ fontWeight: own ? 700 : 400 }}
-      >
+      <span>
         {own || common} {unit}
-      </Typography>
+      </span>
     </Tooltip>
   );
 };
@@ -113,7 +114,6 @@ const ConfiguredMinersTable = ({
   liveMinersByMac,
   togglingMac,
   onToggleEnabled,
-  onDisableAllClick,
   saveMiners,
   readOnly,
   onSaved,
@@ -122,7 +122,6 @@ const ConfiguredMinersTable = ({
   liveMinersByMac: Map<string, Miner>;
   togglingMac: string | null;
   onToggleEnabled: (miner: MinerConfig) => void;
-  onDisableAllClick: () => void;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
   readOnly: boolean;
   onSaved: (message: string) => void;
@@ -148,7 +147,14 @@ const ConfiguredMinersTable = ({
     ? commonAlertMargins(appSettings)
     : { tempMargin: 2, fanMargin: 5 };
   const enabledCount = miners.filter((m) => m.enabled).length;
-  const [expandedMac, setExpandedMac] = useState<string | null>(null);
+  // The miner whose configuration is open -- kept apart from the open flag
+  // so the panel still shows it while it slides out.
+  const [configMac, setConfigMac] = useState<string | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
+  const theme = useTheme();
+  const compact = useMediaQuery(theme.breakpoints.down("md"), {
+    noSsr: true,
+  });
   const isEmpty = miners.length === 0;
   const { statusOf } = useMinerStatus();
   const { data: history } = useMinersHistory();
@@ -157,6 +163,282 @@ const ConfiguredMinersTable = ({
   const [viewedMac, setViewedMac] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const viewed = viewedMac ? liveMinersByMac.get(viewedMac) : undefined;
+
+  // Each miner's pieces, laid out as a table row, or a card on a narrow
+  // screen -- a click on either opens its configuration.
+  const items = miners.map((m) => {
+    const key = normalizeMac(m.mac);
+    const isToggling = togglingMac === key;
+    const poolDrift = poolMismatches(m, liveMinersByMac.get(key));
+    const open = () => {
+      setConfigMac(key);
+      setConfigOpen(true);
+    };
+    const title = (
+      <Box
+        sx={{ display: "flex", alignItems: "center", gap: 0.75, minWidth: 0 }}
+      >
+        <Typography
+          component="span"
+          variant="body2"
+          noWrap
+          sx={{
+            color: poolDrift.length > 0 ? "warning.main" : "inherit",
+            fontWeight: poolDrift.length > 0 ? 700 : 600,
+          }}
+        >
+          {displayName(m) || "—"}
+        </Typography>
+        {poolDrift.length > 0 && (
+          <Tooltip
+            title={t("settingsPage.configured.pool.driftBadgeTooltip", {
+              fields: poolDrift
+                .map((mm) => poolFieldLabel(t, mm.field))
+                .join(", "),
+            })}
+          >
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                flexShrink: 0,
+                bgcolor: "warning.main",
+              }}
+            />
+          </Tooltip>
+        )}
+      </Box>
+    );
+    // The hostname, under the name when an alias hides it.
+    const hostname = m.alias && m.alias !== m.hostname && (
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        noWrap
+        component="div"
+      >
+        {m.hostname}
+      </Typography>
+    );
+    const name = (
+      <Box sx={{ minWidth: 0 }}>
+        {title}
+        {hostname}
+      </Box>
+    );
+    const model = (
+      <Chip
+        size="small"
+        variant="outlined"
+        label={m.model}
+        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+      />
+    );
+    const thresholds = (
+      <Box
+        component="span"
+        sx={{ whiteSpace: "nowrap", color: "text.secondary" }}
+      >
+        <ThresholdValue
+          own={m.alerts?.tempHigh}
+          common={alertDefaults.tempHigh}
+          unit="°C"
+        />
+        {" · "}
+        <ThresholdValue
+          own={m.alerts?.fanHigh}
+          common={alertDefaults.fanHigh}
+          unit="%"
+        />
+      </Box>
+    );
+    // Only what's worth a look: a disabled miner, scheduled tasks -- an
+    // enabled one is the usual case and says nothing.
+    const tasks = m.schedule?.length ?? 0;
+    const chips = (
+      <Stack direction="row" spacing={0.75} alignItems="center">
+        {!m.enabled && (
+          <Chip
+            size="small"
+            variant="outlined"
+            label={t("settingsPage.configured.disabled")}
+            sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+          />
+        )}
+        {tasks > 0 && (
+          <Tooltip
+            title={t("settingsPage.configured.schedule.countTooltip", {
+              count: tasks,
+            })}
+          >
+            <ScheduleIcon
+              fontSize="small"
+              aria-label={t("settingsPage.configured.schedule.countTooltip", {
+                count: tasks,
+              })}
+              sx={{ color: "text.secondary" }}
+            />
+          </Tooltip>
+        )}
+      </Stack>
+    );
+    const actions = (
+      <Box sx={{ whiteSpace: "nowrap" }}>
+        {/* Icons, their word in the tooltip: the list fits its panel
+            without scrolling sideways. Configure says what a click on the
+            row does too. */}
+        <Tooltip title={t("settingsPage.configured.configure")}>
+          <IconButton
+            size="small"
+            aria-label={t("settingsPage.configured.configure")}
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+          >
+            <SettingsIcon fontSize="small" sx={{ color: "text.secondary" }} />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={t("settingsPage.configured.view")}>
+          <span>
+            <IconButton
+              size="small"
+              disabled={!liveMinersByMac.has(key)}
+              aria-label={t("settingsPage.configured.view")}
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewedMac(key);
+                setDrawerOpen(true);
+              }}
+            >
+              <VisibilityIcon fontSize="small" color="primary" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Writable readOnly={readOnly}>
+          <Tooltip
+            title={
+              m.enabled
+                ? t("settingsPage.configured.disable")
+                : t("settingsPage.configured.enable")
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                disabled={isToggling}
+                aria-label={
+                  m.enabled
+                    ? t("settingsPage.configured.disable")
+                    : t("settingsPage.configured.enable")
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleEnabled(m);
+                }}
+              >
+                {isToggling ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : m.enabled ? (
+                  <PauseIcon fontSize="small" sx={{ color: "error.main" }} />
+                ) : (
+                  <PlayArrowIcon
+                    fontSize="small"
+                    sx={{ color: "success.main" }}
+                  />
+                )}
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Writable>
+      </Box>
+    );
+    return {
+      m,
+      key,
+      open,
+      title,
+      hostname,
+      name,
+      model,
+      thresholds,
+      chips,
+      actions,
+    };
+  });
+
+  const table = (
+    <DataTable>
+      <TableHead>
+        <TableRow>
+          <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
+          <TableCell>{t("settingsPage.configured.ip")}</TableCell>
+          <TableCell align="center">
+            {t("settingsPage.configured.model")}
+          </TableCell>
+          <TableCell>{t("settingsPage.configured.thresholds")}</TableCell>
+          <TableCell>{t("settingsPage.configured.status")}</TableCell>
+          <TableCell align="right">
+            {t("settingsPage.configured.actions")}
+          </TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {items.map((i) => (
+          <TableRow
+            key={i.key}
+            hover
+            onClick={i.open}
+            sx={{ cursor: "pointer" }}
+          >
+            <TableCell>{i.name}</TableCell>
+            <TableCell sx={{ fontFamily: "monospace" }}>{i.m.ip}</TableCell>
+            <TableCell align="center">{i.model}</TableCell>
+            <TableCell>{i.thresholds}</TableCell>
+            <TableCell>{i.chips}</TableCell>
+            <TableCell align="right">{i.actions}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </DataTable>
+  );
+
+  // A phone's row: its name and status on top, then short lines that never
+  // break in the middle -- its actions on the right.
+  const cards = (
+    <RowList>
+      {items.map((i) => (
+        <Row
+          key={i.key}
+          onClick={i.open}
+          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              {i.title}
+              {i.chips}
+            </Box>
+            {i.hostname}
+            {/* The same size as the desktop table's cells. */}
+            <Typography variant="body2" color="text.secondary" component="div">
+              <Box component="span" sx={{ fontFamily: "monospace" }}>
+                {i.m.ip}
+              </Box>
+              {` · ${i.m.model}`}
+            </Typography>
+            <Typography variant="body2" component="div">
+              {i.thresholds}
+            </Typography>
+          </Box>
+          {i.actions}
+        </Row>
+      ))}
+    </RowList>
+  );
+  const configured = configMac
+    ? miners.find((m) => normalizeMac(m.mac) === configMac)
+    : undefined;
 
   return (
     <Box>
@@ -175,8 +457,9 @@ const ConfiguredMinersTable = ({
           description={
             isEmpty
               ? t("settingsPage.configured.emptyAlert")
-              : t("settingsPage.configured.description", {
+              : t("settingsPage.toc.miners.summary", {
                   count: miners.length,
+                  enabled: enabledCount,
                 })
           }
         />
@@ -195,7 +478,7 @@ const ConfiguredMinersTable = ({
             }
             aria-expanded={actionsOpen}
             onClick={() => setActionsOpen((open) => !open)}
-            sx={{ height: 40, flexShrink: 0, mb: 2 }}
+            sx={{ height: 40, flexShrink: 0, mb: SECTION_GAP }}
           >
             {t("settingsPage.toolbar.title")}
           </Button>
@@ -209,298 +492,27 @@ const ConfiguredMinersTable = ({
             saveMiners={saveMiners}
             readOnly={readOnly}
             onSaved={onSaved}
-          >
-            <Writable readOnly={readOnly}>
-              <ActionRow
-                icon={PauseIcon}
-                color="error"
-                title={t("settingsPage.configured.disableAll")}
-                description={t("settingsPage.toolbar.disableAllHint")}
-              >
-                <ActionButton
-                  color="error"
-                  icon={<PauseIcon fontSize="small" />}
-                  disabled={enabledCount === 0}
-                  onClick={onDisableAllClick}
-                >
-                  {t("settingsPage.configured.disableAll")}
-                </ActionButton>
-              </ActionRow>
-            </Writable>
-          </MinersToolbar>
+          />
         </Collapse>
       )}
-      {!isEmpty && (
-        <DataTable>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 40 }} />
-              <TableCell>{t("settingsPage.configured.hostname")}</TableCell>
-              <TableCell>{t("settingsPage.configured.ip")}</TableCell>
-              <TableCell>{t("settingsPage.configured.model")}</TableCell>
-              <TableCell>{t("settingsPage.configured.thresholds")}</TableCell>
-              <TableCell>{t("settingsPage.configured.status")}</TableCell>
-              <TableCell align="right">
-                {t("settingsPage.configured.actions")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {miners.map((m) => {
-              const isToggling = togglingMac === normalizeMac(m.mac);
-              const key = normalizeMac(m.mac);
-              const isExpanded = expandedMac === key;
-              const poolDrift = poolMismatches(m, liveMinersByMac.get(key));
-              const toggleExpanded = () =>
-                setExpandedMac((current) => (current === key ? null : key));
-              return (
-                <Fragment key={m.mac}>
-                  <TableRow
-                    hover
-                    onClick={toggleExpanded}
-                    sx={{ cursor: "pointer" }}
-                  >
-                    <TableCell>
-                      <IconButton size="small">
-                        <KeyboardArrowDownIcon
-                          fontSize="small"
-                          sx={{
-                            transition: "transform 0.15s ease",
-                            transform: isExpanded ? "rotate(180deg)" : "none",
-                          }}
-                        />
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 0.75,
-                        }}
-                      >
-                        <Typography
-                          component="span"
-                          sx={{
-                            color:
-                              poolDrift.length > 0 ? "warning.main" : "inherit",
-                            fontWeight: poolDrift.length > 0 ? 700 : 400,
-                          }}
-                        >
-                          {displayName(m) || "—"}
-                        </Typography>
-                        {poolDrift.length > 0 && (
-                          <Tooltip
-                            title={t(
-                              "settingsPage.configured.pool.driftBadgeTooltip",
-                              {
-                                fields: poolDrift
-                                  .map((mm) => poolFieldLabel(t, mm.field))
-                                  .join(", "),
-                              },
-                            )}
-                          >
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: "50%",
-                                flexShrink: 0,
-                                bgcolor: "warning.main",
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {/* Same link as the miner's panel header. */}
-                      <Link
-                        href={`http://${m.ip}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title={t("miner.openDevice")}
-                        // The row opens its editors on click -- following
-                        // the link must not do that too.
-                        onClick={(e) => e.stopPropagation()}
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 0.5,
-                        }}
-                      >
-                        {m.ip}
-                        <OpenInNewIcon sx={{ fontSize: 13 }} />
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={m.model}
-                        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ whiteSpace: "nowrap" }}>
-                      <ThresholdValue
-                        own={m.alerts?.tempHigh}
-                        common={alertDefaults.tempHigh}
-                        unit="°C"
-                      />
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        {" · "}
-                      </Typography>
-                      <ThresholdValue
-                        own={m.alerts?.fanHigh}
-                        common={alertDefaults.fanHigh}
-                        unit="%"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={0.75}>
-                        <Chip
-                          size="small"
-                          label={
-                            m.enabled
-                              ? t("settingsPage.configured.enabled")
-                              : t("settingsPage.configured.disabled")
-                          }
-                          color={m.enabled ? "success" : "default"}
-                          variant={m.enabled ? "filled" : "outlined"}
-                          sx={{
-                            height: 24,
-                            fontSize: "0.8rem",
-                            borderRadius: 1,
-                          }}
-                        />
-                        {(m.schedule?.length ?? 0) > 0 && (
-                          <Tooltip
-                            title={t(
-                              "settingsPage.configured.schedule.countTooltip",
-                              { count: m.schedule?.length ?? 0 },
-                            )}
-                          >
-                            <Chip
-                              size="small"
-                              variant="outlined"
-                              label={t(
-                                "settingsPage.configured.schedule.scheduledLabel",
-                              )}
-                              sx={{
-                                height: 24,
-                                fontSize: "0.8rem",
-                                borderRadius: 1,
-                              }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                      {/* Icons, their word in the tooltip: the table fits
-                          its panel without scrolling sideways. */}
-                      <Tooltip title={t("settingsPage.configured.view")}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            disabled={!liveMinersByMac.has(key)}
-                            aria-label={t("settingsPage.configured.view")}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setViewedMac(key);
-                              setDrawerOpen(true);
-                            }}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Writable readOnly={readOnly}>
-                        <Tooltip
-                          title={
-                            m.enabled
-                              ? t("settingsPage.configured.disable")
-                              : t("settingsPage.configured.enable")
-                          }
-                        >
-                          <span>
-                            <IconButton
-                              size="small"
-                              color={m.enabled ? "warning" : "success"}
-                              disabled={isToggling}
-                              aria-label={
-                                m.enabled
-                                  ? t("settingsPage.configured.disable")
-                                  : t("settingsPage.configured.enable")
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleEnabled(m);
-                              }}
-                            >
-                              {isToggling ? (
-                                <CircularProgress size={18} color="inherit" />
-                              ) : m.enabled ? (
-                                <PauseIcon fontSize="small" />
-                              ) : (
-                                <PlayArrowIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Writable>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      sx={{
-                        py: 0,
-                        borderBottom: isExpanded ? undefined : "none",
-                      }}
-                    >
-                      <Collapse in={isExpanded} unmountOnExit>
-                        <Box sx={{ px: 2 }}>
-                          <AliasEditor
-                            miner={m}
-                            saveMiners={saveMiner}
-                            readOnly={readOnly}
-                          />
-                          <SectionDivider sx={{ my: 1.5 }} />
-                          <PoolEditor
-                            miner={m}
-                            liveMiner={liveMinersByMac.get(key)}
-                            saveMiners={saveMiner}
-                            readOnly={readOnly}
-                          />
-                          <SectionDivider sx={{ my: 1.5 }} />
-                          <AlertThresholdsEditor
-                            miner={m}
-                            common={{ ...alertDefaults, ...alertMargins }}
-                            liveMiner={liveMinersByMac.get(key)}
-                            saveMiners={saveMiner}
-                            readOnly={readOnly}
-                          />
-                          <SectionDivider sx={{ my: 1.5 }} />
-                          <ScheduleEditor
-                            miner={m}
-                            saveMiners={saveMiner}
-                            readOnly={readOnly}
-                          />
-                        </Box>
-                      </Collapse>
-                    </TableCell>
-                  </TableRow>
-                </Fragment>
-              );
-            })}
-          </TableBody>
-        </DataTable>
-      )}
+      {!isEmpty && (compact ? cards : table)}
+      <SidePanel
+        width={820}
+        open={configOpen && configured !== undefined}
+        onClose={() => setConfigOpen(false)}
+      >
+        {configured && (
+          <MinerConfigPanel
+            key={configMac}
+            miner={configured}
+            liveMiner={liveMinersByMac.get(normalizeMac(configured.mac))}
+            common={{ ...alertDefaults, ...alertMargins }}
+            saveMiners={saveMiner}
+            readOnly={readOnly}
+            onClose={() => setConfigOpen(false)}
+          />
+        )}
+      </SidePanel>
       <MinerDrawer
         open={drawerOpen}
         miner={viewed}
@@ -693,8 +705,8 @@ export const MinersSettings = () => {
   const [selectedMacs, setSelectedMacs] = useState<Set<string>>(new Set());
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [togglingMac, setTogglingMac] = useState<string | null>(null);
-  const [disableAllOpen, setDisableAllOpen] = useState(false);
-  const [isDisablingAll, setIsDisablingAll] = useState(false);
+  // Disabling a miner stops its polling: asked first.
+  const [toDisable, setToDisable] = useState<MinerConfig | null>(null);
 
   const configuredByMac = new Map(
     (configuredMiners ?? []).map((m) => [normalizeMac(m.mac), m]),
@@ -702,7 +714,6 @@ export const MinersSettings = () => {
   const liveMinersByMac = new Map(
     (liveMiners ?? []).map((m) => [normalizeMac(m.macAddr), m]),
   );
-  const enabledMiners = (configuredMiners ?? []).filter((m) => m.enabled);
 
   const handleToggleEnabled = async (miner: MinerConfig) => {
     const key = normalizeMac(miner.mac);
@@ -714,24 +725,6 @@ export const MinersSettings = () => {
       // saveError from useMinersConfig already surfaces the message.
     } finally {
       setTogglingMac(null);
-    }
-  };
-
-  const handleDisableAll = async () => {
-    if (isDisablingAll) return;
-    setIsDisablingAll(true);
-    try {
-      await saveMiners(enabledMiners.map((m) => ({ ...m, enabled: false })));
-      setSnackbarMessage(
-        t("settingsPage.configured.disableAllSuccess", {
-          count: enabledMiners.length,
-        }),
-      );
-      setDisableAllOpen(false);
-    } catch {
-      // saveError from useMinersConfig already surfaces the message.
-    } finally {
-      setIsDisablingAll(false);
     }
   };
 
@@ -817,7 +810,7 @@ export const MinersSettings = () => {
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 3, sm: 4 }, borderRadius: 3 }}>
-      <Stack spacing={4}>
+      <Stack spacing={PAGE_GAP}>
         {configuredLoading ? (
           <Skeleton variant="rounded" height={140} sx={{ borderRadius: 3 }} />
         ) : (
@@ -826,8 +819,9 @@ export const MinersSettings = () => {
               miners={configuredMiners}
               liveMinersByMac={liveMinersByMac}
               togglingMac={togglingMac}
-              onToggleEnabled={(m) => void handleToggleEnabled(m)}
-              onDisableAllClick={() => setDisableAllOpen(true)}
+              onToggleEnabled={(m) =>
+                m.enabled ? setToDisable(m) : void handleToggleEnabled(m)
+              }
               saveMiners={saveMiners}
               readOnly={readOnly}
               onSaved={setSnackbarMessage}
@@ -847,7 +841,7 @@ export const MinersSettings = () => {
             />
             <Stack
               direction={{ xs: "column", sm: "row" }}
-              spacing={2}
+              spacing={ROW_SPACING}
               alignItems={{ xs: "stretch", sm: "center" }}
             >
               <ActionButton
@@ -889,7 +883,7 @@ export const MinersSettings = () => {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleScan();
                 }}
-                sx={{ mt: 2, maxWidth: { sm: 360 } }}
+                sx={{ mt: SECTION_GAP, maxWidth: { sm: 360 } }}
                 slotProps={{ inputLabel: { shrink: true } }}
               />
             )}
@@ -906,7 +900,7 @@ export const MinersSettings = () => {
             />
             <Stack
               direction={{ xs: "column", sm: "row" }}
-              spacing={2}
+              spacing={ROW_SPACING}
               alignItems={{ xs: "stretch", sm: "center" }}
             >
               <TextField
@@ -969,7 +963,7 @@ export const MinersSettings = () => {
                           <SelectAllIcon fontSize="small" />
                         )
                       }
-                      sx={{ flexShrink: 0, mb: 2 }}
+                      sx={{ flexShrink: 0, mb: SECTION_GAP }}
                     >
                       {allSelected
                         ? t("settingsPage.discovery.deselectAll")
@@ -998,7 +992,7 @@ export const MinersSettings = () => {
                     onRetry={() => void retryWithLongerTimeout()}
                   />
                 ) : (
-                  <Stack spacing={2}>
+                  <Stack spacing={SECTION_GAP}>
                     {selectedDevices.length > 0 && (
                       <Paper
                         variant="outlined"
@@ -1064,18 +1058,19 @@ export const MinersSettings = () => {
       </Stack>
 
       <ConfirmDialog
-        open={disableAllOpen}
-        onClose={() => setDisableAllOpen(false)}
-        onConfirm={() => void handleDisableAll()}
-        title={t("settingsPage.configured.disableAllTitle")}
-        description={t("settingsPage.configured.disableAllDescription", {
-          count: enabledMiners.length,
+        open={toDisable !== null}
+        onClose={() => setToDisable(null)}
+        onConfirm={() => {
+          if (toDisable) void handleToggleEnabled(toDisable);
+          setToDisable(null);
+        }}
+        title={t("settingsPage.configured.disableTitle", {
+          name: toDisable ? displayName(toDisable) || toDisable.ip : "",
         })}
-        actionLabel={
-          isDisablingAll
-            ? t("settingsPage.discovery.saving")
-            : t("settingsPage.configured.disableAllConfirm")
-        }
+        description={t("settingsPage.configured.disableDescription", {
+          name: toDisable ? displayName(toDisable) || toDisable.ip : "",
+        })}
+        actionLabel={t("settingsPage.configured.disable")}
         actionColor="error"
       />
 
