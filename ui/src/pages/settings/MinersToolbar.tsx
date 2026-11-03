@@ -17,6 +17,7 @@ import axios from "axios";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SECTION_GAP } from "@/components/ui/SectionLayout";
 import { Writable } from "@/components/ui/Writable";
 import { useUiFeatures } from "@/hooks/useMiners";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
@@ -43,21 +44,19 @@ const poolKey = (url: string, port: number) => `${url}:${port}`;
 
 /** One action of the panel: its icon, name and what it does on the left,
  * its controls on the right -- under them, full width, on a phone. */
-export const ActionRow = ({
+const ActionRow = ({
   icon: Icon,
-  color = "primary",
   title,
   description,
   children,
 }: {
   icon: typeof SwapHorizIcon;
-  color?: "primary" | "error";
   title: string;
   description: string;
   children: React.ReactNode;
 }) => {
   const theme = useTheme();
-  const tint = theme.palette[color].main;
+  const tint = theme.palette.primary.main;
   return (
     <Box
       sx={{
@@ -158,21 +157,19 @@ const poolChoices = (live: Miner[]): PoolChoice[] => {
 };
 
 /** Actions on every configured miner at once, in the panel their table's
- * Actions button unfolds -- children (another action) end the row. */
+ * Actions button unfolds. */
 export const MinersToolbar = ({
   miners,
   liveMinersByMac,
   saveMiners,
   readOnly,
   onSaved,
-  children,
 }: {
   miners: MinerConfig[];
   liveMinersByMac: Map<string, Miner>;
   saveMiners: (miners: MinerConfig[]) => Promise<MinerConfig[]>;
   readOnly: boolean;
   onSaved: (message: string) => void;
-  children?: React.ReactNode;
 }) => {
   const { t } = useTranslation();
   const { ui } = useUiFeatures();
@@ -263,7 +260,7 @@ export const MinersToolbar = ({
   return (
     <Box
       sx={{
-        mb: 2,
+        mb: SECTION_GAP,
         px: 2,
         py: 0.5,
         borderRadius: 2,
@@ -332,7 +329,6 @@ export const MinersToolbar = ({
             </ActionButton>
           </ActionRow>
         </Writable>
-        {children}
       </Box>
 
       {syncError && (

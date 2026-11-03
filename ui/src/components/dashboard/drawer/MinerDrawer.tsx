@@ -1,7 +1,7 @@
-import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Box, Drawer } from "@mui/material";
+import { Box } from "@mui/material";
 
+import { SidePanel } from "@/components/ui/SidePanel";
 import { type Miner } from "@/schemas/minerSchema";
 import { type MinerStatus } from "@/utils/minerStatus";
 
@@ -31,40 +31,8 @@ export const MinerDrawer = ({
 }: MinerDrawerProps) => {
   const { t } = useTranslation();
 
-  // Swipe right to close on a phone, like the close button. Only the release
-  // is looked at -- the panel doesn't follow the finger, so it leaves with
-  // its regular slide-out instead of snapping back first.
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    const start = touchStart.current;
-    touchStart.current = null;
-    if (!start) return;
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = Math.abs(e.changedTouches[0].clientY - start.y);
-    // A clear rightward swipe, not a vertical scroll that drifted sideways.
-    if (dx > 80 && dx > dy * 2) onClose();
-  };
-
   return (
-    <Drawer
-      anchor="right"
-      open={open && miner !== undefined}
-      onClose={onClose}
-      slotProps={{
-        paper: {
-          onTouchStart,
-          onTouchEnd,
-          sx: {
-            width: { xs: "100%", sm: 540 },
-            bgcolor: "background.default",
-            backgroundImage: "none",
-          },
-        },
-      }}
-    >
+    <SidePanel open={open && miner !== undefined} onClose={onClose}>
       {miner && status && (
         <>
           <MinerHeader miner={miner} status={status} onClose={onClose} />
@@ -91,6 +59,6 @@ export const MinerDrawer = ({
           <MinerActions miner={miner} />
         </>
       )}
-    </Drawer>
+    </SidePanel>
   );
 };

@@ -25,6 +25,11 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
+import {
+  PAGE_GAP,
+  ROW_SPACING,
+  SECTION_GAP,
+} from "@/components/ui/SectionLayout";
 import { type SmtpSecurity } from "@/schemas/appSettingsSchema";
 
 import { AlertsMailBlock } from "./AlertsMailBlock";
@@ -236,7 +241,7 @@ const NotificationsSection = ({
   };
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing={PAGE_GAP}>
       {/* SMTP server */}
       <Box>
         <SectionTitle
@@ -244,8 +249,8 @@ const NotificationsSection = ({
           title={t("settingsPage.appSettings.mail.smtp.title")}
           description={t("settingsPage.appSettings.mail.smtp.description")}
         />
-        <Stack spacing={2}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+        <Stack spacing={SECTION_GAP}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={ROW_SPACING}>
             <TextField
               size="small"
               label={t("settingsPage.appSettings.mail.smtp.hostLabel")}
@@ -286,7 +291,7 @@ const NotificationsSection = ({
               ))}
             </TextField>
           </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={ROW_SPACING}>
             <TextField
               size="small"
               label={t("settingsPage.appSettings.mail.smtp.usernameLabel")}
@@ -313,7 +318,7 @@ const NotificationsSection = ({
           </Stack>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={2}
+            spacing={ROW_SPACING}
             alignItems={{ xs: "stretch", sm: "center" }}
           >
             <TextField
@@ -398,9 +403,9 @@ const NotificationsSection = ({
         </DataTable>
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={ROW_SPACING}
           alignItems={{ xs: "stretch", sm: "center" }}
-          sx={{ mt: 2 }}
+          sx={{ mt: SECTION_GAP }}
         >
           <TextField
             size="small"
@@ -426,9 +431,9 @@ const NotificationsSection = ({
             address for their links. */}
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={ROW_SPACING}
           alignItems={{ xs: "stretch", sm: "center" }}
-          sx={{ mt: 2 }}
+          sx={{ mt: SECTION_GAP }}
         >
           <TextField
             select
@@ -479,9 +484,9 @@ const NotificationsSection = ({
         {/* Test mail: the server and recipients above, checked right away. */}
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={ROW_SPACING}
           alignItems={{ xs: "stretch", sm: "center" }}
-          sx={{ mt: 3 }}
+          sx={{ mt: SECTION_GAP }}
         >
           <ActionButton
             icon={<SendIcon fontSize="small" />}

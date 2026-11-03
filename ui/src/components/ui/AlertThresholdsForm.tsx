@@ -6,6 +6,7 @@ import { Box, Stack, TextField, Typography } from "@mui/material";
 
 import { ThresholdBar } from "@/components/dashboard/miners/MetricBar";
 import { ActionButton } from "@/components/ui/ActionButton";
+import { SECTION_GAP, SectionActions } from "@/components/ui/SectionLayout";
 import {
   fromThreshold,
   thresholdInvalid,
@@ -115,66 +116,68 @@ export const AlertThresholdsForm = ({
   );
 
   return (
-    <Stack
-      direction={{ xs: "column", md: "row" }}
-      spacing={3}
-      alignItems={{ xs: "stretch", md: "flex-start" }}
-    >
-      {MEASURES.map((m) => {
-        const threshold = effective(m.threshold);
-        const clear = Math.max(0, threshold - effective(m.margin));
-        const value = current?.[m.current];
-        return (
-          <Box key={m.threshold} sx={{ flex: 1, minWidth: 0 }}>
-            <Box sx={{ display: "flex", gap: 1.5 }}>
-              {field(m.threshold)}
-              {withMargins && field(m.margin)}
-            </Box>
-            <Box sx={{ mt: 1.5 }}>
-              <ThresholdBar
-                value={value}
-                threshold={threshold}
-                clearBelow={clear}
-                max={m.max(threshold)}
-              />
-            </Box>
-            {/* Side by side, or one under the other in a narrow column --
+    // The measures side by side when there's room -- one per line on a
+    // phone -- and Save under them, as in every section.
+    <Stack spacing={SECTION_GAP}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: SECTION_GAP }}>
+        {MEASURES.map((m) => {
+          const threshold = effective(m.threshold);
+          const clear = Math.max(0, threshold - effective(m.margin));
+          const value = current?.[m.current];
+          return (
+            <Box key={m.threshold} sx={{ flex: "1 1 220px", minWidth: 0 }}>
+              <Box sx={{ display: "flex", gap: 1.5 }}>
+                {field(m.threshold)}
+                {withMargins && field(m.margin)}
+              </Box>
+              <Box sx={{ mt: 1.5 }}>
+                <ThresholdBar
+                  value={value}
+                  threshold={threshold}
+                  clearBelow={clear}
+                  max={m.max(threshold)}
+                />
+              </Box>
+              {/* Side by side, or one under the other in a narrow column --
                 never cut inside one. */}
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "space-between",
-                columnGap: 1.5,
-                mt: 0.75,
-                whiteSpace: "nowrap",
-              }}
-            >
-              <Typography variant="caption" color="text.secondary">
-                {t("alertThresholds.backToNormal", {
-                  value: `${clear} ${m.unit}`,
-                })}
-              </Typography>
-              {value !== undefined && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  columnGap: 1.5,
+                  mt: 0.75,
+                  whiteSpace: "nowrap",
+                }}
+              >
                 <Typography variant="caption" color="text.secondary">
-                  {t("alertThresholds.now", {
-                    value: `${value.toFixed(0)} ${m.unit}`,
+                  {t("alertThresholds.backToNormal", {
+                    value: `${clear} ${m.unit}`,
                   })}
                 </Typography>
-              )}
+                {value !== undefined && (
+                  <Typography variant="caption" color="text.secondary">
+                    {t("alertThresholds.now", {
+                      value: `${value.toFixed(0)} ${m.unit}`,
+                    })}
+                  </Typography>
+                )}
+              </Box>
             </Box>
-          </Box>
-        );
-      })}
+          );
+        })}
+      </Box>
       <Writable readOnly={readOnly}>
-        <ActionButton
-          icon={<SaveIcon fontSize="small" />}
-          loading={isSaving}
-          disabled={invalid || !dirty}
-          onClick={() => void handleSave()}
-        >
-          {isSaving ? t("alertThresholds.saving") : t("alertThresholds.save")}
-        </ActionButton>
+        <SectionActions>
+          <ActionButton
+            icon={<SaveIcon fontSize="small" />}
+            loading={isSaving}
+            disabled={invalid || !dirty}
+            onClick={() => void handleSave()}
+          >
+            {isSaving ? t("alertThresholds.saving") : t("alertThresholds.save")}
+          </ActionButton>
+        </SectionActions>
       </Writable>
     </Stack>
   );

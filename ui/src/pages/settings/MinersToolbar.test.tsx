@@ -1,5 +1,5 @@
 // The Actions panel of Configuration › Miners: a switch of every miner to a
-// pool, the pools check, Disable all -- through the real <App/>, so each
+// pool, the pools check -- through the real <App/>, so each
 // action's gate (ui.page.settings, ui.action.minerPoolSwitch) is what's
 // under test, not a hand-passed prop.
 import { MemoryRouter } from "react-router-dom";
@@ -155,22 +155,15 @@ describe("the Actions panel", () => {
   it("is folded until Actions is clicked, and folds back", async () => {
     mockBackend();
     await openMiners();
-    expect(
-      screen.queryByRole("button", { name: "Disable all" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Check the pools")).not.toBeInTheDocument();
 
     await openActions();
-    expect(
-      screen.getByRole("button", { name: "Disable all" }),
-    ).toBeInTheDocument();
     expect(screen.getByText("Switch to a pool")).toBeInTheDocument();
     expect(screen.getByText("Check the pools")).toBeInTheDocument();
 
     await openActions();
     await vi.waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Disable all" }),
-      ).not.toBeInTheDocument(),
+      expect(screen.queryByText("Check the pools")).not.toBeInTheDocument(),
     );
   });
 
@@ -424,15 +417,17 @@ describe("the pools check", () => {
 });
 
 describe("a configured miner's IP", () => {
-  it("opens the miner's own interface, without unfolding its row", async () => {
+  it("is plain text in the list, its interface linked from its panel", async () => {
     mockBackend();
     await openMiners();
 
-    const link = screen.getByRole("link", { name: "192.168.1.10" });
+    expect(
+      screen.queryByRole("link", { name: "192.168.1.10" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByText("192.168.1.10"));
+    const link = await screen.findByRole("link", { name: "192.168.1.10" });
     expect(link).toHaveAttribute("href", "http://192.168.1.10");
     expect(link).toHaveAttribute("target", "_blank");
-
-    await userEvent.setup().click(link);
-    expect(screen.queryByLabelText("Alias")).not.toBeInTheDocument();
   });
 });

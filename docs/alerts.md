@@ -55,7 +55,7 @@ les retire tous.
 
 Les seuils de température et de ventilateur se règlent pour tous les
 mineurs dans [Configuration › Système]({{ '/configuration.html#systeme' | relative_url }}),
-et pour un mineur en particulier dans sa ligne de Configuration › Mineurs ;
+et pour un mineur en particulier dans son panneau de Configuration › Mineurs ;
 les marges de retour, communes à tous, dans Configuration › Système.
 
 <table class="data-table">

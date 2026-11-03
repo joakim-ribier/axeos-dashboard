@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { ROW_SPACING, SECTION_GAP } from "@/components/ui/SectionLayout";
 import { formatTimestamp } from "@/utils/format";
 
 import { type AppSettingsFrameContext } from "./AppSettingsFrame";
@@ -51,10 +52,10 @@ export const AlertsMailBlock = ({
         title={t("settingsPage.appSettings.mail.alerts.title")}
         description={t("settingsPage.appSettings.mail.alerts.description")}
       />
-      <Stack spacing={2}>
+      <Stack spacing={SECTION_GAP}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          spacing={ROW_SPACING}
           alignItems={{ xs: "stretch", sm: "center" }}
         >
           <FormControlLabel

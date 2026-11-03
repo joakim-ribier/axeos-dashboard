@@ -497,7 +497,6 @@
       "switchButton": "Basculer",
       "syncRow": "Vérifier les pools",
       "syncHint": "Compare les pools enregistrés dans le dashboard avec ceux réglés sur chaque mineur.",
-      "disableAllHint": "Plus aucun mineur n'est interrogé ni planifié.",
       "pool": "Pool",
       "poolOption": "{{pool}} — actif sur {{active}} / {{held}}",
       "switch": "Basculer tous les mineurs",
@@ -525,30 +524,23 @@
     },
     "configured": {
       "title": "Mineurs configurés",
-      "description_one": "{{count}} mineur — clique sur une ligne pour modifier son alias, ses pools, ses seuils d'alerte et ses tâches planifiées.",
-      "description_other": "{{count}} mineurs — clique sur une ligne pour modifier son alias, ses pools, ses seuils d'alerte et ses tâches planifiées.",
       "hostname": "Nom",
       "ip": "IP",
       "mac": "MAC",
       "model": "Modèle",
       "status": "État",
-      "enabled": "Activé",
       "disabled": "Désactivé",
       "actions": "Actions",
       "disable": "Désactiver",
       "enable": "Activer",
-      "disableAll": "Tout désactiver",
-      "disableAllTitle": "Désactiver tous les mineurs ?",
-      "disableAllDescription": "{{count}} mineur(s) actif(s) seront désactivés et arrêteront d'être interrogés. Utile en cas de problème (panne réseau, coupure électrique...). Tu pourras les réactiver individuellement ensuite.",
-      "disableAllConfirm": "Tout désactiver",
-      "disableAllSuccess": "{{count}} mineur(s) désactivé(s).",
       "lastUpdated": "Dernière modification : {{date}}",
       "emptyAlert": "Aucun mineur configuré pour le moment : lance une détection ci-dessous pour en ajouter.",
       "alias": {
         "title": "Nom affiché",
         "label": "Alias",
         "save": "Enregistrer",
-        "saving": "Enregistrement…"
+        "saving": "Enregistrement…",
+        "description": "Le nom sous lequel ce mineur apparaît partout dans le dashboard ; vide, c'est son hostname."
       },
       "pool": {
         "title": "Pool",
@@ -565,10 +557,10 @@
         "saving": "Enregistrement…",
         "reset": "Réinitialiser",
         "swap": "Inverser primaire et secours",
-        "swapTooltip": "Inverser primaire et secours",
         "driftWarning": "Au dernier relevé du feeder ({{value}}) :",
         "driftItem": "{{field}} : enregistré « {{configured}} » ≠ mineur « {{live}} »",
-        "driftBadgeTooltip": "Config pool différente du mineur : {{fields}}"
+        "driftBadgeTooltip": "Config pool différente du mineur : {{fields}}",
+        "description": "Les pools sur lesquels ce mineur mine : le principal, et le secours qui prend le relais quand le principal ne répond plus."
       },
       "schedule": {
         "title": "Planificateur",
@@ -581,12 +573,11 @@
         "restart": "Redémarrer",
         "cronLabel": "Expression cron",
         "cronPlaceholder": "ex. 59 59 23 * * FRI",
-        "cronHelp": "Secondes Minutes Heures JourDuMois Mois JourDeLaSemaine",
+        "cronHelp": "Six champs : secondes, minutes, heures, jour du mois, mois, jour de la semaine.",
         "invalidCron": "Expression cron invalide",
         "duplicateCron": "Cette expression cron est déjà planifiée pour ce mineur",
         "nextRuns": "Prochaines : {{dates}}",
         "countTooltip": "{{count}} planning(s) configuré(s)",
-        "scheduledLabel": "Planifié",
         "add": "Ajouter",
         "adding": "Ajout…",
         "removing": "Suppression…"
@@ -595,7 +586,11 @@
       "thresholdOwn": "Propre à ce mineur",
       "thresholdCommon": "Celui de tous les mineurs (Configuration › Système)",
       "view": "Voir",
-      "saveSuccess": "Mineur enregistré."
+      "saveSuccess": "Mineur enregistré.",
+      "alertsDescription": "Les seuils au-dessus desquels ce mineur passe en alerte ; un champ vide suit ceux de tous les mineurs.",
+      "disableTitle": "Désactiver {{name}} ?",
+      "disableDescription": "{{name}} disparaît du tableau de bord et n'est plus interrogé : plus de relevés, d'alertes ni de tâches planifiées. Sa configuration et son historique sont conservés, tu pourras le réactiver ensuite.",
+      "configure": "Configurer"
     },
     "appSettings": {
       "save": "Enregistrer",
@@ -625,12 +620,14 @@
       "pools": {
         "title": "Dashboards des pools",
         "description": "Associe un hostname de pool stratum à son modèle d'URL de dashboard. Utilise {user} comme placeholder pour la partie compte de l'utilisateur stratum.",
-        "empty": "Aucun dashboard de pool disponible.",
         "hostLabel": "Hostname du pool",
         "urlLabel": "URL du dashboard",
         "missingUserPlaceholder": "Doit contenir {user}",
         "add": "Ajouter",
-        "remove": "Supprimer"
+        "remove": "Supprimer",
+        "showBuiltIn_one": "Voir le pool intégré",
+        "showBuiltIn_other": "Voir les {{count}} pools intégrés",
+        "hideBuiltIn": "Masquer les pools intégrés"
       },
       "remote": {
         "pushUrlLabel": "URL de push",

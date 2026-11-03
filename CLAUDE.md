@@ -225,6 +225,8 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 | `src/components/dashboard/fleet/` | 24h fleet hashrate chart, health badge (unfolds every miner, problems first), KPIs |
 | `src/components/dashboard/miners/` | Dense list rows and tiles: 24h sparkline, temp/fan gauges, active pool link |
 | `src/components/dashboard/drawer/` | Per-miner detail panel: issues, vitals, 24h chart, pools, session/all-time/device, restart + pool switch |
+| `src/pages/settings/` | Configuration: one section at a time, picked from `SectionMenu` (a column, `SectionPicker` folded on a phone); a configured miner opens `MinerConfigPanel` -- the same menu over its sections (name, pool, alert thresholds, scheduler), each editor saving on its own |
+| `src/components/ui/` | The shared pieces every page reuses rather than restyles: `SectionLayout` (`PAGE_GAP` 32px between a page's blocks, `SECTION_GAP` 20px within one, `ROW_SPACING`, `SectionStack`/`SectionActions` -- buttons under the fields, full width on a phone), `SectionMenu`, `SidePanel` (the right-hand panel, swipe to close), `ActionButton`, `RowList`/`Row` (a list on a phone), `UrlText` (a URL on one line, whole on hover), `DeviceLink`, `AlertThresholdsForm` |
 | `src/utils/minerStatus.ts` | Status per miner, most urgent first: offline > configError > stale > warning (temp / fan alert in progress -- `activeAlerts` from `/api/miners`, so the hysteresis matches the Alerts page; a board, which has none, falls back to above the thresholds pushed with each sample, 62 / 75 when absent) > ok |
 | `src/hooks/useMiners.ts` | TanStack Query: `GET /api/miners`, Zod validation, staleTime=Infinity |
 | `src/hooks/useMinersHistory.ts` | `GET /api/miners/history` -- the fleet chart and every sparkline |

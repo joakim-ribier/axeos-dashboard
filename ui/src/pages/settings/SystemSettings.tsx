@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import MemoryIcon from "@mui/icons-material/Memory";
 import SystemUpdateAltIcon from "@mui/icons-material/SystemUpdateAlt";
 import {
   Box,
+  Button,
   Chip,
+  Collapse,
   IconButton,
   Stack,
   TableBody,
@@ -16,11 +19,20 @@ import {
   TableRow,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
+import { Row, RowList } from "@/components/ui/RowList";
 import { SectionDivider } from "@/components/ui/SectionDivider";
+import {
+  PAGE_GAP,
+  ROW_SPACING,
+  SECTION_GAP,
+} from "@/components/ui/SectionLayout";
+import { UrlText } from "@/components/ui/UrlText";
 import { Writable } from "@/components/ui/Writable";
 
 import { AlertThresholdsBlock } from "./AlertThresholdsBlock";
@@ -34,6 +46,95 @@ interface PoolDashboardRow {
   host: string;
   url: string;
 }
+
+interface UrlRow {
+  key: string;
+  label: React.ReactNode;
+  url: string;
+  /** A pool added by hand -- a built-in one can't be removed. */
+  onRemove?: () => void;
+}
+
+/** URLs and what they're for: a table, or a row each on a phone -- every
+ * URL on one line, whole on hover. */
+const UrlList = ({
+  rows,
+  labelHeader,
+  urlHeader,
+  removeLabel,
+  disabled,
+  readOnly,
+}: {
+  rows: UrlRow[];
+  labelHeader: string;
+  urlHeader: string;
+  removeLabel?: string;
+  disabled?: boolean;
+  readOnly: boolean;
+}) => {
+  const isPhone = useMediaQuery(useTheme().breakpoints.down("sm"), {
+    noSsr: true,
+  });
+  const removable = !readOnly && rows.some((r) => r.onRemove);
+  const remove = (row: UrlRow) =>
+    row.onRemove && (
+      <IconButton
+        size="small"
+        disabled={disabled}
+        onClick={row.onRemove}
+        aria-label={removeLabel}
+      >
+        <DeleteOutlineIcon fontSize="small" />
+      </IconButton>
+    );
+
+  if (isPhone) {
+    return (
+      <RowList>
+        {rows.map((row) => (
+          <Row
+            key={row.key}
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Box sx={{ fontWeight: 600 }}>{row.label}</Box>
+              <Box sx={{ color: "text.secondary" }}>
+                <UrlText url={row.url} />
+              </Box>
+            </Box>
+            {!readOnly && remove(row)}
+          </Row>
+        ))}
+      </RowList>
+    );
+  }
+  return (
+    <DataTable>
+      <TableHead>
+        <TableRow>
+          <TableCell sx={{ width: "1%", whiteSpace: "nowrap" }}>
+            {labelHeader}
+          </TableCell>
+          <TableCell>{urlHeader}</TableCell>
+          {removable && <TableCell align="right" sx={{ width: 56 }} />}
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow hover key={row.key}>
+            <TableCell sx={{ whiteSpace: "nowrap" }}>{row.label}</TableCell>
+            {/* maxWidth 0: the cell takes what's left and cuts the URL
+                short, rather than widening the table. */}
+            <TableCell sx={{ maxWidth: 0, width: "100%" }}>
+              <UrlText url={row.url} />
+            </TableCell>
+            {removable && <TableCell align="right">{remove(row)}</TableCell>}
+          </TableRow>
+        ))}
+      </TableBody>
+    </DataTable>
+  );
+};
 
 const SystemSection = ({
   data,
@@ -96,8 +197,26 @@ const SystemSection = ({
   const handleRemovePoolDashboard = (host: string) =>
     persistPoolDashboards(poolDashboards.filter((p) => p.host !== host));
 
+  // The ones added by hand always in view; the built-in ones -- a list that
+  // grows with each release -- folded until asked for.
+  const [showBuiltIn, setShowBuiltIn] = useState(false);
+  const host = (name: string) => (
+    <Box component="span" sx={{ fontFamily: "monospace" }}>
+      {name}
+    </Box>
+  );
+  const customRows: UrlRow[] = poolDashboards.map((row) => ({
+    key: `custom-${row.host}`,
+    label: host(row.host),
+    url: row.url,
+    onRemove: () => void handleRemovePoolDashboard(row.host),
+  }));
+  const builtInRows: UrlRow[] = Object.entries(
+    data?.defaults.pools.dashboards ?? {},
+  ).map(([name, url]) => ({ key: `builtin-${name}`, label: host(name), url }));
+
   return (
-    <Stack spacing={4}>
+    <Stack spacing={PAGE_GAP}>
       <AlertThresholdsBlock
         data={data}
         readOnly={readOnly}
@@ -117,76 +236,54 @@ const SystemSection = ({
           description={t("settingsPage.appSettings.pools.description")}
         />
 
-        <DataTable sx={{ mb: 2 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                {t("settingsPage.appSettings.pools.hostLabel")}
-              </TableCell>
-              <TableCell>
-                {t("settingsPage.appSettings.pools.urlLabel")}
-              </TableCell>
-              <Writable readOnly={readOnly}>
-                <TableCell align="right" sx={{ width: 56 }} />
-              </Writable>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data &&
-              Object.keys(data.defaults.pools.dashboards).length === 0 &&
-              poolDashboards.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={readOnly ? 2 : 3}>
-                    <Typography variant="caption" color="text.disabled">
-                      {t("settingsPage.appSettings.pools.empty")}
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            {data &&
-              Object.entries(data.defaults.pools.dashboards).map(
-                ([host, url]) => (
-                  <TableRow hover key={`builtin-${host}`}>
-                    <TableCell sx={{ fontFamily: "monospace" }}>
-                      {host}
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}
-                    >
-                      {url}
-                    </TableCell>
-                    <Writable readOnly={readOnly}>
-                      <TableCell />
-                    </Writable>
-                  </TableRow>
-                ),
-              )}
-            {poolDashboards.map((row) => (
-              <TableRow hover key={`custom-${row.host}`}>
-                <TableCell sx={{ fontFamily: "monospace" }}>
-                  {row.host}
-                </TableCell>
-                <TableCell
-                  sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}
-                >
-                  {row.url}
-                </TableCell>
-                <Writable readOnly={readOnly}>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      disabled={isSaving}
-                      onClick={() => void handleRemovePoolDashboard(row.host)}
-                      aria-label={t("settingsPage.appSettings.pools.remove")}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </Writable>
-              </TableRow>
-            ))}
-          </TableBody>
-        </DataTable>
+        {customRows.length > 0 && (
+          <UrlList
+            rows={customRows}
+            labelHeader={t("settingsPage.appSettings.pools.hostLabel")}
+            urlHeader={t("settingsPage.appSettings.pools.urlLabel")}
+            removeLabel={t("settingsPage.appSettings.pools.remove")}
+            disabled={isSaving}
+            readOnly={readOnly}
+          />
+        )}
+        {/* The same fold as the miners' Actions: an outlined button, its
+            arrow turning, the list sliding open under it. */}
+        {builtInRows.length > 0 && (
+          <Box sx={{ mt: customRows.length > 0 ? SECTION_GAP : 0 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              aria-expanded={showBuiltIn}
+              onClick={() => setShowBuiltIn((shown) => !shown)}
+              startIcon={<SystemUpdateAltIcon fontSize="small" />}
+              endIcon={
+                <KeyboardArrowDownIcon
+                  sx={{
+                    transition: "transform 0.2s",
+                    transform: showBuiltIn ? "rotate(180deg)" : "none",
+                  }}
+                />
+              }
+              sx={{ height: 40 }}
+            >
+              {showBuiltIn
+                ? t("settingsPage.appSettings.pools.hideBuiltIn")
+                : t("settingsPage.appSettings.pools.showBuiltIn", {
+                    count: builtInRows.length,
+                  })}
+            </Button>
+            <Collapse in={showBuiltIn} unmountOnExit>
+              <Box sx={{ pt: SECTION_GAP }}>
+                <UrlList
+                  rows={builtInRows}
+                  labelHeader={t("settingsPage.appSettings.pools.hostLabel")}
+                  urlHeader={t("settingsPage.appSettings.pools.urlLabel")}
+                  readOnly={readOnly}
+                />
+              </Box>
+            </Collapse>
+          </Box>
+        )}
 
         {/* Under the table, same shape as the other add forms: the row's
             fields carry no helper text (it'd make one taller than its
@@ -194,9 +291,9 @@ const SystemSection = ({
         <Writable readOnly={readOnly}>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={2}
+            spacing={ROW_SPACING}
             alignItems={{ xs: "stretch", sm: "center" }}
-            sx={{ mt: 2 }}
+            sx={{ mt: SECTION_GAP }}
           >
             <TextField
               size="small"
@@ -248,40 +345,25 @@ const SystemSection = ({
           title={t("settingsPage.appSettings.firmware.title")}
           description={t("settingsPage.appSettings.firmware.description")}
         />
-        <DataTable>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 120 }}>
-                {t("settingsPage.appSettings.firmware.modelLabel")}
-              </TableCell>
-              <TableCell>
-                {t("settingsPage.appSettings.firmware.urlLabel")}
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data &&
-              Object.entries(data.defaults.firmware.repos).map(
-                ([model, url]) => (
-                  <TableRow hover key={model}>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={model}
-                        sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
-                      />
-                    </TableCell>
-                    <TableCell
-                      sx={{ fontFamily: "monospace", overflowWrap: "anywhere" }}
-                    >
-                      {url}
-                    </TableCell>
-                  </TableRow>
-                ),
-              )}
-          </TableBody>
-        </DataTable>
+        <UrlList
+          rows={Object.entries(data?.defaults.firmware.repos ?? {}).map(
+            ([model, url]) => ({
+              key: model,
+              label: (
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={model}
+                  sx={{ height: 24, fontSize: "0.8rem", borderRadius: 1 }}
+                />
+              ),
+              url,
+            }),
+          )}
+          labelHeader={t("settingsPage.appSettings.firmware.modelLabel")}
+          urlHeader={t("settingsPage.appSettings.firmware.urlLabel")}
+          readOnly
+        />
       </Box>
     </Stack>
   );

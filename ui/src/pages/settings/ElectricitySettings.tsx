@@ -22,6 +22,11 @@ import {
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
 import { SectionDivider } from "@/components/ui/SectionDivider";
+import {
+  PAGE_GAP,
+  ROW_SPACING,
+  SECTION_GAP,
+} from "@/components/ui/SectionLayout";
 import { Writable } from "@/components/ui/Writable";
 import { type PowerDevice } from "@/schemas/appSettingsSchema";
 
@@ -125,7 +130,7 @@ const ElectricitySection = ({
   };
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing={PAGE_GAP}>
       {/* Rate */}
       <Box>
         <SectionTitle
@@ -142,7 +147,7 @@ const ElectricitySection = ({
         ) : (
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={2}
+            spacing={ROW_SPACING}
             alignItems={{ xs: "stretch", sm: "center" }}
           >
             <TextField
@@ -298,9 +303,9 @@ const ElectricitySection = ({
         <Writable readOnly={readOnly}>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            spacing={2}
+            spacing={ROW_SPACING}
             alignItems={{ xs: "stretch", sm: "center" }}
-            sx={{ mt: 2 }}
+            sx={{ mt: SECTION_GAP }}
           >
             <TextField
               size="small"

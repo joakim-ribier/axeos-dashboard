@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import CloseIcon from "@mui/icons-material/Close";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import { Box, IconButton, Link, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
 
+import { DeviceLink } from "@/components/ui/DeviceLink";
 import { type Miner } from "@/schemas/minerSchema";
 import { displayName } from "@/utils/minerDisplay";
 import { type MinerStatus, STATUS_COLOR } from "@/utils/minerStatus";
@@ -58,16 +58,7 @@ export const MinerHeader = ({ miner, status, onClose }: MinerHeaderProps) => {
             component="div"
             sx={{ mt: 0.5, color: "text.secondary" }}
           >
-            <Link
-              href={`http://${miner.ip}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={t("miner.openDevice")}
-              sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-            >
-              {miner.ip}
-              <OpenInNewIcon sx={{ fontSize: 13 }} />
-            </Link>
+            <DeviceLink ip={miner.ip} />
             {miner.deviceModel && ` · ${miner.deviceModel}`}
           </Typography>
         </Box>

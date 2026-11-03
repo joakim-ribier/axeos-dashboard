@@ -57,7 +57,7 @@ d'alertes en échec, pool différent de la configuration...).
 
 Scanne le réseau local à la recherche de mineurs AxeOS (bitaxe,
 nerdaxe). Un mineur non trouvé (autre sous-réseau, pare-feu...) peut être
-ajouté directement par IP, juste à côté.
+ajouté directement par IP, juste en dessous.
 
 ![Détection automatique]({{ '/assets/images/settings-scan-before.png' | relative_url }})
 
@@ -69,24 +69,51 @@ configuration.
 ### Mineurs configurés
 {: #mineurs-configures }
 
-La liste des mineurs déjà configurés, avec leur IP, modèle, seuils
-d'alerte (en couleur ceux propres au mineur) et état — activation/
-désactivation en un clic par mineur. L'IP ouvre l'interface AxeOS du
-mineur dans un nouvel onglet, l'œil son panneau de détail, le même que
-sur le [tableau de bord]({{ '/dashboard.html' | relative_url }}). Le
-bouton **Actions** déplie ce qui agit sur tous les mineurs à la fois
+La liste des mineurs déjà configurés : nom (l'alias, et le hostname en
+dessous quand il diffère), IP, modèle, seuils d'alerte et état — une
+horloge pour un mineur qui a des tâches planifiées, **Désactivé** pour un
+mineur désactivé. Sur téléphone, chaque mineur tient sur quelques lignes
+courtes au lieu d'un tableau.
+
+Les actions de chaque mineur :
+
+- ⚙ **Configurer** ouvre son panneau de configuration, comme un clic sur
+  sa ligne (voir [Panneau d'un mineur](#panneau-dun-mineur)).
+- 👁 **Voir** ouvre son panneau de détail, le même que sur le
+  [tableau de bord]({{ '/dashboard.html' | relative_url }}).
+- ⏸ **Désactiver**, après confirmation : le mineur disparaît du tableau
+  de bord et n'est plus interrogé — plus de relevés, d'alertes ni de
+  tâches planifiées. Sa configuration et son historique sont conservés ;
+  ▶ le réactive.
+
+Le bouton **Actions** déplie ce qui agit sur tous les mineurs à la fois
 (voir [Actions](#actions)).
 
 ![Mineurs configurés]({{ '/assets/images/settings-configured-miners.png' | relative_url }})
 
-#### Nom et pools
+### Panneau d'un mineur
+{: #panneau-dun-mineur }
 
-Cliquer sur un mineur déplie son éditeur : nom affiché, et pool primaire
-/ secours (URL, port, utilisateur). Quand ces pools diffèrent de ceux du
-dernier relevé du feeder, une alerte le signale au-dessus, avec l'heure
-de ce relevé.
+Un clic sur un mineur ouvre son panneau de configuration, à droite (en
+plein écran sur téléphone). Un menu, le même que celui de Configuration,
+résume chaque section — nom affiché, pool, seuils d'alerte,
+planificateur — et la section choisie s'affiche à côté, avec son propre
+bouton **Enregistrer**.
 
-![Nom et pools]({{ '/assets/images/settings-alias-pools.png' | relative_url }})
+#### Nom affiché
+
+Le nom sous lequel le mineur apparaît partout dans le dashboard ; vide,
+c'est son hostname. Une détection relancée ne le change jamais.
+
+#### Pool
+
+Les pools primaire et de secours du mineur (URL, port, utilisateur).
+**Inverser primaire et secours** échange les deux avant d'enregistrer.
+Quand ces pools diffèrent de ceux du dernier relevé du feeder, un
+avertissement le signale au-dessus, avec l'heure de ce relevé, et un
+point orange sur l'entrée **Pool** du menu.
+
+![Pool d'un mineur]({{ '/assets/images/settings-alias-pools.png' | relative_url }})
 
 #### Seuils d'alerte
 
@@ -103,6 +130,9 @@ au-delà.
 #### Planificateur
 
 Programme un changement de pool ou un redémarrage selon un planning cron.
+Chaque tâche affiche son action, quand elle s'exécute en clair et son
+expression cron ; pendant la saisie d'une nouvelle, l'aperçu en clair et
+les prochaines exécutions s'affichent sous le champ.
 
 ![Planificateur]({{ '/assets/images/settings-schedule.png' | relative_url }})
 
@@ -137,11 +167,6 @@ est **non lu**. **Synchroniser** enregistre dans le dashboard les pools
 des mineurs à corriger.
 
 ![Vérification des pools]({{ '/assets/images/settings-miners-check.png' | relative_url }})
-
-#### Tout désactiver
-
-Désactive tous les mineurs : plus aucun n'est interrogé ni planifié,
-jusqu'à ce qu'on les réactive un par un.
 
 ---
 
@@ -328,7 +353,7 @@ ventilateur dépasse son seuil, et se termine une fois la valeur
 redescendue sous le seuil moins sa **marge de retour** : une valeur qui
 oscille autour du seuil ne déclenche pas une alerte à chaque relevé. Les
 seuils réglés ici valent pour tous les mineurs — chacun peut avoir les
-siens dans sa ligne de [Mineurs](#mineurs) — et les marges de retour
+siens dans son [panneau](#panneau-dun-mineur) — et les marges de retour
 pour tous. Vides, ce sont les valeurs d'origine : 62 °C et 75 %, avec des
 marges de 2 °C et 5 %.
 
@@ -346,6 +371,10 @@ soi-même la correspondance entre son hostname et l'URL de son
 dashboard, avec `{user}` comme placeholder pour la partie compte de
 l'utilisateur stratum — le lien devient alors cliquable dans la liste et
 le détail des mineurs qui utilisent ce pool.
+
+Seuls les pools ajoutés à la main sont affichés d'emblée : **Voir les
+pools intégrés** déplie les autres. Une URL trop longue est coupée, et
+s'affiche en entier au survol (ou au toucher sur téléphone).
 
 ![Dashboards des pools]({{ '/assets/images/settings-pools.png' | relative_url }})
 
