@@ -65,8 +65,12 @@ make build
 make run-feeder        CONFIG=resources/dashboard.yml
 make run-dashboard-api CONFIG=resources/dashboard.yml
 make run-mailer        CONFIG=resources/dashboard.yml   # every mail (audit report, test mail)
-make run-dashboard-ui  # Vite dev server on :5173, proxies /api → :8080
+make run-dashboard-ui  # Vite dev server on :5174, proxies /api → :8080
 ```
+
+Or, for the UI work alone: `make run` -- dashboard-api and its UI in one
+console, no feeder nor mailer, Ctrl+C stops both. `make remote-run` does the
+same for a board (`:5175`), on a sibling hashboard checkout's data.
 
 `dashboard.yml` field reference is in the
 [Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html#config-file)

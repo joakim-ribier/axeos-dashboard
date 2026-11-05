@@ -14,6 +14,16 @@ CONFIG_FILE ?= resources/dashboard.yml
 # Config for remote-dashboard-api (minimal: storage + pools only)
 REMOTE_DASHBOARD_CONFIG ?= resources/remote-dashboard.yml
 
+# The UI dev servers' ports, fixed (--strictPort: a port in use fails rather
+# than moving to the next one) -- 5173 is hashboard's own UI.
+DASHBOARD_UI_PORT ?= 5174
+REMOTE_UI_PORT    ?= 5175
+
+# A sibling hashboard checkout, whose data the local remote reads (make
+# remote-run) -- found from the main checkout or from a worktree under
+# .claude/worktrees/.
+HASHBOARD_DIR ?= $(firstword $(wildcard ../hashboard ../../../../hashboard))
+
 # GitHub repo + release used by `make latest-*` (fetch CI-built binaries for the local architecture instead of building locally)
 GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG       ?= latest
@@ -60,7 +70,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down dev-attach dev-status dev-logs latest-fetch latest-up latest-down latest-remote-up latest-remote-down build-linux deploy restart docker-build docs-serve
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-remote-dashboard-api run-dashboard-ui run-remote-dashboard-ui rebuild-totals dev-up dev-down latest-fetch latest-up latest-down latest-remote-up latest-remote-down run remote-run build-ui build-linux deploy restart docker-build docs-serve
 
 # ==============================================================================
 # Main Commands
@@ -183,13 +193,13 @@ run-remote-dashboard-api:
 run-dashboard-ui:
 	@echo ">>> Starting UI dev server → dashboard-api (:$(DASHBOARD_API_PORT))..."
 	@if [ ! -d "ui" ]; then echo "Error: UI directory not found."; exit 1; fi
-	cd ui && API_PORT=$(DASHBOARD_API_PORT) npm run dev
+	cd ui && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort
 
 # Run UI dev server → remote-dashboard-api
 run-remote-dashboard-ui:
 	@echo ">>> Starting UI dev server → remote-dashboard-api (:$(REMOTE_DASHBOARD_API_PORT))..."
 	@if [ ! -d "ui" ]; then echo "Error: UI directory not found."; exit 1; fi
-	cd ui && API_PORT=$(REMOTE_DASHBOARD_API_PORT) npm run dev
+	cd ui && API_PORT=$(REMOTE_DASHBOARD_API_PORT) npm run dev -- --port $(REMOTE_UI_PORT) --strictPort
 
 # Display help message
 help:
@@ -209,13 +219,14 @@ help:
 	@echo "  make run-remote-dashboard-ui   - Start UI dev server → remote-dashboard-api (:$(REMOTE_DASHBOARD_API_PORT))"
 	@echo "  make dev-up                    - Start full dev environment (UI + dashboard-api + feeder + mailer)"
 	@echo "  make dev-down                  - Stop dev environment"
-	@echo "  make dev-attach                - Attach to existing dev screen session"
-	@echo "  make dev-status                - List all screen sessions"
+	@echo "  make run                       - dashboard-api + its UI (:$(DASHBOARD_UI_PORT)) in this console, no feeder/mailer -- Ctrl+C stops both"
+	@echo "  make remote-run                - remote-dashboard-api + its UI (:$(REMOTE_UI_PORT)) on the sibling hashboard's data, in this console"
 	@echo "  make latest-fetch              - Fetch prebuilt binaries + UI from the latest GitHub Release (auto-detects arch)"
 	@echo "  make latest-up                 - Start the stack from the latest release, no local build"
 	@echo "  make latest-down               - Stop the latest environment (same as dev-down)"
 	@echo "  make latest-remote-up          - Start remote-dashboard-api from the latest release (VPS use, no local build)"
 	@echo "  make latest-remote-down        - Stop remote-dashboard-api"
+	@echo "  make build-ui                  - Build the UI (static files in ui/dist) -- the same for a dashboard and a board"
 	@echo "  make build-linux               - Cross-compile dashboard-api/feeder/mailer/rebuild-totals (linux/arm64) and build the UI"
 	@echo "  make deploy                    - build-linux, then copy the result to $(DEPLOY_HOST) (test without pushing to main)"
 	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder + mailer from what's on disk, no GitHub fetch"
@@ -243,7 +254,7 @@ dev-up: build
 	# --- DASHBOARD UI ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-ui bash -c "\
 		cd $(UI_DIR) && \
-		API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --host 0.0.0.0"
+		API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --host 0.0.0.0 --port $(DASHBOARD_UI_PORT) --strictPort"
 
 	# --- DASHBOARD API ---
 	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
@@ -260,7 +271,7 @@ dev-up: build
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)"
 
-	@echo "✅ Dev environment started. Use 'make dev-attach' to connect."
+	@echo "✅ Dev environment started. Use 'screen -r $(SCREEN_NAME)' to connect."
 
 # Stop development environment and all associated processes
 dev-down:
@@ -270,10 +281,11 @@ dev-down:
 	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
 	@sleep 1
 
-	# 2. Kill residual processes by name (fallback)
-	-pkill -9 -f "npm run dev" 2>/dev/null || true
+	# 2. Kill residual processes by name (fallback) -- this stack's only: not
+	# the local remote's (remote-run), nor hashboard's UI
+	-pkill -9 -f -- "--port $(DASHBOARD_UI_PORT)" 2>/dev/null || true
 	-pkill -9 -f "npm run preview" 2>/dev/null || true
-	-pkill -9 -f "dashboard-api" 2>/dev/null || true
+	-pkill -9 -f "$(SERVER_BUILD_DIR)/dashboard-api" 2>/dev/null || true
 	-pkill -9 -f "feeder" 2>/dev/null || true
 	-pkill -9 -f "mailer" 2>/dev/null || true
 
@@ -282,17 +294,35 @@ dev-down:
 
 	@echo "✅ Stopped"
 
-# Attach to existing screen session
-dev-attach:
-	screen -r $(SCREEN_NAME)
+# An API and its UI together in this console, each line prefixed with
+# where it comes from; Ctrl+C stops both. No feeder, no mailer.
 
-# List all screen sessions
-dev-status:
-	screen -ls
+# The local dashboard: dashboard-api + its UI on :$(DASHBOARD_UI_PORT).
+run: build
+	@trap 'kill 0' INT TERM; \
+	$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) 2>&1 | sed -l 's/^/[api] /' & \
+	(cd $(UI_DIR) && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort) 2>&1 | sed -l 's/^/[ui]  /' & \
+	wait
 
-# Display logs message
-dev-logs:
-	@echo "Logs available in the screen session. Use 'make dev-attach' to connect."
+# The local remote: remote-dashboard-api reading the sibling hashboard
+# checkout's data (run it there: make run) + its UI on :$(REMOTE_UI_PORT) --
+# http://localhost:$(REMOTE_UI_PORT)/{boardId}. Its config is written here,
+# pointing at HASHBOARD_DIR.
+REMOTE_DEV_CONFIG := resources/build/remote-dashboard.dev.yml
+
+remote-run: build
+	@if [ -z "$(HASHBOARD_DIR)" ]; then echo "Error: no hashboard checkout found -- pass HASHBOARD_DIR=/path/to/hashboard"; exit 1; fi
+	@printf '%s\n' \
+		'# Written by make remote-run -- the local remote on $(abspath $(HASHBOARD_DIR))' \
+		'global: {env: dev}' \
+		'server: {port: "$(REMOTE_DASHBOARD_API_PORT)"}' \
+		'storage: {dataDir: "$(abspath $(HASHBOARD_DIR))/resources"}' \
+		'hashboardURL: "http://localhost:5173"' \
+		> $(REMOTE_DEV_CONFIG)
+	@trap 'kill 0' INT TERM; \
+	$(SERVER_BUILD_DIR)/remote-dashboard-api -config $(REMOTE_DEV_CONFIG) 2>&1 | sed -l 's/^/[api] /' & \
+	(cd $(UI_DIR) && API_PORT=$(REMOTE_DASHBOARD_API_PORT) npm run dev -- --port $(REMOTE_UI_PORT) --strictPort) 2>&1 | sed -l 's/^/[ui]  /' & \
+	wait
 
 # ==============================================================================
 # Latest Environment (prebuilt CI artifacts — no local build, linux/arm64 only)
@@ -372,7 +402,7 @@ latest-up: latest-fetch
 	fi
 
 	@echo "✅ Latest environment started (dashboard-api + feeder + mailer). nginx serves the UI separately."
-	@echo "   Use 'make dev-attach' to connect to the screen session."
+	@echo "   Use 'screen -r $(SCREEN_NAME)' to connect to the screen session."
 
 # Stop the latest environment — identical teardown to dev-down (same screen session name).
 latest-down: dev-down
@@ -387,7 +417,7 @@ latest-remote-up: latest-fetch
 		cd $(ROOT_DIR) && \
 		$(SERVER_BUILD_DIR)/remote-dashboard-api -config $(CONFIG_FILE); exec bash"
 	@echo ">>> remote-dashboard-api started in screen '$(SCREEN_NAME)'"
-	@echo ">>> Attach: make dev-attach"
+	@echo ">>> Attach: screen -r $(SCREEN_NAME)"
 
 # Stop the latest remote environment.
 latest-remote-down:
@@ -405,16 +435,19 @@ latest-remote-down:
 # re-fetches from GitHub first and would overwrite what was just copied.)
 # ==============================================================================
 
+build-ui:
+	@echo ">>> Building UI..."
+	cd $(UI_DIR) && npm run build
+	@echo ">>> Done. Static files: ui/dist"
+
 # Cross-compile dashboard-api + feeder + mailer for the Pi (linux/arm64) and build the UI.
-build-linux:
+build-linux: build-ui
 	@echo ">>> Cross-compiling dashboard-api + feeder + mailer + rebuild-totals for linux/arm64..."
 	@mkdir -p $(SERVER_BUILD_DIR)
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/mailer ./cmd/mailer
 	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
-	@echo ">>> Building UI..."
-	cd $(UI_DIR) && npm run build
 	@echo ">>> Done."
 
 deploy: build-linux

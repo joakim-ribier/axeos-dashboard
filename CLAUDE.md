@@ -15,9 +15,6 @@ Supported device models: **bitaxe** and **nerdaxe** (model-specific response par
 ```bash
 make dev-up        # start all 4 services (UI, dashboard-api, feeder, mailer) in GNU screen session (axeos-dashboard)
 make dev-down      # stop all
-make dev-attach    # attach to screen session
-make dev-logs      # tail logs
-make dev-status    # check screen session status
 ```
 
 ### Individual Services
@@ -28,6 +25,8 @@ make run-feeder        CONFIG=resources/dashboard.yml   # polling daemon
 make run-mailer        CONFIG=resources/dashboard.yml   # scheduled mails (audit report)
 make run-dashboard-ui                                    # Vite dev server → :8080
 make run-remote-dashboard-ui                                    # Vite dev server → :8081 (remote)
+make run                                                 # dashboard-api + its UI (:5174) in this console, no feeder/mailer -- Ctrl+C stops both
+make remote-run                                          # remote-dashboard-api + its UI (:5175) on the sibling hashboard's data
 ```
 
 ### Build & Lint
