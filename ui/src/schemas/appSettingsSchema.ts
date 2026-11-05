@@ -25,6 +25,11 @@ export const remoteSchema = z.object({
   sendUser: z.boolean(),
   sendPools: z.boolean(),
   sendIP: z.boolean(),
+  actions: z.object({
+    restart: z.boolean(),
+    switchPool: z.boolean(),
+    mail: z.boolean(),
+  }),
 });
 
 // Keyed by model -- only "bitaxe"/"nerdaxe" are ever meaningful (see

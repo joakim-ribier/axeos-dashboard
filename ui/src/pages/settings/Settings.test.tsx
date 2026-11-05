@@ -25,6 +25,7 @@ const settings = {
     sendUser: false,
     sendPools: false,
     sendIP: false,
+    actions: { restart: false, switchPool: false, mail: false },
   },
   firmware: { repos: {} },
   defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
@@ -65,7 +66,6 @@ const mockBackend = (settingsFlag: UIVisibility) => {
               backups: "enabled",
               audit: "enabled",
             },
-            action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
           },
         },
       });

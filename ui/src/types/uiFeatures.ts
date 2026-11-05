@@ -10,10 +10,6 @@ export interface UIFeatures {
     backups: UIVisibility;
     audit: UIVisibility;
   };
-  action: {
-    minerRestart: UIVisibility;
-    minerPoolSwitch: UIVisibility;
-  };
 }
 
 // Everything shown/usable -- the fallback while GET /api/info hasn't
@@ -21,5 +17,4 @@ export interface UIFeatures {
 // effectively gets server-side too (see UIVisibility.Normalized).
 export const DEFAULT_UI_FEATURES: UIFeatures = {
   page: { settings: "enabled", backups: "enabled", audit: "enabled" },
-  action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
 };

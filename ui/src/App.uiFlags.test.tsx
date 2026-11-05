@@ -59,7 +59,6 @@ const mockBackend = (page: Page, state: UIVisibility) => {
               audit: "enabled",
               [page]: state,
             },
-            action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
           },
         },
       });

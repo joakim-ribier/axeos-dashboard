@@ -196,6 +196,9 @@ func SettingsChanges(before, after config.AppSettingsFile) []Entry {
 		{"sendUser", onOff(before.Remote.SendUser), onOff(after.Remote.SendUser)},
 		{"sendPools", onOff(before.Remote.SendPools), onOff(after.Remote.SendPools)},
 		{"sendIP", onOff(before.Remote.SendIP), onOff(after.Remote.SendIP)},
+		{"remoteRestart", onOff(before.Remote.Actions.Restart), onOff(after.Remote.Actions.Restart)},
+		{"remoteSwitchPool", onOff(before.Remote.Actions.SwitchPool), onOff(after.Remote.Actions.SwitchPool)},
+		{"remoteActionsMail", onOff(before.Remote.Actions.Mail), onOff(after.Remote.Actions.Mail)},
 	})
 	if before.Remote.APIKey != after.Remote.APIKey {
 		remote = append(remote, Change{Field: "apiKey", Kind: ChangeChanged})

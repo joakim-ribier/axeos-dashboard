@@ -9,7 +9,6 @@ import {
   Box,
   MenuItem,
   TextField,
-  Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -19,7 +18,6 @@ import { ActionButton } from "@/components/ui/ActionButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SECTION_GAP } from "@/components/ui/SectionLayout";
 import { Writable } from "@/components/ui/Writable";
-import { useUiFeatures } from "@/hooks/useMiners";
 import { type MinerConfig, normalizeMac } from "@/schemas/minerConfigSchema";
 import type { Miner } from "@/schemas/minerSchema";
 import { extractErrorMessage } from "@/utils/apiError";
@@ -172,7 +170,6 @@ export const MinersToolbar = ({
   onSaved: (message: string) => void;
 }) => {
   const { t } = useTranslation();
-  const { ui } = useUiFeatures();
   const enabled = miners.filter((m) => m.enabled);
   const liveOf = (m: MinerConfig) => liveMinersByMac.get(normalizeMac(m.mac));
   const live = enabled.flatMap((m) => liveOf(m) ?? []);
@@ -194,9 +191,6 @@ export const MinersToolbar = ({
   const [isComparing, setIsComparing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const poolSwitch = ui.action.minerPoolSwitch;
-  const switchReadOnly = poolSwitch === "readonly";
 
   const handleSwitch = async () => {
     if (!selected || isSwitching) return;
@@ -270,50 +264,42 @@ export const MinersToolbar = ({
       }}
     >
       <Box sx={{ "& > * + *": { borderTop: 1, borderColor: "divider" } }}>
-        {poolSwitch !== "hidden" && (
-          <ActionRow
-            icon={SwapHorizIcon}
-            title={t("settingsPage.toolbar.switchRow")}
-            description={t("settingsPage.toolbar.switchHint")}
+        <ActionRow
+          icon={SwapHorizIcon}
+          title={t("settingsPage.toolbar.switchRow")}
+          description={t("settingsPage.toolbar.switchHint")}
+        >
+          <TextField
+            select
+            size="small"
+            label={t("settingsPage.toolbar.pool")}
+            value={selected ? selectedKey : ""}
+            onChange={(e) => setSelectedKey(e.target.value)}
+            disabled={pools.length === 0}
+            sx={{ minWidth: { sm: 260 } }}
           >
-            <Tooltip
-              title={switchReadOnly ? t("miner.actions.disabledHint") : ""}
-            >
-              <TextField
-                select
-                size="small"
-                label={t("settingsPage.toolbar.pool")}
-                value={selected ? selectedKey : ""}
-                onChange={(e) => setSelectedKey(e.target.value)}
-                disabled={switchReadOnly || pools.length === 0}
-                sx={{ minWidth: { sm: 260 } }}
+            {pools.map((p) => (
+              <MenuItem
+                key={poolKey(p.url, p.port)}
+                value={poolKey(p.url, p.port)}
               >
-                {pools.map((p) => (
-                  <MenuItem
-                    key={poolKey(p.url, p.port)}
-                    value={poolKey(p.url, p.port)}
-                  >
-                    {t("settingsPage.toolbar.poolOption", {
-                      pool: poolKey(p.url, p.port),
-                      active: p.active,
-                      held: p.held,
-                    })}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Tooltip>
-            <ActionButton
-              icon={<SwapHorizIcon fontSize="small" />}
-              disabled={
-                switchReadOnly || !selected || selected.active === selected.held
-              }
-              loading={isSwitching}
-              onClick={() => setSwitchOpen(true)}
-            >
-              {t("settingsPage.toolbar.switchButton")}
-            </ActionButton>
-          </ActionRow>
-        )}
+                {t("settingsPage.toolbar.poolOption", {
+                  pool: poolKey(p.url, p.port),
+                  active: p.active,
+                  held: p.held,
+                })}
+              </MenuItem>
+            ))}
+          </TextField>
+          <ActionButton
+            icon={<SwapHorizIcon fontSize="small" />}
+            disabled={!selected || selected.active === selected.held}
+            loading={isSwitching}
+            onClick={() => setSwitchOpen(true)}
+          >
+            {t("settingsPage.toolbar.switchButton")}
+          </ActionButton>
+        </ActionRow>
         <Writable readOnly={readOnly}>
           <ActionRow
             icon={FactCheckIcon}

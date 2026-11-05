@@ -24,6 +24,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remoteactions"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/storage"
 )
 
@@ -42,6 +43,10 @@ type Feeder struct {
 	// postToRemote), but tests do via WaitForPushes, so every push has
 	// landed by the time a test checks what was sent.
 	pushWG sync.WaitGroup
+
+	// What hashboard last took, with the URL and key it went to.
+	settingsMu   sync.Mutex
+	sentSettings string
 }
 
 // goPush runs fn in a new goroutine, tracked by pushWG so tests can wait
@@ -190,6 +195,10 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	client := bitaxe.NewClient(f.logger, f.config.Endpoints.Info, f.config.Endpoints.Timeout)
 	store := storage.NewRawStorage(f.config.Storage.BitaxesDir(), f.config.Electricity.RatePerKwh)
 	fwCache := firmware.LoadCache(f.config.Storage.BitaxesDir())
+
+	if f.config.Remote.Enabled() {
+		f.pushSettings()
+	}
 
 	var changes []alerts.Event
 	for _, bitaxe := range f.config.GetMiners() {
@@ -420,9 +429,10 @@ func maskedIP(storageKey string) string {
 // .../api/push) -- one route per file hashboard writes, verbatim. A board
 // only gets the miners' stats: nothing of the configuration.
 const (
-	pushSamplePath  = ""         // a successful poll: the day's JSONL + latest.json
-	pushHistoryPath = "/history" // an offline poll: the day's JSONL only
-	pushTotalsPath  = "/totals"  // totals.json
+	pushSamplePath   = ""          // a successful poll: the day's JSONL + latest.json
+	pushHistoryPath  = "/history"  // an offline poll: the day's JSONL only
+	pushTotalsPath   = "/totals"   // totals.json
+	pushSettingsPath = "/settings" // the board's own settings, settings.json
 )
 
 type pushSample struct {
@@ -502,6 +512,47 @@ func (f *Feeder) pushToRemote(path string, now time.Time, storageKey, ip string,
 		return
 	}
 	_ = f.postToRemote(path, body, "sample "+ip)
+}
+
+// In settings.yml's sections, so each value tells where it comes from.
+type boardSettings struct {
+	Remote struct {
+		// Never null: an empty list is what turns them off.
+		Actions             []string `json:"actions"`
+		PollIntervalSeconds int      `json:"pollIntervalSeconds"`
+	} `json:"remote"`
+}
+
+// Remembered only once hashboard took them: a failed send is tried again on
+// the next cycle.
+func (f *Feeder) pushSettings() {
+	var settings boardSettings
+	settings.Remote.Actions = f.config.Remote.Actions.Allowed()
+	settings.Remote.PollIntervalSeconds = int(remoteactions.Interval.Seconds())
+	if settings.Remote.Actions == nil {
+		settings.Remote.Actions = []string{}
+	}
+	body, err := json.Marshal(settings)
+	if err != nil {
+		f.logger.Error("push: marshal error", "context", "settings", "error", err)
+		return
+	}
+	// Sent again to another board, or with another key.
+	sent := f.config.Remote.PushURL + "\x00" + f.config.Remote.APIKey + "\x00" + string(body)
+
+	f.settingsMu.Lock()
+	unchanged := sent == f.sentSettings
+	f.settingsMu.Unlock()
+	if unchanged {
+		return
+	}
+	f.goPush(func() {
+		if f.postToRemote(pushSettingsPath, body, "settings") == nil {
+			f.settingsMu.Lock()
+			f.sentSettings = sent
+			f.settingsMu.Unlock()
+		}
+	})
 }
 
 // pushTotals is the body sent to hashboard's totals endpoint -- the storage

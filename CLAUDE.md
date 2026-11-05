@@ -8,6 +8,8 @@ Dashboard and controller for [Axeos Bitaxe](https://github.com/skot/ESP-Miner) B
 
 Supported device models: **bitaxe** and **nerdaxe** (model-specific response parsing in `internal/healtcheck/response.go`).
 
+Naming: **board** is the word of the remote side -- what a board owns or reads is `boardX` (`boardSettings`, `BoardLayout`), not `RemoteBoardX`, nor a bare `RemoteX` that would read like `config.RemoteConfig`, the local dashboard's own `remote` settings.
+
 ## Commands
 
 ### Full Dev Stack
@@ -78,10 +80,24 @@ React UI → display + control actions (MODE=local → :8080)
     ↓  POST/PUT
 Bitaxe devices (restart / pool switch)
 
-remote-dashboard-api → REST API at /api/{boardId}/miners/*  (read-only, reads remote board data dir)
+remote-dashboard-api → REST API at /api/{boardId}/miners/*  (reads remote board data dir)
     ↓  axios + TanStack Query
 React UI → the home page alone (MODE=remote → :8081, route /{boardId})
+
+Remote actions (a private board's owner: restart / pool switch)
+feeder → POST hashboard /api/push/settings (the actions allowed + the poll
+    interval, when they change) → boards/{boardId}/settings.json -- the
+    board's own settings, not a miner's
+React UI (board) → POST remote-dashboard-api → boards/{boardId}/actions/{mac}.json
+dashboard-api (every minute, only while Configuration › Remote allows one)
+    → GET hashboard /api/actions/pending → {mac}.state.json ({id, polledAt}), written
+      by hashboard → does it (axeos, audited, mailed) -- nothing reported back
+GET /miners → the board shows the request in progress: "pending" then "polled"
 ```
+
+The UI only ever talks to its own API -- dashboard-api, or remote-dashboard-api
+on a board -- never to hashboard; only the local backends (feeder,
+dashboard-api) call hashboard.
 
 Storage is keyed by each device's MAC address (`bitaxes: - mac:`), not its
 IP: a device's IP can change (DHCP, relocation to a different network)
@@ -134,15 +150,17 @@ Separate `cmd/` binaries sharing `internal/` packages:
 |---|---|
 | `cmd/feeder/` | Ticker loop: fetch device `/api/system/info`, append JSONL, write `latest.json`, track alerts (`internal/alerts`), push to hashboard, hand the poll's new alerts to the mailer in the background (when `notifications.alerts.mail` is on); hourly, add any completed day not yet backed up to its month's archive |
 | `cmd/dashboard-api/` | chi HTTP server; reads storage; proxies control commands to devices |
-| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk, and the alerts mail the feeder hands it after a poll (`POST /api/mailer/alerts`: the alerts it raised, one HTML mail -- `alertmail`); its test route also sends an example of the alerts mail or of the audit report (`kind: "alert"` / `"audit"`, made-up content); its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
-| `cmd/remote-dashboard-api/` | Read-only chi HTTP server; auto-discovers miners from remote board data dir; no watcher/cron |
+| `cmd/mailer/` | Every mail, and the only SMTP code: every minute, sends the audit report once due (`auditreport.Due`), from the audit log and `settings.yml` on disk, and the alerts mail the feeder hands it after a poll (`POST /api/mailer/alerts`: the alerts it raised, one HTML mail -- `alertmail`), and the remote action mail dashboard-api hands it (`POST /api/mailer/remote-action` -- `remoteactionmail`, failures only logged); its test route also sends an example of the alerts mail, of the audit report or of the remote action mail (`kind: "alert"` / `"audit"` / `"remote"`, made-up content); its own API on the loopback (`mailer.port`, default 8082) -- `GET /api/mailer/status`, `POST /api/mailer/test` -- which dashboard-api relays (`handler/mailer.go`), so a test mail that goes out proves the mailer runs; its own process so a slow SMTP server touches neither polling nor the UI; exits if its port is taken (another mailer would send every report twice) |
+| `cmd/remote-dashboard-api/` | chi HTTP server for the board UI; auto-discovers miners from remote board data dir; no watcher/cron; its one write: creating a private board's action request (`handler/remote_actions.go`, `boards/{boardId}/actions/{mac}.json`, one per miner, replaced by its next request -- hashboard alone writes its state) |
+| `internal/remoteactions/` | What a private board's owner asks for (restart, switch_primary, switch_fallback): `Poller`, started by dashboard-api, asks hashboard every minute (`GET /api/actions/pending`) -- only while `remote.actions` allows one, no request otherwise -- checks each request (still allowed, an enabled miner of ours by MAC), does it like the UI's buttons (`axeos.Restart` / `ActivateSlot`), audits it (`system` / `remote`, with the IP and User-Agent it was asked from), and hands the mailer the mail when `remote.actions.mail` is on -- nothing is reported back to hashboard. Hashboard isn't trusted: nothing it sends is an address or a pool (the miner and its pools come from the local config, the action from a fixed list), its response is bounded (1 MiB), the requester's IP/User-Agent too (256), and a miner takes one action per 2 poll intervals, whatever comes in; `Interval` (a minute) goes to the board with its settings, whose delays are made of it; `Action`/`State` mirror hashboard's files, a cross-repo contract |
+| `internal/remoteactionmail/` | The remote action mail: `Build` (the templates `remote-action.*.html` and `.txt` filled + the logo inline -- all the wording is in them, labels in `{{define}}`, none in Go) -- the miner's name and the outcome only, no IP nor error |
 | `internal/bitaxe/` | Raw HTTP client to device endpoints (`FetchSystemInfo`, `UpdateSystemStratumSettings`, `Restart`) |
 | `internal/axeos/` | High-level orchestration: `SwitchPool()` (pools from `miners.yml` -- the scheduler), `ActivateSlot()` (a switch from the UI: the device's own slots, read now, with `Activating` -- the miner, not `miners.yml`, is the truth there), `SwitchToPool()` (a pool picked by URL + port, whichever slot the device holds it in: `useFallbackStratum` on a bitaxe, the primary slot on a nerdaxe), `ReadPools()` (a device's pools, read now), `Restart()` — calls bitaxe client, always restarts to apply a config change; a restart left unanswered after the new pools were taken counts as done (the miner is already rebooting) |
 | `internal/audit/` | Audit log: every user-triggered action that matters -- restart, pool switch, `miners.yml`/`settings.yml` save, audit export, backups download, network discovery -- plus their own types with before/after for security-relevant config changes (`changes.go`: pool, schedule, IP, enable/disable, added miner, remote push) -- via `Log.Middleware` (`middleware.go`), set per route by the router's `audited(type)` (client IP/User-Agent, status, query string, error message), never the UI's polling reads, and every scheduler run -- one JSONL file per UTC day under `{dataDir}/data/audit/`; `ReadRange` backs `GET /api/audit` |
 | `internal/alerts/` | Alerts, edge-triggered: `MinerState.Observe` compares each poll with the miner's alerts in progress (`{mac}/alerts.json`: `Ongoing`, the event that raised each, with its `Peak` kept up to date -- sent on the cleared event) and returns only the changes -- raised once when one starts, cleared once when it ends (with `raisedAt`). Hysteresis: raised above the miner's thresholds (`config.AlertThresholdsFor`: its own in `miners.yml`, else `settings.yml`'s, else 62 °C / 75 %), cleared under the threshold minus `settings.yml`'s margins (`config.AlertMargins`, common to every miner, else 2 °C / 5 % -- `ClearLevel`, also what the API sends as `clearBelow`); offline after 2 failed polls in a row; `Log` -- one JSONL file per UTC day under `{dataDir}/data/alerts/` -- backs `GET /api/miners/alerts(/history)` |
 | `internal/auditreport/` | The audit report mail: `Due` (sent around 1 a.m. UTC -- UTC days, like the audit's own files -- daily / every 2 days / weekly Mon→Sun / monthly, each covering the period since the previous one), `Build` (grouped by type, FR/EN -- its labels mirror `ui/src/locales` `auditPage.*` -- the HTML template `audit-report.*.html` filled + a generated text version + the logo inline, the link to the Audit page only for a dashboard with a name: `mailtemplate.Linkable`), `State` on disk (`data/mail/audit-report.json`: last period sent, last error, hourly retry) |
 | `internal/alertmail/` | The alerts mail: `Build` (the HTML template filled + a generated text version + the logo inline), `State` on disk (`data/mail/alerts-mail.json`: last sent, last error, for the Notifications page); a failure is audited (`alert_mail`), a mail sent isn't, nothing is retried |
-| `internal/mailtemplate/` | The mails' wording, as editable files: built-in ones embedded, one per mail and language (`alert.*.html` and `audit-report.*.html`, Go `html/template`s whose `<title>` is the subject, see `RenderHTML` -- never an IP address in them, Gmail files that as spam; `test-mail.*.txt`, plain text), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
+| `internal/mailtemplate/` | The mails' wording, as editable files: built-in ones embedded, one per mail and language (`alert.*.html`, `audit-report.*.html` and `remote-action.*.html`, Go `html/template`s whose `<title>` is the subject, see `RenderHTML` -- never an IP address in them, Gmail files that as spam; `test-mail.*.txt`, plain text), installed by the mailer into `mail-templates/` next to the config file when missing (never over an edited one), read again on every send; `Subject:` line + blank line + text, `#` comments, `{{name}}` placeholders -- a line whose placeholder is empty is dropped, an unknown one kept as is; a broken file falls back to the built-in template (logged) |
 | `internal/mail/` | SMTP sending, standard library only (`Send`: STARTTLS / TLS / plain, optional auth, 15s timeout, UTF-8 headers; with `HTML`, a multipart/alternative text + HTML, inline images by Content-ID); `mailtest` is a fake SMTP server for tests |
 | `internal/backup/` | Monthly zip archives (`ArchiveCompletedDays`, `List`, `Merge`); a past month becomes final once its MD5 is in `checksums.md5` |
 | `internal/storage/` | JSONL read/write, `latest.json` snapshot; JSONL reader tolerates malformed lines |
@@ -188,7 +206,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 
 `MinerCtx` middleware resolves `hostnameOrIp` URL param → config entry, injects into request context.
 
-remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all read-only under `/api/{boardId}/`:
+remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all under `/api/{boardId}/`:
 
 | Method | Path | Handler | Notes |
 |---|---|---|---|
@@ -196,6 +214,17 @@ remote-dashboard-api (`server/cmd/remote-dashboard-api/router.go`), all read-onl
 | `GET` | `/api/{boardId}/miners` | `ListRemoteMiners()` | Miners pushed to this board |
 | `GET` | `/api/{boardId}/miners/history` | `RemoteHistory()` | Last 24h of every remote miner's hashrate, same buckets as local |
 | `GET` | `/api/{boardId}/{ip}/stats` | `RemoteStats()` | Last 24h (rolling) of stats for one remote miner |
+| `POST` | `/api/{boardId}/miners/{ip}/actions` | `RequestRemoteAction()` | Private board only (its viewer is its owner): asks for an action the board's `settings.json` allows, on a miner still sending data -- one in progress per miner, 10 per board an hour |
+
+`GET /miners` carries each miner's `remoteActions` -- the board's
+`settings.json` (`remote.actions`, in `settings.yml`'s sections), which the feeder pushes when it changes
+(`POST /api/push/settings`, tried again next cycle on a failure) -- on a
+private board only, and only for a miner still sending data (its dashboard
+may be off otherwise): the board UI shows a button only for those. And its
+`remoteAction`, the request in progress: `pending` until hashboard hands it
+out (`polledAt`), then `polled` -- each for 2 poll intervals at most
+(`remote.pollIntervalSeconds`): past that a pending one expired, never handed
+out, and a polled one is over. The buttons stay greyed out meanwhile.
 
 Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
@@ -313,6 +342,10 @@ remote:
   sendUser: false               # push the stratum users (wallet) -- off by default: pushed as "xxxxxxxx"
   sendPools: false              # push the pools (url/port) -- off by default: "xxxxxxxx"/0; ssid/ipv6 always obfuscated
   sendIP: false                 # push the miners' IPs -- off by default: the board then knows each by fd00::<mac> (aabb:ccdd:eeff)
+  actions:                      # what a private board's owner may ask for from the board -- all off by default;
+    restart: false              # while one is on, dashboard-api asks hashboard every minute (never otherwise)
+    switchPool: false           # switch_primary / switch_fallback, the pools the device already holds
+    mail: false                 # a mail on every remote action, done or not
 notifications:                  # Configuration > Notifications; never pushed to hashboard
   language: fr                  # fr | en -- the messages' language
   dashboardURL: http://192.168.1.60   # the dashboard's own address, for the messages' links

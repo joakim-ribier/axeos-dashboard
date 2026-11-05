@@ -155,6 +155,10 @@ every commit.
   Configuration's menu, rows on a phone, one shared spacing for every
   page, a confirmed disable (Disable all removed) and folded built-in
   pools with one-line URLs.
+- ✅ **Remote actions**: from a private board, restart a miner or switch it
+  to its other pool, once allowed in Configuration › Remote -- the dashboard
+  picks the request up within a minute, audits it and can send a mail; a
+  test button on every mail, and the `ui.action.*` flags removed.
 
 ## To do
 
@@ -175,6 +179,11 @@ every commit.
 - **New-IP security email**: when an API action comes from an IP never
   seen before (kept in a known-IPs list), send an email along the lines of
   "we detected a new IP address, was it you?" -- through the mailer.
+- **No more mail sending in the audit**: remove the `alert_mail` entry (the
+  alerts mail that failed) -- the audit says who did what on the system, a
+  mail is only a consequence, and the Notifications page already shows the
+  last error. Its type goes too: `audit.Types`, the report's labels and the
+  UI's locales.
 
 ### Settings
 
@@ -189,6 +198,10 @@ every commit.
 
 ### Notifications
 
+- **No wording in the mails' Go code**: the alerts mail and the audit report
+  still generate their text version and hold labels in Go (`alertmail`,
+  `auditreport`). Move them to templates, like `remote-action.*` (text
+  included, labels in `{{define}}`, `mailtemplate.RenderText`).
 - **The audit report triggered from outside the mailer**: the mailer still
   plans it itself (checks every minute whether it's due, reads the audit
   on disk, retries hourly). Like the alerts mail, the trigger should come

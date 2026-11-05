@@ -84,8 +84,8 @@
       "lastPoll": "Dernier relevé",
       "poolUser": "Utilisateur",
       "confirmSwitch": {
-        "primary": "Basculer {{ip}} sur son pool principal ? Le mineur redémarre pour l'appliquer.",
-        "fallback": "Basculer {{ip}} sur son pool de secours ? Le mineur redémarre pour l'appliquer."
+        "primary": "Basculer {{name}} sur son pool principal ? Le mineur redémarre pour l'appliquer.",
+        "fallback": "Basculer {{name}} sur son pool de secours ? Le mineur redémarre pour l'appliquer."
       },
       "threshold": "Seuil {{value}}",
       "pools": "Pools",
@@ -118,16 +118,25 @@
   },
   "miner": {
     "actions": {
-      "disabledHint": "Désactivé par la configuration de ce tableau de bord.",
       "restart": {
-        "description": "Demande de redémarrage pour le mineur {{ip}}.",
+        "description": "Redémarrer {{name}} ?",
         "label": "Redémarrer",
         "title": "Redémarrer le mineur"
       },
       "switchPool": {
-        "description": "Demande de changement de pool pour {{ip}}.",
+        "description": "Changer le pool de {{name}} ?",
         "label": "Basculer",
         "title": "Basculer de Pool"
+      },
+      "remote": {
+        "confirmHint": "Ton dashboard la fera dans la minute.",
+        "label": {
+          "restart": "Redémarrage",
+          "switch_primary": "Bascule vers le pool principal",
+          "switch_fallback": "Bascule vers le pool de secours"
+        },
+        "pending": "{{action}} — demande en cours",
+        "polled": "{{action}} — récupérée par ton dashboard à {{time}}"
       }
     },
     "blockFound": {
@@ -296,7 +305,8 @@
     "services": {
       "scheduler": "Planificateur",
       "backup": "Sauvegarde de chaque nuit",
-      "mailer": "Notifications"
+      "mailer": "Notifications",
+      "remote": "Board distant"
     },
     "failed": "Échec",
     "empty": "Aucun événement sur cette période.",
@@ -323,6 +333,9 @@
       "sendUser": "Envoi de l'utilisateur / wallet",
       "sendPools": "Envoi des pools",
       "sendIP": "Envoi de l'IP",
+      "remoteRestart": "Redémarrage à distance",
+      "remoteSwitchPool": "Bascule de pool à distance",
+      "remoteActionsMail": "Mail des actions à distance",
       "scheduleAdded": "Tâche ajoutée",
       "scheduleRemoved": "Tâche supprimée",
       "alias": "Alias",
@@ -393,6 +406,18 @@
         "off": "désactivé"
       },
       "sendIP": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "remoteRestart": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "remoteSwitchPool": {
+        "on": "activé",
+        "off": "désactivé"
+      },
+      "remoteActionsMail": {
         "on": "activé",
         "off": "désactivé"
       },
@@ -659,6 +684,19 @@
           "notSent": "Privé — jamais envoyé",
           "masked": "Masqué — adresse fictive"
         },
+        "actions": {
+          "title": "Actions à distance",
+          "description": "Depuis ton board, quand il est privé, tu peux redémarrer un mineur ou le basculer sur son autre pool.",
+          "restart": "Redémarrage",
+          "switchPool": "Bascule de pool",
+          "mail": "Alerte par mail à chaque action",
+          "allowed": "Autorisé depuis le board",
+          "off": "Désactivé",
+          "mailOn": "Envoyé à chaque action",
+          "mailHint": "Le mail part par le serveur SMTP de Configuration › Notifications.",
+          "test": "Tester",
+          "testSent": "Exemple de mail d'action à distance envoyé."
+        },
         "invalidPushUrl": "L'adresse doit commencer par http:// ou https://."
       },
       "firmware": {
@@ -697,11 +735,11 @@
         "test": {
           "send": "Envoyer un mail de test",
           "sending": "Envoi…",
-          "needsSmtp": "Enregistre d'abord un serveur SMTP.",
-          "needsRecipient": "Ajoute d'abord un destinataire.",
+          "needsSmtp": "Enregistre d'abord un serveur SMTP dans Configuration › Notifications.",
+          "needsRecipient": "Ajoute d'abord un destinataire dans Configuration › Notifications.",
+          "mailerDown": "Le service qui envoie les mails ne répond pas.",
           "sent": "Mail de test envoyé.",
-          "failed": "L'envoi a échoué : {{error}}",
-          "unknownError": "erreur inconnue"
+          "failed": "L'envoi a échoué : {{error}}"
         },
         "languageLabel": "Langue des mails",
         "languages": {

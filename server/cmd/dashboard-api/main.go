@@ -17,6 +17,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/audit"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/healtcheck"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remoteactions"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/scheduler"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version"
 )
@@ -53,7 +54,7 @@ import (
 // @tag.name Remote push
 // @tag.description The hashboard board this dashboard pushes to.
 // @tag.name Board miners
-// @tag.description A board's miners, their history and stats.
+// @tag.description A board's miners, their history and stats -- and, on a private board, the actions its owner asks for.
 // @tag.name Mailer
 // @tag.description The mailer's own API, on the loopback only.
 //
@@ -113,14 +114,18 @@ func main() {
 
 	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
 
-	NewRouter(logger, cfg, watcher, versionChecker).
+	router := NewRouter(logger, cfg, watcher, versionChecker).
 		WithMinersStore(minersStore).
 		WithAppSettingsStore(appSettingsStore).
-		WithAuditLog(auditLog).
-		Listen()
+		WithAuditLog(auditLog)
+	router.Listen()
 
 	sched := scheduler.NewScheduler(logger, cfg).WithMinersStore(minersStore).WithAuditLog(auditLog)
 	sched.Start()
+
+	// Asks hashboard only while Configuration › Remote allows an action.
+	remoteActions := remoteactions.New(logger, router.snapshotConfig, auditLog)
+	remoteActions.Start()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -128,6 +133,7 @@ func main() {
 
 	logger.Info("Shutting down server...")
 
+	remoteActions.Stop()
 	sched.Stop()
 	watcher.Stop()
 

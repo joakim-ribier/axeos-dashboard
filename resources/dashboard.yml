@@ -28,15 +28,11 @@ firmware:
 # only ever be used as a one-time seed before settings.yml exists, and
 # never again once it does -- confusing enough (and risky enough, for
 # remote.apiKey specifically, in a file git tracks) to just leave unset.
-# ui controls which pages/actions the frontend shows -- every value below
-# is already the default (nothing here restricts anything), spelled out as
-# documentation. Each accepts enabled | readonly | hidden -- see
-# remote-dashboard.yml for a deployment that actually restricts some.
+# ui controls which pages the frontend shows -- every value below is already
+# the default (nothing here restricts anything), spelled out as
+# documentation. Each accepts enabled | readonly | hidden.
 ui:
   page:
     settings: enabled
     backups: enabled
     audit: enabled
-  action:
-    minerRestart: enabled
-    minerPoolSwitch: enabled

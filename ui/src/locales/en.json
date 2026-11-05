@@ -84,8 +84,8 @@
       "lastPoll": "Last poll",
       "poolUser": "User",
       "confirmSwitch": {
-        "primary": "Switch {{ip}} to its primary pool? The miner restarts to apply it.",
-        "fallback": "Switch {{ip}} to its fallback pool? The miner restarts to apply it."
+        "primary": "Switch {{name}} to its primary pool? The miner restarts to apply it.",
+        "fallback": "Switch {{name}} to its fallback pool? The miner restarts to apply it."
       },
       "threshold": "Threshold {{value}}",
       "pools": "Pools",
@@ -118,16 +118,25 @@
   },
   "miner": {
     "actions": {
-      "disabledHint": "Disabled by this dashboard's configuration.",
       "restart": {
-        "description": "Restart miner {{ip}}.",
+        "description": "Restart {{name}}?",
         "label": "Restart",
         "title": "Restart Miner"
       },
       "switchPool": {
-        "description": "Switch pool of {{ip}}.",
+        "description": "Switch the pool of {{name}}?",
         "label": "Switch",
         "title": "Switch miner pool"
+      },
+      "remote": {
+        "confirmHint": "Your dashboard will do it within a minute.",
+        "label": {
+          "restart": "Restart",
+          "switch_primary": "Switch to the primary pool",
+          "switch_fallback": "Switch to the fallback pool"
+        },
+        "pending": "{{action}} — request in progress",
+        "polled": "{{action}} — picked up by your dashboard at {{time}}"
       }
     },
     "blockFound": {
@@ -296,7 +305,8 @@
     "services": {
       "scheduler": "Scheduler",
       "backup": "Nightly backup",
-      "mailer": "Notifications"
+      "mailer": "Notifications",
+      "remote": "Remote board"
     },
     "failed": "Failed",
     "empty": "No events in this period.",
@@ -323,6 +333,9 @@
       "sendUser": "User / wallet push",
       "sendPools": "Pools push",
       "sendIP": "IP push",
+      "remoteRestart": "Remote restart",
+      "remoteSwitchPool": "Remote pool switch",
+      "remoteActionsMail": "Remote actions mail",
       "scheduleAdded": "Job added",
       "scheduleRemoved": "Job removed",
       "alias": "Alias",
@@ -393,6 +406,18 @@
         "off": "off"
       },
       "sendIP": {
+        "on": "on",
+        "off": "off"
+      },
+      "remoteRestart": {
+        "on": "on",
+        "off": "off"
+      },
+      "remoteSwitchPool": {
+        "on": "on",
+        "off": "off"
+      },
+      "remoteActionsMail": {
         "on": "on",
         "off": "off"
       },
@@ -659,6 +684,19 @@
           "notSent": "Private — never sent",
           "masked": "Masked — made-up address"
         },
+        "actions": {
+          "title": "Remote actions",
+          "description": "From your board, while it's private, you can restart a miner or switch it to its other pool.",
+          "restart": "Restart",
+          "switchPool": "Pool switch",
+          "mail": "Mail alert on every action",
+          "allowed": "Allowed from the board",
+          "off": "Off",
+          "mailOn": "Sent on every action",
+          "mailHint": "The mail goes through the SMTP server of Configuration › Notifications.",
+          "test": "Test",
+          "testSent": "Remote action mail example sent."
+        },
         "invalidPushUrl": "The address must start with http:// or https://."
       },
       "firmware": {
@@ -697,11 +735,11 @@
         "test": {
           "send": "Send a test mail",
           "sending": "Sending…",
-          "needsSmtp": "Save an SMTP server first.",
-          "needsRecipient": "Add a recipient first.",
+          "needsSmtp": "Save an SMTP server first, in Configuration › Notifications.",
+          "needsRecipient": "Add a recipient first, in Configuration › Notifications.",
+          "mailerDown": "The service sending the mails isn't answering.",
           "sent": "Test mail sent.",
-          "failed": "Sending failed: {{error}}",
-          "unknownError": "unknown error"
+          "failed": "Sending failed: {{error}}"
         },
         "languageLabel": "Mail language",
         "languages": {

@@ -346,8 +346,19 @@ definitions:
         description: Power is the device's constant draw, in watts.
         type: number
     type: object
+  config.RemoteActionsConfig:
+    properties:
+      mail:
+        type: boolean
+      restart:
+        type: boolean
+      switchPool:
+        type: boolean
+    type: object
   config.RemoteConfig:
     properties:
+      actions:
+        $ref: '#/definitions/config.RemoteActionsConfig'
       apiKey:
         type: string
       pushURL:
@@ -769,6 +780,11 @@ definitions:
       mail:
         $ref: '#/definitions/handler.mailSettingsResponse'
     type: object
+  handler.remoteActionRequest:
+    properties:
+      action:
+        type: string
+    type: object
   handler.smtpSettingsResponse:
     properties:
       from:
@@ -807,8 +823,9 @@ definitions:
     properties:
       kind:
         description: |-
-          Kind "alert" or "audit" sends an example of the alerts mail or of the
-          audit report instead, with made-up content.
+          Kind "alert", "audit" or "remote" sends an example of the alerts mail,
+          of the audit report or of the remote action mail instead, with made-up
+          content.
         type: string
       lang:
         description: Lang picks the mail's language, the dashboard's own ("fr" or
@@ -960,6 +977,14 @@ definitions:
       releaseURL:
         description: GitHub releases page for the latest firmware version
         type: string
+      remoteAction:
+        $ref: '#/definitions/model.RemoteAction'
+      remoteActions:
+        description: 'A private board''s only, like RemoteAction: its viewer is its
+          owner.'
+        items:
+          type: string
+        type: array
       responseTime:
         description: Ping/latency to the pool (ms).
         type: number
@@ -1059,21 +1084,19 @@ definitions:
         description: Number of miners successfully loaded
         type: integer
     type: object
-  model.UIActionFeatures:
+  model.RemoteAction:
     properties:
-      minerPoolSwitch:
+      action:
         type: string
-      minerRestart:
-        description: |-
-          MinerRestart/MinerPoolSwitch: "enabled" | "readonly" | "hidden" --
-          see config.UIActionConfig. "readonly" renders the button disabled
-          (with a hint), "hidden" doesn't render it at all.
+      createdAt:
+        type: string
+      polledAt:
+        type: string
+      status:
         type: string
     type: object
   model.UIFeatures:
     properties:
-      action:
-        $ref: '#/definitions/model.UIActionFeatures'
       page:
         $ref: '#/definitions/model.UIPageFeatures'
     type: object
@@ -1087,6 +1110,17 @@ definitions:
         type: string
       settings:
         description: 'Settings: "enabled" | "readonly" | "hidden" -- see config.UIPageConfig.'
+        type: string
+    type: object
+  remoteactionmail.Event:
+    properties:
+      action:
+        type: string
+      at:
+        type: string
+      miner:
+        type: string
+      status:
         type: string
     type: object
   remotepush.Board:
@@ -1166,6 +1200,65 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: List miners pushed to a hashboard board (read-only)
+      tags:
+      - Board miners
+  /api/{boardId}/miners/{ip}/actions:
+    post:
+      consumes:
+      - application/json
+      description: 'On a private board only (its viewer is its owner): asks the dashboard
+        pushing to the board to restart the miner or switch it to its other pool --
+        an action that dashboard allows (Configuration › Remote, sent as the board''s
+        settings.json), on a miner still sending data. The dashboard picks it up on
+        its next poll and reports nothing back; a request not picked up within 2 of
+        its poll intervals expires. GET /api/{boardId}/miners shows the one in progress.
+        One per miner, 10 per board an hour.'
+      parameters:
+      - description: hashboard board ID
+        in: path
+        name: boardId
+        required: true
+        type: string
+      - description: Miner IP, as the board knows it
+        in: path
+        name: ip
+        required: true
+        type: string
+      - description: restart, switch_primary or switch_fallback
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.remoteActionRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/model.RemoteAction'
+        "400":
+          description: unknown action
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: public board, or action not allowed by the dashboard
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: no such miner
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: an action is already in progress for this miner, or it sends
+            no data any more
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "429":
+          description: too many actions this hour
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Ask for a remote action (board owner)
       tags:
       - Board miners
   /api/{boardId}/miners/history:
@@ -1389,8 +1482,8 @@ paths:
       description: Has the mailer service send a test mail to every configured recipient
         through the saved SMTP server.
       parameters:
-      - description: 'Mail language (fr or en, default en), and kind (alert or audit:
-          an example of that mail)'
+      - description: 'Mail language (fr or en, default en), and kind (alert, audit
+          or remote: an example of that mail)'
         in: body
         name: request
         schema:
@@ -1601,6 +1694,53 @@ paths:
       summary: Send an alerts mail (mailer)
       tags:
       - Mailer
+  /api/mailer/remote-action:
+    post:
+      consumes:
+      - application/json
+      description: 'The mailer''s own API, on the loopback only (mailer.port, default
+        8082): mails one action asked for from the board (restart, pool switch) and
+        how it went. Called by dashboard-api once it handled the action, when Configuration
+        › Remote turns this mail on.'
+      parameters:
+      - description: The action, as handled
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/remoteactionmail.Event'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.testMailResponse'
+        "400":
+          description: no action, or SMTP server or recipients not configured
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+        "502":
+          description: the SMTP server refused or couldn't be reached
+          schema:
+            properties:
+              code:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string
+            type: object
+      summary: Send a remote action mail (mailer)
+      tags:
+      - Mailer
   /api/mailer/status:
     get:
       description: 'The mailer''s own API, on the loopback only (mailer.port, default
@@ -1622,11 +1762,12 @@ paths:
       - application/json
       description: 'The mailer''s own API, on the loopback only (mailer.port, default
         8082): sends a test mail to every recipient through the saved SMTP server
-        -- or, with kind "alert" or "audit", an example of the alerts mail or of the
-        audit report with made-up content. Reached through dashboard-api''s POST /api/config/mail/test.'
+        -- or, with kind "alert", "audit" or "remote", an example of the alerts mail,
+        of the audit report or of the remote action mail with made-up content. Reached
+        through dashboard-api''s POST /api/config/mail/test.'
       parameters:
-      - description: Mail language (fr or en, default en), and kind (alert or audit
-          for an example of that mail)
+      - description: Mail language (fr or en, default en), and kind (alert, audit
+          or remote for an example of that mail)
         in: body
         name: request
         schema:
@@ -1963,7 +2104,8 @@ tags:
   name: Status
 - description: The hashboard board this dashboard pushes to.
   name: Remote push
-- description: A board's miners, their history and stats.
+- description: A board's miners, their history and stats -- and, on a private board,
+    the actions its owner asks for.
   name: Board miners
 - description: The mailer's own API, on the loopback only.
   name: Mailer

@@ -1,7 +1,11 @@
 // internal/model/miner.go
 package model
 
-import "github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+import (
+	"time"
+
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/config"
+)
 
 // Obfuscated is what a board gets instead of a device field its dashboard
 // doesn't share (see the feeder's remotePayload): the field is there, its
@@ -94,10 +98,23 @@ type MinerInfo struct {
 	TempThreshold float64 `json:"tempThreshold,omitempty"` // °C
 	FanThreshold  float64 `json:"fanThreshold,omitempty"`  // %
 
+	// A private board's only, like RemoteAction: its viewer is its owner.
+	RemoteActions []string      `json:"remoteActions,omitempty"`
+	RemoteAction  *RemoteAction `json:"remoteAction,omitempty"`
+
 	// The miner's alerts in progress, as the feeder keeps them (raised
 	// above a threshold, ended a margin under it) -- always a list locally,
 	// null on a board, which then judges a reading by its threshold alone.
 	ActiveAlerts []ActiveAlert `json:"activeAlerts"`
+}
+
+// In progress only. The dashboard reports nothing back: each status lasts 2
+// of its poll intervals at most.
+type RemoteAction struct {
+	Action    string     `json:"action"`
+	Status    string     `json:"status"`
+	CreatedAt time.Time  `json:"createdAt"`
+	PolledAt  *time.Time `json:"polledAt,omitempty"`
 }
 
 // ActiveAlert is an alert in progress on a miner, and the reading it ends
@@ -171,8 +188,7 @@ type InfoResponse struct {
 }
 
 type UIFeatures struct {
-	Page   UIPageFeatures   `json:"page"`
-	Action UIActionFeatures `json:"action"`
+	Page UIPageFeatures `json:"page"`
 }
 
 type UIPageFeatures struct {
@@ -182,12 +198,4 @@ type UIPageFeatures struct {
 	Backups string `json:"backups"`
 	// Audit: "enabled" | "hidden" -- see config.UIPageConfig.
 	Audit string `json:"audit"`
-}
-
-type UIActionFeatures struct {
-	// MinerRestart/MinerPoolSwitch: "enabled" | "readonly" | "hidden" --
-	// see config.UIActionConfig. "readonly" renders the button disabled
-	// (with a hint), "hidden" doesn't render it at all.
-	MinerRestart    string `json:"minerRestart"`
-	MinerPoolSwitch string `json:"minerPoolSwitch"`
 }

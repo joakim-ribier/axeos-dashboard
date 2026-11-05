@@ -56,6 +56,7 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 			Miners:      make([]model.MinerInfo, 0),
 			BoardPublic: isPublic,
 		}
+		settings := readBoardSettings(cfg, boardID)
 
 		for _, entry := range entries {
 			if !entry.IsDir() {
@@ -73,6 +74,15 @@ func ListRemoteMiners(cfg config.Config, accessChecker *hashboardaccess.Checker)
 			info := toMinerInfo(raw, miner, raw.LatestFirmware, cfg.Firmware.Repos[string(miner.Model)], cfg.Pools.Dashboards)
 			info.Alive, info.AliveCheckedAt = aliveFromTimestamp(raw.Timestamp, raw.FeederIntervalSeconds)
 			info.TempThreshold, info.FanThreshold = raw.AlertThresholds.TempHigh, raw.AlertThresholds.FanHigh
+			// A public board is for anyone to see: never an action there. Nor
+			// on a miner gone quiet -- its dashboard may be off, no one to
+			// pick the request up.
+			if !isPublic && info.Alive {
+				info.RemoteActions = settings.Remote.Actions
+			}
+			if !isPublic {
+				info.RemoteAction = actionInProgress(boardActionsDir(cfg, boardID), entry.Name(), settings.actionLifetime(), time.Now().UTC())
+			}
 
 			// totals.json is pushed separately from the per-poll sample (see
 			// cmd/feeder.pushTotalsToRemote) -- hashboard stores it verbatim,

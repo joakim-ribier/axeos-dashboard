@@ -70,7 +70,6 @@ describe("Sidebar", () => {
     mockUseUiFeatures.mockReturnValue({
       ui: {
         page: { settings: "enabled", backups: "enabled" },
-        action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
       },
       isLoading: false,
     });
@@ -131,7 +130,6 @@ describe("Sidebar", () => {
       mockUseUiFeatures.mockReturnValue({
         ui: {
           page: { settings: "hidden", backups: "enabled" },
-          action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
         },
         isLoading: false,
       });
@@ -153,7 +151,6 @@ describe("Sidebar", () => {
       mockUseUiFeatures.mockReturnValue({
         ui: {
           page: { settings: "enabled", backups: "hidden" },
-          action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
         },
         isLoading: false,
       });
@@ -535,7 +532,6 @@ describe("Sidebar", () => {
               audit: "enabled",
               [page]: state,
             },
-            action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
           },
           isLoading: false,
         });

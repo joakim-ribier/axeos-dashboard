@@ -30,6 +30,8 @@ func NewRouter(cfg config.Config, versionChecker *appversion.Checker, accessChec
 		r.Get("/miners", handler.ListRemoteMiners(cfg, accessChecker))
 		r.Get("/miners/history", handler.RemoteHistory(cfg))
 		r.Get("/{ip}/stats", handler.RemoteStats(cfg))
+		// The only write here.
+		r.Post("/miners/{ip}/actions", handler.RequestRemoteAction(cfg, accessChecker))
 	})
 
 	return r

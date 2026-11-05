@@ -93,6 +93,8 @@ local. Aucune authentification requise — usage réseau local uniquement.
   [hashboard.live](https://hashboard.live)
 - Données personnelles offusquées avant l'envoi : wallet, pools, adresses
   du réseau local — à partager seulement si vous le choisissez
+- Redémarrage ou bascule de pool depuis votre board privé, si vous
+  l'autorisez
 
 [Voir le détail de Hashboard]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 

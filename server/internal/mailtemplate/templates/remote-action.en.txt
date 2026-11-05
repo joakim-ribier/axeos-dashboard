@@ -1,0 +1,16 @@
+{{/*
+  Text version of the remote action mail -- same variables as
+  remote-action.en.html. A Go template (https://pkg.go.dev/text/template).
+*/ -}}
+{{define "action"}}{{if eq .Action "restart"}}Restart{{else if eq .Action "switch_primary"}}Switch to the primary pool{{else if eq .Action "switch_fallback"}}Switch to the fallback pool{{else}}{{.Action}}{{end}}{{end -}}
+{{define "outcome"}}{{if eq .Status "done"}}Done{{else if eq .Status "failed"}}Failed{{else if eq .Status "rejected"}}Refused by the dashboard{{else}}{{.Status}}{{end}}{{end -}}
+{{if .Test}}Test of the remote action mail, asked from Configuration › Remote.
+An example: no action was done.
+
+{{end}}Remote action — {{.At.Format "2006-01-02 15:04 (UTC)"}}
+
+{{.Miner}}: {{template "action" .}}
+{{template "outcome" .}}
+{{if .AuditURL}}
+{{.AuditURL}}
+{{end}}

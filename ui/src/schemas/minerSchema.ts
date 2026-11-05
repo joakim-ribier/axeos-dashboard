@@ -64,6 +64,15 @@ export const minerSchema = z.object({
   // absent on a board (see tempThreshold/fanThreshold).
   tempThreshold: z.number().optional(),
   fanThreshold: z.number().optional(),
+  remoteActions: z.array(z.string()).optional(),
+  remoteAction: z
+    .object({
+      action: z.string(),
+      status: z.enum(["pending", "polled"]),
+      createdAt: z.string(),
+      polledAt: z.string().optional(),
+    })
+    .optional(),
   // Its alerts in progress, as the feeder keeps them (raised above a
   // threshold, ended under clearBelow) -- null on a board.
   activeAlerts: z

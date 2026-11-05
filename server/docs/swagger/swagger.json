@@ -285,7 +285,7 @@
                 "summary": "Send a test mail",
                 "parameters": [
                     {
-                        "description": "Mail language (fr or en, default en), and kind (alert or audit: an example of that mail)",
+                        "description": "Mail language (fr or en, default en), and kind (alert, audit or remote: an example of that mail)",
                         "name": "request",
                         "in": "body",
                         "schema": {
@@ -585,6 +585,74 @@
                 }
             }
         },
+        "/api/mailer/remote-action": {
+            "post": {
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): mails one action asked for from the board (restart, pool switch) and how it went. Called by dashboard-api once it handled the action, when Configuration › Remote turns this mail on.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mailer"
+                ],
+                "summary": "Send a remote action mail (mailer)",
+                "parameters": [
+                    {
+                        "description": "The action, as handled",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/remoteactionmail.Event"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.testMailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "no action, or SMTP server or recipients not configured",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "the SMTP server refused or couldn't be reached",
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "code": {
+                                    "type": "integer"
+                                },
+                                "error": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/mailer/status": {
             "get": {
                 "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): since when it runs, and when its loop last looked for a mail to send (once a minute). Read through dashboard-api's GET /api/status.",
@@ -607,7 +675,7 @@
         },
         "/api/mailer/test": {
             "post": {
-                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind \"alert\" or \"audit\", an example of the alerts mail or of the audit report with made-up content. Reached through dashboard-api's POST /api/config/mail/test.",
+                "description": "The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind \"alert\", \"audit\" or \"remote\", an example of the alerts mail, of the audit report or of the remote action mail with made-up content. Reached through dashboard-api's POST /api/config/mail/test.",
                 "consumes": [
                     "application/json"
                 ],
@@ -620,7 +688,7 @@
                 "summary": "Send a test mail (mailer)",
                 "parameters": [
                     {
-                        "description": "Mail language (fr or en, default en), and kind (alert or audit for an example of that mail)",
+                        "description": "Mail language (fr or en, default en), and kind (alert, audit or remote for an example of that mail)",
                         "name": "request",
                         "in": "body",
                         "schema": {
@@ -1131,6 +1199,84 @@
                 }
             }
         },
+        "/api/{boardId}/miners/{ip}/actions": {
+            "post": {
+                "description": "On a private board only (its viewer is its owner): asks the dashboard pushing to the board to restart the miner or switch it to its other pool -- an action that dashboard allows (Configuration › Remote, sent as the board's settings.json), on a miner still sending data. The dashboard picks it up on its next poll and reports nothing back; a request not picked up within 2 of its poll intervals expires. GET /api/{boardId}/miners shows the one in progress. One per miner, 10 per board an hour.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Board miners"
+                ],
+                "summary": "Ask for a remote action (board owner)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "hashboard board ID",
+                        "name": "boardId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Miner IP, as the board knows it",
+                        "name": "ip",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "restart, switch_primary or switch_fallback",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.remoteActionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/model.RemoteAction"
+                        }
+                    },
+                    "400": {
+                        "description": "unknown action",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "public board, or action not allowed by the dashboard",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no such miner",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "an action is already in progress for this miner, or it sends no data any more",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "too many actions this hour",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/{boardId}/{ip}/stats": {
             "get": {
                 "description": "Same as /api/miners/{hostnameOrIp}/stats, for a miner pushed to a hashboard board.",
@@ -1621,9 +1767,26 @@
                 }
             }
         },
+        "config.RemoteActionsConfig": {
+            "type": "object",
+            "properties": {
+                "mail": {
+                    "type": "boolean"
+                },
+                "restart": {
+                    "type": "boolean"
+                },
+                "switchPool": {
+                    "type": "boolean"
+                }
+            }
+        },
         "config.RemoteConfig": {
             "type": "object",
             "properties": {
+                "actions": {
+                    "$ref": "#/definitions/config.RemoteActionsConfig"
+                },
                 "apiKey": {
                     "type": "string"
                 },
@@ -2215,6 +2378,14 @@
                 }
             }
         },
+        "handler.remoteActionRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.smtpSettingsResponse": {
             "type": "object",
             "properties": {
@@ -2267,7 +2438,7 @@
             "type": "object",
             "properties": {
                 "kind": {
-                    "description": "Kind \"alert\" or \"audit\" sends an example of the alerts mail or of the\naudit report instead, with made-up content.",
+                    "description": "Kind \"alert\", \"audit\" or \"remote\" sends an example of the alerts mail,\nof the audit report or of the remote action mail instead, with made-up\ncontent.",
                     "type": "string"
                 },
                 "lang": {
@@ -2434,6 +2605,16 @@
                     "description": "GitHub releases page for the latest firmware version",
                     "type": "string"
                 },
+                "remoteAction": {
+                    "$ref": "#/definitions/model.RemoteAction"
+                },
+                "remoteActions": {
+                    "description": "A private board's only, like RemoteAction: its viewer is its owner.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "responseTime": {
                     "description": "Ping/latency to the pool (ms).",
                     "type": "number"
@@ -2533,14 +2714,19 @@
                 }
             }
         },
-        "model.UIActionFeatures": {
+        "model.RemoteAction": {
             "type": "object",
             "properties": {
-                "minerPoolSwitch": {
+                "action": {
                     "type": "string"
                 },
-                "minerRestart": {
-                    "description": "MinerRestart/MinerPoolSwitch: \"enabled\" | \"readonly\" | \"hidden\" --\nsee config.UIActionConfig. \"readonly\" renders the button disabled\n(with a hint), \"hidden\" doesn't render it at all.",
+                "createdAt": {
+                    "type": "string"
+                },
+                "polledAt": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -2548,9 +2734,6 @@
         "model.UIFeatures": {
             "type": "object",
             "properties": {
-                "action": {
-                    "$ref": "#/definitions/model.UIActionFeatures"
-                },
                 "page": {
                     "$ref": "#/definitions/model.UIPageFeatures"
                 }
@@ -2569,6 +2752,23 @@
                 },
                 "settings": {
                     "description": "Settings: \"enabled\" | \"readonly\" | \"hidden\" -- see config.UIPageConfig.",
+                    "type": "string"
+                }
+            }
+        },
+        "remoteactionmail.Event": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "at": {
+                    "type": "string"
+                },
+                "miner": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -2636,7 +2836,7 @@
             "name": "Remote push"
         },
         {
-            "description": "A board's miners, their history and stats.",
+            "description": "A board's miners, their history and stats -- and, on a private board, the actions its owner asks for.",
             "name": "Board miners"
         },
         {

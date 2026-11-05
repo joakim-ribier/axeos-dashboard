@@ -629,9 +629,30 @@ type RemoteConfig struct {
 	// unless the operator asks for it. Without SendIP a board knows each
 	// miner by an IPv6 made from its MAC instead (see the feeder's
 	// maskedIP).
-	SendUser  bool `yaml:"sendUser" json:"sendUser"`
-	SendPools bool `yaml:"sendPools" json:"sendPools"`
-	SendIP    bool `yaml:"sendIP" json:"sendIP"`
+	SendUser  bool                `yaml:"sendUser" json:"sendUser"`
+	SendPools bool                `yaml:"sendPools" json:"sendPools"`
+	SendIP    bool                `yaml:"sendIP" json:"sendIP"`
+	Actions   RemoteActionsConfig `yaml:"actions" json:"actions"`
+}
+
+// Only actions without a parameter: switching uses the pools miners.yml
+// already holds.
+type RemoteActionsConfig struct {
+	Restart    bool `yaml:"restart" json:"restart"`
+	SwitchPool bool `yaml:"switchPool" json:"switchPool"`
+	Mail       bool `yaml:"mail" json:"mail"`
+}
+
+// ScheduleAction's strings: the audit reads them too.
+func (a RemoteActionsConfig) Allowed() []string {
+	var types []string
+	if a.Restart {
+		types = append(types, string(ActionRestart))
+	}
+	if a.SwitchPool {
+		types = append(types, string(ActionSwitchPrimary), string(ActionSwitchFallback))
+	}
+	return types
 }
 
 // Enabled reports whether the feeder has enough to push to hashboard --
@@ -791,13 +812,11 @@ func (c Config) AppSettingsSnapshot() AppSettingsFile {
 	}
 }
 
-// UIVisibility is a three-state switch for one page or action in the
-// frontend: fully usable, visible but inert, or not shown at all. What
-// "ReadOnly" actually means is up to whichever component reads it -- a
-// page with both read-only content and a write action (e.g. Settings: the
-// configured-miners table plus its save button) can show the former and
-// hide the latter; a single button (e.g. restart) just renders itself
-// disabled, with a hint explaining why.
+// UIVisibility is a three-state switch for one page in the frontend: fully
+// usable, visible but inert, or not shown at all. What "ReadOnly" actually
+// means is up to whichever component reads it -- a page with both read-only
+// content and a write action (e.g. Settings: the configured-miners table
+// plus its save button) can show the former and hide the latter.
 type UIVisibility string
 
 const (
@@ -808,7 +827,7 @@ const (
 
 // Normalized defaults the zero value (unset in dashboard.yml) to "enabled"
 // -- one React codebase shows everything unless an operator opts a
-// specific page/action out, rather than the frontend hardcoding what
+// specific page out, rather than the frontend hardcoding what
 // "local" vs "remote" means.
 func (v UIVisibility) Normalized() UIVisibility {
 	if v == "" {
@@ -817,7 +836,7 @@ func (v UIVisibility) Normalized() UIVisibility {
 	return v
 }
 
-// UIConfig restricts which pages/actions this instance's frontend shows,
+// UIConfig restricts which pages this instance's frontend shows,
 // dashboard-api and remote-dashboard-api alike. Read by GET /api/info (see
 // internal/handler/info.go) and applied client-side; not itself an
 // authorization boundary on its own -- e.g. remote-dashboard-api's own
@@ -825,8 +844,7 @@ func (v UIVisibility) Normalized() UIVisibility {
 // are always read-only regardless of what Page.Settings is set to, they're
 // never the write endpoints /settings' Save actions call.
 type UIConfig struct {
-	Page   UIPageConfig   `yaml:"page"`
-	Action UIActionConfig `yaml:"action"`
+	Page UIPageConfig `yaml:"page"`
 }
 
 type UIPageConfig struct {
@@ -843,13 +861,4 @@ type UIPageConfig struct {
 	// "hidden" hides the page and its nav entry. dashboard-api keeps
 	// recording either way.
 	Audit UIVisibility `yaml:"audit"`
-}
-
-type UIActionConfig struct {
-	// MinerRestart/MinerPoolSwitch control the per-miner "restart" and
-	// "switch pool" buttons on the dashboard: "enabled" shows a working
-	// button, "readonly" shows it disabled (with a hint), "hidden" doesn't
-	// render it at all.
-	MinerRestart    UIVisibility `yaml:"minerRestart"`
-	MinerPoolSwitch UIVisibility `yaml:"minerPoolSwitch"`
 }

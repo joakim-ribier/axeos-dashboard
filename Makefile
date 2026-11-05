@@ -183,7 +183,7 @@ rebuild-totals:
 	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
 	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG) $(FALLBACK_RATE_FLAG)
 
-# Run remote-dashboard-api (read-only) with remote-dashboard.yml
+# Run remote-dashboard-api with remote-dashboard.yml
 run-remote-dashboard-api:
 	@echo ">>> Starting remote-dashboard-api with config: $(REMOTE_DASHBOARD_CONFIG)..."
 	@if [ ! -f "$(REMOTE_DASHBOARD_CONFIG)" ]; then echo "Error: Config file $(REMOTE_DASHBOARD_CONFIG) not found."; exit 1; fi

@@ -81,6 +81,7 @@ export const AppSettingsFrame = ({
       sendUser: false,
       sendPools: false,
       sendIP: false,
+      actions: { restart: false, switchPool: false, mail: false },
     },
     notifications: toNotificationsInput(
       data?.notifications ?? EMPTY_NOTIFICATIONS,

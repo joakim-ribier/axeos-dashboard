@@ -1,0 +1,16 @@
+{{/*
+  Version texte du mail d'action à distance -- mêmes variables que
+  remote-action.fr.html. Modèle Go (https://pkg.go.dev/text/template).
+*/ -}}
+{{define "action"}}{{if eq .Action "restart"}}Redémarrage{{else if eq .Action "switch_primary"}}Bascule vers le pool principal{{else if eq .Action "switch_fallback"}}Bascule vers le pool de secours{{else}}{{.Action}}{{end}}{{end -}}
+{{define "outcome"}}{{if eq .Status "done"}}Effectuée{{else if eq .Status "failed"}}Échouée{{else if eq .Status "rejected"}}Refusée par le dashboard{{else}}{{.Status}}{{end}}{{end -}}
+{{if .Test}}Test du mail d'action à distance, demandé depuis Configuration › Distant.
+Exemple : aucune action n'a été exécutée.
+
+{{end}}Action à distance — {{.At.Format "02/01/2006 à 15:04 (UTC)"}}
+
+{{.Miner}} : {{template "action" .}}
+{{template "outcome" .}}
+{{if .AuditURL}}
+{{.AuditURL}}
+{{end}}

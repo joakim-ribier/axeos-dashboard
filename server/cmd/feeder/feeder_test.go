@@ -33,12 +33,12 @@ func serverAddr(server *httptest.Server) string {
 	return strings.TrimPrefix(server.URL, "http://")
 }
 
-// isNonSamplePushPath reports whether path is the totals push runOnce fires
-// alongside the per-miner sample push -- shared by every test remoteServer
-// handler below that only cares about the sample push, so the concurrent
-// totals push doesn't race it onto the same assertion channel.
+// isNonSamplePushPath reports whether path is the totals or the board
+// settings push runOnce fires alongside the per-miner sample push -- shared
+// by every test remoteServer handler below that only cares about the sample
+// push, so the concurrent ones don't race it onto the same assertion channel.
 func isNonSamplePushPath(path string) bool {
-	return path == "/totals"
+	return path == "/totals" || path == "/settings"
 }
 
 func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
@@ -318,6 +318,11 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
 		w.WriteHeader(http.StatusOK)
+		// The board's own settings go out every first cycle, whatever its
+		// miners -- not a miner's data.
+		if r.URL.Path == "/settings" {
+			return
+		}
 		pushCh <- pushedRequest{path: r.URL.Path, body: decoded}
 	}))
 	defer remoteServer.Close()
