@@ -208,7 +208,9 @@ with the address the page is open at.
 Below, **Send a test mail** mails the recipients through the **saved**
 server, to check everything works — the mailer included. A small
 notification confirms it went out; on a failure, it gives the SMTP
-server's reason, with a button to copy it.
+server's reason, with a button to copy it. While no mail can go out, the
+send buttons are greyed out and a banner at the top of the section says
+what's missing.
 
 ### Audit report
 
@@ -319,6 +321,14 @@ follow your fleet from anywhere, no VPN needed.
   and a link to your account.
 - **Connection** — the push URL and your hashboard API key, then
   **Save**. A blank URL turns the push off.
+- **Remote actions** — from your private board, you can restart a miner
+  or switch it to its other pool. One switch for the restart, one for the
+  pool switch: only the actions allowed show on the board. The dashboard
+  picks the request up within a minute, does it, and records it in the
+  audit (service *Remote board*, with the IP it was asked from). A third
+  switch sends a mail on every action, through the Notifications' SMTP
+  server; **Test** sends an example of it, once the server and a recipient
+  are set.
 - **Your data protection** — your wallet, your pools and your miners' IP
   are obfuscated before the push: hashboard doesn't receive them. One
   switch per piece of data to share it anyway; each saves on click and

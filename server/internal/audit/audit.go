@@ -30,6 +30,7 @@ const (
 	ServiceScheduler = "scheduler"
 	ServiceBackup    = "backup"
 	ServiceMailer    = "mailer"
+	ServiceRemote    = "remote"
 )
 
 // Type values deliberately reuse config.ScheduleAction's strings for the

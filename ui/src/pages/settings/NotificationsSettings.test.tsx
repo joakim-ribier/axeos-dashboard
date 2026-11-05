@@ -27,6 +27,13 @@ vi.mock("@/utils/clipboard", () => ({
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
 
+let mailerState = "ok";
+vi.mock("@/hooks/useServicesStatus", () => ({
+  useServicesStatus: () => ({
+    data: { services: { mailer: { state: mailerState } } },
+  }),
+}));
+
 const saveSettings = vi.fn();
 let settings: AppSettings;
 vi.mock("@/hooks/useAppSettings", () => ({
@@ -73,6 +80,7 @@ const buildSettings = (
     sendUser: false,
     sendPools: false,
     sendIP: false,
+    actions: { restart: false, switchPool: false, mail: false },
   },
   firmware: { repos: {} },
   defaults: {
@@ -105,6 +113,7 @@ describe("NotificationsSettings", () => {
     saveSettings.mockReset();
     saveSettings.mockResolvedValue(undefined);
     mockedAxios.post.mockReset();
+    mailerState = "ok";
     settings = buildSettings({ smtp: SAVED_SMTP, to: ["me@example.com"] });
   });
 
@@ -382,7 +391,6 @@ describe("NotificationsSettings", () => {
       render(<NotificationsSettings />);
 
       expect(testButton()).toBeDisabled();
-      expect(screen.getByText(`${k}.test.needsSmtp`)).toBeInTheDocument();
     });
 
     it("can't be sent without a recipient", () => {
@@ -390,7 +398,34 @@ describe("NotificationsSettings", () => {
       render(<NotificationsSettings />);
 
       expect(testButton()).toBeDisabled();
-      expect(screen.getByText(`${k}.test.needsRecipient`)).toBeInTheDocument();
+    });
+
+    it("can't be sent while the mailer doesn't answer, whichever mail", () => {
+      mailerState = "offline";
+      render(<NotificationsSettings />);
+
+      expect(testButton()).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: `${k}.alerts.sendExample` }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: `${k}.report.sendExample` }),
+      ).toBeDisabled();
+    });
+
+    it("says why under each section's button", () => {
+      mailerState = "offline";
+      render(<NotificationsSettings />);
+
+      expect(screen.getAllByText(`${k}.test.mailerDown`)).toHaveLength(3);
+    });
+
+    it("can be sent with a mailer merely late", () => {
+      mailerState = "late";
+      render(<NotificationsSettings />);
+
+      expect(testButton()).toBeEnabled();
+      expect(screen.queryByText(`${k}.test.mailerDown`)).toBeNull();
     });
 
     it("sends it in the dashboard's language, with a toast like a save", async () => {

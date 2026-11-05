@@ -218,7 +218,8 @@ En dessous, **Envoyer un mail de test** envoie un mail aux destinataires
 avec le serveur **enregistré**, pour vérifier que tout fonctionne — le
 mailer compris. Une petite notification confirme l'envoi ; en cas
 d'échec, elle donne le motif du serveur SMTP, avec un bouton pour le
-copier.
+copier. Tant qu'aucun mail ne peut partir, les boutons d'envoi sont grisés
+et un bandeau en haut de la section dit ce qui manque.
 
 ### Rapport d'audit
 
@@ -330,6 +331,14 @@ pour suivre votre flotte depuis n'importe où, sans VPN.
   données reçues par hashboard, et un lien vers votre compte.
 - **Connexion** — l'URL de push et votre clé API hashboard, puis
   **Enregistrer**. Une URL vide coupe l'envoi.
+- **Actions à distance** — depuis votre board privé, vous pouvez
+  redémarrer un mineur ou le basculer sur son autre pool. Un interrupteur
+  pour le redémarrage, un pour la bascule : seules les actions autorisées
+  apparaissent sur le board. Le dashboard récupère la demande dans la
+  minute, la fait, et l'inscrit dans l'audit (service *Board distant*, avec
+  l'IP d'où elle a été demandée). Un troisième interrupteur envoie un mail à
+  chaque action, par le serveur SMTP des Notifications ; **Tester** envoie un
+  exemple de ce mail, une fois le serveur et un destinataire renseignés.
 - **Protection de tes données** — votre wallet, vos pools et l'IP de vos
   mineurs sont offusqués avant l'envoi : hashboard ne les reçoit pas. Un
   interrupteur par donnée pour la partager malgré tout ; chacun

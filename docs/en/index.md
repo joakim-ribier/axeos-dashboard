@@ -90,6 +90,7 @@ No authentication required — internal LAN use only.
   [hashboard.live](https://hashboard.live)
 - Personal data obfuscated before the push: wallet, pools, local network
   addresses — shared only if you choose to
+- Restart or pool switch from your private board, if you allow it
 
 [See Hashboard in detail]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 

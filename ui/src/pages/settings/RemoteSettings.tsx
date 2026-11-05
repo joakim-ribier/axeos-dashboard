@@ -6,6 +6,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import SaveIcon from "@mui/icons-material/Save";
+import SettingsRemoteIcon from "@mui/icons-material/SettingsRemote";
 import {
   Box,
   Chip,
@@ -27,6 +28,7 @@ import {
   AppSettingsFrame,
   type AppSettingsFrameContext,
 } from "./AppSettingsFrame";
+import { MailBlockedNotice, MailTestButton } from "./MailTestButton";
 import { SectionTitle } from "./SectionTitle";
 
 /** A label/value line of the board block. */
@@ -41,6 +43,7 @@ const InfoRow = ({
     sx={{
       display: "flex",
       flexDirection: { xs: "column", sm: "row" },
+      alignItems: { sm: "center" },
       gap: { xs: 0.25, sm: 2 },
       py: 1,
       "& + &": { borderTop: 1, borderColor: "divider" },
@@ -53,7 +56,15 @@ const InfoRow = ({
     >
       {label}
     </Typography>
-    <Box sx={{ minWidth: 0, display: "flex", alignItems: "center", gap: 1 }}>
+    <Box
+      sx={{
+        minWidth: 0,
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 1,
+      }}
+    >
       {children}
     </Box>
   </Box>
@@ -81,11 +92,23 @@ const SHARED_FIELDS: { field: SharedField; label: string; off: string }[] = [
   },
 ];
 
+type ActionField = "restart" | "switchPool" | "mail";
+
+const ACTION_FIELDS: { field: ActionField; on: string }[] = [
+  { field: "restart", on: "settingsPage.appSettings.remote.actions.allowed" },
+  {
+    field: "switchPool",
+    on: "settingsPage.appSettings.remote.actions.allowed",
+  },
+  { field: "mail", on: "settingsPage.appSettings.remote.actions.mailOn" },
+];
+
 const RemoteSection = ({
   data,
   isSaving,
   persist,
   serverBasePayload,
+  notify,
 }: AppSettingsFrameContext) => {
   const { t } = useTranslation();
   const { data: board } = useRemoteBoard();
@@ -128,6 +151,17 @@ const RemoteSection = ({
   const handleShare = (field: SharedField, checked: boolean) => {
     const base = serverBasePayload();
     return persist({ ...base, remote: { ...base.remote, [field]: checked } });
+  };
+
+  const handleAction = (field: ActionField, checked: boolean) => {
+    const base = serverBasePayload();
+    return persist({
+      ...base,
+      remote: {
+        ...base.remote,
+        actions: { ...base.remote.actions, [field]: checked },
+      },
+    });
   };
 
   return (
@@ -260,6 +294,56 @@ const RemoteSection = ({
             </ActionButton>
           </Box>
         </Stack>
+      </Box>
+
+      <SectionDivider />
+
+      <Box>
+        <SectionTitle
+          icon={<SettingsRemoteIcon fontSize="small" />}
+          title={t("settingsPage.appSettings.remote.actions.title")}
+          description={t("settingsPage.appSettings.remote.actions.description")}
+        />
+        <MailBlockedNotice mail={data?.notifications.mail} />
+        {ACTION_FIELDS.map(({ field, on }) => {
+          const label = t(`settingsPage.appSettings.remote.actions.${field}`);
+          const checked = data?.remote.actions[field] ?? false;
+          return (
+            <InfoRow key={field} label={label}>
+              <Switch
+                size="small"
+                checked={checked}
+                disabled={isSaving}
+                onChange={(e) => void handleAction(field, e.target.checked)}
+                slotProps={{ input: { "aria-label": label } }}
+              />
+              <Typography
+                variant="body2"
+                color={checked ? "warning.main" : "text.secondary"}
+              >
+                {t(
+                  checked ? on : "settingsPage.appSettings.remote.actions.off",
+                )}
+              </Typography>
+              {field === "mail" && (
+                <Stack sx={{ width: { xs: "100%", sm: "auto" } }}>
+                  <MailTestButton
+                    mail={data?.notifications.mail}
+                    kind="remote"
+                    label={t("settingsPage.appSettings.remote.actions.test")}
+                    sentMessage={t(
+                      "settingsPage.appSettings.remote.actions.testSent",
+                    )}
+                    notify={notify}
+                  />
+                </Stack>
+              )}
+            </InfoRow>
+          );
+        })}
+        <Typography variant="caption" color="text.secondary" component="p">
+          {t("settingsPage.appSettings.remote.actions.mailHint")}
+        </Typography>
       </Box>
 
       <SectionDivider />

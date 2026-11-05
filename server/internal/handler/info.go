@@ -41,10 +41,6 @@ func Info(versionChecker *appversion.Checker, hashboardURL string, remote bool, 
 					Backups:  string(ui.Page.Backups.Normalized()),
 					Audit:    string(ui.Page.Audit.Normalized()),
 				},
-				Action: model.UIActionFeatures{
-					MinerRestart:    string(ui.Action.MinerRestart.Normalized()),
-					MinerPoolSwitch: string(ui.Action.MinerPoolSwitch.Normalized()),
-				},
 			},
 		}
 

@@ -5,6 +5,8 @@ group: Remote
 subnav:
   - title: Fonctionnement
     anchor: fonctionnement
+  - title: Actions à distance
+    anchor: actions-a-distance
   - title: Protection des données
     anchor: protection-des-donnees
   - title: Dans le dashboard
@@ -17,6 +19,10 @@ subnav:
   <a href="#fonctionnement" class="toc-card">
     <span class="toc-card-icon">🔄</span>
     <span class="toc-card-title">Fonctionnement</span>
+  </a>
+  <a href="#actions-a-distance" class="toc-card">
+    <span class="toc-card-icon">🕹️</span>
+    <span class="toc-card-title">Actions à distance</span>
   </a>
   <a href="#protection-des-donnees" class="toc-card">
     <span class="toc-card-icon">🔒</span>
@@ -65,11 +71,38 @@ et pour chaque mineur :
 - **une ligne « hors ligne »** quand le mineur ne répond pas : le graphe
   24 h du board chute à 0 comme en local.
 
+Et, une fois pour tout le board, **ses réglages** : les actions à distance
+autorisées, envoyées seulement quand elles changent.
+
 Les envois partent en arrière-plan : un hashboard lent ou injoignable ne
 retarde jamais le cycle, l'échec est écrit dans les logs. Un réglage
 modifié s'applique au cycle suivant.
 
 [Voir le détail dans Feeder →]({{ '/feeder.html#hashboard' | relative_url }}){: .btn .btn-primary }
+
+---
+
+## 🕹️ Actions à distance
+{: #actions-a-distance }
+
+Sur un board **privé**, le panneau d'un mineur qui envoie ses données garde
+ses boutons **Redémarrer** et **Basculer**, pour les actions que le
+dashboard autorise (*Configuration › Distant*).
+
+1. Le board dépose la demande sur hashboard.
+2. Le dashboard la récupère dans la minute — il ne demande rien à hashboard
+   tant qu'aucune action n'est autorisée.
+3. Il vérifie qu'elle est toujours autorisée et que le mineur est l'un des
+   siens, la fait comme ses propres boutons et l'inscrit dans l'audit.
+4. Le board affiche *Demande en cours*, puis *Demande récupérée* avec
+   l'heure, boutons grisés. Chaque état dure au plus deux intervalles de
+   récupération : une demande non récupérée à temps expire sans être
+   exécutée.
+
+Une seule demande à la fois par mineur. Le résultat de l'action est dans
+l'audit du dashboard, et dans le mail si vous l'avez activé.
+
+[Voir le réglage →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
 
 ---
 

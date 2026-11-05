@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import axios from "axios";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type AppSettings,
@@ -10,7 +11,10 @@ import {
 import { RemoteSettings } from "./RemoteSettings";
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "fr" },
+  }),
 }));
 
 const saveSettings = vi.fn();
@@ -22,6 +26,12 @@ vi.mock("@/hooks/useAppSettings", () => ({
     saveSettings,
     isSaving: false,
     saveError: null,
+  }),
+}));
+
+vi.mock("@/hooks/useServicesStatus", () => ({
+  useServicesStatus: () => ({
+    data: { services: { mailer: { state: "ok" } } },
   }),
 }));
 
@@ -58,6 +68,7 @@ describe("RemoteSettings -- push URL check", () => {
         sendUser: false,
         sendPools: false,
         sendIP: false,
+        actions: { restart: false, switchPool: false, mail: false },
       },
       firmware: { repos: {} },
       defaults: {
@@ -125,6 +136,7 @@ describe("RemoteSettings -- sensitive data", () => {
         sendUser: false,
         sendPools: true,
         sendIP: false,
+        actions: { restart: false, switchPool: false, mail: false },
       },
       firmware: { repos: {} },
       defaults: {
@@ -181,5 +193,133 @@ describe("RemoteSettings -- sensitive data", () => {
       ...settings.remote,
       pushURL: "https://elsewhere.example/api/push",
     });
+  });
+});
+
+describe("RemoteSettings -- remote actions", () => {
+  const toggle = (name: "restart" | "switchPool" | "mail") =>
+    screen.getByRole("switch", { name: `${k}.actions.${name}` });
+  const testButton = () =>
+    screen.getByRole("button", { name: `${k}.actions.test` });
+
+  const withActions = (
+    actions: AppSettings["remote"]["actions"],
+    mail: AppSettings["notifications"]["mail"] = EMPTY_NOTIFICATIONS.mail,
+  ): AppSettings => ({
+    electricity: { ratePerKwh: 0.2 },
+    pools: { dashboards: {} },
+    remote: {
+      pushURL: "https://hashboard.live/api/push",
+      apiKey: "key",
+      sendUser: false,
+      sendPools: false,
+      sendIP: false,
+      actions,
+    },
+    firmware: { repos: {} },
+    defaults: {
+      pools: { dashboards: {} },
+      firmware: { repos: {} },
+      alerts: { tempHigh: 62, fanHigh: 75, tempMargin: 2, fanMargin: 5 },
+    },
+    alerts: { tempHigh: 0, fanHigh: 0, tempMargin: 0, fanMargin: 0 },
+    readOnly: {
+      feederInterval: "2m0s",
+      healthCheckInterval: "1m0s",
+      firmwareCacheTTL: "24h0m0s",
+      auditReport: {},
+      alertsMail: {},
+    },
+    notifications: { ...EMPTY_NOTIFICATIONS, mail },
+  });
+
+  const off = { restart: false, switchPool: false, mail: false };
+  const mailReady = {
+    smtp: {
+      ...EMPTY_NOTIFICATIONS.mail.smtp,
+      host: "smtp.example.com",
+      port: 587,
+      from: "axeos@example.com",
+    },
+    to: ["me@example.com"],
+  };
+
+  beforeEach(() => {
+    saveSettings.mockReset();
+    saveSettings.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is off until the user turns it on", () => {
+    settings = withActions(off);
+    render(<RemoteSettings />);
+
+    expect(toggle("restart")).not.toBeChecked();
+    expect(toggle("switchPool")).not.toBeChecked();
+    expect(toggle("mail")).not.toBeChecked();
+    expect(screen.getAllByText(`${k}.actions.off`)).toHaveLength(3);
+  });
+
+  it("shows what is allowed", () => {
+    settings = withActions({ restart: true, switchPool: false, mail: true });
+    render(<RemoteSettings />);
+
+    expect(toggle("restart")).toBeChecked();
+    expect(toggle("switchPool")).not.toBeChecked();
+    expect(toggle("mail")).toBeChecked();
+    expect(screen.getAllByText(`${k}.actions.allowed`)).toHaveLength(1);
+    expect(screen.getAllByText(`${k}.actions.mailOn`)).toHaveLength(1);
+    expect(screen.getAllByText(`${k}.actions.off`)).toHaveLength(1);
+  });
+
+  it.each(["restart", "switchPool", "mail"] as const)(
+    "saves %s on its own, nothing else changed",
+    async (field) => {
+      const user = userEvent.setup();
+      settings = withActions({ ...off, restart: field !== "restart" });
+      render(<RemoteSettings />);
+
+      await user.click(toggle(field));
+
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(saveSettings.mock.calls[0][0].remote).toEqual({
+        ...settings.remote,
+        actions: {
+          ...settings.remote.actions,
+          [field]: !settings.remote.actions[field],
+        },
+      });
+    },
+  );
+
+  it("won't test the mail without an SMTP server, and says so", () => {
+    settings = withActions(off);
+    render(<RemoteSettings />);
+
+    expect(testButton()).toBeDisabled();
+    expect(
+      screen.getByText("settingsPage.appSettings.mail.test.needsSmtp"),
+    ).toBeInTheDocument();
+  });
+
+  it("tests the remote action mail, whatever the mail toggle", async () => {
+    const post = vi.spyOn(axios, "post").mockResolvedValue({ data: {} });
+    const user = userEvent.setup();
+    settings = withActions(off, mailReady);
+    render(<RemoteSettings />);
+
+    await user.click(testButton());
+
+    expect(post).toHaveBeenCalledWith("/api/config/mail/test", {
+      lang: "fr",
+      kind: "remote",
+    });
+    expect(saveSettings).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(`${k}.actions.testSent`),
+    ).toBeInTheDocument();
   });
 });

@@ -41,9 +41,6 @@ func TestInfo_localMode(t *testing.T) {
 	if got.UI.Page.Settings != "enabled" || got.UI.Page.Backups != "enabled" || got.UI.Page.Audit != "enabled" {
 		t.Errorf("UI.Page = %+v, want all enabled", got.UI.Page)
 	}
-	if got.UI.Action.MinerRestart != "enabled" || got.UI.Action.MinerPoolSwitch != "enabled" {
-		t.Errorf("UI.Action = %+v, want both enabled", got.UI.Action)
-	}
 }
 
 func TestInfo_remoteMode(t *testing.T) {
@@ -51,8 +48,7 @@ func TestInfo_remoteMode(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/api/info", nil)
 
 	ui := config.UIConfig{
-		Page:   config.UIPageConfig{Settings: config.UIHidden, Backups: config.UIHidden, Audit: config.UIHidden},
-		Action: config.UIActionConfig{MinerRestart: config.UIHidden, MinerPoolSwitch: config.UIHidden},
+		Page: config.UIPageConfig{Settings: config.UIHidden, Backups: config.UIHidden, Audit: config.UIHidden},
 	}
 	Info(testVersionChecker(), "https://hashboard.live", true, ui)(w, r)
 

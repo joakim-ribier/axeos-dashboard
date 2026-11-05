@@ -52,6 +52,7 @@ const buildSettings = (devices: PowerDevice[]): AppSettings => ({
     sendUser: false,
     sendPools: false,
     sendIP: false,
+    actions: { restart: false, switchPool: false, mail: false },
   },
   firmware: { repos: {} },
   defaults: {

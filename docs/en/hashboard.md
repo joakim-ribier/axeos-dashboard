@@ -6,6 +6,8 @@ lang: en
 subnav:
   - title: How it works
     anchor: how-it-works
+  - title: Remote actions
+    anchor: remote-actions
   - title: Data protection
     anchor: data-protection
   - title: In the dashboard
@@ -18,6 +20,10 @@ subnav:
   <a href="#how-it-works" class="toc-card">
     <span class="toc-card-icon">🔄</span>
     <span class="toc-card-title">How it works</span>
+  </a>
+  <a href="#remote-actions" class="toc-card">
+    <span class="toc-card-icon">🕹️</span>
+    <span class="toc-card-title">Remote actions</span>
   </a>
   <a href="#data-protection" class="toc-card">
     <span class="toc-card-icon">🔒</span>
@@ -65,11 +71,37 @@ for each miner:
 - **an "offline" line** when the miner doesn't answer: the board's 24h
   chart dips to 0 as it does locally.
 
+And, once for the whole board, **its settings**: the remote actions
+allowed, sent only when they change.
+
 Pushes run in the background: a slow or unreachable hashboard never
 delays the cycle, the failure is written to the logs. A changed setting
 applies on the next cycle.
 
 [See the details in Feeder →]({{ '/en/feeder.html#hashboard' | relative_url }}){: .btn .btn-primary }
+
+---
+
+## 🕹️ Remote actions
+{: #remote-actions }
+
+On a **private** board, the panel of a miner sending its data keeps its
+**Restart** and **Switch** buttons, for the actions the dashboard allows
+(*Configuration › Remote*).
+
+1. The board leaves the request on hashboard.
+2. The dashboard picks it up within a minute — it asks hashboard nothing
+   while no action is allowed.
+3. It checks the action is still allowed and the miner is one of its own,
+   does it like its own buttons and records it in the audit.
+4. The board shows *Request in progress*, then *Request picked up* with
+   the time, buttons greyed out. Each state lasts two pick-up intervals at
+   most: a request not picked up in time expires without being done.
+
+One request at a time per miner. The action's outcome is in the
+dashboard's audit, and in the mail if you turned it on.
+
+[See the setting →]({{ '/en/configuration.html#remote' | relative_url }}){: .btn .btn-primary }
 
 ---
 

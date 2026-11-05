@@ -17,7 +17,6 @@ function renderGate(page: UIFeatures["page"], isLoading = false) {
   mockUseUiFeatures.mockReturnValue({
     ui: {
       page,
-      action: { minerRestart: "enabled", minerPoolSwitch: "enabled" },
     },
     isLoading,
   });

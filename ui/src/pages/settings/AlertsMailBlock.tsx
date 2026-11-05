@@ -1,7 +1,6 @@
 // src/pages/settings/AlertsMailBlock.tsx
 import { useTranslation } from "react-i18next";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
-import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
   FormControlLabel,
@@ -10,11 +9,11 @@ import {
   Typography,
 } from "@mui/material";
 
-import { ActionButton } from "@/components/ui/ActionButton";
 import { ROW_SPACING, SECTION_GAP } from "@/components/ui/SectionLayout";
 import { formatTimestamp } from "@/utils/format";
 
 import { type AppSettingsFrameContext } from "./AppSettingsFrame";
+import { MailBlockedNotice, MailTestButton } from "./MailTestButton";
 import { SectionTitle } from "./SectionTitle";
 
 /** A mail on every feeder poll that raises alerts (see alertmail) -- the
@@ -24,15 +23,8 @@ export const AlertsMailBlock = ({
   isSaving,
   persist,
   serverBasePayload,
-  sending,
-  blocked,
-  onSendExample,
-}: AppSettingsFrameContext & {
-  sending: boolean;
-  // No mail can go out yet -- the test mail above says why.
-  blocked: boolean;
-  onSendExample: () => void;
-}) => {
+  notify,
+}: AppSettingsFrameContext) => {
   const { t } = useTranslation();
   const enabled = data?.notifications.alerts.mail ?? false;
   const status = data?.readOnly.alertsMail;
@@ -52,6 +44,7 @@ export const AlertsMailBlock = ({
         title={t("settingsPage.appSettings.mail.alerts.title")}
         description={t("settingsPage.appSettings.mail.alerts.description")}
       />
+      <MailBlockedNotice mail={data?.notifications.mail} />
       <Stack spacing={SECTION_GAP}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -69,16 +62,13 @@ export const AlertsMailBlock = ({
             label={t("settingsPage.appSettings.mail.alerts.enabledLabel")}
             sx={{ flexGrow: 1, mr: 0 }}
           />
-          <ActionButton
-            icon={<SendIcon fontSize="small" />}
-            loading={sending}
-            disabled={blocked}
-            onClick={onSendExample}
-          >
-            {sending
-              ? t("settingsPage.appSettings.mail.test.sending")
-              : t("settingsPage.appSettings.mail.alerts.sendExample")}
-          </ActionButton>
+          <MailTestButton
+            mail={data?.notifications.mail}
+            kind="alert"
+            label={t("settingsPage.appSettings.mail.alerts.sendExample")}
+            sentMessage={t("settingsPage.appSettings.mail.alerts.exampleSent")}
+            notify={notify}
+          />
         </Stack>
         {status?.lastError ? (
           <Typography variant="caption" color="warning.main">

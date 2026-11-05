@@ -1,7 +1,6 @@
 // The Actions panel of Configuration › Miners: a switch of every miner to a
-// pool, the pools check -- through the real <App/>, so each
-// action's gate (ui.page.settings, ui.action.minerPoolSwitch) is what's
-// under test, not a hand-passed prop.
+// pool, the pools check -- through the real <App/>, so the pools check's
+// gate (ui.page.settings) is what's under test, not a hand-passed prop.
 import { MemoryRouter } from "react-router-dom";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -50,10 +49,7 @@ const device = {
   fallbackStratumUser: "wallet.solo-NEW",
 };
 
-const mockBackend = (
-  settingsFlag: UIVisibility = "enabled",
-  poolSwitchFlag: UIVisibility = "enabled",
-) => {
+const mockBackend = (settingsFlag: UIVisibility = "enabled") => {
   mockedAxios.get.mockImplementation((url: string) => {
     if (url === "/api/info") {
       return Promise.resolve({
@@ -64,10 +60,6 @@ const mockBackend = (
               settings: settingsFlag,
               backups: "enabled",
               audit: "enabled",
-            },
-            action: {
-              minerRestart: "enabled",
-              minerPoolSwitch: poolSwitchFlag,
             },
           },
         },
@@ -84,6 +76,7 @@ const mockBackend = (
             sendUser: false,
             sendPools: false,
             sendIP: false,
+            actions: { restart: false, switchPool: false, mail: false },
           },
           firmware: { repos: {} },
           defaults: { pools: { dashboards: {} }, firmware: { repos: {} } },
@@ -167,49 +160,14 @@ describe("the Actions panel", () => {
     );
   });
 
-  it("is there while one of its actions is left", async () => {
-    mockBackend("readonly", "enabled");
-    await openMiners();
-    expect(actionsButton()).toBeInTheDocument();
-  });
-
-  it("is gone when none of its actions is left", async () => {
-    mockBackend("readonly", "hidden");
-    await openMiners();
-    expect(actionsButton()).not.toBeInTheDocument();
-  });
-});
-
-describe("the switch to a pool, controlled by ui.action.minerPoolSwitch", () => {
-  it("is there when enabled", async () => {
-    mockBackend("enabled", "enabled");
+  it("keeps the switch to a pool when settings are read-only", async () => {
+    mockBackend("readonly");
     await openMiners();
     await openActions();
     expect(screen.getByRole("combobox", { name: "Pool" })).not.toHaveAttribute(
       "aria-disabled",
       "true",
     );
-  });
-
-  it("is disabled when read-only", async () => {
-    mockBackend("enabled", "readonly");
-    await openMiners();
-    await openActions();
-    expect(screen.getByRole("combobox", { name: "Pool" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(screen.getByRole("button", { name: "Switch" })).toBeDisabled();
-  });
-
-  it("is gone when hidden", async () => {
-    mockBackend("enabled", "hidden");
-    await openMiners();
-    await openActions();
-    expect(screen.queryByText("Switch to a pool")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("combobox", { name: "Pool" }),
-    ).not.toBeInTheDocument();
   });
 });
 

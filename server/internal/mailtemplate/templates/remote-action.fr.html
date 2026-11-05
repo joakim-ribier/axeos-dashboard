@@ -1,0 +1,115 @@
+{{/*
+  Mail d'action à distance -- envoyé pour chaque action demandée depuis le
+  board (redémarrage, bascule de pool), effectuée ou non
+  (Configuration › Distant › Actions à distance).
+
+  Le <title> est l'objet du mail. Le fichier est relu à chaque envoi ; s'il
+  ne passe pas, le modèle d'origine est utilisé (et l'erreur est dans les
+  logs du mailer). Supprimer le fichier le remet d'origine au prochain
+  démarrage du mailer.
+
+  Syntaxe : modèles Go (https://pkg.go.dev/html/template) -- {{.Champ}},
+  {{if ...}}...{{end}}. Les valeurs sont échappées pour le HTML.
+
+  Variables :
+    .Miner         le nom du mineur
+    .Action        restart, switch_primary ou switch_fallback -- ses libellés
+                   sont dans {{define "action"}}, ci-dessous
+    .Status        done, failed ou rejected -- ses libellés sont dans
+                   {{define "outcome"}}, ci-dessous
+    .Color         sa couleur : vert, rouge ou orange
+    .Test          vrai pour l'exemple envoyé par le bouton Tester : rien n'a été exécuté
+    .At            la date et l'heure de l'action (UTC) -- son format est dans
+                   {{define "date"}}, ci-dessous
+    .DashboardURL  l'adresse du dashboard (vide si elle n'est pas renseignée)
+    .AuditURL      la page Audit du dashboard -- vide si l'adresse n'est pas
+                   renseignée, ou si c'est une IP : un lien vers une IP fait
+                   classer le mail en spam
+
+  L'image « cid:logo » est le logo, joint au mail.
+*/ -}}
+{{define "action"}}{{if eq .Action "restart"}}Redémarrage{{else if eq .Action "switch_primary"}}Bascule vers le pool principal{{else if eq .Action "switch_fallback"}}Bascule vers le pool de secours{{else}}{{.Action}}{{end}}{{end -}}
+{{define "outcome"}}{{if eq .Status "done"}}Effectuée{{else if eq .Status "failed"}}Échouée{{else if eq .Status "rejected"}}Refusée par le dashboard{{else}}{{.Status}}{{end}}{{end -}}
+{{define "date"}}{{.At.Format "02/01/2006 à 15:04 (UTC)"}}{{end -}}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>{{if .Test}}Test du mail d'action à distance — AxeOS Dashboard{{else}}{{.Miner}} : {{template "action" .}} depuis le board — {{template "outcome" .}}{{end}}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f2f6;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f2f6;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1e1e2a;">
+
+        <!-- En-tête : le logo et le nom de l'app -->
+        <tr>
+          <td style="background-color:#1e1e2a;padding:20px 24px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="vertical-align:middle;padding-right:12px;">
+                  <img src="cid:logo" width="40" height="40" alt="" style="display:block;border:0;border-radius:8px;">
+                </td>
+                <td style="vertical-align:middle;">
+                  <div style="font-size:18px;font-weight:700;color:#ffffff;">AxeOS Dashboard</div>
+                  <div style="font-size:13px;color:#00b4ff;">Action à distance</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Le résumé -->
+        <tr>
+          <td style="padding:28px 24px 8px 24px;">
+            {{if .Test}}
+            <div style="font-size:20px;font-weight:700;line-height:1.3;">Test du mail d'action à distance</div>
+            <div style="font-size:14px;color:#6b6b80;padding-top:6px;">Demandé depuis Configuration › Distant le {{template "date" .}}. Voici à quoi ressemble ce mail : c'est un exemple, aucune action n'a été exécutée.</div>
+            {{else}}
+            <div style="font-size:20px;font-weight:700;line-height:1.3;">Une action demandée depuis le board</div>
+            <div style="font-size:14px;color:#6b6b80;padding-top:6px;">Le {{template "date" .}}</div>
+            {{end}}
+          </td>
+        </tr>
+
+        <!-- L'action -->
+        <tr>
+          <td style="padding:12px 24px 8px 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;background-color:#f7f8fa;border-radius:8px;border-left:4px solid {{.Color}};">
+              <tr>
+                <td style="padding:14px 16px;">
+                  <div style="font-size:15px;font-weight:700;">{{.Miner}}</div>
+                  <div style="font-size:15px;padding-top:4px;color:#3d3d4e;">{{template "action" .}}</div>
+                  <div style="font-size:15px;padding-top:2px;color:{{.Color}};font-weight:600;">{{template "outcome" .}}</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Le lien vers la page Audit, quand l'adresse du dashboard est un nom (pas une IP) -->
+        {{if .AuditURL}}
+        <tr>
+          <td align="center" style="padding:12px 24px 28px 24px;">
+            <a href="{{.AuditURL}}" style="display:inline-block;background-color:#00b4ff;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 24px;border-radius:8px;">Voir l'audit</a>
+          </td>
+        </tr>
+        {{end}}
+
+        <!-- Pied de page -->
+        <tr>
+          <td style="padding:16px 24px 20px 24px;border-top:1px solid #e6e7ee;font-size:12px;line-height:1.5;color:#8a8aa0;">
+            Envoyé par AxeOS Dashboard pour chaque action demandée depuis le board.
+            Pour ne plus le recevoir : Configuration › Distant › Actions à distance.
+          </td>
+        </tr>
+
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

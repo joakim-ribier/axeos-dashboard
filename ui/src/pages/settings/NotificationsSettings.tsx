@@ -6,7 +6,6 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DnsIcon from "@mui/icons-material/Dns";
 import GroupIcon from "@mui/icons-material/Group";
 import SaveIcon from "@mui/icons-material/Save";
-import SendIcon from "@mui/icons-material/Send";
 import {
   Box,
   IconButton,
@@ -19,7 +18,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import axios from "axios";
 
 import { ActionButton } from "@/components/ui/ActionButton";
 import { DataTable } from "@/components/ui/DataTable";
@@ -38,18 +36,10 @@ import {
   type AppSettingsFrameContext,
 } from "./AppSettingsFrame";
 import { AuditReportBlock } from "./AuditReportBlock";
+import { MailBlockedNotice, MailTestButton } from "./MailTestButton";
 import { SectionTitle } from "./SectionTitle";
 
 const SECURITIES: SmtpSecurity[] = ["starttls", "tls", "none"];
-
-type MailKind = "test" | "alert" | "audit";
-
-// The confirmation of each kind of mail sent from this page.
-const SENT: Record<MailKind, string> = {
-  test: "settingsPage.appSettings.mail.test.sent",
-  alert: "settingsPage.appSettings.mail.alerts.exampleSent",
-  audit: "settingsPage.appSettings.mail.report.exampleSent",
-};
 
 const MAIL_LANGUAGES = ["fr", "en"] as const;
 
@@ -80,9 +70,6 @@ const NotificationsSection = ({
   const [password, setPassword] = useState("");
   const [from, setFrom] = useState("");
   const [newRecipient, setNewRecipient] = useState("");
-  // The mail being sent from this page, if any: the test mail, or an
-  // example of the alerts mail or of the audit report.
-  const [sending, setSending] = useState<MailKind | null>(null);
 
   const saved = data?.notifications;
 
@@ -140,10 +127,6 @@ const NotificationsSection = ({
       },
     });
   };
-  const smtpConfigured = Boolean(
-    saved?.mail.smtp.host && saved.mail.smtp.port && saved.mail.smtp.from,
-  );
-
   // Checked here, before anything is sent: the server would refuse these
   // anyway, but a form's refusal belongs in the form. A blank server is
   // fine -- it turns mail off.
@@ -209,35 +192,6 @@ const NotificationsSection = ({
     if (!isNewRecipientValid) return;
     setNewRecipient("");
     return persistRecipients([...recipients, newRecipientValue]);
-  };
-
-  const testBlocker = !smtpConfigured
-    ? "needsSmtp"
-    : recipients.length === 0
-      ? "needsRecipient"
-      : null;
-
-  // kind "alert": an example of the alerts mail, with made-up alerts.
-  const handleSendTest = async (kind: MailKind) => {
-    setSending(kind);
-    try {
-      await axios.post("/api/config/mail/test", {
-        lang: i18n.language.startsWith("fr") ? "fr" : "en",
-        kind: kind === "test" ? undefined : kind,
-      });
-      notify(t(SENT[kind]));
-    } catch (err) {
-      const body = axios.isAxiosError<{ error?: string; message?: string }>(err)
-        ? err.response?.data
-        : undefined;
-      const error =
-        body?.message ||
-        body?.error ||
-        t("settingsPage.appSettings.mail.test.unknownError");
-      notify(t("settingsPage.appSettings.mail.test.failed", { error }), error);
-    } finally {
-      setSending(null);
-    }
   };
 
   return (
@@ -361,6 +315,7 @@ const NotificationsSection = ({
             "settingsPage.appSettings.mail.recipients.description",
           )}
         />
+        <MailBlockedNotice mail={saved?.mail} />
         <DataTable>
           <TableHead>
             <TableRow>
@@ -488,21 +443,12 @@ const NotificationsSection = ({
           alignItems={{ xs: "stretch", sm: "center" }}
           sx={{ mt: SECTION_GAP }}
         >
-          <ActionButton
-            icon={<SendIcon fontSize="small" />}
-            loading={sending === "test"}
-            disabled={testBlocker !== null}
-            onClick={() => void handleSendTest("test")}
-          >
-            {sending === "test"
-              ? t("settingsPage.appSettings.mail.test.sending")
-              : t("settingsPage.appSettings.mail.test.send")}
-          </ActionButton>
-          {testBlocker && (
-            <Typography variant="body2" color="text.secondary">
-              {t(`settingsPage.appSettings.mail.test.${testBlocker}`)}
-            </Typography>
-          )}
+          <MailTestButton
+            mail={saved?.mail}
+            label={t("settingsPage.appSettings.mail.test.send")}
+            sentMessage={t("settingsPage.appSettings.mail.test.sent")}
+            notify={notify}
+          />
         </Stack>
       </Box>
 
@@ -515,9 +461,6 @@ const NotificationsSection = ({
         persist={persist}
         serverBasePayload={serverBasePayload}
         notify={notify}
-        sending={sending === "audit"}
-        blocked={testBlocker !== null}
-        onSendExample={() => void handleSendTest("audit")}
       />
 
       <SectionDivider />
@@ -529,9 +472,6 @@ const NotificationsSection = ({
         persist={persist}
         serverBasePayload={serverBasePayload}
         notify={notify}
-        sending={sending === "alert"}
-        blocked={testBlocker !== null}
-        onSendExample={() => void handleSendTest("alert")}
       />
     </Stack>
   );

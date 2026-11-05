@@ -15,6 +15,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/auditreport"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mail"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/mailtemplate"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remoteactionmail"
 )
 
 // Handler is the mailer's own API. It listens on the loopback only (see
@@ -25,6 +26,7 @@ func (m *Mailer) Handler() http.Handler {
 	router.Get("/api/mailer/status", m.status)
 	router.Post("/api/mailer/test", m.sendTestMail)
 	router.Post("/api/mailer/alerts", m.sendAlertsMail)
+	router.Post("/api/mailer/remote-action", m.sendRemoteActionMail)
 	return router
 }
 
@@ -54,8 +56,9 @@ func (m *Mailer) status(w http.ResponseWriter, _ *http.Request) {
 type testMailRequest struct {
 	// Lang picks the mail's language, the dashboard's own ("fr" or "en").
 	Lang string `json:"lang"`
-	// Kind "alert" or "audit" sends an example of the alerts mail or of the
-	// audit report instead, with made-up content.
+	// Kind "alert", "audit" or "remote" sends an example of the alerts mail,
+	// of the audit report or of the remote action mail instead, with made-up
+	// content.
 	Kind string `json:"kind"`
 }
 
@@ -74,10 +77,10 @@ var sentAtLayouts = map[string]string{
 // so a success means the saved setup, and the mailer itself, actually work.
 //
 // @Summary Send a test mail (mailer)
-// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind "alert" or "audit", an example of the alerts mail or of the audit report with made-up content. Reached through dashboard-api's POST /api/config/mail/test.
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): sends a test mail to every recipient through the saved SMTP server -- or, with kind "alert", "audit" or "remote", an example of the alerts mail, of the audit report or of the remote action mail with made-up content. Reached through dashboard-api's POST /api/config/mail/test.
 // @Tags Mailer
 // @Accept json
-// @Param request body main.testMailRequest false "Mail language (fr or en, default en), and kind (alert or audit for an example of that mail)"
+// @Param request body main.testMailRequest false "Mail language (fr or en, default en), and kind (alert, audit or remote for an example of that mail)"
 // @Produce json
 // @Success 200 {object} main.testMailResponse
 // @Failure 400 {object} object{error=string,message=string,code=int} "SMTP server or recipients not configured"
@@ -111,6 +114,13 @@ func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 		msg, err = alertmail.Build(settings, alertmail.Sample(time.Now()), m.config.MailTemplatesDir)
 		if err != nil {
 			m.logger.Error("alerts mail template unusable, the built-in one is used instead", "error", err)
+		}
+	case "remote":
+		settings.Language = lang
+		var err error
+		msg, err = remoteactionmail.Build(settings, remoteactionmail.Sample(time.Now()), m.config.MailTemplatesDir)
+		if err != nil {
+			m.logger.Error("remote action mail template unusable, the built-in one is used instead", "error", err)
 		}
 	case "audit":
 		// Whatever the saved types and "skip if empty": the whole example.
@@ -197,6 +207,44 @@ func (m *Mailer) sendAlertsMail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
 	}
+	writeJSON(w, http.StatusOK, testMailResponse{SentTo: settings.Mail.To})
+}
+
+// A mail that can't go out is only logged: the action itself is already in
+// the audit.
+//
+// @Summary Send a remote action mail (mailer)
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): mails one action asked for from the board (restart, pool switch) and how it went. Called by dashboard-api once it handled the action, when Configuration › Remote turns this mail on.
+// @Tags Mailer
+// @Accept json
+// @Param request body remoteactionmail.Event true "The action, as handled"
+// @Produce json
+// @Success 200 {object} main.testMailResponse
+// @Failure 400 {object} object{error=string,message=string,code=int} "no action, or SMTP server or recipients not configured"
+// @Failure 502 {object} object{error=string,message=string,code=int} "the SMTP server refused or couldn't be reached"
+// @Router /api/mailer/remote-action [post]
+func (m *Mailer) sendRemoteActionMail(w http.ResponseWriter, r *http.Request) {
+	var event remoteactionmail.Event
+	if err := json.NewDecoder(r.Body).Decode(&event); err != nil || event.Action == "" {
+		writeError(w, http.StatusBadRequest, "no action to mail")
+		return
+	}
+	settings := m.notifications()
+	if !settings.Mail.SMTP.Configured() || len(settings.Mail.To) == 0 {
+		writeError(w, http.StatusBadRequest, "no SMTP server or no recipient configured")
+		return
+	}
+
+	msg, err := remoteactionmail.Build(settings, event, m.config.MailTemplatesDir)
+	if err != nil {
+		m.logger.Error("remote action mail template unusable, the built-in one is used instead", "error", err)
+	}
+	if err := mail.Send(r.Context(), settings.Mail.SMTP, msg); err != nil {
+		m.logger.Error("failed to send the remote action mail", "action", event.Action, "error", err)
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	m.logger.Info("Remote action mail sent", "action", event.Action, "status", event.Status)
 	writeJSON(w, http.StatusOK, testMailResponse{SentTo: settings.Mail.To})
 }
 

@@ -137,6 +137,20 @@ func TestSendTestMail_alertExample(t *testing.T) {
 	}
 }
 
+func TestSendTestMail_remoteActionExample(t *testing.T) {
+	server := mailtest.NewServer(t)
+	m := mailerWithServer(t, server, "me@example.com")
+
+	w := post(m, "/api/mailer/test", `{"lang":"fr","kind":"remote"}`)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
+	}
+	if subject, html := subjectOf(t, server.Next(t)); subject != "Test du mail d'action à distance — AxeOS Dashboard" || !html {
+		t.Errorf("subject = %q (html with logo: %v), want the French example", subject, html)
+	}
+}
+
 func TestSendTestMail_auditExample(t *testing.T) {
 	server := mailtest.NewServer(t)
 	m := mailerWithServer(t, server, "me@example.com")

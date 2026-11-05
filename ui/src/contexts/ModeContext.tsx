@@ -7,6 +7,7 @@ interface ApiPaths {
   miners: string;
   history: string;
   stats: (ip: string) => string;
+  remoteAction?: (ip: string) => string;
 }
 
 interface ModeContextValue {
@@ -37,6 +38,7 @@ export const ModeProvider = ({ mode, children }: ModeProviderProps) => {
           miners: `/api/${boardId}/miners`,
           history: `/api/${boardId}/miners/history`,
           stats: (ip: string) => `/api/${boardId}/${ip}/stats`,
+          remoteAction: (ip: string) => `/api/${boardId}/miners/${ip}/actions`,
         }
       : {
           miners: "/api/miners",

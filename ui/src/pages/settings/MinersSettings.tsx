@@ -127,10 +127,7 @@ const ConfiguredMinersTable = ({
   onSaved: (message: string) => void;
 }) => {
   const { t } = useTranslation();
-  const { ui } = useUiFeatures();
   const [actionsOpen, setActionsOpen] = useState(false);
-  // Every action on the whole fleet is gated: none left, no Actions button.
-  const hasActions = !readOnly || ui.action.minerPoolSwitch !== "hidden";
   const { data: appSettings } = useAppSettings();
   // A save from a miner's row says so, like every other save.
   const saveMiner = async (updated: MinerConfig[]) => {
@@ -463,7 +460,7 @@ const ConfiguredMinersTable = ({
                 })
           }
         />
-        {!isEmpty && hasActions && (
+        {!isEmpty && (
           <Button
             variant="outlined"
             size="small"
@@ -484,7 +481,7 @@ const ConfiguredMinersTable = ({
           </Button>
         )}
       </Box>
-      {!isEmpty && hasActions && (
+      {!isEmpty && (
         <Collapse in={actionsOpen} unmountOnExit>
           <MinersToolbar
             miners={miners}
