@@ -69,8 +69,7 @@ make run-dashboard-ui  # Vite dev server on :5174, proxies /api → :8080
 ```
 
 Or, for the UI work alone: `make run` -- dashboard-api and its UI in one
-console, no feeder nor mailer, Ctrl+C stops both. `make remote-run` does the
-same for a board (`:5175`), on a sibling hashboard checkout's data.
+console, no feeder nor mailer, Ctrl+C stops both.
 
 `dashboard.yml` field reference is in the
 [Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html#config-file)
@@ -111,15 +110,49 @@ When `checks.yml` succeeds on `main`,
 feeder/dashboard-api/mailer/remote-dashboard-api/rebuild-totals binaries for **both
 `linux/arm64` (Raspberry Pi) and `linux/amd64` (typical VPS)**, builds the UI
 once, and publishes everything to a rolling `latest` GitHub Release.
-`make latest-fetch` auto-detects the local architecture (`uname -m`) and
+`make latest-update` auto-detects the local architecture (`uname -m`) and
 pulls the matching binaries — no need to specify it manually, override with
 `RELEASE_ARCH=` if detection ever guesses wrong.
 
-- `make latest-up` / `make latest-down` — Pi: dashboard-api + feeder + mailer
-- `make latest-remote-up` / `make latest-remote-down` — VPS: remote-dashboard-api only
+- Pi: `make latest-update` — dashboard-api + feeder + mailer, in `dist/`, each
+  a systemd service (`deploy/`, `make install-services`, `make restart`)
+- VPS: the release's `remote-dashboard-api-amd64` and `ui-dist.tar.gz`, for a
+  board
 
-Neither needs a local Go or npm build — see the Makefile's
-`latest-fetch`/`latest-up`/`latest-remote-up` targets.
+Neither needs a local Go or npm build.
+
+**On your own server** — three values, the only ones to change. They're at the
+very top of the [Makefile](Makefile); put yours in a `Makefile.local` next to
+it, not versioned, which `make deploy` copies to the server too:
+
+```makefile
+DEPLOY_HOST := my-ssh-alias
+DEPLOY_USER := me
+DEPLOY_DIR  := /home/me/axeos-dashboard
+```
+
+| Variable | What it is |
+|---|---|
+| `DEPLOY_HOST` | The server's SSH alias |
+| `DEPLOY_USER` | The user its services run as |
+| `DEPLOY_DIR` | Its folder, holding `config.yml`, `settings.yml`, `miners.yml` and `data/` |
+
+`deploy/` holds a template of each service and of the nginx site, with
+`@DEPLOY_USER@` and `@DEPLOY_DIR@` in place of these values.
+
+```bash
+make deploy              # from your machine: dist/, deploy/ and the Makefile, nothing restarted
+
+# on the server, in DEPLOY_DIR:
+make install-services    # the first time, and when deploy/*.service change
+make restart             # mailer, then feeder, then dashboard-api
+```
+
+nginx is yours to install, once: `dist/deploy/nginx-axeos-dashboard.conf`, with
+your `DEPLOY_DIR` in place of `@DEPLOY_DIR@`.
+
+Logs: `journalctl -u axeos-dashboard-feeder -f`, likewise for
+`axeos-dashboard-api` and `axeos-dashboard-mailer`.
 
 ---
 

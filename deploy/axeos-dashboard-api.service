@@ -1,0 +1,16 @@
+[Unit]
+Description=axeos-dashboard dashboard-api
+# An order only: the API keeps answering whatever the others do.
+After=network-online.target axeos-dashboard-mailer.service axeos-dashboard-feeder.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@DEPLOY_USER@
+WorkingDirectory=@DEPLOY_DIR@
+ExecStart=@DEPLOY_DIR@/dist/api/dashboard-api -config @DEPLOY_DIR@/config.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -26,10 +26,19 @@ make run-dashboard-api CONFIG=resources/dashboard.yml   # HTTP API on :8080
 make run-feeder        CONFIG=resources/dashboard.yml   # polling daemon
 make run-mailer        CONFIG=resources/dashboard.yml   # scheduled mails (audit report)
 make run-dashboard-ui                                    # Vite dev server → :8080
-make run-remote-dashboard-ui                                    # Vite dev server → :8081 (remote)
 make run                                                 # dashboard-api + its UI (:5174) in this console, no feeder/mailer -- Ctrl+C stops both
-make remote-run                                          # remote-dashboard-api + its UI (:5175) on the sibling hashboard's data
 ```
+
+### Deploy
+
+```bash
+make deploy            # from your machine: a local build into dist/ on DEPLOY_HOST, nothing restarted
+make install-services  # on the server: the systemd services from deploy/, the first time and when they change
+make restart           # on the server: mailer, then feeder, then dashboard-api
+make latest-update     # on the server: from the GitHub release, restarted
+```
+
+The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_DIR`), yours in `Makefile.local`, not versioned.
 
 ### Build & Lint
 
@@ -264,7 +273,7 @@ Every page declares its title with `PageHeader`, which renders into the sticky `
 
 Charts: Recharts (fleet chart, per-miner 24h chart) plus a hand-drawn SVG sparkline. Validation: Zod. State: TanStack Query for server data, React state and contexts (`src/contexts/`) otherwise.
 
-Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard).
+Vite proxy: `API_PORT` env var required — `API_PORT=8080` (dashboard) or `API_PORT=8081` (remote-dashboard). Running a board locally (`make run-dashboard`), like deploying one, is on the hashboard side.
 Route `/:boardId` → remote mode; route `/` → local mode.
 
 ### Config (`resources/dashboard.yml` + `resources/settings.yml` + `resources/miners.yml`)

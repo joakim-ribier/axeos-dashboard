@@ -2492,7 +2492,7 @@
                     "type": "string"
                 },
                 "remote": {
-                    "description": "Remote is true for remote-dashboard-api, false for dashboard-api --\nthe single React codebase can't otherwise tell which binary it's\ntalking to (both serve the same routes, and hashboardURL alone isn't\na reliable signal: remote-dashboard-api can leave it unconfigured\ntoo, see resources/remote-dashboard.yml). The UI needs this to know\nwhether an unrecognized single path segment is even worth treating\nas a possible board id in the first place -- on dashboard-api, no\nboard ever exists, so a mistyped URL must never surface board-only\nchrome (the public/private chip, the \"board is private\" screen).",
+                    "description": "Remote is true for remote-dashboard-api, false for dashboard-api --\nthe single React codebase can't otherwise tell which binary it's\ntalking to (both serve the same routes, and hashboardURL alone isn't\na reliable signal: remote-dashboard-api can leave it unconfigured\ntoo). The UI needs this to know\nwhether an unrecognized single path segment is even worth treating\nas a possible board id in the first place -- on dashboard-api, no\nboard ever exists, so a mistyped URL must never surface board-only\nchrome (the public/private chip, the \"board is private\" screen).",
                     "type": "boolean"
                 },
                 "ui": {

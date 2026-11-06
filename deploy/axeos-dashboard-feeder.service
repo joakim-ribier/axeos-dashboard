@@ -1,0 +1,17 @@
+[Unit]
+Description=axeos-dashboard feeder
+# Its first poll may raise alerts, which it hands to the mailer. An order only:
+# a mailer down doesn't stop the polling.
+After=network-online.target axeos-dashboard-mailer.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@DEPLOY_USER@
+WorkingDirectory=@DEPLOY_DIR@
+ExecStart=@DEPLOY_DIR@/dist/api/feeder -config @DEPLOY_DIR@/config.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

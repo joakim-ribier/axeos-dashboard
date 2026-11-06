@@ -173,7 +173,7 @@ type InfoResponse struct {
 	// the single React codebase can't otherwise tell which binary it's
 	// talking to (both serve the same routes, and hashboardURL alone isn't
 	// a reliable signal: remote-dashboard-api can leave it unconfigured
-	// too, see resources/remote-dashboard.yml). The UI needs this to know
+	// too). The UI needs this to know
 	// whether an unrecognized single path segment is even worth treating
 	// as a possible board id in the first place -- on dashboard-api, no
 	// board ever exists, so a mistyped URL must never surface board-only

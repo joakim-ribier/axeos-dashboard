@@ -1,0 +1,15 @@
+[Unit]
+Description=axeos-dashboard mailer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@DEPLOY_USER@
+WorkingDirectory=@DEPLOY_DIR@
+ExecStart=@DEPLOY_DIR@/dist/api/mailer -config @DEPLOY_DIR@/config.yml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
