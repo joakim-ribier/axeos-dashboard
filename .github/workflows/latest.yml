@@ -202,9 +202,9 @@ jobs:
           body: |
             Built from commit ${{ needs.guard.outputs.sha }} on `main`.
             Binaries for linux/arm64 (Raspberry Pi) and linux/amd64 (typical VPS).
-            Fetch with `make latest-up` (Pi, dashboard-api + feeder + mailer) or
-            `make latest-remote-up` (VPS, remote-dashboard-api) — both auto-detect
-            the local architecture.
+            Fetch with `make latest-update` (Pi, dashboard-api + feeder + mailer), which
+            auto-detects the local architecture; a VPS takes remote-dashboard-api-amd64
+            and ui-dist.tar.gz.
           files: |
             dist/feeder-arm64
             dist/feeder-amd64

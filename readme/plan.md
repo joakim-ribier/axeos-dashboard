@@ -48,7 +48,7 @@ every commit.
   another section's save. Well-known pool dashboard links and firmware
   repo URLs are built into the binary
   (`server/internal/config/defaults.go`) rather than duplicated per
-  deployment, so fixing/adding one is a code change + `latest-up`;
+  deployment, so fixing/adding one is a code change + `latest-update`;
   `settings.yml` only stores custom pool extras on top of that built-in
   list (firmware repos are shown read-only, not overridable from this UI
   at all). Launch-time settings that genuinely need a restart
@@ -159,6 +159,11 @@ every commit.
   to its other pool, once allowed in Configuration › Remote -- the dashboard
   picks the request up within a minute, audits it and can send a mail; a
   test button on every mail, and the `ui.action.*` flags removed.
+- ✅ **A clean deployment**: on the server, one systemd service per process
+  (dashboard-api, feeder, mailer) from `dist/`, restarted after a crash, no
+  screen and nothing downloaded at start; `make deploy`, `make restart`,
+  `make latest-update`, the server's values at the top of the Makefile or in
+  `Makefile.local`.
 
 ## To do
 
