@@ -38,6 +38,8 @@ make restart           # on the server: mailer, then feeder, then dashboard-api
 make latest-update     # on the server: from the GitHub release, restarted
 ```
 
+On the server, `deploy/aliases.sh` (in `dist/deploy/`, loaded from `~/.bashrc`): `axeos-restart`, `axeos-update`, `axeos-status`, `axeos-logs`.
+
 The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_DIR`), yours in `Makefile.local`, not versioned.
 
 ### Build & Lint

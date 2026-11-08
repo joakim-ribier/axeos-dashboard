@@ -57,7 +57,7 @@ VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/s
 # ==============================================================================
 # Phony Targets (Virtual commands, not actual files)
 # ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-dashboard-ui rebuild-totals dev-up dev-down install-services restart latest-update run build-ui build-linux deploy docker-build docs-serve
+.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-dashboard-ui rebuild-totals dev-up dev-down install-services install-aliases restart latest-update run build-ui build-linux deploy docker-build docs-serve
 
 # ==============================================================================
 # Main Commands
@@ -259,6 +259,14 @@ install-services:
 	done
 	sudo systemctl daemon-reload
 	sudo systemctl enable $(SERVICES)
+	@$(MAKE) --no-print-directory install-aliases
+
+# The shortcuts (axeos-help...) at every login: one line in ~/.bashrc, added once.
+ALIASES_LINE := [ -f $(CURDIR)/dist/deploy/aliases.sh ] && . $(CURDIR)/dist/deploy/aliases.sh
+install-aliases:
+	@grep -qF '$(ALIASES_LINE)' ~/.bashrc 2>/dev/null \
+		&& echo ">>> Shortcuts already loaded by ~/.bashrc" \
+		|| { echo '$(ALIASES_LINE)' >> ~/.bashrc && echo ">>> Shortcuts added to ~/.bashrc -- new logins have them, or: . ~/.bashrc"; }
 
 restart:
 	sudo systemctl restart $(SERVICES)

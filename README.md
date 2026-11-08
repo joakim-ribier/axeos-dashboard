@@ -154,6 +154,11 @@ your `DEPLOY_DIR` in place of `@DEPLOY_DIR@`.
 Logs: `journalctl -u axeos-dashboard-feeder -f`, likewise for
 `axeos-dashboard-api` and `axeos-dashboard-mailer`.
 
+On the server, `deploy/aliases.sh` (copied to
+`dist/deploy/`) gives shortcuts — `axeos-restart`, `axeos-update`,
+`axeos-status`, `axeos-logs` — once loaded from your `~/.bashrc`:
+`. <DEPLOY_DIR>/dist/deploy/aliases.sh`.
+
 ---
 
 ## Deployment
