@@ -11,14 +11,22 @@ import { ModeProvider } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo } from "@/hooks/useMiners";
 
-import { BoardChip } from "./Sidebar";
+import { AppVersion, BoardChip } from "./Sidebar";
 
 /** The home page, or the request-access screen of a private board --
  * then, faded at the bottom, the board's line (its ID, public or private,
- * the hashboard account). */
+ * the hashboard account), with the version it runs, as in the sidebar. */
 const Board = () => {
   const { boardId = "" } = useParams<{ boardId: string }>();
-  const { hashboardUrl, isPublic, boardNotFound, boardBlocked } = useAppInfo();
+  const {
+    hashboardUrl,
+    isPublic,
+    boardNotFound,
+    boardBlocked,
+    buildSHA,
+    versionStatus,
+    releaseUrl,
+  } = useAppInfo();
   // Nothing behind this board: "/" sends the visitor on to hashboard (see
   // AppLayout).
   if (boardNotFound) return <Navigate to="/" replace />;
@@ -35,14 +43,27 @@ const Board = () => {
       <Box
         component="footer"
         sx={{
-          display: "flex",
-          justifyContent: "center",
+          // The board's line centered, the version at the far left, as in the
+          // sidebar; stacked and centered on a phone.
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "1fr auto 1fr" },
+          justifyItems: { xs: "center", sm: "normal" },
+          alignItems: "center",
+          gap: 1,
           mt: 3,
           pb: 2,
           opacity: 0.6,
           "&:hover": { opacity: 1 },
         }}
       >
+        <Box sx={{ justifySelf: { sm: "start" }, order: { xs: 2, sm: 0 } }}>
+          <AppVersion
+            compact
+            buildSHA={buildSHA}
+            versionStatus={versionStatus}
+            releaseUrl={releaseUrl}
+          />
+        </Box>
         <BoardChip
           board={{ id: boardId, url: `/${boardId}`, isPublic, hashboardUrl }}
         />

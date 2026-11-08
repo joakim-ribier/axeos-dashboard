@@ -164,6 +164,8 @@ every commit.
   screen and nothing downloaded at start; `make deploy`, `make restart`,
   `make latest-update`, the server's values at the top of the Makefile or in
   `Makefile.local`.
+- ✅ **The version on a board**: at the foot of the board, the version it
+  runs with its status, as in the sidebar, in the size of the board's line.
 
 ## To do
 

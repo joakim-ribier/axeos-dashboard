@@ -4,7 +4,7 @@
 // remote dispatch -- that a per-hook unit test wouldn't notice since each
 // of those already assumes the routing wiring around it is correct.
 import { MemoryRouter } from "react-router-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -201,6 +201,30 @@ describe("App routing smoke test (remote board)", () => {
       expect(screen.queryByText("foobar")).not.toBeInTheDocument();
     },
   );
+
+  it("shows the version it runs at the foot of the board, as in the sidebar", async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info")
+        return Promise.resolve({
+          data: {
+            remote: true,
+            buildSHA: "b1dd6ed",
+            appVersion: "dev",
+            appVersionStatus: "upToDate",
+          },
+        });
+      return Promise.resolve({ data: { miners: [], total: 0 } });
+    });
+
+    renderApp("/demo");
+
+    const footer = await waitFor(() => {
+      const el = document.querySelector("footer");
+      expect(el).toHaveTextContent("Version b1dd6ed");
+      return el as HTMLElement;
+    });
+    expect(within(footer).getByLabelText("Up to date")).toBeInTheDocument();
+  });
 
   it("lands on a valid board's home for an unknown sub-path under it, instead of a dead end", async () => {
     renderApp("/demo/some-unknown-subpath");

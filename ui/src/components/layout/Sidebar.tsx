@@ -351,6 +351,136 @@ interface SidebarFooterProps {
   onToggleCollapsed?: () => void;
 }
 
+type VersionProps = Pick<
+  SidebarFooterProps,
+  "buildSHA" | "versionStatus" | "releaseUrl"
+>;
+
+const useVersionDisplay = ({
+  buildSHA,
+  versionStatus,
+  releaseUrl,
+  iconSize = 18,
+}: VersionProps & { iconSize?: number }) => {
+  const { t } = useTranslation();
+  const updateUrl = versionStatus === "updateAvailable" ? releaseUrl : null;
+  const statusText =
+    versionStatus === "upToDate"
+      ? t("sidebar.versionUpToDate")
+      : updateUrl
+        ? t("sidebar.versionUpdateAvailable")
+        : null;
+  const statusColor = updateUrl ? "warning.main" : "success.main";
+  const statusIcon =
+    versionStatus === "upToDate" ? (
+      <CheckCircleOutlineIcon sx={{ fontSize: iconSize }} />
+    ) : updateUrl ? (
+      <SystemUpdateAltIcon sx={{ fontSize: iconSize }} />
+    ) : null;
+  const versionText = buildSHA
+    ? t("sidebar.versionLabel", { sha: buildSHA })
+    : null;
+
+  // A link to the release when there's one to get, plain text otherwise.
+  const linkProps = updateUrl
+    ? {
+        component: "a" as const,
+        href: updateUrl,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        "aria-label": "app update available",
+      }
+    : {};
+
+  return {
+    versionText,
+    statusText,
+    statusColor,
+    statusIcon,
+    updateUrl,
+    linkProps,
+  };
+};
+
+/** The running version with its status (a link to the release when one is
+ * newer) -- the sidebar's foot, and a board's, compact there: the size of the
+ * board's line next to it. */
+export const AppVersion = ({
+  compact = false,
+  ...props
+}: VersionProps & { compact?: boolean }) => {
+  const {
+    versionText,
+    statusText,
+    statusColor,
+    statusIcon,
+    updateUrl,
+    linkProps,
+  } = useVersionDisplay({ ...props, iconSize: compact ? 14 : 18 });
+  if (!versionText) return null;
+  const textSize = compact ? { fontSize: "0.7rem", lineHeight: 1.4 } : {};
+  return (
+    <Box
+      {...linkProps}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: compact ? 0.75 : 1.25,
+        minWidth: 0,
+        color: "inherit",
+        textDecoration: "none",
+        borderRadius: 2,
+        ...(updateUrl && {
+          "&:hover .version-status": { textDecoration: "underline" },
+        }),
+      }}
+    >
+      {statusIcon && (
+        <Box
+          component="span"
+          aria-label={statusText ?? undefined}
+          sx={{ display: "flex", color: statusColor }}
+        >
+          {statusIcon}
+        </Box>
+      )}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          variant="caption"
+          noWrap
+          component="div"
+          sx={{
+            color: compact ? "text.disabled" : "text.secondary",
+            fontFamily: "monospace",
+            ...textSize,
+          }}
+        >
+          {versionText}
+        </Typography>
+        {statusText && (
+          <Typography
+            className="version-status"
+            variant="caption"
+            component="div"
+            sx={{
+              color: statusColor,
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              ...textSize,
+            }}
+          >
+            {statusText}
+            {updateUrl && (
+              <OpenInNewIcon sx={{ fontSize: compact ? 11 : 12 }} />
+            )}
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
 /**
  * The sidebar's foot, one row: the running version with its status (a
  * link to the release when one is newer), and the fold button. Folded,
@@ -364,36 +494,16 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
   onToggleCollapsed,
 }) => {
   const { t } = useTranslation();
-  const updateUrl = versionStatus === "updateAvailable" ? releaseUrl : null;
-  const statusText =
-    versionStatus === "upToDate"
-      ? t("sidebar.versionUpToDate")
-      : updateUrl
-        ? t("sidebar.versionUpdateAvailable")
-        : null;
-  const statusColor = updateUrl ? "warning.main" : "success.main";
-  const statusIcon =
-    versionStatus === "upToDate" ? (
-      <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
-    ) : updateUrl ? (
-      <SystemUpdateAltIcon sx={{ fontSize: 18 }} />
-    ) : null;
-  const versionText = buildSHA
-    ? t("sidebar.versionLabel", { sha: buildSHA })
-    : null;
+  const {
+    versionText,
+    statusText,
+    statusColor,
+    statusIcon,
+    updateUrl,
+    linkProps,
+  } = useVersionDisplay({ buildSHA, versionStatus, releaseUrl });
 
   if (!versionText && !onToggleCollapsed) return null;
-
-  // A link to the release when there's one to get, plain text otherwise.
-  const linkProps = updateUrl
-    ? {
-        component: "a" as const,
-        href: updateUrl,
-        target: "_blank",
-        rel: "noopener noreferrer",
-        "aria-label": "app update available",
-      }
-    : {};
 
   const toggle = onToggleCollapsed && (
     <Tooltip
@@ -468,57 +578,12 @@ const SidebarFooter: React.FC<SidebarFooterProps> = ({
           }}
         >
           {versionText && (
-            <Box
-              {...linkProps}
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1.25,
-                minWidth: 0,
-                flexGrow: 1,
-                color: "inherit",
-                textDecoration: "none",
-                borderRadius: 2,
-                ...(updateUrl && {
-                  "&:hover .version-status": { textDecoration: "underline" },
-                }),
-              }}
-            >
-              {statusIcon && (
-                <Box
-                  component="span"
-                  aria-label={statusText ?? undefined}
-                  sx={{ display: "flex", color: statusColor }}
-                >
-                  {statusIcon}
-                </Box>
-              )}
-              <Box sx={{ minWidth: 0 }}>
-                <Typography
-                  variant="caption"
-                  noWrap
-                  component="div"
-                  sx={{ color: "text.secondary", fontFamily: "monospace" }}
-                >
-                  {versionText}
-                </Typography>
-                {statusText && (
-                  <Typography
-                    className="version-status"
-                    variant="caption"
-                    component="div"
-                    sx={{
-                      color: statusColor,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.5,
-                    }}
-                  >
-                    {statusText}
-                    {updateUrl && <OpenInNewIcon sx={{ fontSize: 12 }} />}
-                  </Typography>
-                )}
-              </Box>
+            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+              <AppVersion
+                buildSHA={buildSHA}
+                versionStatus={versionStatus}
+                releaseUrl={releaseUrl}
+              />
             </Box>
           )}
           <Box sx={{ ml: "auto", flexShrink: 0 }}>{toggle}</Box>
