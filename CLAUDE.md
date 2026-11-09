@@ -250,7 +250,7 @@ Global middleware: RequestID, RealIP, Logger, Recoverer, Timeout(30s).
 
 ### React Frontend (`ui/`)
 
-Pages: Home (`/`), Alerts, Audit, Settings, Backups. A board (`/{boardId}`, remote mode) is the Home page alone -- `BoardLayout`: no sidebar nor top bar, a faded footer with the board's line, the browser's language; any other path under it lands on its home. MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
+Pages: Home (`/`), Alerts, Audit, Settings, Backups. A board (`/{boardId}`, remote mode) is the Home page alone -- `BoardLayout`: no sidebar nor top bar, an icon in the fleet card's header (`BoardPanelButton`, through `BoardPanelContext`) opening `BoardPanel` (the board, what's shared -- read off the latest samples, `sharedOnBoard` -- and the version), the browser's language; any other path under it lands on its home. MUI dark theme (bg `#1e1e2a`, primary `#00b4ff`). Fully localized (EN + FR via i18next).
 
 Every page declares its title with `PageHeader`, which renders into the sticky `TopBar` (a portal into a slot `AppLayout` provides) rather than above the page; on a phone the bar keeps the title, auto-refresh and the bell, the rest unfolds under a "More" button.
 

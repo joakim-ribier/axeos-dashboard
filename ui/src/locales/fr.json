@@ -476,6 +476,45 @@
     "sending": "Envoi…",
     "sent": "Si cet email est enregistré pour ce tableau, un lien vient de lui être envoyé."
   },
+  "boardPanel": {
+    "open": "Ma flotte",
+    "title": "Ma flotte",
+    "setLocally": "Se règle depuis le dashboard local.",
+    "board": {
+      "title": "Ma flotte",
+      "id": "Board",
+      "visibility": "Visibilité",
+      "public": "Public",
+      "private": "Privé",
+      "account": "Compte",
+      "manage": "Gérer le compte hashboard"
+    },
+    "shared": {
+      "title": "Données partagées",
+      "user": "Utilisateur / wallet des pools",
+      "pools": "Pools (adresse et port)",
+      "ip": "Adresse IP des mineurs",
+      "network": "Réseau Wi-Fi et IPv6",
+      "sent": "Partagé avec hashboard",
+      "notSent": "Privé — jamais envoyé",
+      "masked": "Masqué — adresse fictive",
+      "unknown": "Pas encore de relevé"
+    },
+    "actions": {
+      "title": "Actions à distance",
+      "restart": "Redémarrage",
+      "switchPool": "Changement de pool",
+      "allowed": "Autorisé",
+      "notAllowed": "Non autorisé",
+      "publicBoard": "Jamais sur un board public",
+      "unknown": "Aucun mineur actif"
+    },
+    "version": {
+      "title": "Version",
+      "description": "La version d'<repo>axeos-dashboard</repo> qui fait tourner ce board.",
+      "label": "Version"
+    }
+  },
   "settingsPage": {
     "header": {
       "title": "Configuration",

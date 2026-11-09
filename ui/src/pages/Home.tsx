@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import { useState } from "react";
+import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import { Box, Link, Typography, useMediaQuery, useTheme } from "@mui/material";
@@ -17,6 +17,10 @@ import {
   MINER_VIEWS,
   MinerToolbar,
 } from "@/components/dashboard/toolbar/MinerToolbar";
+import {
+  BoardPanelButton,
+  BoardPanelContext,
+} from "@/components/layout/BoardPanel";
 import { AlertList } from "@/components/ui/AlertList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { useSearch } from "@/contexts/SearchContext";
@@ -94,6 +98,8 @@ export const Home = () => {
   );
   const pools = poolSegments(miners);
 
+  const onBoard = useContext(BoardPanelContext) !== null;
+
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <PageHeader
@@ -120,6 +126,12 @@ export const Home = () => {
         icon={<DashboardIcon />}
       />
 
+      {/* No fleet card to hold the board's icon: above the notice. */}
+      {onBoard && !isLoading && miners.length === 0 && (
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: -1.5 }}>
+          <BoardPanelButton />
+        </Box>
+      )}
       {error && !data ? (
         <AlertList severity="error" items={[t("dashboard.error")]} />
       ) : isLoading ? null : miners.length === 0 ? (
@@ -133,6 +145,7 @@ export const Home = () => {
             isStale={isStale}
             statusOf={statusOf}
             onOpen={openMiner}
+            action={onBoard && <BoardPanelButton />}
           />
 
           <Box

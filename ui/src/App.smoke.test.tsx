@@ -5,11 +5,13 @@
 // of those already assumes the routing wiring around it is correct.
 import { MemoryRouter } from "react-router-dom";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import axios from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "@/App";
 import i18n from "@/i18n";
+import { makeMiner } from "@/test/miner";
 
 vi.mock("axios");
 const mockedAxios = vi.mocked(axios, true);
@@ -59,10 +61,10 @@ describe("App routing smoke test (remote board)", () => {
     await waitFor(() =>
       expect(mockedAxios.get).toHaveBeenCalledWith("/api/demo/miners"),
     );
-    // The footer's board line links back to the board.
-    await waitFor(() =>
-      expect(container.querySelector('a[href="/demo"]')).not.toBeNull(),
-    );
+    // The board's own details, behind their icon.
+    expect(
+      await screen.findByRole("button", { name: "My fleet" }),
+    ).toBeInTheDocument();
     // A board only reads its miners' stats: nothing else is fetched...
     const urls = new Set(mockedAxios.get.mock.calls.map(([url]) => url));
     expect([...urls].sort()).toEqual(
@@ -202,7 +204,7 @@ describe("App routing smoke test (remote board)", () => {
     },
   );
 
-  it("shows the version it runs at the foot of the board, as in the sidebar", async () => {
+  it("opens the board's details from its icon: the board, what's shared, the version", async () => {
     mockedAxios.get.mockImplementation((url: string) => {
       if (url === "/api/info")
         return Promise.resolve({
@@ -215,15 +217,69 @@ describe("App routing smoke test (remote board)", () => {
         });
       return Promise.resolve({ data: { miners: [], total: 0 } });
     });
+    const user = userEvent.setup();
 
     renderApp("/demo");
+    await user.click(await screen.findByRole("button", { name: "My fleet" }));
 
-    const footer = await waitFor(() => {
-      const el = document.querySelector("footer");
-      expect(el).toHaveTextContent("Version b1dd6ed");
-      return el as HTMLElement;
+    const panel = await screen.findByRole("presentation");
+    expect(within(panel).getByText("demo")).toBeInTheDocument();
+    expect(within(panel).getByText("Shared data")).toBeInTheDocument();
+    // No miner yet: nothing to read what's shared from.
+    expect(within(panel).getAllByText("No reading yet")).toHaveLength(3);
+    expect(within(panel).getByText("b1dd6ed")).toBeInTheDocument();
+    expect(
+      within(panel).getByRole("link", { name: "axeos-dashboard" }),
+    ).toHaveAttribute(
+      "href",
+      "https://github.com/joakim-ribier/axeos-dashboard",
+    );
+    // The old footer is gone.
+    expect(document.querySelector("footer")).toBeNull();
+  });
+
+  it("reads what's shared off the board's miners", async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === "/api/info")
+        return Promise.resolve({ data: { remote: true } });
+      if (url.endsWith("/miners/history"))
+        return Promise.resolve({ data: { buckets: [], miners: [] } });
+      return Promise.resolve({
+        data: {
+          configured: 1,
+          total: 1,
+          miners: [
+            {
+              ...makeMiner(),
+              stratumUser: "xxxxxxxx",
+              fallbackStratumUser: "xxxxxxxx",
+              ip: "fd00::aabb:ccdd:eeff",
+              alive: true,
+              remoteActions: ["restart"],
+            },
+          ],
+        },
+      });
     });
-    expect(within(footer).getByLabelText("Up to date")).toBeInTheDocument();
+    const user = userEvent.setup();
+
+    renderApp("/demo");
+    await user.click(await screen.findByRole("button", { name: "My fleet" }));
+
+    const panel = await screen.findByRole("presentation");
+    await waitFor(() =>
+      expect(
+        within(panel).getByText("Shared with hashboard"),
+      ).toBeInTheDocument(),
+    );
+    // A restart may be asked for, not a pool switch.
+    expect(within(panel).getByText("Allowed")).toBeInTheDocument();
+    expect(within(panel).getByText("Not allowed")).toBeInTheDocument();
+    // The pools are shared; the wallet, the IP, the network aren't.
+    expect(within(panel).getAllByText("Private — never sent")).toHaveLength(2);
+    expect(
+      within(panel).getByText("Masked — made-up address"),
+    ).toBeInTheDocument();
   });
 
   it("lands on a valid board's home for an unknown sub-path under it, instead of a dead end", async () => {
