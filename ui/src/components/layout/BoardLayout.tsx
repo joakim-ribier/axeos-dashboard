@@ -1,5 +1,5 @@
 // src/components/layout/BoardLayout.tsx
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, Outlet, useParams } from "react-router-dom";
 import { Box } from "@mui/material";
@@ -11,22 +11,16 @@ import { ModeProvider } from "@/contexts/ModeContext";
 import { useRefreshSettings } from "@/contexts/RefreshSettingsContext";
 import { useAppInfo } from "@/hooks/useMiners";
 
-import { AppVersion, BoardChip } from "./Sidebar";
+import { BoardPanel, BoardPanelContext } from "./BoardPanel";
 
-/** The home page, or the request-access screen of a private board --
- * then, faded at the bottom, the board's line (its ID, public or private,
- * the hashboard account), with the version it runs, as in the sidebar. */
+/** The home page, or the request-access screen of a private board -- and
+ * the board's own details (BoardPanel), opened from the page's icon
+ * (BoardPanelButton). */
 const Board = () => {
   const { boardId = "" } = useParams<{ boardId: string }>();
-  const {
-    hashboardUrl,
-    isPublic,
-    boardNotFound,
-    boardBlocked,
-    buildSHA,
-    versionStatus,
-    releaseUrl,
-  } = useAppInfo();
+  const { hashboardUrl, boardNotFound, boardBlocked } = useAppInfo();
+  const [panelOpen, setPanelOpen] = useState(false);
+  const openPanel = useCallback(() => setPanelOpen(true), []);
   // Nothing behind this board: "/" sends the visitor on to hashboard (see
   // AppLayout).
   if (boardNotFound) return <Navigate to="/" replace />;
@@ -37,37 +31,16 @@ const Board = () => {
         {boardBlocked ? (
           <BoardLockedPage boardId={boardId} hashboardUrl={hashboardUrl} />
         ) : (
-          <Outlet />
+          <BoardPanelContext.Provider value={openPanel}>
+            <Outlet />
+          </BoardPanelContext.Provider>
         )}
       </Box>
-      <Box
-        component="footer"
-        sx={{
-          // The board's line centered, the version at the far left, as in the
-          // sidebar; stacked and centered on a phone.
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "1fr auto 1fr" },
-          justifyItems: { xs: "center", sm: "normal" },
-          alignItems: "center",
-          gap: 1,
-          mt: 3,
-          pb: 2,
-          opacity: 0.6,
-          "&:hover": { opacity: 1 },
-        }}
-      >
-        <Box sx={{ justifySelf: { sm: "start" }, order: { xs: 2, sm: 0 } }}>
-          <AppVersion
-            compact
-            buildSHA={buildSHA}
-            versionStatus={versionStatus}
-            releaseUrl={releaseUrl}
-          />
-        </Box>
-        <BoardChip
-          board={{ id: boardId, url: `/${boardId}`, isPublic, hashboardUrl }}
-        />
-      </Box>
+      <BoardPanel
+        open={panelOpen}
+        onClose={() => setPanelOpen(false)}
+        boardId={boardId}
+      />
     </Box>
   );
 };

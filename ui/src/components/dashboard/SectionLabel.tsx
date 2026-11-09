@@ -1,6 +1,7 @@
 import AirIcon from "@mui/icons-material/Air";
 import BoltIcon from "@mui/icons-material/Bolt";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import DiamondOutlinedIcon from "@mui/icons-material/DiamondOutlined";
 import EnergySavingsLeafOutlinedIcon from "@mui/icons-material/EnergySavingsLeafOutlined";
 import EuroIcon from "@mui/icons-material/Euro";
@@ -8,10 +9,13 @@ import HistoryIcon from "@mui/icons-material/History";
 import LanOutlinedIcon from "@mui/icons-material/LanOutlined";
 import MemoryOutlinedIcon from "@mui/icons-material/MemoryOutlined";
 import MonitorHeartOutlinedIcon from "@mui/icons-material/MonitorHeartOutlined";
+import PrivacyTipOutlinedIcon from "@mui/icons-material/PrivacyTipOutlined";
+import SettingsRemoteOutlinedIcon from "@mui/icons-material/SettingsRemoteOutlined";
 import ShowChartIcon from "@mui/icons-material/ShowChart";
 import SpeedIcon from "@mui/icons-material/Speed";
 import ThermostatIcon from "@mui/icons-material/Thermostat";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
+import UpdateIcon from "@mui/icons-material/Update";
 import { Box, SvgIconProps, Typography } from "@mui/material";
 
 /** One icon and color per kind of figure, so the same metric looks the
@@ -31,6 +35,10 @@ const ICONS = {
   session: [TimerOutlinedIcon, "#4dd0e1"],
   allTime: [HistoryIcon, "#ce93d8"],
   device: [MemoryOutlinedIcon, "info.light"],
+  board: [DashboardOutlinedIcon, "primary.main"],
+  privacy: [PrivacyTipOutlinedIcon, "warning.light"],
+  actions: [SettingsRemoteOutlinedIcon, "#4dd0e1"],
+  version: [UpdateIcon, "success.light"],
 } satisfies Record<string, [React.ComponentType<SvgIconProps>, string]>;
 
 export type SectionIcon = keyof typeof ICONS;

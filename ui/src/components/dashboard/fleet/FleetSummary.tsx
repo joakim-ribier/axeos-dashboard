@@ -41,6 +41,8 @@ interface FleetSummaryProps {
   isStale: (timestamp: string) => boolean;
   statusOf: (miner: Miner) => MinerStatus;
   onOpen: (ip: string) => void;
+  /** At the end of the header -- on a phone, next to the title. */
+  action?: React.ReactNode;
 }
 
 export const FleetSummary = ({
@@ -50,6 +52,7 @@ export const FleetSummary = ({
   isStale,
   statusOf,
   onOpen,
+  action,
 }: FleetSummaryProps) => {
   const { t } = useTranslation();
 
@@ -109,7 +112,18 @@ export const FleetSummary = ({
           <SectionLabel icon="hashrate">
             {t("dashboard.fleet.hashrate24h")}
           </SectionLabel>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              ...(action && {
+                ml: "auto",
+                order: { xs: 3, md: 0 },
+                flexBasis: { xs: "100%", md: "auto" },
+              }),
+            }}
+          >
             <FleetHealth miners={miners} statusOf={statusOf} onOpen={onOpen} />
             {lastPoll && (
               <Tooltip
@@ -135,6 +149,11 @@ export const FleetSummary = ({
               </Tooltip>
             )}
           </Box>
+          {action && (
+            <Box sx={{ ml: { xs: "auto", md: 0 }, order: { xs: 2, md: 0 } }}>
+              {action}
+            </Box>
+          )}
         </Box>
         <Box
           sx={{

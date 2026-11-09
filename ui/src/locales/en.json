@@ -476,6 +476,45 @@
     "sending": "Sending…",
     "sent": "If that email is registered to this board, a link was just sent to it."
   },
+  "boardPanel": {
+    "open": "My fleet",
+    "title": "My fleet",
+    "setLocally": "Set from the local dashboard.",
+    "board": {
+      "title": "My fleet",
+      "id": "Board",
+      "visibility": "Visibility",
+      "public": "Public",
+      "private": "Private",
+      "account": "Account",
+      "manage": "Manage the hashboard account"
+    },
+    "shared": {
+      "title": "Shared data",
+      "user": "Pool user / wallet",
+      "pools": "Pools (address and port)",
+      "ip": "Miners' IP address",
+      "network": "Wi-Fi network and IPv6",
+      "sent": "Shared with hashboard",
+      "notSent": "Private — never sent",
+      "masked": "Masked — made-up address",
+      "unknown": "No reading yet"
+    },
+    "actions": {
+      "title": "Remote actions",
+      "restart": "Restart",
+      "switchPool": "Pool switch",
+      "allowed": "Allowed",
+      "notAllowed": "Not allowed",
+      "publicBoard": "Never on a public board",
+      "unknown": "No active miner"
+    },
+    "version": {
+      "title": "Version",
+      "description": "The <repo>axeos-dashboard</repo> version this board runs.",
+      "label": "Version"
+    }
+  },
   "settingsPage": {
     "header": {
       "title": "Settings",

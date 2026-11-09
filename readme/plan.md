@@ -164,8 +164,9 @@ every commit.
   screen and nothing downloaded at start; `make deploy`, `make restart`,
   `make latest-update`, the server's values at the top of the Makefile or in
   `Makefile.local`.
-- ✅ **The version on a board**: at the foot of the board, the version it
-  runs with its status, as in the sidebar, in the size of the board's line.
+- ✅ **A board's panel**: an icon in the fleet card opens "My fleet" -- the
+  board, what's shared and the remote actions allowed (read off the latest
+  samples), and the version it runs.
 
 ## To do
 
