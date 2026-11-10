@@ -2,6 +2,7 @@
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import { Box, Link, Typography, useMediaQuery, useTheme } from "@mui/material";
 
 import { MinerDrawer } from "@/components/dashboard/drawer/MinerDrawer";
@@ -23,6 +24,8 @@ import {
 } from "@/components/layout/BoardPanel";
 import { AlertList } from "@/components/ui/AlertList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatePage } from "@/components/ui/StatePage";
+import { useMode } from "@/contexts/ModeContext";
 import { useSearch } from "@/contexts/SearchContext";
 import { useMiners } from "@/hooks/useMiners";
 import { useMinersHistory } from "@/hooks/useMinersHistory";
@@ -56,6 +59,7 @@ export const Home = () => {
   const { data: history } = useMinersHistory();
   const { data: remoteBoard } = useRemoteBoard();
   const { query } = useSearch();
+  const { mode } = useMode();
   const [sort, setSort] = useMinerSort();
   const { statusOf, isStale } = useMinerStatus();
   const [view, setView] = useStoredChoice(
@@ -135,7 +139,16 @@ export const Home = () => {
       {error && !data ? (
         <AlertList severity="error" items={[t("dashboard.error")]} />
       ) : isLoading ? null : miners.length === 0 ? (
-        <AlertList severity="warning" items={[t("dashboard.noData")]} />
+        <StatePage
+          icon={HourglassEmptyIcon}
+          tone="primary"
+          title={t("dashboard.empty.title")}
+          message={
+            mode === "remote"
+              ? t("dashboard.empty.board")
+              : t("dashboard.empty.local")
+          }
+        />
       ) : (
         <>
           <FleetSummary

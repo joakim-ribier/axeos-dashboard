@@ -7,7 +7,11 @@
       "remoteBoard": "Ouvrir le board distant",
       "title": "Tableau de bord"
     },
-    "noData": "Aucune donnée pour le moment. Le relevé initial des mineurs configurés n'a pas encore eu lieu — réessaie dans quelques instants.",
+    "empty": {
+      "title": "Aucune donnée pour l'instant",
+      "local": "Le premier relevé de tes mineurs arrive dans quelques instants. La page se met à jour toute seule.",
+      "board": "Ce board affichera ses mineurs dès leurs premières données. La page se met à jour toute seule."
+    },
     "toolbar": {
       "search": "Rechercher",
       "searchHint": "Nom, IP, modèle, temp>60…",

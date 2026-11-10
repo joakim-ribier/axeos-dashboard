@@ -56,12 +56,12 @@ const showMiners = (miners: Miner[]) =>
 const freshMiner = (overrides: Partial<Miner>) =>
   makeMiner({ timestamp: new Date().toISOString(), ...overrides });
 
-function renderHome() {
+function renderHome(mode: "local" | "remote" = "local") {
   return render(
     <QueryClientProvider client={new QueryClient()}>
       <I18nextProvider i18n={i18n}>
         <MemoryRouter initialEntries={["/"]}>
-          <ModeProvider mode="local">
+          <ModeProvider mode={mode}>
             <SearchProvider>
               {/* Where the TopBar would host the PageHeader. */}
               <PageTitleSlotContext.Provider value={document.body}>
@@ -256,7 +256,24 @@ describe("Home page", () => {
     showMiners([]);
     renderHome();
 
-    expect(screen.getByText(i18n.t("dashboard.noData"))).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("dashboard.empty.title")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t("dashboard.empty.local")),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/miners OK/)).not.toBeInTheDocument();
+  });
+
+  it("tells a board's visitor it waits for its miners, in a board's words", () => {
+    showMiners([]);
+    renderHome("remote");
+
+    expect(
+      screen.getByText(i18n.t("dashboard.empty.board")),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(i18n.t("dashboard.empty.local")),
+    ).not.toBeInTheDocument();
   });
 });
