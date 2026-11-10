@@ -4,7 +4,7 @@
     "header": {
       "description": "Overview of all connected AxeOs miners.",
       "lastSample": "last data received by hashboard: {{time}}",
-      "remoteBoard": "Open the remote board",
+      "remoteBoard": "Open your board",
       "title": "Dashboard"
     },
     "empty": {
@@ -310,7 +310,7 @@
       "scheduler": "Scheduler",
       "backup": "Nightly backup",
       "mailer": "Notifications",
-      "remote": "Remote board"
+      "remote": "Board"
     },
     "failed": "Failed",
     "empty": "No events in this period.",
@@ -481,11 +481,11 @@
     "sent": "If that email is registered to this board, a link was just sent to it."
   },
   "boardPanel": {
-    "open": "My fleet",
-    "title": "My fleet",
+    "open": "My board",
+    "title": "My board",
     "setLocally": "Set from the local dashboard.",
     "board": {
-      "title": "My fleet",
+      "title": "My board",
       "id": "Board",
       "visibility": "Visibility",
       "public": "Public",
