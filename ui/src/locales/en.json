@@ -7,7 +7,11 @@
       "remoteBoard": "Open the remote board",
       "title": "Dashboard"
     },
-    "noData": "No data yet. The configured miners haven't been polled for the first time yet -- try again in a moment.",
+    "empty": {
+      "title": "No data yet",
+      "local": "Your miners' first poll is on its way. The page updates on its own.",
+      "board": "This board will show its miners as soon as their first data comes in. The page updates on its own."
+    },
     "toolbar": {
       "search": "Search",
       "searchHint": "Name, IP, model, temp>60…",
