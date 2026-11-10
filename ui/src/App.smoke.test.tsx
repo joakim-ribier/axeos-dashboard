@@ -63,7 +63,7 @@ describe("App routing smoke test (remote board)", () => {
     );
     // The board's own details, behind their icon.
     expect(
-      await screen.findByRole("button", { name: "My fleet" }),
+      await screen.findByRole("button", { name: "My board" }),
     ).toBeInTheDocument();
     // A board only reads its miners' stats: nothing else is fetched...
     const urls = new Set(mockedAxios.get.mock.calls.map(([url]) => url));
@@ -220,7 +220,7 @@ describe("App routing smoke test (remote board)", () => {
     const user = userEvent.setup();
 
     renderApp("/demo");
-    await user.click(await screen.findByRole("button", { name: "My fleet" }));
+    await user.click(await screen.findByRole("button", { name: "My board" }));
 
     const panel = await screen.findByRole("presentation");
     expect(within(panel).getByText("demo")).toBeInTheDocument();
@@ -264,7 +264,7 @@ describe("App routing smoke test (remote board)", () => {
     const user = userEvent.setup();
 
     renderApp("/demo");
-    await user.click(await screen.findByRole("button", { name: "My fleet" }));
+    await user.click(await screen.findByRole("button", { name: "My board" }));
 
     const panel = await screen.findByRole("presentation");
     await waitFor(() =>

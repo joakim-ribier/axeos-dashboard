@@ -253,7 +253,7 @@ var fr = labels{
 		"auditReportTypeRemoved": "Type retiré du rapport",
 	},
 	sources:  map[string]string{"api": "Dashboard", "system": "Système"},
-	services: map[string]string{"scheduler": "Planificateur", "backup": "Sauvegarde de chaque nuit", "mailer": "Notifications", "remote": "Board distant"},
+	services: map[string]string{"scheduler": "Planificateur", "backup": "Sauvegarde de chaque nuit", "mailer": "Notifications", "remote": "Board"},
 
 	failed:   "Échec",
 	changed:  "valeur modifiée",
@@ -368,7 +368,7 @@ var en = labels{
 		"auditReportTypeRemoved": "Type removed from the report",
 	},
 	sources:  map[string]string{"api": "Dashboard", "system": "System"},
-	services: map[string]string{"scheduler": "Scheduler", "backup": "Nightly backup", "mailer": "Notifications", "remote": "Remote board"},
+	services: map[string]string{"scheduler": "Scheduler", "backup": "Nightly backup", "mailer": "Notifications", "remote": "Board"},
 
 	failed:   "Failed",
 	changed:  "value changed",

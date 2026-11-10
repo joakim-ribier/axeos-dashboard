@@ -96,7 +96,7 @@ describe("Home page", () => {
         screen.getByText("Overview of all connected AxeOs miners."),
       ).toBeInTheDocument();
       expect(
-        screen.queryByRole("link", { name: "Open the remote board" }),
+        screen.queryByRole("link", { name: "Open your board" }),
       ).not.toBeInTheDocument();
     });
 
@@ -112,7 +112,7 @@ describe("Home page", () => {
       showMiners([]);
       renderHome();
 
-      const link = screen.getByRole("link", { name: "Open the remote board" });
+      const link = screen.getByRole("link", { name: "Open your board" });
       expect(link).toHaveAttribute("href", "https://d.example/abc123");
       expect(link).toHaveAttribute("target", "_blank");
       expect(
