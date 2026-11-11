@@ -225,4 +225,4 @@ demandé par le dashboard.
 Firmware testé, jusqu'à ces versions :
 
 - **Bitaxe Gamma** — [v2.15.4](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.4){:target="_blank" rel="noopener noreferrer"}
-- **NerdQAxe++** — [v1.1.0.1](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.0.1){:target="_blank" rel="noopener noreferrer"}
+- **NerdQAxe++** — [v1.1.2](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.2){:target="_blank" rel="noopener noreferrer"}
