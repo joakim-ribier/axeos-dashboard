@@ -82,7 +82,10 @@ feeder → writes resources/data/bitaxes/{mac}/YYYY-MM-DD.jsonl  (append)
          like the local one. Stats only: no alerts, no config (miners.yml/
          settings.yml), nothing of a MAC mismatch -- each sample carries
          just what the board shows it by (alias, rate, feeder interval, the
-         miner's alert thresholds)
+         miner's alert thresholds); only the first enabled miners, in the
+         config's order, up to the board's miner limit (hashboard's
+         /api/board/info, read again in the background each cycle --
+         remotepush.Split), the others polled and stored here as usual
     ↓  reads latest.json
 dashboard-api → REST API at /api/miners/*  (routes still take ip/hostname;
                 config's mac: resolves the storage dir)
@@ -210,7 +213,7 @@ dashboard-api (`server/cmd/dashboard-api/router.go`):
 | `GET` | `/api/config/discover` | `Discover()` | Network scan for AxeOS devices |
 | `POST` | `/api/config/mail/test` | `SendTestMail()` | Has the mailer send a test mail to the recipients through the **saved** SMTP server (`lang`: fr/en); 503 when the mailer isn't running |
 | `GET` | `/api/status` | `Status()` | How every process is doing, in one answer: dashboard-api, feeder (its last poll, from `latest.json`), health check, mailer (asked on the loopback), firmware cache -- each `ok` / `late` (nothing within twice its interval) / `offline` (didn't answer) / `unknown` (no run yet); the sidebar's services dots |
-| `GET` | `/api/remote/board` | `RemoteBoard()` | The hashboard board this instance pushes to (boardId, public, links, last sample received) -- relays hashboard's `GET /api/board/info`, cached one feeder interval (`remotepush.BoardCache`); empty when remote isn't configured or hashboard is unreachable |
+| `GET` | `/api/remote/board` | `RemoteBoard()` | The hashboard board this instance pushes to (boardId, public, links, last sample received) -- relays hashboard's `GET /api/board/info`, cached one feeder interval (`remotepush.BoardCache`); its miner limit, and the enabled miners the feeder holds back past it (`notSent`, `remotepush.Split`); empty when remote isn't configured or hashboard is unreachable |
 | `GET` | `/api/audit` | `ListAudit()` | Audit log between `from`/`to` (default last 24h, max a year): restart, pool switch, config saves, exports/downloads, network discovery -- API with client IP/User-Agent, system (scheduler); `ip`/`type` filters -- paginated (+ `/api/audit/export`, same filters, unpaginated JSON file; `/api/audit/types`, the list of types -- `audit.Types`, the one source the UI's filter reads) |
 | `GET` | `/api/backups` | `ListBackups()` | Monthly backup archives |
 | `GET` | `/api/backups/download?months=` | `DownloadBackups()` | One or several months in one zip |

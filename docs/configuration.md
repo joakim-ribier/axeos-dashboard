@@ -328,7 +328,9 @@ pour suivre votre flotte depuis n'importe où, sans VPN.
 
 - **Ton board** — une fois l'envoi configuré : l'identifiant du board
   (clic pour l'ouvrir), s'il est public ou privé, l'heure des dernières
-  données reçues par hashboard, et un lien vers votre compte.
+  données reçues par hashboard, combien de mineurs de votre flotte il
+  contient sur sa limite — avec ceux qui la dépassent, pas envoyés — et un
+  lien vers votre compte.
 - **Connexion** — l'URL de push et votre clé API hashboard, puis
   **Enregistrer**. Une URL vide coupe l'envoi.
 - **Actions à distance** — depuis votre board privé, vous pouvez

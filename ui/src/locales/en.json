@@ -709,6 +709,9 @@
           "private": "Private",
           "lastSample": "Last data received by hashboard",
           "noSample": "None yet",
+          "fleet": "Fleet on the board",
+          "fleetCount": "{{count}} / {{limit}} miners",
+          "notSent": "Not sent to the board: {{names}}",
           "account": "Account",
           "manage": "Manage your hashboard account"
         },

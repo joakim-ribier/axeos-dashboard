@@ -188,6 +188,12 @@ mineur est rangé côté hashboard sous le même nom de dossier qu'en local. Les
 hashboard lent ou injoignable ne retarde jamais le cycle, l'échec est
 écrit dans les logs.
 
+À chaque cycle, le feeder lit aussi la limite de mineurs du board
+(`…/api/board/info`), en arrière-plan lui aussi. Au-delà, seuls les
+premiers mineurs activés, dans l'ordre de la configuration, sont envoyés
+— tant que la limite n'est pas connue, tous le sont ; les mineurs retenus
+sont écrits dans les logs, une fois à chaque changement.
+
 [Aller à Hashboard →]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ## Détection des mises à jour firmware

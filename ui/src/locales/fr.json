@@ -709,6 +709,9 @@
           "private": "Privé",
           "lastSample": "Dernières données reçues par hashboard",
           "noSample": "Aucune pour l'instant",
+          "fleet": "Flotte sur le board",
+          "fleetCount": "{{count}} / {{limit}} mineurs",
+          "notSent": "Pas envoyés au board : {{names}}",
           "account": "Compte",
           "manage": "Gérer ton compte hashboard"
         },

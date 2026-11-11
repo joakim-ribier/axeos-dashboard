@@ -184,6 +184,12 @@ miner is stored on hashboard under the same folder name as locally.
 Pushes run in the background, with a 10 s delay: a slow or unreachable
 hashboard never delays the cycle, the failure is written to the logs.
 
+Each cycle, the feeder also reads the board's miner limit
+(`…/api/board/info`), in the background too. Past it, only the first
+enabled miners in the configuration's order are pushed — until the limit
+is known, every one is; the miners held back are written to the logs once
+each time they change.
+
 [Go to Hashboard →]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
 
 ## Firmware update detection

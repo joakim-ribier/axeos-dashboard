@@ -223,6 +223,34 @@ const RemoteSection = ({
                   : t("settingsPage.appSettings.remote.board.noSample")}
               </Typography>
             </InfoRow>
+            {board.miners && (
+              <InfoRow label={t("settingsPage.appSettings.remote.board.fleet")}>
+                <Box>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontFamily: "monospace",
+                      color:
+                        board.miners.count >= board.miners.limit
+                          ? "warning.main"
+                          : undefined,
+                    }}
+                  >
+                    {t("settingsPage.appSettings.remote.board.fleetCount", {
+                      count: board.miners.count,
+                      limit: board.miners.limit,
+                    })}
+                  </Typography>
+                  {!!board.notSent?.length && (
+                    <Typography variant="caption" color="warning.main">
+                      {t("settingsPage.appSettings.remote.board.notSent", {
+                        names: board.notSent.join(", "),
+                      })}
+                    </Typography>
+                  )}
+                </Box>
+              </InfoRow>
+            )}
             {board.hashboardURL && (
               <InfoRow
                 label={t("settingsPage.appSettings.remote.board.account")}

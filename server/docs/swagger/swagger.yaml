@@ -572,6 +572,29 @@ definitions:
       status:
         type: string
     type: object
+  handler.RemoteBoardResponse:
+    properties:
+      boardId:
+        type: string
+      dashboardURL:
+        type: string
+      hashboardURL:
+        type: string
+      lastSampleAt:
+        type: string
+      miners:
+        allOf:
+        - $ref: '#/definitions/remotepush.BoardMiners'
+        description: |-
+          Miners is how many miners the board holds and may hold -- absent
+          from a hashboard that has no limit.
+      notSent:
+        items:
+          type: string
+        type: array
+      public:
+        type: boolean
+    type: object
   handler.ServiceStatus:
     properties:
       interval:
@@ -1123,18 +1146,12 @@ definitions:
       status:
         type: string
     type: object
-  remotepush.Board:
+  remotepush.BoardMiners:
     properties:
-      boardId:
-        type: string
-      dashboardURL:
-        type: string
-      hashboardURL:
-        type: string
-      lastSampleAt:
-        type: string
-      public:
-        type: boolean
+      count:
+        type: integer
+      limit:
+        type: integer
     type: object
 host: localhost:8080
 info:
@@ -2051,16 +2068,17 @@ paths:
   /api/remote/board:
     get:
       description: 'Returns what hashboard knows about the board this instance pushes
-        to: the link to its remote dashboard, and when hashboard last received a sample
-        for it. Empty when remote push isn''t configured, or hashboard can''t be reached.
-        Cached for one feeder interval.'
+        to: the link to its remote dashboard, when hashboard last received a sample
+        for it, its miner limit -- and the enabled miners the feeder doesn''t push
+        past that limit. Empty when remote push isn''t configured, or hashboard can''t
+        be reached. Cached for one feeder interval.'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/remotepush.Board'
+            $ref: '#/definitions/handler.RemoteBoardResponse'
       summary: Remote board info
       tags:
       - Remote push

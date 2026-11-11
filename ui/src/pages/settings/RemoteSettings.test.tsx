@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import axios from "axios";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { type RemoteBoard } from "@/hooks/useRemoteBoard";
 import {
   type AppSettings,
   EMPTY_NOTIFICATIONS,
@@ -44,8 +45,9 @@ vi.mock("@/hooks/useMiners", () => ({
   }),
 }));
 
+let board: RemoteBoard | undefined;
 vi.mock("@/hooks/useRemoteBoard", () => ({
-  useRemoteBoard: () => ({ data: undefined }),
+  useRemoteBoard: () => ({ data: board }),
 }));
 
 const k = "settingsPage.appSettings.remote";
@@ -120,6 +122,35 @@ describe("RemoteSettings -- push URL check", () => {
   });
 });
 
+// Settings of an instance pushing to hashboard.
+const pushingSettings = (): AppSettings => ({
+  electricity: { ratePerKwh: 0.2 },
+  pools: { dashboards: {} },
+  remote: {
+    pushURL: "https://hashboard.live/api/push",
+    apiKey: "key",
+    sendUser: false,
+    sendPools: true,
+    sendIP: false,
+    actions: { restart: false, switchPool: false, mail: false },
+  },
+  firmware: { repos: {} },
+  defaults: {
+    pools: { dashboards: {} },
+    firmware: { repos: {} },
+    alerts: { tempHigh: 62, fanHigh: 75, tempMargin: 2, fanMargin: 5 },
+  },
+  alerts: { tempHigh: 0, fanHigh: 0, tempMargin: 0, fanMargin: 0 },
+  readOnly: {
+    feederInterval: "2m0s",
+    healthCheckInterval: "1m0s",
+    firmwareCacheTTL: "24h0m0s",
+    auditReport: {},
+    alertsMail: {},
+  },
+  notifications: EMPTY_NOTIFICATIONS,
+});
+
 describe("RemoteSettings -- sensitive data", () => {
   const toggle = (name: "user" | "pools" | "ip") =>
     screen.getByRole("switch", { name: `${k}.shared.${name}` });
@@ -127,33 +158,7 @@ describe("RemoteSettings -- sensitive data", () => {
   beforeEach(() => {
     saveSettings.mockReset();
     saveSettings.mockResolvedValue(undefined);
-    settings = {
-      electricity: { ratePerKwh: 0.2 },
-      pools: { dashboards: {} },
-      remote: {
-        pushURL: "https://hashboard.live/api/push",
-        apiKey: "key",
-        sendUser: false,
-        sendPools: true,
-        sendIP: false,
-        actions: { restart: false, switchPool: false, mail: false },
-      },
-      firmware: { repos: {} },
-      defaults: {
-        pools: { dashboards: {} },
-        firmware: { repos: {} },
-        alerts: { tempHigh: 62, fanHigh: 75, tempMargin: 2, fanMargin: 5 },
-      },
-      alerts: { tempHigh: 0, fanHigh: 0, tempMargin: 0, fanMargin: 0 },
-      readOnly: {
-        feederInterval: "2m0s",
-        healthCheckInterval: "1m0s",
-        firmwareCacheTTL: "24h0m0s",
-        auditReport: {},
-        alertsMail: {},
-      },
-      notifications: EMPTY_NOTIFICATIONS,
-    };
+    settings = pushingSettings();
   });
 
   it("shows what is shared and what stays private", () => {
@@ -321,5 +326,43 @@ describe("RemoteSettings -- remote actions", () => {
     expect(
       await screen.findByText(`${k}.actions.testSent`),
     ).toBeInTheDocument();
+  });
+});
+
+describe("RemoteSettings -- the board's fleet", () => {
+  const board0: RemoteBoard = {
+    boardId: "abcd1234abcd1234",
+    public: false,
+    miners: { limit: 10, count: 10 },
+  };
+
+  beforeEach(() => {
+    settings = pushingSettings();
+  });
+  afterEach(() => {
+    board = undefined;
+  });
+
+  it("says how many miners the board holds, and which it doesn't get", () => {
+    board = { ...board0, notSent: ["bitaxe-11", "Garage"] };
+    render(<RemoteSettings />);
+
+    expect(screen.getByText(`${k}.board.fleetCount`)).toBeInTheDocument();
+    expect(screen.getByText(`${k}.board.notSent`)).toBeInTheDocument();
+  });
+
+  it("names nobody when every miner is sent", () => {
+    board = board0;
+    render(<RemoteSettings />);
+
+    expect(screen.getByText(`${k}.board.fleetCount`)).toBeInTheDocument();
+    expect(screen.queryByText(`${k}.board.notSent`)).not.toBeInTheDocument();
+  });
+
+  it("shows no fleet line for a hashboard without a limit", () => {
+    board = { ...board0, miners: undefined };
+    render(<RemoteSettings />);
+
+    expect(screen.queryByText(`${k}.board.fleet`)).not.toBeInTheDocument();
   });
 });
