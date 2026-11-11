@@ -214,7 +214,7 @@ const RemoteSection = ({
                   : t("settingsPage.appSettings.remote.board.noSample")}
               </Typography>
             </InfoRow>
-            {board.miners && (
+            {board.minerQuota && (
               <InfoRow label={t("settingsPage.appSettings.remote.board.fleet")}>
                 <Box>
                   <Typography
@@ -222,14 +222,14 @@ const RemoteSection = ({
                     sx={{
                       fontFamily: "monospace",
                       color:
-                        board.miners.count >= board.miners.limit
+                        board.minerQuota.count >= board.minerQuota.limit
                           ? "warning.main"
                           : undefined,
                     }}
                   >
                     {t("settingsPage.appSettings.remote.board.fleetCount", {
-                      count: board.miners.count,
-                      limit: board.miners.limit,
+                      count: board.minerQuota.count,
+                      limit: board.minerQuota.limit,
                     })}
                   </Typography>
                   {!!board.notSent?.length && (

@@ -14,7 +14,7 @@ const remoteBoardSchema = z.object({
   lastSampleAt: z.string().optional(),
   // The board's miner limit and how many it holds -- absent from a
   // hashboard without one.
-  miners: z.object({ limit: z.number(), count: z.number() }).optional(),
+  minerQuota: z.object({ limit: z.number(), count: z.number() }).optional(),
   // The enabled miners the feeder doesn't push, past that limit.
   notSent: z.array(z.string()).optional(),
   // The link to hashboard: why there's no board, the key refused above all.

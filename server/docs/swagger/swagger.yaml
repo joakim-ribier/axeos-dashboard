@@ -582,12 +582,10 @@ definitions:
         type: string
       lastSampleAt:
         type: string
-      miners:
+      minerQuota:
         allOf:
-        - $ref: '#/definitions/remotepush.BoardMiners'
-        description: |-
-          Miners is how many miners the board holds and may hold -- absent
-          from a hashboard that has no limit.
+        - $ref: '#/definitions/remotepush.MinerQuota'
+        description: MinerQuota is absent from a hashboard that has no limit.
       notSent:
         items:
           type: string
@@ -1152,7 +1150,7 @@ definitions:
       status:
         type: string
     type: object
-  remotepush.BoardMiners:
+  remotepush.MinerQuota:
     properties:
       count:
         type: integer

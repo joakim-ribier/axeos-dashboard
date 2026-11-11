@@ -10,9 +10,9 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 )
 
-// RemoteBoardResponse is the board, and the enabled miners the feeder
-// doesn't push to it, past its miner limit (remotepush.Split, the
-// feeder's own choice) -- by the name the UI shows them by.
+// RemoteBoardResponse feeds the UI's board line, the home page's link to the
+// board and Configuration › Remote. NotSent recomputes the feeder's
+// remotepush.Split, so it names the miners the feeder actually holds back.
 type RemoteBoardResponse struct {
 	remotepush.Board
 	NotSent []string `json:"notSent,omitempty"`

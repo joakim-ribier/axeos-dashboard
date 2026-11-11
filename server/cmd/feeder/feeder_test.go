@@ -911,7 +911,7 @@ func TestFeeder_runOnce_pushesOnlyTheMinersTheBoardTakes(t *testing.T) {
 	var pushed []string
 	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/board/info" {
-			_, _ = w.Write([]byte(`{"boardId":"b","miners":{"limit":1,"count":1}}`))
+			_, _ = w.Write([]byte(`{"boardId":"b","minerQuota":{"limit":1,"count":1}}`))
 			return
 		}
 		var body struct {

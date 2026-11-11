@@ -13,7 +13,7 @@ func Split(miners []config.Bitaxe, board Board) (sent, held []config.Bitaxe) {
 		if m.StorageKey() == "" {
 			continue
 		}
-		if board.Miners != nil && len(sent) >= board.Miners.Limit {
+		if board.MinerQuota != nil && len(sent) >= board.MinerQuota.Limit {
 			held = append(held, m)
 			continue
 		}

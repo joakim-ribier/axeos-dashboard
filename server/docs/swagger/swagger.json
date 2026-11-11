@@ -2104,11 +2104,11 @@
                 "lastSampleAt": {
                     "type": "string"
                 },
-                "miners": {
-                    "description": "Miners is how many miners the board holds and may hold -- absent\nfrom a hashboard that has no limit.",
+                "minerQuota": {
+                    "description": "MinerQuota is absent from a hashboard that has no limit.",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/remotepush.BoardMiners"
+                            "$ref": "#/definitions/remotepush.MinerQuota"
                         }
                     ]
                 },
@@ -2811,7 +2811,7 @@
                 }
             }
         },
-        "remotepush.BoardMiners": {
+        "remotepush.MinerQuota": {
             "type": "object",
             "properties": {
                 "count": {
