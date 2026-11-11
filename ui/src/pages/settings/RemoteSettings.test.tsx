@@ -340,7 +340,7 @@ describe("RemoteSettings -- the board's fleet", () => {
   const board0: RemoteBoard = {
     boardId: "abcd1234abcd1234",
     public: false,
-    miners: { limit: 10, count: 10 },
+    minerQuota: { limit: 10, count: 10 },
   };
 
   beforeEach(() => {
@@ -384,7 +384,7 @@ describe("RemoteSettings -- the board's fleet", () => {
   });
 
   it("shows no fleet line for a hashboard without a limit", () => {
-    board = { ...board0, miners: undefined };
+    board = { ...board0, minerQuota: undefined };
     render(<RemoteSettings />);
 
     expect(screen.queryByText(`${k}.board.fleet`)).not.toBeInTheDocument();

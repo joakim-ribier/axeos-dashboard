@@ -29,9 +29,9 @@ func TestSplit(t *testing.T) {
 		sent, held []string
 	}{
 		{"no limit known: every one", Board{}, []string{"a", "b", "c"}, []string{}},
-		{"room for all", Board{Miners: &BoardMiners{Limit: 10}}, []string{"a", "b", "c"}, []string{}},
-		{"the first ones, in order", Board{Miners: &BoardMiners{Limit: 2}}, []string{"a", "b"}, []string{"c"}},
-		{"a limit of 0: none", Board{Miners: &BoardMiners{Limit: 0}}, []string{}, []string{"a", "b", "c"}},
+		{"room for all", Board{MinerQuota: &MinerQuota{Limit: 10}}, []string{"a", "b", "c"}, []string{}},
+		{"the first ones, in order", Board{MinerQuota: &MinerQuota{Limit: 2}}, []string{"a", "b"}, []string{"c"}},
+		{"a limit of 0: none", Board{MinerQuota: &MinerQuota{Limit: 0}}, []string{}, []string{"a", "b", "c"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

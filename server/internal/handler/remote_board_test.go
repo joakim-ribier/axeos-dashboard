@@ -71,7 +71,7 @@ func TestRemoteBoard_hashboardDown(t *testing.T) {
 // The miners past the board's limit are named, as the feeder holds them.
 func TestRemoteBoard_namesTheMinersNotSent(t *testing.T) {
 	hashboard := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"boardId":"abc","miners":{"limit":1,"count":1}}`))
+		_, _ = w.Write([]byte(`{"boardId":"abc","minerQuota":{"limit":1,"count":1}}`))
 	}))
 	defer hashboard.Close()
 
@@ -91,8 +91,8 @@ func TestRemoteBoard_namesTheMinersNotSent(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatal(err)
 	}
-	if got.Miners == nil || got.Miners.Limit != 1 {
-		t.Errorf("Miners = %+v, want limit 1", got.Miners)
+	if got.MinerQuota == nil || got.MinerQuota.Limit != 1 {
+		t.Errorf("MinerQuota = %+v, want limit 1", got.MinerQuota)
 	}
 	if len(got.NotSent) != 1 || got.NotSent[0] != "Garage" {
 		t.Errorf("NotSent = %v, want [Garage]", got.NotSent)

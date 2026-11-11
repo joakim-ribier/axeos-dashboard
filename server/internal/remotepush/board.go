@@ -18,13 +18,12 @@ type Board struct {
 	HashboardURL string     `json:"hashboardURL,omitempty"`
 	DashboardURL string     `json:"dashboardURL,omitempty"`
 	LastSampleAt *time.Time `json:"lastSampleAt,omitempty"`
-	// Miners is how many miners the board holds and may hold -- absent
-	// from a hashboard that has no limit.
-	Miners *BoardMiners `json:"miners,omitempty"`
+	// MinerQuota is absent from a hashboard that has no limit.
+	MinerQuota *MinerQuota `json:"minerQuota,omitempty"`
 }
 
-// BoardMiners is the board's miner limit and how many it holds.
-type BoardMiners struct {
+// MinerQuota is the board's miner limit and how many it holds.
+type MinerQuota struct {
 	Limit int `json:"limit"`
 	Count int `json:"count"`
 }

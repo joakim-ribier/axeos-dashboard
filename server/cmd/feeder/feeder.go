@@ -52,7 +52,7 @@ type Feeder struct {
 	sentSettings string
 
 	// The board as hashboard last described it (its miner limit), and the
-	// miners last held back past it -- see toBoard.
+	// miners last held back past it -- see minersToPush.
 	boardMu sync.Mutex
 	board   remotepush.Board
 	held    string
@@ -208,7 +208,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	if f.config.Remote.Enabled() {
 		f.pushSettings()
 	}
-	toBoard := f.toBoard()
+	toPush := f.minersToPush()
 
 	var changes []alerts.Event
 	for _, bitaxe := range f.config.GetMiners() {
@@ -218,7 +218,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			f.logger.Error("bitaxe: no mac configured, skipping (set mac: in dashboard.yml)", "ip", addr)
 			continue
 		}
-		push := f.config.Remote.Enabled() && (toBoard == nil || toBoard[key])
+		push := f.config.Remote.Enabled() && (toPush == nil || toPush[key])
 
 		payload, err := client.FetchSystemInfo(ctx, addr)
 		if err != nil {
@@ -279,14 +279,12 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 }
 
-// toBoard is which miners this poll pushes to the board, by storage key --
-// nil for every one -- from the board's miner limit as last read: the
-// first enabled miners in the configuration's order (remotepush.Split),
-// the others still polled, stored and watched here. The limit is read
-// again in the background for the next poll, so a slow hashboard never
-// holds polling up; until it's known, every miner is pushed and hashboard
-// refuses the ones past it.
-func (f *Feeder) toBoard() map[string]bool {
+// minersToPush is the storage keys this poll pushes, nil for all. Hashboard
+// enforces the limit anyway; trimming here keeps the same miners on the
+// board (the config's first ones, not whichever pushed first) and spares
+// it a 403 per extra miner each poll. The limit is re-read in the
+// background for the next poll; until it's known, every miner is pushed.
+func (f *Feeder) minersToPush() map[string]bool {
 	if !f.config.Remote.Enabled() {
 		return nil
 	}
@@ -304,7 +302,7 @@ func (f *Feeder) toBoard() map[string]bool {
 
 	f.boardMu.Lock()
 	defer f.boardMu.Unlock()
-	if f.board.Miners == nil {
+	if f.board.MinerQuota == nil {
 		return nil
 	}
 	sent, held := remotepush.Split(f.config.GetMiners(), f.board)
@@ -329,7 +327,7 @@ func (f *Feeder) logHeld(held []config.Bitaxe) {
 	}
 	f.held = key
 	if len(held) > 0 {
-		f.logger.Warn("push: the board is full, these miners aren't sent to it", "limit", f.board.Miners.Limit, "miners", names)
+		f.logger.Warn("push: the board is full, these miners aren't sent to it", "limit", f.board.MinerQuota.Limit, "miners", names)
 	} else {
 		f.logger.Info("push: every miner is sent to the board")
 	}
