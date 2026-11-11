@@ -321,12 +321,15 @@ follow your fleet from anywhere, no VPN needed.
   how many miners of your fleet it holds out of its limit — with the ones
   past it, not sent — and a link to your account.
 - **Connection** — the push URL and your hashboard API key, then
-  **Save**. A blank URL turns the push off.
+  **Save**. A blank URL turns the push off. If hashboard refuses the key
+  or doesn't answer, an alert says so here (with an orange dot on the
+  menu's **Remote** entry); for a refused key, it links to your Remote
+  page on hashboard, where the new one is.
 - **Remote actions** — from your private board, you can restart a miner
   or switch it to its other pool. One switch for the restart, one for the
   pool switch: only the actions allowed show on the board. The dashboard
   picks the request up within a minute, does it, and records it in the
-  audit (service *Remote board*, with the IP it was asked from). A third
+  audit (service *Board*, with the IP it was asked from). A third
   switch sends a mail on every action, through the Notifications' SMTP
   server; **Test** sends an example of it, once the server and a recipient
   are set.

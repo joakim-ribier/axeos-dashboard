@@ -332,12 +332,15 @@ pour suivre votre flotte depuis n'importe où, sans VPN.
   contient sur sa limite — avec ceux qui la dépassent, pas envoyés — et un
   lien vers votre compte.
 - **Connexion** — l'URL de push et votre clé API hashboard, puis
-  **Enregistrer**. Une URL vide coupe l'envoi.
+  **Enregistrer**. Une URL vide coupe l'envoi. Si hashboard refuse la clé
+  ou ne répond pas, une alerte le dit ici (avec un point orange sur
+  l'entrée **Distant** du menu) ; pour une clé refusée, elle mène à votre
+  page Distant sur hashboard, où se trouve la nouvelle.
 - **Actions à distance** — depuis votre board privé, vous pouvez
   redémarrer un mineur ou le basculer sur son autre pool. Un interrupteur
   pour le redémarrage, un pour la bascule : seules les actions autorisées
   apparaissent sur le board. Le dashboard récupère la demande dans la
-  minute, la fait, et l'inscrit dans l'audit (service *Board distant*, avec
+  minute, la fait, et l'inscrit dans l'audit (service *Board*, avec
   l'IP d'où elle a été demandée). Un troisième interrupteur envoie un mail à
   chaque action, par le serveur SMTP des Notifications ; **Tester** envoie un
   exemple de ce mail, une fois le serveur et un destinataire renseignés.
