@@ -17,6 +17,8 @@ const remoteBoardSchema = z.object({
   miners: z.object({ limit: z.number(), count: z.number() }).optional(),
   // The enabled miners the feeder doesn't push, past that limit.
   notSent: z.array(z.string()).optional(),
+  // The link to hashboard: why there's no board, the key refused above all.
+  state: z.enum(["ok", "unauthorized", "refused", "unreachable"]).optional(),
 });
 
 export type RemoteBoard = z.infer<typeof remoteBoardSchema>;

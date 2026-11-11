@@ -1,6 +1,8 @@
 package remotepush
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -103,11 +105,32 @@ func TestBoardCache_cachesFailures(t *testing.T) {
 	if _, err := c.Get(srv.URL+"/api/push", "key", time.Hour); err == nil {
 		t.Fatal("first Get() error = nil, want the fetch error")
 	}
+	// Its error comes back with it: the state stays what hashboard said.
 	got, err := c.Get(srv.URL+"/api/push", "key", time.Hour)
-	if err != nil || got != (Board{}) {
-		t.Errorf("second Get() = %+v, %v, want an empty Board and no error", got, err)
+	if err == nil || got != (Board{}) {
+		t.Errorf("second Get() = %+v, %v, want an empty Board and the first error", got, err)
 	}
 	if calls != 1 {
 		t.Errorf("calls = %d, want 1 -- an unreachable hashboard isn't retried within ttl", calls)
+	}
+}
+
+func TestStateOf(t *testing.T) {
+	tests := []struct {
+		err  error
+		want string
+	}{
+		{nil, StateOK},
+		{&StatusError{Code: http.StatusUnauthorized}, StateUnauthorized},
+		{fmt.Errorf("wrapped: %w", &StatusError{Code: http.StatusUnauthorized}), StateUnauthorized},
+		{&StatusError{Code: http.StatusTooManyRequests}, StateRefused},
+		{&StatusError{Code: http.StatusNotFound}, StateUnreachable},
+		{&StatusError{Code: http.StatusBadGateway}, StateUnreachable},
+		{errors.New("dial tcp: connection refused"), StateUnreachable},
+	}
+	for _, tt := range tests {
+		if got := StateOf(tt.err); got != tt.want {
+			t.Errorf("StateOf(%v) = %q, want %q", tt.err, got, tt.want)
+		}
 	}
 }

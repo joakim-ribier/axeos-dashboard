@@ -16,6 +16,13 @@ vi.mock("react-i18next", () => ({
     t: (key: string) => key,
     i18n: { language: "fr" },
   }),
+  Trans: ({
+    i18nKey,
+    components,
+  }: {
+    i18nKey: string;
+    components?: Record<string, React.ReactElement<{ href?: string }>>;
+  }) => <a href={Object.values(components ?? {})[0]?.props.href}>{i18nKey}</a>,
 }));
 
 const saveSettings = vi.fn();
@@ -357,6 +364,23 @@ describe("RemoteSettings -- the board's fleet", () => {
 
     expect(screen.getByText(`${k}.board.fleetCount`)).toBeInTheDocument();
     expect(screen.queryByText(`${k}.board.notSent`)).not.toBeInTheDocument();
+  });
+
+  it("says when hashboard refuses the API key, with where to get it", () => {
+    board = { ...board0, state: "unauthorized" };
+    render(<RemoteSettings />);
+
+    // The saved push URL's hashboard, /me/remote.
+    expect(
+      screen.getByText(`${k}.state.unauthorizedLink`).closest("a"),
+    ).toHaveAttribute("href", "https://hashboard.live/me/remote");
+  });
+
+  it("says nothing of the link when it's fine", () => {
+    board = { ...board0, state: "ok" };
+    render(<RemoteSettings />);
+
+    expect(screen.queryByText(/\.state\./)).not.toBeInTheDocument();
   });
 
   it("shows no fleet line for a hashboard without a limit", () => {

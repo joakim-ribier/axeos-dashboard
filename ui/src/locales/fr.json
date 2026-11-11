@@ -743,7 +743,13 @@
           "test": "Tester",
           "testSent": "Exemple de mail d'action à distance envoyé."
         },
-        "invalidPushUrl": "L'adresse doit commencer par http:// ou https://."
+        "invalidPushUrl": "L'adresse doit commencer par http:// ou https://.",
+        "state": {
+          "unauthorized": "hashboard refuse ta clé d'API : colle celle de ta page Distant sur hashboard.",
+          "refused": "hashboard refuse les envois pour l'instant (trop de requêtes, souvent à cause d'une clé refusée).",
+          "unreachable": "hashboard ne répond pas.",
+          "unauthorizedLink": "Ta clé d'API n'est plus reconnue par hashboard — récupère la nouvelle sur <page>ta page Distant</page> et colle-la juste en dessous."
+        }
       },
       "firmware": {
         "title": "Repos firmware",
