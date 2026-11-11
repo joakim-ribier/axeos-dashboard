@@ -74,6 +74,11 @@ for each miner:
 And, once for the whole board, **its settings**: the remote actions
 allowed, sent only when they change.
 
+A board holds a limited number of miners (10 by default, set by
+hashboard). Past it, the feeder sends only the first enabled miners, in
+the configuration's order; the others are still polled, stored and
+watched here, and *Configuration › Remote* names them.
+
 Pushes run in the background: a slow or unreachable hashboard never
 delays the cycle, the failure is written to the logs. A changed setting
 applies on the next cycle.
@@ -181,5 +186,5 @@ Once the push is set up, your board shows in the dashboard itself:
 - **Menu** — under *AxeOS · D#hashboard*, the board ID (click to open the
   board), whether it's public or private, and a link to your hashboard
   account.
-- **Home** — under the page title, an *Open the remote board* link and
+- **Home** — under the page title, an *Open your board* link and
   when hashboard last received data.

@@ -1091,7 +1091,7 @@
         },
         "/api/remote/board": {
             "get": {
-                "description": "Returns what hashboard knows about the board this instance pushes to: the link to its remote dashboard, and when hashboard last received a sample for it. Empty when remote push isn't configured, or hashboard can't be reached. Cached for one feeder interval.",
+                "description": "Returns what hashboard knows about the board this instance pushes to: the link to its remote dashboard, when hashboard last received a sample for it, its miner limit -- and the enabled miners the feeder doesn't push past that limit. Empty when remote push isn't configured, or hashboard can't be reached. Cached for one feeder interval.",
                 "produces": [
                     "application/json"
                 ],
@@ -1103,7 +1103,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/remotepush.Board"
+                            "$ref": "#/definitions/handler.RemoteBoardResponse"
                         }
                     }
                 }
@@ -2089,6 +2089,40 @@
                 }
             }
         },
+        "handler.RemoteBoardResponse": {
+            "type": "object",
+            "properties": {
+                "boardId": {
+                    "type": "string"
+                },
+                "dashboardURL": {
+                    "type": "string"
+                },
+                "hashboardURL": {
+                    "type": "string"
+                },
+                "lastSampleAt": {
+                    "type": "string"
+                },
+                "miners": {
+                    "description": "Miners is how many miners the board holds and may hold -- absent\nfrom a hashboard that has no limit.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/remotepush.BoardMiners"
+                        }
+                    ]
+                },
+                "notSent": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "public": {
+                    "type": "boolean"
+                }
+            }
+        },
         "handler.ServiceStatus": {
             "type": "object",
             "properties": {
@@ -2773,23 +2807,14 @@
                 }
             }
         },
-        "remotepush.Board": {
+        "remotepush.BoardMiners": {
             "type": "object",
             "properties": {
-                "boardId": {
-                    "type": "string"
+                "count": {
+                    "type": "integer"
                 },
-                "dashboardURL": {
-                    "type": "string"
-                },
-                "hashboardURL": {
-                    "type": "string"
-                },
-                "lastSampleAt": {
-                    "type": "string"
-                },
-                "public": {
-                    "type": "boolean"
+                "limit": {
+                    "type": "integer"
                 }
             }
         }

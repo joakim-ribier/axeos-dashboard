@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -34,11 +35,12 @@ func serverAddr(server *httptest.Server) string {
 }
 
 // isNonSamplePushPath reports whether path is the totals or the board
-// settings push runOnce fires alongside the per-miner sample push -- shared
-// by every test remoteServer handler below that only cares about the sample
-// push, so the concurrent ones don't race it onto the same assertion channel.
+// settings push, or the read of the board's miner limit, runOnce fires
+// alongside the per-miner sample push -- shared by every test remoteServer
+// handler below that only cares about the sample push, so the concurrent
+// ones don't race it onto the same assertion channel.
 func isNonSamplePushPath(path string) bool {
-	return path == "/totals" || path == "/settings"
+	return path == "/totals" || path == "/settings" || path == "/board/info"
 }
 
 func TestFeeder_runOnce_fetchesStoresAndPushes(t *testing.T) {
@@ -318,9 +320,9 @@ func TestFeeder_runOnce_mismatchedReportedMacStoresNothing(t *testing.T) {
 		var decoded map[string]any
 		_ = json.Unmarshal(body, &decoded)
 		w.WriteHeader(http.StatusOK)
-		// The board's own settings go out every first cycle, whatever its
-		// miners -- not a miner's data.
-		if r.URL.Path == "/settings" {
+		// The board's own settings go out every first cycle, and its miner
+		// limit is read every cycle, whatever its miners -- not a miner's data.
+		if r.URL.Path == "/settings" || r.URL.Path == "/board/info" {
 			return
 		}
 		pushCh <- pushedRequest{path: r.URL.Path, body: decoded}
@@ -892,5 +894,76 @@ func TestReadingsPoll_weighedAgainstTheMinersThresholds(t *testing.T) {
 	want := alerts.Poll{Temp: 64.5, FanSpeed: 90, TempThreshold: 65, FanThreshold: 95, Margins: config.AlertMargins{Temp: 2, Fan: 5}, Version: "v2.1", LatestVersion: "v2.2"}
 	if got != want {
 		t.Errorf("readingsPoll() = %+v, want %+v", got, want)
+	}
+}
+
+// Past the board's miner limit, the miners last in the configuration are
+// no longer pushed -- still polled and stored here -- once the limit is
+// known: the first poll, before it is, pushes every one.
+func TestFeeder_runOnce_pushesOnlyTheMinersTheBoardTakes(t *testing.T) {
+	dir := t.TempDir()
+	bitaxeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"hashRate":500000}`))
+	}))
+	defer bitaxeServer.Close()
+
+	var mu sync.Mutex
+	var pushed []string
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/board/info" {
+			_, _ = w.Write([]byte(`{"boardId":"b","miners":{"limit":1,"count":1}}`))
+			return
+		}
+		var body struct {
+			StorageKey string `json:"storageKey"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		w.WriteHeader(http.StatusNoContent)
+		if r.URL.Path == "" || r.URL.Path == "/" {
+			mu.Lock()
+			pushed = append(pushed, body.StorageKey)
+			mu.Unlock()
+		}
+	}))
+	defer remoteServer.Close()
+
+	minerAddr := serverAddr(bitaxeServer)
+	cfg := config.Config{
+		Bitaxes: []config.Bitaxe{
+			{Ip: minerAddr, Mac: "aa:aa:aa:aa:aa:01", Model: "bitaxe", Hostname: "first", Enabled: true},
+			{Ip: minerAddr, Mac: "aa:aa:aa:aa:aa:02", Model: "bitaxe", Hostname: "second", Enabled: true},
+		},
+		Endpoints: config.EndpointConfig{Info: "api/system/info", Timeout: time.Second},
+		Storage:   config.StorageConfig{DataDir: dir},
+		Firmware:  config.FirmwareConfig{CacheTTL: time.Hour, Repos: map[string]string{}},
+		Remote:    config.RemoteConfig{PushURL: remoteServer.URL, APIKey: "test-key"},
+	}
+	var logBuf bytes.Buffer
+	feeder := NewFeeder(slog.New(slog.NewTextHandler(&logBuf, nil)), cfg)
+
+	cycle := func() []string {
+		mu.Lock()
+		pushed = nil
+		mu.Unlock()
+		feeder.runOnce(context.Background())
+		feeder.WaitForPushes()
+		mu.Lock()
+		defer mu.Unlock()
+		slices.Sort(pushed)
+		return slices.Clone(pushed)
+	}
+
+	if got := cycle(); !slices.Equal(got, []string{"aaaaaaaaaa01", "aaaaaaaaaa02"}) {
+		t.Errorf("first poll, no limit known: pushed %v, want both", got)
+	}
+	if got := cycle(); !slices.Equal(got, []string{"aaaaaaaaaa01"}) {
+		t.Errorf("once the limit is known: pushed %v, want the first only", got)
+	}
+	// Still stored here.
+	if _, err := os.Stat(filepath.Join(cfg.Storage.BitaxesDir(), "aaaaaaaaaa02", "latest.json")); err != nil {
+		t.Errorf("the miner past the limit isn't stored locally: %v", err)
+	}
+	if !strings.Contains(logBuf.String(), "aren't sent") || !strings.Contains(logBuf.String(), "second") {
+		t.Errorf("log = %s, want the held miner named", logBuf.String())
 	}
 }

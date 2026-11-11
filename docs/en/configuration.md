@@ -318,7 +318,8 @@ follow your fleet from anywhere, no VPN needed.
 
 - **Your board** — once the push is set up: the board ID (click to open
   it), whether it's public or private, when hashboard last received data,
-  and a link to your account.
+  how many miners of your fleet it holds out of its limit — with the ones
+  past it, not sent — and a link to your account.
 - **Connection** — the push URL and your hashboard API key, then
   **Save**. A blank URL turns the push off.
 - **Remote actions** — from your private board, you can restart a miner

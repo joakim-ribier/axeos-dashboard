@@ -74,6 +74,11 @@ et pour chaque mineur :
 Et, une fois pour tout le board, **ses réglages** : les actions à distance
 autorisées, envoyées seulement quand elles changent.
 
+Un board contient un nombre limité de mineurs (10 par défaut, fixé par
+hashboard). Au-delà, le feeder n'envoie que les premiers mineurs activés,
+dans l'ordre de la configuration ; les autres restent relevés, stockés et
+surveillés en local, et *Configuration › Distant* les nomme.
+
 Les envois partent en arrière-plan : un hashboard lent ou injoignable ne
 retarde jamais le cycle, l'échec est écrit dans les logs. Un réglage
 modifié s'applique au cycle suivant.
@@ -183,5 +188,5 @@ lui-même :
 - **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
   ouvrir le board), s'il est public ou privé, et un lien vers votre compte
   hashboard.
-- **Accueil** — sous le titre de la page, un lien *Ouvrir le board
-  distant* et l'heure des dernières données reçues par hashboard.
+- **Accueil** — sous le titre de la page, un lien *Ouvrir ton board* et
+  l'heure des dernières données reçues par hashboard.

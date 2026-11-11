@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -25,6 +27,7 @@ import (
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/model"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remoteactions"
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/remotepush"
 	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/storage"
 )
 
@@ -47,6 +50,12 @@ type Feeder struct {
 	// What hashboard last took, with the URL and key it went to.
 	settingsMu   sync.Mutex
 	sentSettings string
+
+	// The board as hashboard last described it (its miner limit), and the
+	// miners last held back past it -- see toBoard.
+	boardMu sync.Mutex
+	board   remotepush.Board
+	held    string
 }
 
 // goPush runs fn in a new goroutine, tracked by pushWG so tests can wait
@@ -199,6 +208,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	if f.config.Remote.Enabled() {
 		f.pushSettings()
 	}
+	toBoard := f.toBoard()
 
 	var changes []alerts.Event
 	for _, bitaxe := range f.config.GetMiners() {
@@ -208,6 +218,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			f.logger.Error("bitaxe: no mac configured, skipping (set mac: in dashboard.yml)", "ip", addr)
 			continue
 		}
+		push := f.config.Remote.Enabled() && (toBoard == nil || toBoard[key])
 
 		payload, err := client.FetchSystemInfo(ctx, addr)
 		if err != nil {
@@ -216,7 +227,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 			offline := []model.Alert{{Type: model.AlertOffline, Message: err.Error()}}
 			if err := store.AppendAlertOnly(now, key, offline); err != nil {
 				f.logger.Error("storage error (offline alert)", "ip", addr, "mac", key, "error", err)
-			} else {
+			} else if push {
 				f.pushOffline(now, key, addr, bitaxe, offline)
 			}
 			continue
@@ -238,7 +249,7 @@ func (f *Feeder) runOnce(ctx context.Context) {
 		// Storage is keyed by MAC (stable across IP/location changes), not IP.
 		if err := store.Append(now, key, payload); err != nil {
 			f.logger.Error("storage error", "ip", addr, "mac", key, "error", err)
-		} else if f.config.Remote.Enabled() {
+		} else if push {
 			// Push the already-computed storage key, not the raw mac --
 			// hashboard just uses it verbatim as its own directory name, no
 			// need for it to know anything about MAC address formatting at
@@ -265,6 +276,62 @@ func (f *Feeder) runOnce(ctx context.Context) {
 	}
 	for model := range models {
 		firmware.CheckAndCache(model, f.config.Firmware.Repos, f.config.Firmware.CacheTTL, f.config.Storage.BitaxesDir(), f.logger)
+	}
+}
+
+// toBoard is which miners this poll pushes to the board, by storage key --
+// nil for every one -- from the board's miner limit as last read: the
+// first enabled miners in the configuration's order (remotepush.Split),
+// the others still polled, stored and watched here. The limit is read
+// again in the background for the next poll, so a slow hashboard never
+// holds polling up; until it's known, every miner is pushed and hashboard
+// refuses the ones past it.
+func (f *Feeder) toBoard() map[string]bool {
+	if !f.config.Remote.Enabled() {
+		return nil
+	}
+	pushURL, apiKey := f.config.Remote.PushURL, f.config.Remote.APIKey
+	f.goPush(func() {
+		board, err := remotepush.FetchBoard(pushURL, apiKey)
+		if err != nil {
+			f.logger.Warn("push: failed to read the board's miner limit", "error", err)
+			return
+		}
+		f.boardMu.Lock()
+		f.board = board
+		f.boardMu.Unlock()
+	})
+
+	f.boardMu.Lock()
+	defer f.boardMu.Unlock()
+	if f.board.Miners == nil {
+		return nil
+	}
+	sent, held := remotepush.Split(f.config.GetMiners(), f.board)
+	f.logHeld(held)
+	keys := make(map[string]bool, len(sent))
+	for _, m := range sent {
+		keys[m.StorageKey()] = true
+	}
+	return keys
+}
+
+// logHeld says which miners are held back past the board's limit, once
+// each time that changes -- not every poll. Called with boardMu held.
+func (f *Feeder) logHeld(held []config.Bitaxe) {
+	names := make([]string, 0, len(held))
+	for _, m := range held {
+		names = append(names, m.DisplayName())
+	}
+	key := strings.Join(names, "\x00")
+	if key == f.held {
+		return
+	}
+	f.held = key
+	if len(held) > 0 {
+		f.logger.Warn("push: the board is full, these miners aren't sent to it", "limit", f.board.Miners.Limit, "miners", names)
+	} else {
+		f.logger.Info("push: every miner is sent to the board")
 	}
 }
 
@@ -599,7 +666,13 @@ func (f *Feeder) postToRemote(path string, body []byte, logCtx string) error {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		f.logger.Error("push: unexpected status", "context", logCtx, "path", path, "status", resp.Status)
+		// hashboard says why it refused a miner: its board is full
+		// (miner_limit) or out of disk (disk_quota).
+		var refused struct {
+			Error string `json:"error"`
+		}
+		_ = json.NewDecoder(io.LimitReader(resp.Body, 1<<10)).Decode(&refused)
+		f.logger.Error("push: unexpected status", "context", logCtx, "path", path, "status", resp.Status, "reason", refused.Error)
 		return fmt.Errorf("unexpected status %s (%s)", resp.Status, path)
 	}
 

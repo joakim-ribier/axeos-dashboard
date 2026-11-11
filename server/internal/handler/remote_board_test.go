@@ -67,3 +67,34 @@ func TestRemoteBoard_hashboardDown(t *testing.T) {
 		t.Errorf("RemoteBoard() = %+v, want an empty Board", got)
 	}
 }
+
+// The miners past the board's limit are named, as the feeder holds them.
+func TestRemoteBoard_namesTheMinersNotSent(t *testing.T) {
+	hashboard := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"boardId":"abc","miners":{"limit":1,"count":1}}`))
+	}))
+	defer hashboard.Close()
+
+	cfg := config.Config{
+		Remote: config.RemoteConfig{PushURL: hashboard.URL + "/api/push", APIKey: "key"},
+		Feeder: config.FeederConfig{Interval: time.Minute},
+		Bitaxes: []config.Bitaxe{
+			{Hostname: "first", Mac: "aa:aa:aa:aa:aa:01", Enabled: true},
+			{Hostname: "off", Mac: "aa:aa:aa:aa:aa:02"},
+			{Hostname: "second", Alias: "Garage", Mac: "aa:aa:aa:aa:aa:03", Enabled: true},
+		},
+	}
+	w := httptest.NewRecorder()
+	RemoteBoard(cfg, &remotepush.BoardCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), w, httptest.NewRequest(http.MethodGet, "/api/remote/board", nil))
+
+	var got RemoteBoardResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Miners == nil || got.Miners.Limit != 1 {
+		t.Errorf("Miners = %+v, want limit 1", got.Miners)
+	}
+	if len(got.NotSent) != 1 || got.NotSent[0] != "Garage" {
+		t.Errorf("NotSent = %v, want [Garage]", got.NotSent)
+	}
+}

@@ -12,6 +12,11 @@ const remoteBoardSchema = z.object({
   hashboardURL: z.string().optional(),
   dashboardURL: z.string().optional(),
   lastSampleAt: z.string().optional(),
+  // The board's miner limit and how many it holds -- absent from a
+  // hashboard without one.
+  miners: z.object({ limit: z.number(), count: z.number() }).optional(),
+  // The enabled miners the feeder doesn't push, past that limit.
+  notSent: z.array(z.string()).optional(),
 });
 
 export type RemoteBoard = z.infer<typeof remoteBoardSchema>;
