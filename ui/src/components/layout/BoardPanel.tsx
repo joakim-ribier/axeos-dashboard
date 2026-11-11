@@ -2,14 +2,14 @@
 import { createContext, useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import CloseIcon from "@mui/icons-material/Close";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PrivacyTipOutlinedIcon from "@mui/icons-material/PrivacyTipOutlined";
-import { Box, IconButton, Link, Tooltip, Typography } from "@mui/material";
+import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 
 import {
   DetailList,
   DrawerSection,
 } from "@/components/dashboard/drawer/DrawerSection";
+import { ExternalLink } from "@/components/ui/ExternalLink";
 import { SidePanel } from "@/components/ui/SidePanel";
 import { useAppInfo, useMiners } from "@/hooks/useMiners";
 import { type Miner } from "@/schemas/minerSchema";
@@ -83,24 +83,6 @@ const ShareValue = ({ share }: { share: Share }) => {
     </Box>
   );
 };
-
-const ExternalLink = ({
-  href,
-  children,
-}: {
-  href: string;
-  children?: React.ReactNode;
-}) => (
-  <Link
-    href={href}
-    target="_blank"
-    rel="noopener noreferrer"
-    sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
-  >
-    {children}
-    <OpenInNewIcon sx={{ fontSize: 14 }} />
-  </Link>
-);
 
 const Description = ({ children }: { children: React.ReactNode }) => (
   <Typography variant="body2" color="text.secondary">

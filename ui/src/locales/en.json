@@ -743,7 +743,13 @@
           "test": "Test",
           "testSent": "Remote action mail example sent."
         },
-        "invalidPushUrl": "The address must start with http:// or https://."
+        "invalidPushUrl": "The address must start with http:// or https://.",
+        "state": {
+          "unauthorized": "hashboard refuses your API key: paste the one from your Remote page on hashboard.",
+          "refused": "hashboard refuses the pushes for now (too many requests, often because of a refused key).",
+          "unreachable": "hashboard doesn't answer.",
+          "unauthorizedLink": "hashboard no longer recognizes your API key — grab the new one on <page>your Remote page</page> and paste it just below."
+        }
       },
       "firmware": {
         "title": "Firmware repos",

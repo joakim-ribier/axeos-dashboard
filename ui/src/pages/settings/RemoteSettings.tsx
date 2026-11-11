@@ -1,23 +1,16 @@
 // src/pages/settings/RemoteSettings.tsx
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import PrivacyTipIcon from "@mui/icons-material/PrivacyTip";
 import SaveIcon from "@mui/icons-material/Save";
 import SettingsRemoteIcon from "@mui/icons-material/SettingsRemote";
-import {
-  Box,
-  Chip,
-  Link,
-  Stack,
-  Switch,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Stack, Switch, TextField, Typography } from "@mui/material";
 
 import { ActionButton } from "@/components/ui/ActionButton";
+import { AlertList } from "@/components/ui/AlertList";
+import { ExternalLink } from "@/components/ui/ExternalLink";
 import { SecretField } from "@/components/ui/SecretField";
 import { SectionDivider } from "@/components/ui/SectionDivider";
 import { PAGE_GAP, SECTION_GAP } from "@/components/ui/SectionLayout";
@@ -113,6 +106,12 @@ const RemoteSection = ({
   const { t } = useTranslation();
   const { data: board } = useRemoteBoard();
   const [pushURL, setPushURL] = useState("");
+  // Where hashboard shows the API key: the saved push URL's hashboard,
+  // whose /me/remote holds it -- known even when hashboard refuses the key.
+  const savedPushURL = data?.remote.pushURL ?? "";
+  const keyPage = savedPushURL
+    ? `${savedPushURL.replace(/\/api\/push\/?$/, "")}/me/remote`
+    : null;
   const [apiKey, setApiKey] = useState("");
 
   useEffect(() => {
@@ -179,21 +178,13 @@ const RemoteSection = ({
             />
             <InfoRow label={t("settingsPage.appSettings.remote.board.id")}>
               {board.dashboardURL ? (
-                <Link
+                <ExternalLink
                   variant="body2"
                   href={board.dashboardURL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    fontFamily: "monospace",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
+                  sx={{ fontFamily: "monospace" }}
                 >
                   {board.boardId}
-                  <OpenInNewIcon sx={{ fontSize: 14 }} />
-                </Link>
+                </ExternalLink>
               ) : (
                 <Typography variant="body2" sx={{ fontFamily: "monospace" }}>
                   {board.boardId}
@@ -255,20 +246,9 @@ const RemoteSection = ({
               <InfoRow
                 label={t("settingsPage.appSettings.remote.board.account")}
               >
-                <Link
-                  variant="body2"
-                  href={`${board.hashboardURL}/me`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 0.5,
-                  }}
-                >
+                <ExternalLink variant="body2" href={`${board.hashboardURL}/me`}>
                   {t("settingsPage.appSettings.remote.board.manage")}
-                  <OpenInNewIcon sx={{ fontSize: 14 }} />
-                </Link>
+                </ExternalLink>
               </InfoRow>
             )}
           </Box>
@@ -286,6 +266,29 @@ const RemoteSection = ({
           )}
         />
         <Stack spacing={SECTION_GAP}>
+          {board?.state && board.state !== "ok" && (
+            <AlertList
+              severity="warning"
+              items={[
+                board.state === "unauthorized" && keyPage ? (
+                  <Trans
+                    i18nKey="settingsPage.appSettings.remote.state.unauthorizedLink"
+                    components={{
+                      page: (
+                        <ExternalLink
+                          href={keyPage}
+                          color="inherit"
+                          fontWeight={700}
+                        />
+                      ),
+                    }}
+                  />
+                ) : (
+                  t(`settingsPage.appSettings.remote.state.${board.state}`)
+                ),
+              ]}
+            />
+          )}
           <TextField
             size="small"
             label={t("settingsPage.appSettings.remote.pushUrlLabel")}

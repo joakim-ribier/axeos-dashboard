@@ -594,6 +594,12 @@ definitions:
         type: array
       public:
         type: boolean
+      state:
+        description: |-
+          State is the link to hashboard (remotepush.StateOf): ok, or why the
+          board couldn't be read -- the API key refused above all. Empty when
+          remote push isn't configured.
+        type: string
     type: object
   handler.ServiceStatus:
     properties:
@@ -2069,9 +2075,10 @@ paths:
     get:
       description: 'Returns what hashboard knows about the board this instance pushes
         to: the link to its remote dashboard, when hashboard last received a sample
-        for it, its miner limit -- and the enabled miners the feeder doesn''t push
-        past that limit. Empty when remote push isn''t configured, or hashboard can''t
-        be reached. Cached for one feeder interval.'
+        for it, its miner limit, the enabled miners the feeder doesn''t push past
+        that limit -- and the state of the link (ok, unauthorized: the API key is
+        refused, refused, unreachable). Empty when remote push isn''t configured,
+        or hashboard can''t be reached. Cached for one feeder interval.'
       produces:
       - application/json
       responses:

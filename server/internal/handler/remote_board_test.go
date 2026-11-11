@@ -98,3 +98,26 @@ func TestRemoteBoard_namesTheMinersNotSent(t *testing.T) {
 		t.Errorf("NotSent = %v, want [Garage]", got.NotSent)
 	}
 }
+
+// A refused API key is said as such, not as a board that isn't there.
+func TestRemoteBoard_saysTheKeyIsRefused(t *testing.T) {
+	hashboard := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer hashboard.Close()
+
+	cfg := config.Config{
+		Remote: config.RemoteConfig{PushURL: hashboard.URL + "/api/push", APIKey: "old-key"},
+		Feeder: config.FeederConfig{Interval: time.Minute},
+	}
+	w := httptest.NewRecorder()
+	RemoteBoard(cfg, &remotepush.BoardCache{}, slog.New(slog.NewTextHandler(io.Discard, nil)), w, httptest.NewRequest(http.MethodGet, "/api/remote/board", nil))
+
+	var got RemoteBoardResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.State != remotepush.StateUnauthorized {
+		t.Errorf("State = %q, want %q", got.State, remotepush.StateUnauthorized)
+	}
+}

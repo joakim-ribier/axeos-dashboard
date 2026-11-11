@@ -15,6 +15,7 @@ import { SectionMenu, SectionPicker } from "@/components/ui/SectionMenu";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useMiners, useUiFeatures } from "@/hooks/useMiners";
 import { useMinersConfig } from "@/hooks/useMinersConfig";
+import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import { normalizeMac } from "@/schemas/minerConfigSchema";
 import { formatTimestamp } from "@/utils/format";
 import { poolMismatches } from "@/utils/poolDrift";
@@ -54,6 +55,7 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
   const { data: configured } = useMinersConfig();
   const { data: liveMiners } = useMiners();
   const { data: settings } = useAppSettings();
+  const { data: board } = useRemoteBoard();
 
   const liveByMac = new Map(
     (liveMiners ?? []).map((m) => [normalizeMac(m.macAddr), m]),
@@ -108,6 +110,10 @@ const useSectionSummaries = (): Record<SectionKey, SectionSummary> => {
       summary: settings?.remote.pushURL
         ? t("settingsPage.toc.remote.summary")
         : t("settingsPage.toc.remote.off"),
+      issue:
+        board?.state && board.state !== "ok"
+          ? t(`settingsPage.appSettings.remote.state.${board.state}`)
+          : undefined,
     },
     // What it holds, for someone looking for it.
     system: { summary: t("settingsPage.toc.system.summary") },
