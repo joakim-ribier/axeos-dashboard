@@ -21,7 +21,7 @@ import (
 // reports StatusUnknown without ever making a network call.
 func testVersionChecker() *appversion.Checker {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return appversion.NewChecker(logger, "http://example.invalid", "dev")
+	return appversion.NewChecker(logger, "http://example.invalid", "dev", "dev")
 }
 
 func writeFixture(t *testing.T, path, content string) {

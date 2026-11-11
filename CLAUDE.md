@@ -33,7 +33,7 @@ make rebuild-totals                                      # totals.json from the 
 make deploy            # from your machine: a local build into dist/ on DEPLOY_HOST, nothing restarted
 make install-services  # on the server: the systemd services from deploy/, the first time and when they change
 make restart           # on the server: mailer, then feeder, then dashboard-api
-make latest-update     # on the server: from the GitHub release, restarted
+make update            # on the server: from the last vX.Y.Z release, restarted (RELEASE_TAG=0.2.0 / latest for another)
 make versions          # the releases on GitHub: latest's commit, every vX.Y.Z
 ```
 

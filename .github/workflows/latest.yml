@@ -65,40 +65,9 @@ jobs:
   build:
     needs: guard
     if: needs.guard.outputs.publish == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [arm64, amd64] # arm64: Raspberry Pi. amd64: typical VPS (e.g. hashboard).
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.guard.outputs.sha }}
-
-      - uses: actions/setup-go@v7
-        with:
-          go-version: "1.24.3"
-          cache-dependency-path: server/go.sum
-
-      - name: build binaries (linux/${{ matrix.arch }})
-        working-directory: server
-        env:
-          GOOS: linux
-          GOARCH: ${{ matrix.arch }}
-        run: |
-          mkdir -p ../dist
-          sha=$(echo "${{ needs.guard.outputs.sha }}" | cut -c1-7)
-          ldflags="-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$sha"
-          go build -ldflags "$ldflags" -o ../dist/feeder-${{ matrix.arch }} ./cmd/feeder
-          go build -ldflags "$ldflags" -o ../dist/mailer-${{ matrix.arch }} ./cmd/mailer
-          go build -ldflags "$ldflags" -o ../dist/dashboard-api-${{ matrix.arch }} ./cmd/dashboard-api
-          go build -ldflags "$ldflags" -o ../dist/remote-dashboard-api-${{ matrix.arch }} ./cmd/remote-dashboard-api
-          go build -ldflags "$ldflags" -o ../dist/rebuild-totals-${{ matrix.arch }} ./cmd/rebuild-totals
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: binaries-${{ matrix.arch }}
-          path: dist/*
-          retention-days: 1
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.guard.outputs.sha }}
 
   # Builds + pushes the "services" (feeder + dashboard-api) and "dashboard"
   # (UI + reverse-proxy) images to GHCR, tagged "latest" -- same rolling-release
@@ -176,21 +145,6 @@ jobs:
           pattern: binaries-*
           merge-multiple: true
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: ui/package-lock.json
-
-      - name: build UI
-        working-directory: ui
-        env:
-          API_PORT: "8080" # placeholder — only proxy target for dev/preview, not baked into the build
-        run: |
-          npm ci
-          npm run build
-          tar -czf ../dist/ui-dist.tar.gz -C dist .
-
       - name: publish rolling "latest" release
         uses: softprops/action-gh-release@v3
         with:
@@ -198,13 +152,13 @@ jobs:
           name: "latest (${{ needs.guard.outputs.sha }})"
           target_commitish: ${{ needs.guard.outputs.sha }}
           prerelease: true
-          make_latest: "true"
+          make_latest: "false" # "Latest" is the last vX.Y.Z, what `make update` installs
           body: |
             Built from commit ${{ needs.guard.outputs.sha }} on `main`.
             Binaries for linux/arm64 (Raspberry Pi) and linux/amd64 (typical VPS).
-            Fetch with `make latest-update` (Pi, dashboard-api + feeder + mailer), which
-            auto-detects the local architecture; a VPS takes remote-dashboard-api-amd64
-            and ui-dist.tar.gz.
+            Fetch with `make update RELEASE_TAG=latest` (Pi, dashboard-api + feeder +
+            mailer), which auto-detects the local architecture; a VPS takes
+            remote-dashboard-api-amd64 and ui-dist.tar.gz.
           files: |
             dist/feeder-arm64
             dist/feeder-amd64

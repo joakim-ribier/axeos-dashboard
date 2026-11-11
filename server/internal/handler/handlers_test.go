@@ -31,7 +31,7 @@ func testLogger() *slog.Logger {
 // tests only care that the field gets threaded through, not the outcome
 // of a real GitHub check.
 func testVersionChecker() *appversion.Checker {
-	return appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	return appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 }
 
 // testAccessChecker returns a hashboardaccess.Checker rooted at a fresh,

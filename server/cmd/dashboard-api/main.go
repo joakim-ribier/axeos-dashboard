@@ -112,7 +112,7 @@ func main() {
 	watcher := healtcheck.NewWatcher(logger, cfg).WithMinersStore(minersStore)
 	watcher.Start(&wg)
 
-	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
+	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleasesAPIURL, version.GitSHA, version.Version)
 
 	router := NewRouter(logger, cfg, watcher, versionChecker).
 		WithMinersStore(minersStore).

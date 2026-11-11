@@ -1,0 +1,83 @@
+name: Build
+
+# The release files -- every binary for linux/arm64 (Raspberry Pi) and
+# linux/amd64 (typical VPS), and the UI -- built once here for both
+# latest.yml (the rolling "latest") and release.yml (a vX.Y.Z), so the two
+# never ship different things. Left as the binaries-* artifacts.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit to build
+        required: true
+        type: string
+      version:
+        description: internal/version.Version -- "0.2.0" for v0.2.0, "dev" for a rolling build
+        required: false
+        type: string
+        default: dev
+
+jobs:
+  binaries:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [arm64, amd64]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24.3"
+          cache-dependency-path: server/go.sum
+
+      - name: build binaries (linux/${{ matrix.arch }})
+        working-directory: server
+        env:
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p ../dist
+          sha=$(git rev-parse HEAD | cut -c1-7)
+          pkg=github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version
+          ldflags="-X $pkg.GitSHA=$sha -X $pkg.Version=${{ inputs.version }}"
+          for cmd in feeder mailer dashboard-api remote-dashboard-api rebuild-totals; do
+            go build -ldflags "$ldflags" -o ../dist/$cmd-${{ matrix.arch }} ./cmd/$cmd
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries-${{ matrix.arch }}
+          path: dist/*
+          retention-days: 1
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ui/package-lock.json
+
+      - name: build UI
+        working-directory: ui
+        env:
+          API_PORT: "8080" # placeholder — only proxy target for dev/preview, not baked into the build
+        run: |
+          npm ci
+          npm run build
+          mkdir -p ../dist
+          tar -czf ../dist/ui-dist.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: binaries-ui
+          path: dist/ui-dist.tar.gz
+          retention-days: 1

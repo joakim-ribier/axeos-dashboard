@@ -83,11 +83,17 @@ Every push to `main` and every pull request targeting it runs
 
 ## Releases
 
-When `checks.yml` succeeds on `main`, [`latest.yml`](.github/workflows/latest.yml)
-builds every binary for `linux/arm64` (Raspberry Pi) and `linux/amd64` (VPS),
-and the UI, into a rolling `latest` GitHub Release.
+[`build.yml`](.github/workflows/build.yml) builds every binary for
+`linux/arm64` (Raspberry Pi) and `linux/amd64` (VPS), and the UI, for two
+kinds of GitHub Release:
 
-`make latest-update` installs it on the server.
+- **`vX.Y.Z`** — attached to the release when it's published
+  ([`release.yml`](.github/workflows/release.yml)), stamped with its version,
+  next to the versioned Docker images.
+- **`latest`** — republished on every push to `main` once `checks.yml`
+  succeeds ([`latest.yml`](.github/workflows/latest.yml)).
+
+`make versions` lists them, `make update` installs one on the server.
 A board's VPS takes the release's `remote-dashboard-api-amd64` and
 `ui-dist.tar.gz`.
 

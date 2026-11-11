@@ -14,6 +14,9 @@ subnav:
 
 # axeos-dashboard
 
+{: .release }
+> 🚀 [See the latest release — 0.1.0]({{ '/en/release-v0.1.0.html' | relative_url }})
+
 **axeos-dashboard** is a local dashboard that brings together the
 stats for all your Bitcoin ASIC miners compatible with
 [AxeOs](https://github.com/skot/ESP-Miner) (Bitaxe, NerdQAxe...) in one

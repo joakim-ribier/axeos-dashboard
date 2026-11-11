@@ -48,7 +48,7 @@ every commit.
   another section's save. Well-known pool dashboard links and firmware
   repo URLs are built into the binary
   (`server/internal/config/defaults.go`) rather than duplicated per
-  deployment, so fixing/adding one is a code change + `latest-update`;
+  deployment, so fixing/adding one is a code change + a release (`make update`);
   `settings.yml` only stores custom pool extras on top of that built-in
   list (firmware repos are shown read-only, not overridable from this UI
   at all). Launch-time settings that genuinely need a restart
@@ -167,6 +167,10 @@ every commit.
 - ✅ **A board's panel**: an icon in the fleet card opens "My fleet" -- the
   board, what's shared and the remote actions allowed (read off the latest
   samples), and the version it runs.
+- ✅ **Versioned releases with their binaries**: a `vX.Y.Z` release gets the
+  same binaries + UI as `latest` (one shared `build.yml`), stamped with its
+  version; `make update` installs the last one, or `RELEASE_TAG=` any other;
+  the sidebar's version compares a release with the next one.
 
 ## To do
 
