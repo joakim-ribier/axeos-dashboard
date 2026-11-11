@@ -30,7 +30,7 @@ func releaseServer(t *testing.T, targetCommitish, htmlURL string) *httptest.Serv
 func TestChecker_neverCheckedFetchesImmediately(t *testing.T) {
 	server := releaseServer(t, "94a060b47f9a1862892306c33f20d0ef51c22551", "https://example.com/releases/latest")
 
-	checker := NewChecker(testLogger(), server.URL, "94a060b")
+	checker := NewChecker(testLogger(), server.URL, "94a060b", "dev")
 	got := checker.Result()
 
 	if got.Status != StatusUpToDate {
@@ -44,7 +44,7 @@ func TestChecker_neverCheckedFetchesImmediately(t *testing.T) {
 func TestChecker_reportsUpdateAvailableWhenBehind(t *testing.T) {
 	server := releaseServer(t, "94a060b47f9a1862892306c33f20d0ef51c22551", "https://example.com/releases/latest")
 
-	checker := NewChecker(testLogger(), server.URL, "fdcb38c")
+	checker := NewChecker(testLogger(), server.URL, "fdcb38c", "dev")
 	got := checker.Result()
 
 	if got.Status != StatusUpdateAvailable {
@@ -55,7 +55,7 @@ func TestChecker_reportsUpdateAvailableWhenBehind(t *testing.T) {
 func TestChecker_stripsDirtySuffixBeforeComparing(t *testing.T) {
 	server := releaseServer(t, "94a060b47f9a1862892306c33f20d0ef51c22551", "https://example.com/releases/latest")
 
-	checker := NewChecker(testLogger(), server.URL, "94a060b-dirty")
+	checker := NewChecker(testLogger(), server.URL, "94a060b-dirty", "dev")
 	got := checker.Result()
 
 	if got.Status != StatusUpToDate {
@@ -71,7 +71,7 @@ func TestChecker_devBuildNeverChecksNetwork(t *testing.T) {
 	}))
 	defer server.Close()
 
-	checker := NewChecker(testLogger(), server.URL, "dev")
+	checker := NewChecker(testLogger(), server.URL, "dev", "dev")
 	got := checker.Result()
 
 	if called {
@@ -91,7 +91,7 @@ func TestChecker_skipsFetchWhenFresh(t *testing.T) {
 	}))
 	defer server.Close()
 
-	checker := NewChecker(testLogger(), server.URL, "abcdef1")
+	checker := NewChecker(testLogger(), server.URL, "abcdef1", "dev")
 	checker.Result() // first call: always fetches
 
 	called = false
@@ -111,7 +111,7 @@ func TestChecker_refetchesOnceStale(t *testing.T) {
 	}))
 	defer server.Close()
 
-	checker := NewChecker(testLogger(), server.URL, "0000000")
+	checker := NewChecker(testLogger(), server.URL, "0000000", "dev")
 	checker.Result()
 	if callCount != 1 {
 		t.Fatalf("callCount after first Result() = %d, want 1", callCount)
@@ -140,7 +140,7 @@ func TestChecker_fetchErrorLeavesPreviousResultUntouched(t *testing.T) {
 	}))
 	defer server.Close()
 
-	checker := NewChecker(testLogger(), server.URL, "0000000")
+	checker := NewChecker(testLogger(), server.URL, "0000000", "dev")
 	first := checker.Result()
 	if first.Status != StatusUpdateAvailable {
 		t.Fatalf("first Result().Status = %q, want %q", first.Status, StatusUpdateAvailable)
@@ -165,7 +165,7 @@ func TestChecker_malformedTargetCommitishLeavesPreviousResultUntouched(t *testin
 	}))
 	defer server.Close()
 
-	checker := NewChecker(testLogger(), server.URL, "0000000")
+	checker := NewChecker(testLogger(), server.URL, "0000000", "dev")
 	first := checker.Result()
 	if first.Status != StatusUpdateAvailable {
 		t.Fatalf("first Result().Status = %q, want %q", first.Status, StatusUpdateAvailable)
@@ -179,5 +179,54 @@ func TestChecker_malformedTargetCommitishLeavesPreviousResultUntouched(t *testin
 	second := checker.Result()
 	if second != first {
 		t.Errorf("Result() after a malformed release = %+v, want it unchanged from %+v", second, first)
+	}
+}
+
+func tagServer(t *testing.T, tagName string, path *string) *httptest.Server {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*path = r.URL.Path
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"tag_name": tagName,
+			"html_url": "https://example.com/releases/" + tagName,
+		})
+	}))
+	t.Cleanup(server.Close)
+	return server
+}
+
+func TestChecker_releaseBuildFollowsTheLastRelease(t *testing.T) {
+	tests := []struct {
+		name, lastTag, running, want string
+	}{
+		{"on the last release", "v0.2.0", "0.2.0", StatusUpToDate},
+		{"a newer release out", "v0.3.0", "0.2.0", StatusUpdateAvailable},
+		{"ahead of a stale cached release", "v0.2.0", "0.3.0", StatusUpToDate},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var path string
+			server := tagServer(t, tt.lastTag, &path)
+
+			got := NewChecker(testLogger(), server.URL, "94a060b", tt.running).Result()
+
+			if path != "/latest" {
+				t.Errorf("asked %q, want the last vX.Y.Z (/latest)", path)
+			}
+			if got.Status != tt.want {
+				t.Errorf("Status = %q, want %q", got.Status, tt.want)
+			}
+		})
+	}
+}
+
+func TestChecker_rollingBuildFollowsLatest(t *testing.T) {
+	var path string
+	server := tagServer(t, "latest", &path)
+
+	NewChecker(testLogger(), server.URL, "94a060b", "dev").Result()
+
+	if path != "/tags/latest" {
+		t.Errorf("asked %q, want the rolling release (/tags/latest)", path)
 	}
 }

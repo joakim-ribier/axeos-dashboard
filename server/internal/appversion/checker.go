@@ -1,7 +1,8 @@
 // Package appversion checks whether a newer build of this dashboard app
-// itself has been published, by comparing the running binary's git SHA
-// (internal/version.GitSHA) against the commit GitHub's rolling "latest"
-// release currently points at.
+// itself has been published: a release build (internal/version.Version set,
+// e.g. "0.2.0") against the last vX.Y.Z release, any other build by its git
+// SHA (internal/version.GitSHA) against the commit the rolling "latest"
+// release points at -- each follows what it was installed from.
 //
 // This lives server-side (rather than each browser tab checking GitHub
 // independently) so a deployment serving many concurrent viewers only
@@ -17,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/firmware"
 )
 
 // CheckInterval bounds how often the "latest" release is actually
@@ -24,11 +27,10 @@ import (
 // cached result.
 const CheckInterval = 24 * time.Hour
 
-// DefaultReleaseAPIURL is the GitHub API URL for this project's rolling
-// "latest" release. Both dashboard-api and remote-dashboard-api point
-// their Checker at this in production; tests override it with an
-// httptest server URL instead.
-const DefaultReleaseAPIURL = "https://api.github.com/repos/joakim-ribier/axeos-dashboard/releases/tags/latest"
+// DefaultReleasesAPIURL is the GitHub API URL of this project's releases:
+// "/latest" is the last vX.Y.Z, "/tags/latest" the rolling one. Tests
+// override it with an httptest server URL.
+const DefaultReleasesAPIURL = "https://api.github.com/repos/joakim-ribier/axeos-dashboard/releases"
 
 // Status values reported to the UI.
 const (
@@ -44,6 +46,7 @@ type Result struct {
 }
 
 type githubRelease struct {
+	TagName         string `json:"tag_name"`
 	TargetCommitish string `json:"target_commitish"`
 	HTMLURL         string `json:"html_url"`
 }
@@ -56,34 +59,35 @@ type Checker struct {
 	lastChecked time.Time
 	result      Result
 
-	httpClient    *http.Client
-	logger        *slog.Logger
-	releaseAPIURL string
-	runningSHA    string
+	httpClient     *http.Client
+	logger         *slog.Logger
+	releasesAPIURL string
+	runningSHA     string
+	runningVersion string
 }
 
-// NewChecker builds a Checker. releaseAPIURL is the full GitHub API URL for
-// the "latest" release tag (e.g.
-// "https://api.github.com/repos/OWNER/REPO/releases/tags/latest") -- tests
-// substitute an httptest server URL here. runningSHA is this binary's own
-// git SHA (internal/version.GitSHA); a "dev" build (no ldflags, e.g. `go
-// run`) has nothing meaningful to compare against, so Result always
+// NewChecker builds a Checker. runningSHA and runningVersion are this
+// binary's internal/version.GitSHA and Version; a build with neither (no
+// ldflags, e.g. `go run`) has nothing to compare against, so Result always
 // reports StatusUnknown without ever hitting the network.
-func NewChecker(logger *slog.Logger, releaseAPIURL, runningSHA string) *Checker {
+func NewChecker(logger *slog.Logger, releasesAPIURL, runningSHA, runningVersion string) *Checker {
 	return &Checker{
-		result:        Result{Status: StatusUnknown},
-		httpClient:    &http.Client{Timeout: 5 * time.Second},
-		logger:        logger.With("namespace", "AppVersionChecker"),
-		releaseAPIURL: releaseAPIURL,
-		runningSHA:    runningSHA,
+		result:         Result{Status: StatusUnknown},
+		httpClient:     &http.Client{Timeout: 5 * time.Second},
+		logger:         logger.With("namespace", "AppVersionChecker"),
+		releasesAPIURL: releasesAPIURL,
+		runningSHA:     runningSHA,
+		runningVersion: runningVersion,
 	}
 }
+
+func (c *Checker) isRelease() bool { return c.runningVersion != "dev" && c.runningVersion != "" }
 
 // Result returns the last known check result, refreshing it first
 // (synchronously) if the cache is stale or has never been populated. Safe
 // to call from concurrent request handlers.
 func (c *Checker) Result() Result {
-	if c.runningSHA == "dev" {
+	if c.runningSHA == "dev" && !c.isRelease() {
 		return Result{Status: StatusUnknown}
 	}
 
@@ -109,6 +113,15 @@ func (c *Checker) refreshLocked() {
 		return
 	}
 
+	if c.isRelease() {
+		status := StatusUpToDate
+		if firmware.IsNewer(release.TagName, c.runningVersion) {
+			status = StatusUpdateAvailable
+		}
+		c.result = Result{Status: status, ReleaseURL: release.HTMLURL}
+		return
+	}
+
 	if len(release.TargetCommitish) < 7 {
 		c.logger.Warn("latest release has no usable target commit", "target_commitish", release.TargetCommitish)
 		return
@@ -124,7 +137,11 @@ func (c *Checker) refreshLocked() {
 }
 
 func (c *Checker) fetchLatestRelease() (githubRelease, error) {
-	req, err := http.NewRequest(http.MethodGet, c.releaseAPIURL, nil)
+	path := "/tags/latest"
+	if c.isRelease() {
+		path = "/latest"
+	}
+	req, err := http.NewRequest(http.MethodGet, c.releasesAPIURL+path, nil)
 	if err != nil {
 		return githubRelease{}, err
 	}

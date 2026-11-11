@@ -27,7 +27,7 @@ func serverAddr(server *httptest.Server) string {
 func newTestRouter(t *testing.T, cfg config.Config) http.Handler {
 	t.Helper()
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	return NewRouter(testLogger(), cfg, watcher, versionChecker).Handler()
 }
 
@@ -80,7 +80,7 @@ func TestRouter_saveMinersConfig_reflectedImmediatelyBySubsequentGet(t *testing.
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).Handler()
 
 	body := `{"bitaxes":[{"ip":"10.0.0.5","mac":"aabbccddeeff","hostname":"new-miner","enabled":false}]}`
@@ -111,7 +111,7 @@ func TestRouter_minersStore_picksUpExternalFileChangeOnNextRequest(t *testing.T)
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).Handler()
 
 	w := httptest.NewRecorder()

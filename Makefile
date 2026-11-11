@@ -26,14 +26,15 @@ CONFIG ?= resources/dashboard.yml
 
 BIN_DIR := resources/build/server/bin
 
-# GitHub repo + release used by `make latest-update` (CI-built binaries for the
-# local architecture instead of building locally)
+# GitHub repo + release used by `make update` (CI-built binaries for the local
+# architecture instead of building locally). No RELEASE_TAG: the last vX.Y.Z
+# release; RELEASE_TAG=0.2.0 for release v0.2.0, RELEASE_TAG=latest for main's tip.
 GITHUB_REPO ?= joakim-ribier/axeos-dashboard
-RELEASE_TAG ?= latest
+RELEASE_TAG ?=
 
 # Auto-detected local architecture, used to pick the right release asset
 # (feeder-$(RELEASE_ARCH), dashboard-api-$(RELEASE_ARCH), ...). Override if
-# `uname -m` reports something unexpected: make latest-update RELEASE_ARCH=amd64
+# `uname -m` reports something unexpected: make update RELEASE_ARCH=amd64
 UNAME_ARCH := $(shell uname -m)
 ifeq ($(UNAME_ARCH),x86_64)
 RELEASE_ARCH ?= amd64
@@ -62,7 +63,7 @@ go-build = mkdir -p $(BIN_DIR) && cd server && for bin in $(BINARIES); do \
 .DEFAULT_GOAL := help
 .PHONY: help init run run-dashboard-api run-feeder run-mailer run-dashboard-ui docker build build-ui clean \
 	lint test swagger docs build-linux deploy \
-	install-services install-aliases restart latest-update versions rebuild-totals check-config
+	install-services install-aliases restart update versions rebuild-totals check-config
 
 help: ## this list
 	@awk 'BEGIN { FS = ":.*## " } \
@@ -179,11 +180,11 @@ install-aliases: ## on the server: the shortcuts (axeos-help...) at every login
 restart: ## on the server: restart mailer, feeder and dashboard-api (systemd)
 	sudo systemctl restart $(SERVICES)
 
-RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/download/$(RELEASE_TAG)
+RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/$(if $(RELEASE_TAG),download/$(if $(filter latest,$(RELEASE_TAG)),latest,v$(RELEASE_TAG)),latest/download)
 
 # Downloaded beside, then swapped: a failed download changes nothing.
-latest-update: ## on the server: install the latest GitHub release, then restart
-	@echo ">>> Fetching release '$(RELEASE_TAG)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
+update: ## on the server: install the last vX.Y.Z release (RELEASE_TAG=0.2.0 / latest for another), then restart
+	@echo ">>> Fetching release '$(or $(RELEASE_TAG),the last vX.Y.Z)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
 	mkdir -p dist/api
 	rm -rf dist/ui.new dist/ui.old
 	mkdir dist/ui.new

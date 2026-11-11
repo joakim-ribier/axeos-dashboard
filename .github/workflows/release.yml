@@ -1,8 +1,10 @@
 name: Release
 
-# Publishes versioned Docker images to GHCR when a real GitHub Release is
-# published under a "vX.Y.Z" tag (e.g. via "Draft a new release" -- typing
-# a new tag there is enough, GitHub creates it for you) -- separate from
+# Publishes versioned Docker images to GHCR, and attaches the binaries + UI
+# (build.yml, stamped with the version) to the release itself, when a real
+# GitHub Release is published under a "vX.Y.Z" tag (e.g. via "Draft a new
+# release" -- typing a new tag there is enough, GitHub creates it for
+# you), so `make update` can install that version -- separate from
 # latest.yml's rolling "latest" tag/release, which keeps publishing on
 # every push to main exactly as before and is never touched by this
 # workflow.
@@ -23,8 +25,44 @@ on:
     types: [published]
 
 jobs:
-  docker:
+  version:
     if: startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - id: resolve
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: echo "version=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ github.event.release.tag_name }}
+      version: ${{ needs.version.outputs.version }}
+
+  assets:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: attach the binaries + UI to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG_NAME" dist/* --clobber --repo ${{ github.repository }}
+
+  docker:
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,13 +72,9 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: resolve version + sha
+      - name: resolve sha
         id: resolve
-        env:
-          TAG_NAME: ${{ github.event.release.tag_name }}
-        run: |
-          echo "version=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
@@ -60,8 +94,8 @@ jobs:
           push: true
           build-args: |
             GIT_SHA=${{ steps.resolve.outputs.sha }}
-            VERSION=${{ steps.resolve.outputs.version }}
-          tags: ghcr.io/${{ github.repository }}/axeos-services:${{ steps.resolve.outputs.version }}
+            VERSION=${{ needs.version.outputs.version }}
+          tags: ghcr.io/${{ github.repository }}/axeos-services:${{ needs.version.outputs.version }}
 
       - name: build + push dashboard image
         uses: docker/build-push-action@v6
@@ -70,4 +104,4 @@ jobs:
           file: docker/dashboard.Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}/axeos-dashboard:${{ steps.resolve.outputs.version }}
+          tags: ghcr.io/${{ github.repository }}/axeos-dashboard:${{ needs.version.outputs.version }}

@@ -22,7 +22,7 @@ func newAuditedRouter(t *testing.T, cfg config.Config) (http.Handler, *audit.Log
 	t.Helper()
 	log := audit.NewLog(t.TempDir())
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	return NewRouter(testLogger(), cfg, watcher, versionChecker).WithAuditLog(log).Handler(), log
 }
 
@@ -294,7 +294,7 @@ func TestRouter_auditRecordsTheCriticalChangesOfAConfigSave(t *testing.T) {
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 	log := audit.NewLog(t.TempDir())
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).WithAuditLog(log).Handler()
 
 	body := `{"bitaxes":[{"ip":"10.0.0.5","mac":"aabbccddeeff","hostname":"prof","enabled":true,"url":"pool.a","port":3333,"user":"bc1qevil.w1"}]}`
@@ -333,7 +333,7 @@ func TestRouter_auditRecordsASaveWithNoSensitiveChangeAsSuch(t *testing.T) {
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 	log := audit.NewLog(t.TempDir())
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).WithAuditLog(log).Handler()
 
 	// Only the alias changes: nothing sensitive, so the save's own type --
@@ -359,7 +359,7 @@ func TestRouter_auditIgnoresASaveThatChangesNothing(t *testing.T) {
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 	log := audit.NewLog(t.TempDir())
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).WithAuditLog(log).Handler()
 
 	body := `{"bitaxes":[{"ip":"10.0.0.5","mac":"aabbccddeeff","hostname":"prof","enabled":true}]}`
@@ -384,7 +384,7 @@ func TestRouter_auditDiffsConcurrentSavesOneAfterTheOther(t *testing.T) {
 	store := config.NewMinersStore(cfg.MinersFilePath, cfg.Bitaxes)
 	log := audit.NewLog(t.TempDir())
 	watcher := healtcheck.NewWatcher(testLogger(), cfg)
-	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev")
+	versionChecker := appversion.NewChecker(testLogger(), "http://example.invalid", "dev", "dev")
 	router := NewRouter(testLogger(), cfg, watcher, versionChecker).WithMinersStore(store).WithAuditLog(log).Handler()
 
 	const saves = 10

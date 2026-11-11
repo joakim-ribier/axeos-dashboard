@@ -60,7 +60,7 @@ Development -- on your machine
 
 Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
   restart                on the server: restart mailer, feeder and dashboard-api (systemd)
-  latest-update          on the server: install the latest GitHub release, then restart
+  update                 on the server: install the last vX.Y.Z release (RELEASE_TAG=0.2.0 / latest for another), then restart
   ...</pre>
 </div>
 
@@ -204,15 +204,27 @@ dans `dist/`.
       <td>redémarre mailer, feeder et dashboard-api</td>
     </tr>
     <tr>
-      <td><code>make latest-update</code></td>
-      <td>installe la release <code>latest</code>, puis redémarre</td>
+      <td><code>make update</code></td>
+      <td>installe la dernière release, puis redémarre</td>
     </tr>
   </tbody>
 </table>
 
-`make latest-update` télécharge les binaires de l'architecture du serveur
-(arm64 ou amd64, détectée seule), depuis la release `latest` : le dernier
-commit de `main`. Si un téléchargement échoue, rien n'est remplacé.
+`make update` télécharge les binaires de l'architecture du serveur
+(arm64 ou amd64, détectée seule). Sans rien, la dernière release ; avec
+`RELEASE_TAG=`, une version précise (pour y rester, ou revenir en
+arrière), ou `latest`, le dernier commit de `main`. Si un téléchargement
+échoue, rien n'est remplacé.
+
+<div class="terminal-card">
+  <div class="terminal-card-header">
+    <span class="terminal-card-icon">&gt;_</span>
+    <span class="terminal-card-title">Terminal</span>
+  </div>
+  <pre class="terminal-card-body"><span class="term-command">$ make update</span>
+<span class="term-command">$ make update RELEASE_TAG=0.2.0</span>
+<span class="term-command">$ make update RELEASE_TAG=latest</span></pre>
+</div>
 
 ## 🏷️ Releases
 {: #releases }

@@ -34,7 +34,7 @@ func main() {
 	}
 	logger := newLogger("remote-dashboard", logFile)
 
-	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleaseAPIURL, version.GitSHA)
+	versionChecker := appversion.NewChecker(logger, appversion.DefaultReleasesAPIURL, version.GitSHA, version.Version)
 	accessChecker := hashboardaccess.New(cfg.Storage.ResolveHashboardDataDir())
 
 	r := NewRouter(cfg, versionChecker, accessChecker)
