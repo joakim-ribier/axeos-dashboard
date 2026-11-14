@@ -162,10 +162,14 @@ deploy: build-linux ## copy the binaries, the UI, deploy/ and this Makefile to D
 #   curl -fLO https://github.com/joakim-ribier/axeos-dashboard/releases/latest/download/Makefile
 install: not-root ## on the server, the first time: the last stable version (RELEASE_TAG= as for update), a config.yml, the services started
 	@$(MAKE) --no-print-directory fetch
-	test -f config.yml || cp dist/deploy/config.yml.example config.yml
+	@if [ -f config.yml ]; then echo ">>> config.yml kept"; \
+	else cp dist/deploy/config.yml.example config.yml && echo ">>> config.yml written, from dist/deploy/config.yml.example"; fi
 	@$(MAKE) --no-print-directory install-services
-	sudo systemctl restart $(SERVICES)
-	@echo ">>> Running. nginx, once (sudo apt install nginx first), serves the UI and proxies the API:"
+	@sudo systemctl restart $(SERVICES) && echo ">>> Started: $(SERVICES)"
+	@echo ">>> nginx, once (sudo apt install nginx first), serves the UI and proxies the API:"
+	@d="$(CURDIR)"; while [ "$$d" != / ]; do \
+		[ -n "$$(find "$$d" -maxdepth 0 -perm -0001)" ] || echo "    chmod o+x $$d    # nginx (www-data) goes through it, without listing it"; \
+		d=$$(dirname "$$d"); done
 	@echo "    sed 's#@DEPLOY_DIR@#$(CURDIR)#g' dist/deploy/nginx-axeos-dashboard.conf | sudo tee /etc/nginx/sites-available/axeos-dashboard > /dev/null"
 	@echo "    sudo ln -sf /etc/nginx/sites-available/axeos-dashboard /etc/nginx/sites-enabled/ && sudo rm -f /etc/nginx/sites-enabled/default && sudo systemctl reload nginx"
 
@@ -175,13 +179,14 @@ not-root:
 	@[ "$$(id -u)" != 0 ] || { echo "Error: run it as the user the services run as, without sudo (it calls sudo itself)"; exit 1; }
 
 install-services: not-root ## on the server: install + enable the systemd services from dist/deploy/ (first time, and when they change)
-	for s in $(SERVICES); do \
+	@for s in $(SERVICES); do \
 		sed -e 's#@DEPLOY_DIR@#$(CURDIR)#g' -e 's#@DEPLOY_USER@#$(shell id -un)#g' dist/deploy/$$s.service > /tmp/$$s.service \
 		&& sudo install -m 644 /tmp/$$s.service /etc/systemd/system/ \
 		&& rm /tmp/$$s.service || exit 1; \
 	done
-	sudo systemctl daemon-reload
-	sudo systemctl enable $(SERVICES)
+	@sudo systemctl daemon-reload
+	@sudo systemctl enable --quiet $(SERVICES)
+	@echo ">>> Services installed and enabled, from $(CURDIR), as $(shell id -un)"
 	@$(MAKE) --no-print-directory install-aliases
 
 # One line in ~/.bashrc, added once.
@@ -192,7 +197,7 @@ install-aliases: ## on the server: the shortcuts (axeos-help...) at every login
 		|| { echo '$(ALIASES_LINE)' >> ~/.bashrc && echo ">>> Shortcuts added to ~/.bashrc -- new logins have them, or: . ~/.bashrc"; }
 
 restart: ## on the server: restart mailer, feeder and dashboard-api (systemd)
-	sudo systemctl restart $(SERVICES)
+	@sudo systemctl restart $(SERVICES) && echo ">>> Restarted: $(SERVICES)"
 
 RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/$(if $(RELEASE_TAG),download/$(if $(filter latest,$(RELEASE_TAG)),latest,v$(RELEASE_TAG)),latest/download)
 
@@ -203,26 +208,27 @@ RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/$(if $(RELEASE_TAG),do
 # daemon-reload): only said when they changed.
 fetch:
 	@echo ">>> Fetching '$(or $(RELEASE_TAG),the last stable version)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
-	mkdir -p dist/api
-	rm -rf dist/ui.new dist/ui.old dist/deploy.new dist/deploy.old Makefile.new
-	mkdir dist/ui.new dist/deploy.new
-	for bin in $(BINARIES); do curl -fL $(RELEASE_URL)/$$bin-$(RELEASE_ARCH) -o dist/api/$$bin.new || exit 1; done
-	curl -fL $(RELEASE_URL)/ui-dist.tar.gz | tar -xz -C dist/ui.new
-	test -f dist/ui.new/index.html
-	curl -fL $(RELEASE_URL)/deploy.tar.gz | tar -xz -C dist/deploy.new --strip-components=1
-	curl -fL $(RELEASE_URL)/Makefile -o Makefile.new
-	for bin in $(BINARIES); do chmod +x dist/api/$$bin.new && mv dist/api/$$bin.new dist/api/$$bin || exit 1; done
-	if [ -d dist/ui ]; then mv dist/ui dist/ui.old; fi
-	mv dist/ui.new dist/ui
-	rm -rf dist/ui.old
+	@mkdir -p dist/api
+	@rm -rf dist/ui.new dist/ui.old dist/deploy.new dist/deploy.old Makefile.new
+	@mkdir dist/ui.new dist/deploy.new
+	@for bin in $(BINARIES); do curl -fsSL $(RELEASE_URL)/$$bin-$(RELEASE_ARCH) -o dist/api/$$bin.new || exit 1; done
+	@curl -fsSL $(RELEASE_URL)/ui-dist.tar.gz | tar -xz -C dist/ui.new
+	@test -f dist/ui.new/index.html
+	@curl -fsSL $(RELEASE_URL)/deploy.tar.gz | tar -xz -C dist/deploy.new --strip-components=1
+	@curl -fsSL $(RELEASE_URL)/Makefile -o Makefile.new
+	@for bin in $(BINARIES); do chmod +x dist/api/$$bin.new && mv dist/api/$$bin.new dist/api/$$bin || exit 1; done
+	@if [ -d dist/ui ]; then mv dist/ui dist/ui.old; fi
+	@mv dist/ui.new dist/ui
+	@rm -rf dist/ui.old
 	@changed=; if [ -d dist/deploy ]; then \
 		for s in $(SERVICES); do cmp -s dist/deploy/$$s.service dist/deploy.new/$$s.service || changed=1; done; \
 		mv dist/deploy dist/deploy.old; fi; \
 	mv dist/deploy.new dist/deploy && rm -rf dist/deploy.old && mv Makefile.new Makefile; \
+	echo ">>> In place: dist/api, dist/ui, dist/deploy and this Makefile"; \
 	if [ -n "$$changed" ]; then echo ">>> The systemd services changed: make install-services, to install them"; fi
 
 update: fetch ## on the server: the last stable version, then restart -- RELEASE_TAG=1.0.0 a given one, RELEASE_TAG=latest the last commit on main
-	sudo systemctl restart $(SERVICES)
+	@sudo systemctl restart $(SERVICES) && echo ">>> Restarted: $(SERVICES)"
 
 check-config:
 	@test -f "$(CONFIG)" || { echo "Error: config file $(CONFIG) not found (CONFIG=...)"; exit 1; }

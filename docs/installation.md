@@ -163,7 +163,10 @@ votre utilisateur, et ajoute les raccourcis `axeos-*` à votre `~/.bashrc`.
 Une version précise : `make install RELEASE_TAG=1.0.0`.
 
 nginx, une fois, sert l'interface et relaie l'API : `make install` affiche
-à la fin ses deux commandes, déjà remplies avec ce dossier.
+à la fin ses deux commandes, déjà remplies avec ce dossier. nginx doit
+pouvoir traverser chaque dossier du chemin : pour un dossier qui ne le
+permet pas (un dossier personnel en `700`, par exemple), il affiche aussi
+le `chmod o+x` à lancer, qui ne permet pas d'en lister le contenu.
 
 Les mises à jour : `make update`, ou `axeos-update` (voir
 [Makefile › Serveur](makefile.html#serveur)).
