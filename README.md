@@ -93,7 +93,8 @@ kinds of GitHub Release:
 - **`latest`** — republished on every push to `main` once `checks.yml`
   succeeds ([`latest.yml`](.github/workflows/latest.yml)).
 
-`make versions` lists them, `make update` installs one on the server.
+`make versions` lists them, `make update` installs one on the server, with
+its Makefile and `deploy/`.
 A board's VPS takes the release's `remote-dashboard-api-amd64` and
 `ui-dist.tar.gz`.
 

@@ -1,7 +1,8 @@
 name: Build
 
 # The release files -- every binary for linux/arm64 (Raspberry Pi) and
-# linux/amd64 (typical VPS), and the UI -- built once here for both
+# linux/amd64 (typical VPS), the UI, and the Makefile + deploy/ that
+# `make update` refreshes on the server -- built once here for both
 # latest.yml (the rolling "latest") and release.yml (a vX.Y.Z), so the two
 # never ship different things. Left as the binaries-* artifacts.
 on:
@@ -12,7 +13,7 @@ on:
         required: true
         type: string
       version:
-        description: internal/version.Version -- "0.2.0" for v0.2.0, "dev" for a rolling build
+        description: internal/version.Version -- "1.0.0" for v1.0.0, "dev" for a rolling build
         required: false
         type: string
         default: dev
@@ -76,8 +77,16 @@ jobs:
           mkdir -p ../dist
           tar -czf ../dist/ui-dist.tar.gz -C dist .
 
+      - name: pack the Makefile and deploy/
+        run: |
+          cp Makefile dist/
+          tar -czf dist/deploy.tar.gz deploy
+
       - uses: actions/upload-artifact@v7
         with:
           name: binaries-ui
-          path: dist/ui-dist.tar.gz
+          path: |
+            dist/ui-dist.tar.gz
+            dist/Makefile
+            dist/deploy.tar.gz
           retention-days: 1

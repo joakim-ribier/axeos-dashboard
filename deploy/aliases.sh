@@ -15,7 +15,7 @@ axeos-help() {
   cat <<EOF
 axeos          go to $AXEOS_DIR
 axeos-restart  restart dashboard-api, feeder and mailer
-axeos-update   update to the last release, and restart (RELEASE_TAG=0.2.0 axeos-update for another)
+axeos-update   update to the last release, and restart (RELEASE_TAG=1.0.0 axeos-update for another)
 axeos-status   status of the three services
 axeos-logs     their logs, live (Ctrl+C to quit)
 axeos-help     this list

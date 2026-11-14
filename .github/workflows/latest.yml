@@ -171,3 +171,5 @@ jobs:
             dist/rebuild-totals-arm64
             dist/rebuild-totals-amd64
             dist/ui-dist.tar.gz
+            dist/Makefile
+            dist/deploy.tar.gz

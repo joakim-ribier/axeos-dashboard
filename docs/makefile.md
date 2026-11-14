@@ -60,7 +60,7 @@ Development -- on your machine
 
 Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
   restart                on the server: restart mailer, feeder and dashboard-api (systemd)
-  update                 on the server: install the last vX.Y.Z release (RELEASE_TAG=0.2.0 / latest for another), then restart
+  update                 on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / latest for another), then restart
   ...</pre>
 </div>
 
@@ -213,8 +213,11 @@ dans `dist/`.
 `make update` télécharge les binaires de l'architecture du serveur
 (arm64 ou amd64, détectée seule). Sans rien, la dernière release ; avec
 `RELEASE_TAG=`, une version précise (pour y rester, ou revenir en
-arrière), ou `latest`, le dernier commit de `main`. Si un téléchargement
-échoue, rien n'est remplacé.
+arrière), ou `latest`, le dernier commit de `main`. Le Makefile et
+`dist/deploy/` viennent avec la release : la mise à jour suivante utilise
+déjà les siens. Si les services systemd ont changé, elle le dit :
+`make install-services` pour les installer. Si un téléchargement échoue,
+rien n'est remplacé.
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -222,7 +225,7 @@ arrière), ou `latest`, le dernier commit de `main`. Si un téléchargement
     <span class="terminal-card-title">Terminal</span>
   </div>
   <pre class="terminal-card-body"><span class="term-command">$ make update</span>
-<span class="term-command">$ make update RELEASE_TAG=0.2.0</span>
+<span class="term-command">$ make update RELEASE_TAG=1.0.0</span>
 <span class="term-command">$ make update RELEASE_TAG=latest</span></pre>
 </div>
 
@@ -240,5 +243,5 @@ ancienne.
   </div>
   <pre class="terminal-card-body"><span class="term-command">$ make versions</span>
 latest    e72f5e3
-releases  v0.2.0 v0.1.0</pre>
+releases  v1.0.0 v0.1.0</pre>
 </div>

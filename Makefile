@@ -28,7 +28,7 @@ BIN_DIR := resources/build/server/bin
 
 # GitHub repo + release used by `make update` (CI-built binaries for the local
 # architecture instead of building locally). No RELEASE_TAG: the last vX.Y.Z
-# release; RELEASE_TAG=0.2.0 for release v0.2.0, RELEASE_TAG=latest for main's tip.
+# release; RELEASE_TAG=1.0.0 for release v1.0.0, RELEASE_TAG=latest for main's tip.
 GITHUB_REPO ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG ?=
 
@@ -182,19 +182,29 @@ restart: ## on the server: restart mailer, feeder and dashboard-api (systemd)
 
 RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/$(if $(RELEASE_TAG),download/$(if $(filter latest,$(RELEASE_TAG)),latest,v$(RELEASE_TAG)),latest/download)
 
-# Downloaded beside, then swapped: a failed download changes nothing.
-update: ## on the server: install the last vX.Y.Z release (RELEASE_TAG=0.2.0 / latest for another), then restart
+# Everything downloaded beside, then swapped: a failed download changes nothing.
+# This Makefile and dist/deploy/ come with the release too, so the next update
+# runs the release's own; make has read this one already, replacing it is safe.
+# The services themselves are installed by install-services (sudo, a
+# daemon-reload): only said when they changed.
+update: ## on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / latest for another), then restart
 	@echo ">>> Fetching release '$(or $(RELEASE_TAG),the last vX.Y.Z)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
 	mkdir -p dist/api
-	rm -rf dist/ui.new dist/ui.old
-	mkdir dist/ui.new
+	rm -rf dist/ui.new dist/ui.old dist/deploy.new dist/deploy.old Makefile.new
+	mkdir dist/ui.new dist/deploy.new
 	for bin in $(BINARIES); do curl -fL $(RELEASE_URL)/$$bin-$(RELEASE_ARCH) -o dist/api/$$bin.new || exit 1; done
 	curl -fL $(RELEASE_URL)/ui-dist.tar.gz | tar -xz -C dist/ui.new
 	test -f dist/ui.new/index.html
+	curl -fL $(RELEASE_URL)/deploy.tar.gz | tar -xz -C dist/deploy.new --strip-components=1
+	curl -fL $(RELEASE_URL)/Makefile -o Makefile.new
 	for bin in $(BINARIES); do chmod +x dist/api/$$bin.new && mv dist/api/$$bin.new dist/api/$$bin || exit 1; done
 	if [ -d dist/ui ]; then mv dist/ui dist/ui.old; fi
 	mv dist/ui.new dist/ui
 	rm -rf dist/ui.old
+	@changed=; for s in $(SERVICES); do cmp -s dist/deploy/$$s.service dist/deploy.new/$$s.service || changed=1; done; \
+	if [ -d dist/deploy ]; then mv dist/deploy dist/deploy.old; fi; \
+	mv dist/deploy.new dist/deploy && rm -rf dist/deploy.old && mv Makefile.new Makefile; \
+	if [ -n "$$changed" ]; then echo ">>> The systemd services changed: make install-services, to install them"; fi
 	sudo systemctl restart $(SERVICES)
 
 check-config:
