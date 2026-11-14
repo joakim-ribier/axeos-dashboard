@@ -142,9 +142,31 @@ folder:
 ## 💻 Native
 {: #native }
 
-{: .note }
-> A `native-install.sh` script will be shipped to make installing the
-> individual services easier.
+Without Docker, with the release's binaries: in the folder the services
+will run from, as a user with `sudo`, the Makefile alone is enough.
+
+<div class="terminal-card">
+  <div class="terminal-card-header">
+    <span class="terminal-card-icon">&gt;_</span>
+    <span class="terminal-card-title">Terminal</span>
+  </div>
+  <pre class="terminal-card-body"><span class="term-command">$ mkdir ~/axeos-dashboard && cd ~/axeos-dashboard</span>
+<span class="term-command">$ curl -fLO https://github.com/joakim-ribier/axeos-dashboard/releases/latest/download/Makefile</span>
+<span class="term-command">$ make install</span></pre>
+</div>
+
+`make install` downloads the last stable version (the binaries for the server's
+architecture, the UI, the Makefile and `deploy/`), writes a `config.yml`
+(never over an existing one), installs and starts the systemd services
+(feeder, dashboard-api, mailer) from this folder, as your user, and adds the
+`axeos-*` shortcuts to your `~/.bashrc`. A given version:
+`make install RELEASE_TAG=1.0.0`.
+
+nginx, once, serves the UI and proxies the API: `make install` prints its
+two commands at the end, already filled in with this folder.
+
+Updates: `make update`, or `axeos-update` (see
+[Makefile › Server](makefile.html#server)).
 
 ---
 

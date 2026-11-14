@@ -1,0 +1,23 @@
+# config.yml of a native install -- written by `make install` the first time,
+# never over an existing one. Launch settings only, read by dashboard-api,
+# feeder and mailer at startup (make restart after a change); everything else
+# is set from the UI.
+global:
+  env: prod
+server:
+  port: "8080"          # what nginx proxies /api/ to
+mailer:
+  port: "8082"          # loopback only
+storage:
+  dataDir: .            # this folder: the history lands in data/, next to this file
+feeder:
+  interval: 2m
+healthCheck:
+  interval: 1m
+endpoints:
+  timeout: 5s
+  info: api/system/info
+  system: api/system
+  restart: api/system/restart
+firmware:
+  cacheTTL: 24h

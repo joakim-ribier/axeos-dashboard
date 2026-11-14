@@ -31,15 +31,16 @@ make rebuild-totals                                      # totals.json from the 
 
 ```bash
 make deploy            # from your machine: a local build into dist/ on DEPLOY_HOST, nothing restarted
+make install           # on the server, the first time, with the release's Makefile alone (curl -fLO .../releases/latest/download/Makefile): release + config.yml + services started
 make install-services  # on the server: the systemd services from deploy/, the first time and when they change
 make restart           # on the server: mailer, then feeder, then dashboard-api
-make update            # on the server: from the last vX.Y.Z release, restarted (RELEASE_TAG=1.0.0 / latest for another) -- with the release's Makefile and deploy/
+make update            # on the server: the last stable version, restarted -- RELEASE_TAG=1.0.0 a given one, RELEASE_TAG=latest the last commit on main; with the release's Makefile and deploy/
 make versions          # the releases on GitHub: latest's commit, every vX.Y.Z
 ```
 
-On the server, `deploy/aliases.sh` (in `dist/deploy/`, loaded from `~/.bashrc`): `axeos-restart`, `axeos-update`, `axeos-status`, `axeos-logs`.
+On the server, `deploy/aliases.sh` (in `dist/deploy/`, loaded from `~/.bashrc`): `axeos-restart`, `axeos-update`, `axeos-update-latest`, `axeos-status`, `axeos-logs`.
 
-The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_DIR`), yours in `Makefile.local`, not versioned -- `make init` writes it, asking for each.
+The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_DIR`, for `make deploy` only -- the server works from its own folder, as the user running it), yours in `Makefile.local`, not versioned -- `make init` writes it, asking for each.
 
 ### Build & Lint
 

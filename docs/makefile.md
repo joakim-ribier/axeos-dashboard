@@ -58,7 +58,7 @@ Development -- on your machine
   run-&lt;service&gt;          one service alone, from the last build (CONFIG=...)
   ...
 
-Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
+Server -- on the server itself, in its folder (everything it runs lives in dist/)
   restart                on the server: restart mailer, feeder and dashboard-api (systemd)
   update                 on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / latest for another), then restart
   ...</pre>
@@ -139,9 +139,8 @@ l'historique : voir [Scripts](rebuild-totals.html#rebuild-totals).
 De votre machine vers votre serveur, sans passer par une release : pour
 essayer une modification avant de la publier.
 
-Le serveur se décrit en trois valeurs : son alias SSH, l'utilisateur sous
-lequel tournent les services et son dossier. `make init` les demande une à
-une et les écrit dans `Makefile.local`, à côté du Makefile (non versionné).
+Le serveur se décrit en deux valeurs : son alias SSH et son dossier.
+`make init` les demande une à une et les écrit dans `Makefile.local`, à côté du Makefile (non versionné).
 Entrée garde la valeur proposée. Les valeurs remplacées restent en
 commentaire, datées :
 
@@ -152,16 +151,13 @@ commentaire, datées :
   </div>
   <pre class="terminal-card-body"><span class="term-command">$ make init</span>
 SSH alias of the server [server-dev]: pi
-User its services run as [debian]:
 Its folder [/home/debian/axeos-bitaxe-dashboard]: /home/debian/axeos
 >>> Makefile.local written:
 DEPLOY_HOST := pi
-DEPLOY_USER := debian
 DEPLOY_DIR  := /home/debian/axeos
 
 <span class="term-comment"># Replaced on 2026-11-14 10:12:</span>
 <span class="term-comment"># DEPLOY_HOST := server-dev</span>
-<span class="term-comment"># DEPLOY_USER := debian</span>
 <span class="term-comment"># DEPLOY_DIR  := /home/debian/axeos-bitaxe-dashboard</span></pre>
 </div>
 
@@ -196,6 +192,10 @@ dans `dist/`.
   </thead>
   <tbody>
     <tr>
+      <td><code>make install</code></td>
+      <td>la première fois : la dernière version stable, un <code>config.yml</code>, les services installés et démarrés (voir <a href="installation.html#native">Installation › Native</a>)</td>
+    </tr>
+    <tr>
       <td><code>make install-services</code></td>
       <td>installe et active les services systemd (la première fois, et quand ils changent), plus les raccourcis <code>axeos-*</code></td>
     </tr>
@@ -205,15 +205,15 @@ dans `dist/`.
     </tr>
     <tr>
       <td><code>make update</code></td>
-      <td>installe la dernière release, puis redémarre</td>
+      <td>installe la dernière version stable (ou une autre, ci-dessous), puis redémarre</td>
     </tr>
   </tbody>
 </table>
 
 `make update` télécharge les binaires de l'architecture du serveur
-(arm64 ou amd64, détectée seule). Sans rien, la dernière release ; avec
-`RELEASE_TAG=`, une version précise (pour y rester, ou revenir en
-arrière), ou `latest`, le dernier commit de `main`. Le Makefile et
+(arm64 ou amd64, détectée seule), selon ce qu'on lui demande (ci-dessous) :
+`axeos-update` fait le premier cas, `axeos-update-latest` le dernier. Le
+Makefile et
 `dist/deploy/` viennent avec la release : la mise à jour suivante utilise
 déjà les siens. Si les services systemd ont changé, elle le dit :
 `make install-services` pour les installer. Si un téléchargement échoue,
@@ -224,9 +224,9 @@ rien n'est remplacé.
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ make update</span>
-<span class="term-command">$ make update RELEASE_TAG=1.0.0</span>
-<span class="term-command">$ make update RELEASE_TAG=latest</span></pre>
+  <pre class="terminal-card-body"><span class="term-command">$ make update</span>                      <span class="term-comment"># la dernière version stable</span>
+<span class="term-command">$ make update RELEASE_TAG=1.0.0</span>    <span class="term-comment"># une version précise (pour y rester, ou revenir en arrière)</span>
+<span class="term-command">$ make update RELEASE_TAG=latest</span>   <span class="term-comment"># le dernier commit sur main</span></pre>
 </div>
 
 ## 🏷️ Releases

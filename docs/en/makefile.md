@@ -58,7 +58,7 @@ Development -- on your machine
   run-&lt;service&gt;          one service alone, from the last build (CONFIG=...)
   ...
 
-Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
+Server -- on the server itself, in its folder (everything it runs lives in dist/)
   restart                on the server: restart mailer, feeder and dashboard-api (systemd)
   update                 on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / latest for another), then restart
   ...</pre>
@@ -139,8 +139,8 @@ see [Scripts](rebuild-totals.html#rebuild-totals).
 From your machine to your server, without a release: to try a change out
 before publishing it.
 
-The server comes down to three values: its SSH alias, the user its
-services run as and its folder. `make init` asks for each and writes them
+The server comes down to two values: its SSH alias and its folder.
+`make init` asks for each and writes them
 into `Makefile.local`, next to the Makefile (not versioned). Enter keeps
 the value shown. The values it replaces stay as comments, dated:
 
@@ -151,16 +151,13 @@ the value shown. The values it replaces stay as comments, dated:
   </div>
   <pre class="terminal-card-body"><span class="term-command">$ make init</span>
 SSH alias of the server [server-dev]: pi
-User its services run as [debian]:
 Its folder [/home/debian/axeos-bitaxe-dashboard]: /home/debian/axeos
 >>> Makefile.local written:
 DEPLOY_HOST := pi
-DEPLOY_USER := debian
 DEPLOY_DIR  := /home/debian/axeos
 
 <span class="term-comment"># Replaced on 2026-11-14 10:12:</span>
 <span class="term-comment"># DEPLOY_HOST := server-dev</span>
-<span class="term-comment"># DEPLOY_USER := debian</span>
 <span class="term-comment"># DEPLOY_DIR  := /home/debian/axeos-bitaxe-dashboard</span></pre>
 </div>
 
@@ -193,6 +190,10 @@ On the server itself, in its folder: everything it runs is in `dist/`.
   </thead>
   <tbody>
     <tr>
+      <td><code>make install</code></td>
+      <td>the first time: the last stable version, a <code>config.yml</code>, the services installed and started (see <a href="installation.html#native">Installation › Native</a>)</td>
+    </tr>
+    <tr>
       <td><code>make install-services</code></td>
       <td>installs and enables the systemd services (the first time, and when they change), plus the <code>axeos-*</code> shortcuts</td>
     </tr>
@@ -202,15 +203,14 @@ On the server itself, in its folder: everything it runs is in `dist/`.
     </tr>
     <tr>
       <td><code>make update</code></td>
-      <td>installs the last release, then restarts</td>
+      <td>installs the last stable version (or another, below), then restarts</td>
     </tr>
   </tbody>
 </table>
 
 `make update` downloads the binaries for the server's architecture (arm64
-or amd64, detected on its own). With nothing, the last release; with
-`RELEASE_TAG=`, a given version (to stay on it, or go back), or `latest`,
-the last commit on `main`. The Makefile and `dist/deploy/` come with the
+or amd64, detected on its own), as asked (below): `axeos-update` does the
+first, `axeos-update-latest` the last. The Makefile and `dist/deploy/` come with the
 release: the next update already runs its own. If the systemd services
 changed, it says so: `make install-services` to install them. If a download
 fails, nothing is replaced.
@@ -220,9 +220,9 @@ fails, nothing is replaced.
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ make update</span>
-<span class="term-command">$ make update RELEASE_TAG=1.0.0</span>
-<span class="term-command">$ make update RELEASE_TAG=latest</span></pre>
+  <pre class="terminal-card-body"><span class="term-command">$ make update</span>                      <span class="term-comment"># the last stable version</span>
+<span class="term-command">$ make update RELEASE_TAG=1.0.0</span>    <span class="term-comment"># a given version (to stay on it, or go back)</span>
+<span class="term-command">$ make update RELEASE_TAG=latest</span>   <span class="term-comment"># the last commit on main</span></pre>
 </div>
 
 ## 🏷️ Releases
