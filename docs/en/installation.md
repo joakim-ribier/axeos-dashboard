@@ -46,7 +46,7 @@ subnav:
   by hand.
 
 The version to install is required, via `IMAGE_TAG`: `latest` for the very
-newest, or a specific release (e.g. `0.2.0`).
+newest, or a specific release (e.g. `1.0.0`).
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -85,7 +85,7 @@ remembered from one run to the next.
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=0.2.0 bash</span></pre>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=1.0.0 bash</span></pre>
 </div>
 
 ### Structure

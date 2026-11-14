@@ -1,6 +1,6 @@
 // Package appversion checks whether a newer build of this dashboard app
 // itself has been published: a release build (internal/version.Version set,
-// e.g. "0.2.0") against the last vX.Y.Z release, any other build by its git
+// e.g. "1.0.0") against the last vX.Y.Z release, any other build by its git
 // SHA (internal/version.GitSHA) against the commit the rolling "latest"
 // release points at -- each follows what it was installed from.
 //
