@@ -163,7 +163,10 @@ architecture, the UI, the Makefile and `deploy/`), writes a `config.yml`
 `make install RELEASE_TAG=1.0.0`.
 
 nginx, once, serves the UI and proxies the API: `make install` prints its
-two commands at the end, already filled in with this folder.
+two commands at the end, already filled in with this folder. nginx must be
+able to go through every folder on the path: for one that doesn't let it
+(a home folder in `700`, for instance), it also prints the `chmod o+x` to
+run, which doesn't let it list what's inside.
 
 Updates: `make update`, or `axeos-update` (see
 [Makefile › Server](makefile.html#server)).
