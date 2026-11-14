@@ -4,8 +4,18 @@
 # mix with the source tree (and can be gitignored as a single folder).
 # Build context is untouched (still resolved from docker-compose.yml's own
 # directory, the repo root), so this only changes where data lands on disk.
+#
+# Its own project and container names, whatever folder or worktree it's run
+# from: a rerun replaces the same dev stack, and it never collides with a
+# real install's axeos-services / axeos-dashboard on the same machine.
+name: axeos-dashboard-dev
+
 services:
   services:
+    container_name: axeos-dev-services
     volumes:
       - ./axeos-dashboard/config:/config
       - ./axeos-dashboard/storage:/data
+
+  dashboard:
+    container_name: axeos-dev-dashboard

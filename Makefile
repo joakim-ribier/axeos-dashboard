@@ -5,7 +5,8 @@
 # The server, the only three values to change for yours: its SSH alias, the user
 # its services run as, and its folder. `make deploy` copies there,
 # `make install-services` writes them into deploy/*.service. Yours go in
-# Makefile.local (same lines, not versioned), which `make deploy` copies too. A
+# Makefile.local (same lines, not versioned -- `make init` writes it), which
+# `make deploy` copies too. A
 # := so a stale one exported in a shell can't send a deploy elsewhere; the
 # command line still wins.
 DEPLOY_HOST := server-dev
@@ -13,19 +14,22 @@ DEPLOY_USER := debian
 DEPLOY_DIR  := /home/debian/axeos-bitaxe-dashboard
 -include Makefile.local
 
-# Listening port for dashboard-api (must match server.port in CONFIG_FILE)
+# Listening port for dashboard-api (must match server.port in CONFIG)
 DASHBOARD_API_PORT ?= 8080
-
-# Path to the configuration file
-CONFIG_FILE ?= resources/dashboard.yml
 
 # The UI dev server's port, fixed (--strictPort: a port in use fails rather
 # than moving to the next one).
 DASHBOARD_UI_PORT ?= 5174
 
-# GitHub repo + release used by `make latest-update` (CI-built binaries for the local architecture instead of building locally)
-GITHUB_REPO       ?= joakim-ribier/axeos-dashboard
-RELEASE_TAG       ?= latest
+# The configuration file every run-* target starts with
+CONFIG ?= resources/dashboard.yml
+
+BIN_DIR := resources/build/server/bin
+
+# GitHub repo + release used by `make latest-update` (CI-built binaries for the
+# local architecture instead of building locally)
+GITHUB_REPO ?= joakim-ribier/axeos-dashboard
+RELEASE_TAG ?= latest
 
 # Auto-detected local architecture, used to pick the right release asset
 # (feeder-$(RELEASE_ARCH), dashboard-api-$(RELEASE_ARCH), ...). Override if
@@ -41,217 +45,121 @@ else
 RELEASE_ARCH ?= $(UNAME_ARCH)
 endif
 
-# ==============================================================================
-# Build Configuration
-# ==============================================================================
+UI_DIR   := ui
+BINARIES := dashboard-api feeder mailer rebuild-totals
+SERVICES := axeos-dashboard-api axeos-dashboard-feeder axeos-dashboard-mailer
 
-# Output directory for compiled binaries
-SERVER_BUILD_DIR := resources/build/server/bin
-
-# Git SHA baked into each binary (exposed via GET /api/miners as buildSHA) —
-# lets you confirm you're running the version you expect, e.g. after `make latest-update`.
-GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
+# Git SHA baked into each binary (exposed via GET /api/info as buildSHA) --
+# lets you confirm you're running the version you expect.
+GIT_SHA   := $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 GIT_DIRTY := $(shell git diff --quiet 2>/dev/null || echo -dirty)
 VERSION_LDFLAGS := -ldflags "-X github.com/joakimribier/axeos-bitaxe-dashboard/server/internal/version.GitSHA=$(GIT_SHA)$(GIT_DIRTY)"
 
-# ==============================================================================
-# Phony Targets (Virtual commands, not actual files)
-# ==============================================================================
-.PHONY: all build clean help lintAll test swagger run-dashboard-api run-feeder run-mailer run-dashboard-ui rebuild-totals dev-up dev-down install-services install-aliases restart latest-update run build-ui build-linux deploy docker-build docs-serve
+# Every binary of BINARIES into BIN_DIR; $(1): the GOOS/GOARCH to build for, none for this machine.
+go-build = mkdir -p $(BIN_DIR) && cd server && for bin in $(BINARIES); do \
+	$(1) go build $(VERSION_LDFLAGS) -o ../$(BIN_DIR)/$$bin ./cmd/$$bin || exit 1; done
 
-# ==============================================================================
-# Main Commands
-# ==============================================================================
+.DEFAULT_GOAL := help
+.PHONY: help init run run-dashboard-api run-feeder run-mailer run-dashboard-ui docker build build-ui clean \
+	lint test swagger docs build-linux deploy \
+	install-services install-aliases restart latest-update versions rebuild-totals check-config
 
-# Default target: build everything
-all: build
+help: ## this list
+	@awk 'BEGIN { FS = ":.*## " } \
+		/^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } \
+		/^[a-z][a-zA-Z_ -]*:.*## / { n = split($$1, t, " "); printf "  \033[36m%-22s\033[0m %s\n", (n > 1 ? "run-<service>" : t[1]), $$2 }' $(MAKEFILE_LIST)
 
-# Build all binaries
-build:
-	@echo ">>> Compiling both projects..."
-	@mkdir -p $(SERVER_BUILD_DIR)
+##@ Development -- on your machine
 
-	# Build FEEDER binary
-	@echo "   - Building feeder..."
-	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
+# Mailer first: the feeder and dashboard-api both call it. Each line is
+# prefixed with the process it comes from; Ctrl+C stops them all.
+run: build check-config ## the whole stack in this console: mailer, feeder, dashboard-api, UI (:5174) -- Ctrl+C stops it
+	@trap 'kill 0' INT TERM; \
+	$(BIN_DIR)/mailer -config $(CONFIG) 2>&1 | sed -l 's/^/[mailer] /' & \
+	$(BIN_DIR)/feeder -config $(CONFIG) 2>&1 | sed -l 's/^/[feeder] /' & \
+	$(BIN_DIR)/dashboard-api -config $(CONFIG) 2>&1 | sed -l 's/^/[api]    /' & \
+	(cd $(UI_DIR) && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort) 2>&1 | sed -l 's/^/[ui]     /' & \
+	wait
 
-	# Build MAILER binary
-	@echo "   - Building mailer..."
-	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/mailer ./cmd/mailer
+run-dashboard-api run-feeder run-mailer: run-%: check-config ## one service alone, from the last build (CONFIG=...)
+	$(BIN_DIR)/$* -config $(CONFIG)
 
-	# Build DASHBOARD-API binary
-	@echo "   - Building dashboard-api..."
-	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
+run-dashboard-ui: ## the UI dev server alone → dashboard-api (:8080)
+	cd $(UI_DIR) && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort
 
-	# Build REBUILD-TOTALS binary (one-off tool, not part of the running stack)
-	@echo "   - Building rebuild-totals..."
-	cd server && go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
+docker: ## the Docker images from this checkout (uncommitted changes included), then the stack started (HTTP_PORT=...)
+	./docker-build-dev.sh
 
-	@echo ">>> Success! Binaries available in $(SERVER_BUILD_DIR)/"
+build: ## compile dashboard-api, feeder, mailer, rebuild-totals
+	$(call go-build,)
 
-# Build the "app" Docker image with the same version stamping as `build`
-# (GIT_SHA + GIT_DIRTY) baked in via --build-arg, instead of the
-# Dockerfile's own "dev" placeholder -- so a locally built image reports
-# which commit it came from, same as a locally built binary does.
-docker-build:
-	@echo ">>> Building Docker images (GIT_SHA=$(GIT_SHA)$(GIT_DIRTY))..."
-	docker compose build --build-arg GIT_SHA=$(GIT_SHA)$(GIT_DIRTY)
+build-ui: ## build the UI (ui/dist)
+	cd $(UI_DIR) && npm run build
 
-# Run linter on all Go packages
-lintAll:
-	@echo ">>> Running linter on all packages..."
-	cd server && golangci-lint run ./...
-	@echo ">>> Linting complete."
+clean: ## remove the compiled binaries
+	rm -rf $(BIN_DIR)
 
-# Run the Go test suite with race detection and coverage
-test:
-	@echo ">>> Running Go test suite..."
-	cd server && go test ./... -race -cover
-	@echo ">>> Tests complete."
-
-# Regenerate the OpenAPI spec from @-annotations in internal/handler and cmd/dashboard-api,
-# and refresh the copy the docs site's Redoc page (docs/en/api.md, docs/api.md) reads from.
-swagger:
-	@echo ">>> Regenerating OpenAPI spec..."
-	cd server && go tool swag init -g cmd/dashboard-api/main.go -o docs/swagger --outputTypes json,yaml --parseInternal
-	cp server/docs/swagger/swagger.json docs/assets/api/swagger.json
-	@echo ">>> Done. See server/docs/swagger/swagger.yaml and docs/assets/api/swagger.json"
-
-# Serve the docs site (GitHub Pages / Jekyll) locally, with live rebuild
-docs-serve:
-	@echo ">>> Starting Jekyll docs server..."
-	cd docs && jekyll serve
-
-# Clean build artifacts
-clean:
-	@echo ">>> Cleaning $(SERVER_BUILD_DIR)..."
-	rm -rf $(SERVER_BUILD_DIR)
-	@echo ">>> Done."
-
-# Run dashboard-api with the specified configuration file
-run-dashboard-api:
-	@echo ">>> Starting dashboard-api with config: $(CONFIG_FILE)..."
-	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)
-
-# Run feeder with the specified configuration file
-run-feeder:
-	@echo ">>> Starting feeder with config: $(CONFIG_FILE)..."
-	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)
-
-# Run mailer (scheduled mails: the audit report) with the specified configuration file
-run-mailer:
-	@echo ">>> Starting mailer with config: $(CONFIG_FILE)..."
-	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)
-
-# Reconstruct totals.json (persistent, reboot-surviving uptime/shares/
-# electricity-cost counters) from each miner's full JSONL history. Safe by
-# default: DRY_RUN=1 unless overridden, and the tool itself backs up any
-# existing totals.json before overwriting it. Examples:
-#   make rebuild-totals                              # dry-run, all miners
-#   make rebuild-totals MINER=aabbccddeeff            # dry-run, one miner
-#   make rebuild-totals MINER=aabbccddeeff DRY_RUN=   # write it for real, one miner
-#   make rebuild-totals DRY_RUN=                      # write it for real, all miners
-#   make rebuild-totals DRY_RUN= FALLBACK_RATE=0.15   # ...billing pre-tracking polls at €0.15/kWh instead of today's configured rate
+# totals.json (uptime/shares/electricity counters that survive reboots) rebuilt
+# from each miner's whole JSONL history. Dry run unless DRY_RUN= is given; the
+# tool backs up any existing totals.json before writing it. Examples:
+#   make rebuild-totals                              # dry run, all miners
+#   make rebuild-totals MINER=aabbccddeeff DRY_RUN=  # for real, one miner
+#   make rebuild-totals DRY_RUN= FALLBACK_RATE=0.15  # polls from before the rate was tracked at €0.15/kWh
 DRY_RUN ?= 1
 MINER ?=
 FALLBACK_RATE ?=
-DRY_RUN_FLAG = $(if $(DRY_RUN),-dry-run=true,-dry-run=false)
-MINER_FLAG = $(if $(MINER),-miner $(MINER),)
-FALLBACK_RATE_FLAG = $(if $(FALLBACK_RATE),-fallback-rate $(FALLBACK_RATE),)
-rebuild-totals:
-	@echo ">>> Backfilling totals.json (config: $(CONFIG_FILE))..."
-	@if [ ! -f "$(CONFIG_FILE)" ]; then echo "Error: Config file $(CONFIG_FILE) not found."; exit 1; fi
-	@$(SERVER_BUILD_DIR)/rebuild-totals -config $(CONFIG_FILE) $(DRY_RUN_FLAG) $(MINER_FLAG) $(FALLBACK_RATE_FLAG)
+rebuild-totals: check-config ## rebuild totals.json from the history (dry run unless DRY_RUN=; MINER=, FALLBACK_RATE=)
+	$(BIN_DIR)/rebuild-totals -config $(CONFIG) -dry-run=$(if $(DRY_RUN),true,false) \
+		$(if $(MINER),-miner $(MINER)) $(if $(FALLBACK_RATE),-fallback-rate $(FALLBACK_RATE))
 
-# Run UI dev server → dashboard-api
-run-dashboard-ui:
-	@echo ">>> Starting UI dev server → dashboard-api (:$(DASHBOARD_API_PORT))..."
-	@if [ ! -d "ui" ]; then echo "Error: UI directory not found."; exit 1; fi
-	cd ui && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort
+##@ Quality -- on your machine
 
-# ==============================================================================
-# Dev Environment (UI + APIs via screen)
-# ==============================================================================
+lint: ## golangci-lint on every Go package
+	cd server && golangci-lint run ./...
 
-SCREEN_NAME := axeos-dashboard
-ROOT_DIR := $(shell pwd)
-UI_DIR := ui
+test: ## the Go tests, with the race detector and coverage
+	cd server && go test ./... -race -cover
 
-# Start full development environment with all services in a screen session
-dev-up: build
-	@echo "🚀 Starting full dev environment..."
+# Also refreshes the copy the docs site's Redoc page (docs/en/api.md, docs/api.md) reads.
+swagger: ## regenerate the OpenAPI spec from the handlers' annotations
+	cd server && go tool swag init -g cmd/dashboard-api/main.go -o docs/swagger --outputTypes json,yaml --parseInternal
+	cp server/docs/swagger/swagger.json docs/assets/api/swagger.json
 
-	# Quit old session if it exists
-	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
-	@sleep 1
+docs: ## the docs site locally, rebuilt on every change
+	cd docs && jekyll serve
 
-	# Create new screen session
-	screen -dmS $(SCREEN_NAME)
+##@ Deploy -- from your machine to DEPLOY_HOST, without a release
 
-	# --- DASHBOARD UI ---
-	screen -S $(SCREEN_NAME) -X screen -t dashboard-ui bash -c "\
-		cd $(UI_DIR) && \
-		API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --host 0.0.0.0 --port $(DASHBOARD_UI_PORT) --strictPort"
+# Asked one by one, Enter keeps the value shown: Makefile.local's if there is
+# one, else the defaults at the top of this file. The values it replaces stay
+# below, commented and dated -- the last ones only; none when nothing changed.
+init: ## write Makefile.local: the server's SSH alias, its user and its folder
+	@printf 'SSH alias of the server [%s]: ' '$(DEPLOY_HOST)'; read host; \
+	printf 'User its services run as [%s]: ' '$(DEPLOY_USER)'; read user; \
+	printf 'Its folder [%s]: ' '$(DEPLOY_DIR)'; read dir; \
+	new=$$(printf 'DEPLOY_HOST := %s\nDEPLOY_USER := %s\nDEPLOY_DIR  := %s' \
+		"$${host:-$(DEPLOY_HOST)}" "$${user:-$(DEPLOY_USER)}" "$${dir:-$(DEPLOY_DIR)}"); \
+	old=$$(grep -v '^#' Makefile.local 2>/dev/null | grep -v '^$$'); \
+	if [ "$$new" = "$$old" ]; then echo ">>> Nothing changed, Makefile.local left as is:"; cat Makefile.local; exit 0; fi; \
+	{ echo "$$new"; \
+	  if [ -n "$$old" ]; then echo; echo "# Replaced on $$(date '+%Y-%m-%d %H:%M'):"; echo "$$old" | sed 's/^/# /'; fi; \
+	} > Makefile.local.new && mv Makefile.local.new Makefile.local; \
+	echo ">>> Makefile.local written:"; cat Makefile.local
 
-	# --- DASHBOARD API ---
-	screen -S $(SCREEN_NAME) -X screen -t dashboard-api bash -c "\
-		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE)"
+build-linux: build-ui ## cross-compile the binaries for the Pi (linux/arm64) and build the UI
+	$(call go-build,GOOS=linux GOARCH=arm64)
 
-	# --- FEEDER ---
-	screen -S $(SCREEN_NAME) -X screen -t feeder bash -c "\
-		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/feeder -config $(CONFIG_FILE)"
+deploy: build-linux ## copy the binaries, the UI, deploy/ and this Makefile to DEPLOY_HOST -- then make restart on the server
+	ssh $(DEPLOY_HOST) "mkdir -p $(DEPLOY_DIR)/dist/api $(DEPLOY_DIR)/dist/ui"
+	rsync -avz $(BINARIES:%=$(BIN_DIR)/%) $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/api/
+	rsync -avz --delete $(UI_DIR)/dist/ $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/ui/
+	rsync -avz deploy $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/
+	rsync -avz Makefile $(wildcard Makefile.local) $(DEPLOY_HOST):$(DEPLOY_DIR)/
+	@echo ">>> Done. Restart on the server: cd $(DEPLOY_DIR) && make restart"
 
-	# --- MAILER ---
-	screen -S $(SCREEN_NAME) -X screen -t mailer bash -c "\
-		cd $(ROOT_DIR) && \
-		$(SERVER_BUILD_DIR)/mailer -config $(CONFIG_FILE)"
+##@ Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
 
-	@echo "✅ Dev environment started. Use 'screen -r $(SCREEN_NAME)' to connect."
-
-# Stop development environment and all associated processes
-dev-down:
-	@echo "🛑 Stopping dev environment..."
-
-	# 1. Kill the entire screen session (kills all child processes)
-	- screen -S $(SCREEN_NAME) -X quit 2>/dev/null || true
-	@sleep 1
-
-	# 2. Kill residual processes by name (fallback) -- this stack's only
-	-pkill -9 -f -- "--port $(DASHBOARD_UI_PORT)" 2>/dev/null || true
-	-pkill -9 -f "npm run preview" 2>/dev/null || true
-	-pkill -9 -f "$(SERVER_BUILD_DIR)/dashboard-api" 2>/dev/null || true
-	-pkill -9 -f "feeder" 2>/dev/null || true
-	-pkill -9 -f "mailer" 2>/dev/null || true
-
-	# 3. Clean up zombie screen sessions
-	-screen -wipe > /dev/null 2>&1 || true
-
-	@echo "✅ Stopped"
-
-# dashboard-api + its UI on :$(DASHBOARD_UI_PORT) together in this console, each
-# line prefixed with where it comes from; Ctrl+C stops both. No feeder, no mailer.
-run: build
-	@trap 'kill 0' INT TERM; \
-	$(SERVER_BUILD_DIR)/dashboard-api -config $(CONFIG_FILE) 2>&1 | sed -l 's/^/[api] /' & \
-	(cd $(UI_DIR) && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort) 2>&1 | sed -l 's/^/[ui]  /' & \
-	wait
-
-# ==============================================================================
-# The server: everything it runs lives in dist/, next to this Makefile -- dist/api,
-# dist/ui, dist/deploy -- as one systemd service per process, no screen.
-# Run these there.
-# ==============================================================================
-
-SERVICES := axeos-dashboard-api axeos-dashboard-feeder axeos-dashboard-mailer
-BINARIES := dashboard-api feeder mailer rebuild-totals
-RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/download/$(RELEASE_TAG)
-
-install-services:
+install-services: ## on the server: install + enable the systemd services from dist/deploy/ (first time, and when they change)
 	for s in $(SERVICES); do \
 		sed -e 's#@DEPLOY_DIR@#$(DEPLOY_DIR)#g' -e 's#@DEPLOY_USER@#$(DEPLOY_USER)#g' dist/deploy/$$s.service > /tmp/$$s.service \
 		&& sudo install -m 644 /tmp/$$s.service /etc/systemd/system/ \
@@ -261,18 +169,20 @@ install-services:
 	sudo systemctl enable $(SERVICES)
 	@$(MAKE) --no-print-directory install-aliases
 
-# The shortcuts (axeos-help...) at every login: one line in ~/.bashrc, added once.
+# One line in ~/.bashrc, added once.
 ALIASES_LINE := [ -f $(CURDIR)/dist/deploy/aliases.sh ] && . $(CURDIR)/dist/deploy/aliases.sh
-install-aliases:
+install-aliases: ## on the server: the shortcuts (axeos-help...) at every login
 	@grep -qF '$(ALIASES_LINE)' ~/.bashrc 2>/dev/null \
 		&& echo ">>> Shortcuts already loaded by ~/.bashrc" \
 		|| { echo '$(ALIASES_LINE)' >> ~/.bashrc && echo ">>> Shortcuts added to ~/.bashrc -- new logins have them, or: . ~/.bashrc"; }
 
-restart:
+restart: ## on the server: restart mailer, feeder and dashboard-api (systemd)
 	sudo systemctl restart $(SERVICES)
 
+RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/download/$(RELEASE_TAG)
+
 # Downloaded beside, then swapped: a failed download changes nothing.
-latest-update:
+latest-update: ## on the server: install the latest GitHub release, then restart
 	@echo ">>> Fetching release '$(RELEASE_TAG)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
 	mkdir -p dist/api
 	rm -rf dist/ui.new dist/ui.old
@@ -286,57 +196,12 @@ latest-update:
 	rm -rf dist/ui.old
 	sudo systemctl restart $(SERVICES)
 
-# ==============================================================================
-# Deploy (a local build, run from your machine, for trying out a change on the
-# real server without pushing to main or waiting on CI: dist/ and this Makefile.
-# Nothing is restarted: `make restart` on the server afterwards.)
-# ==============================================================================
+check-config:
+	@test -f "$(CONFIG)" || { echo "Error: config file $(CONFIG) not found (CONFIG=...)"; exit 1; }
 
-build-ui:
-	@echo ">>> Building UI..."
-	cd $(UI_DIR) && npm run build
-	@echo ">>> Done. Static files: ui/dist"
+##@ Releases -- from anywhere
 
-# Cross-compile dashboard-api + feeder + mailer for the Pi (linux/arm64) and build the UI.
-build-linux: build-ui
-	@echo ">>> Cross-compiling dashboard-api + feeder + mailer + rebuild-totals for linux/arm64..."
-	@mkdir -p $(SERVER_BUILD_DIR)
-	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/dashboard-api ./cmd/dashboard-api
-	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/feeder ./cmd/feeder
-	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/mailer ./cmd/mailer
-	cd server && GOOS=linux GOARCH=arm64 go build $(VERSION_LDFLAGS) -o ../$(SERVER_BUILD_DIR)/rebuild-totals ./cmd/rebuild-totals
-	@echo ">>> Done."
-
-deploy: build-linux
-	@echo ">>> Copying the binaries, the UI, deploy/ and this Makefile to $(DEPLOY_HOST):$(DEPLOY_DIR)..."
-	ssh $(DEPLOY_HOST) "mkdir -p $(DEPLOY_DIR)/dist/api $(DEPLOY_DIR)/dist/ui"
-	rsync -avz $(BINARIES:%=$(SERVER_BUILD_DIR)/%) $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/api/
-	rsync -avz --delete $(UI_DIR)/dist/ $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/ui/
-	rsync -avz deploy $(DEPLOY_HOST):$(DEPLOY_DIR)/dist/
-	rsync -avz Makefile $(wildcard Makefile.local) $(DEPLOY_HOST):$(DEPLOY_DIR)/
-	@echo ">>> Done. Restart on the server: cd $(DEPLOY_DIR) && make restart"
-
-# Display help message
-help:
-	@echo "Available commands:"
-	@echo "  make build                     - Compile feeder, mailer, dashboard-api and rebuild-totals"
-	@echo "  make lintAll                   - Run linter on all packages"
-	@echo "  make swagger                   - Regenerate the OpenAPI spec (server/docs/swagger/)"
-	@echo "  make docs-serve                - Serve the docs site locally (cd docs && jekyll serve)"
-	@echo "  make clean                     - Remove generated binaries"
-	@echo "  make docker-build               - Build the Docker images locally with the real git SHA baked in (docker compose build)"
-	@echo "  make run-dashboard-api         - Start dashboard-api with resources/dashboard.yml"
-	@echo "  make run-feeder                - Start feeder with resources/dashboard.yml"
-	@echo "  make run-mailer                - Start mailer (scheduled mails) with resources/dashboard.yml"
-	@echo "  make rebuild-totals           - Reconstruct totals.json from JSONL history (dry-run by default; DRY_RUN= to write, MINER= to target one miner)"
-	@echo "  make run-dashboard-ui          - Start UI dev server → dashboard-api (:$(DASHBOARD_API_PORT))"
-	@echo "  make dev-up                    - Start full dev environment (UI + dashboard-api + feeder + mailer)"
-	@echo "  make dev-down                  - Stop dev environment"
-	@echo "  make run                       - dashboard-api + its UI (:$(DASHBOARD_UI_PORT)) in this console, no feeder/mailer -- Ctrl+C stops both"
-	@echo "  make install-services          - (run on the server) install the systemd services from dist/deploy/"
-	@echo "  make restart                   - (run on the server) restart dashboard-api + feeder + mailer"
-	@echo "  make latest-update             - (run on the server) update from the latest GitHub Release (auto-detects arch) and restart"
-	@echo "  make build-ui                  - Build the UI (static files in ui/dist) -- the same for a dashboard and a board"
-	@echo "  make build-linux               - Cross-compile dashboard-api/feeder/mailer/rebuild-totals (linux/arm64) and build the UI"
-	@echo "  make deploy                    - build-linux, then copy the result to $(DEPLOY_HOST) (test without pushing to main)"
-	@echo "  make help                      - Show this help message"
+versions: ## the releases on GitHub: latest's commit, then every vX.Y.Z, newest first
+	@tags=$$(git ls-remote --tags https://github.com/$(GITHUB_REPO).git) || exit 1; \
+	echo "latest    $$(echo "$$tags" | awk '$$2 == "refs/tags/latest" { print substr($$1, 1, 7) }')"; \
+	echo "releases  $$(echo "$$tags" | sed -n 's#.*refs/tags/\(v[0-9][^^]*\)$$#\1#p' | sort -rV | paste -sd ' ' -)"

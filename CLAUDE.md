@@ -12,21 +12,19 @@ Naming: **board** is the word of the remote side -- what a board owns or reads i
 
 ## Commands
 
-### Full Dev Stack
+`make` alone lists every target, by section -- the README shows it as an image: with any new, renamed or redescribed target, regenerate it with `freeze --execute "make" --window --border.radius 8 --shadow.blur 20 --shadow.y 10 --margin 20 --padding 20,40 --output readme/make-help.png` (then `sips -Z 2400` it).
+
+### Dev
 
 ```bash
-make dev-up        # start all 4 services (UI, dashboard-api, feeder, mailer) in GNU screen session (axeos-dashboard)
-make dev-down      # stop all
-```
-
-### Individual Services
-
-```bash
-make run-dashboard-api CONFIG=resources/dashboard.yml   # HTTP API on :8080
+make run                                                 # the whole stack in this console: mailer, feeder, dashboard-api, UI (:5174) -- each line
+                                                         # prefixed with its process, Ctrl+C stops it all
+make run-dashboard-api CONFIG=resources/dashboard.yml   # one service alone, from the last build: HTTP API on :8080
 make run-feeder        CONFIG=resources/dashboard.yml   # polling daemon
-make run-mailer        CONFIG=resources/dashboard.yml   # scheduled mails (audit report)
+make run-mailer        CONFIG=resources/dashboard.yml   # every mail
 make run-dashboard-ui                                    # Vite dev server → :8080
-make run                                                 # dashboard-api + its UI (:5174) in this console, no feeder/mailer -- Ctrl+C stops both
+make docker                                              # the Docker images from this checkout, then the stack (docker-build-dev.sh, HTTP_PORT=)
+make rebuild-totals                                      # totals.json from the history, dry run unless DRY_RUN=
 ```
 
 ### Deploy
@@ -36,17 +34,18 @@ make deploy            # from your machine: a local build into dist/ on DEPLOY_H
 make install-services  # on the server: the systemd services from deploy/, the first time and when they change
 make restart           # on the server: mailer, then feeder, then dashboard-api
 make latest-update     # on the server: from the GitHub release, restarted
+make versions          # the releases on GitHub: latest's commit, every vX.Y.Z
 ```
 
 On the server, `deploy/aliases.sh` (in `dist/deploy/`, loaded from `~/.bashrc`): `axeos-restart`, `axeos-update`, `axeos-status`, `axeos-logs`.
 
-The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_DIR`), yours in `Makefile.local`, not versioned.
+The server's values are at the very top of the Makefile (`DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_DIR`), yours in `Makefile.local`, not versioned -- `make init` writes it, asking for each.
 
 ### Build & Lint
 
 ```bash
 make build         # compile all binaries → resources/build/server/bin/
-make lintAll       # golangci-lint on Go packages -- requires golangci-lint v2.13.1 installed
+make lint          # golangci-lint on Go packages -- requires golangci-lint v2.13.1 installed
                    # locally (e.g. `brew install golangci-lint`), same version CI pins in
                    # .github/workflows/checks.yml -- keep both in sync when bumping
 
