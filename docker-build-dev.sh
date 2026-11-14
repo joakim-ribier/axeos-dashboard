@@ -13,7 +13,7 @@
 # with whatever changed since last time.
 #
 # nginx lands on a random free port by default (see docker-compose.yml --
-# check it with `docker compose ps`), so this never conflicts with
+# check it with `docker compose -p axeos-dashboard-dev ps`), so this never conflicts with
 # whatever else is already running on the machine. Pass HTTP_PORT for a
 # fixed, memorable one instead:
 #   HTTP_PORT=8888 ./docker-build-dev.sh
