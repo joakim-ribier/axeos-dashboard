@@ -93,8 +93,14 @@ kinds of GitHub Release:
 - **`latest`** — republished on every push to `main` once `checks.yml`
   succeeds ([`latest.yml`](.github/workflows/latest.yml)).
 
-`make versions` lists them, `make update` installs one on the server, with
-its Makefile and `deploy/`.
+`make versions` lists them. On the server, with its Makefile and `deploy/`:
+
+```bash
+make update                      # the last stable version
+make update RELEASE_TAG=1.0.0    # a given version
+make update RELEASE_TAG=latest   # the last commit on main
+```
+
 A board's VPS takes the release's `remote-dashboard-api-amd64` and
 `ui-dist.tar.gz`.
 
@@ -106,10 +112,18 @@ A board's VPS takes the release's `remote-dashboard-api-amd64` and
 fixed port, updating, pinning a version with `IMAGE_TAG`. `make docker`
 builds the images from your checkout: the [Dev page](https://joakim-ribier.github.io/axeos-dashboard/en/dev.html).
 
-**On your own server**, from a local build:
+**On your own server**, from the releases -- on the server, in the folder the
+services will run from, nothing else needed:
 
 ```bash
-make init                # your machine: the server's SSH alias, user and folder, into Makefile.local
+curl -fLO https://github.com/joakim-ribier/axeos-dashboard/releases/latest/download/Makefile
+make install             # the last stable version, a config.yml, the services installed and started
+```
+
+Or from a local build:
+
+```bash
+make init                # your machine: the server's SSH alias and folder, into Makefile.local
 make deploy              # your machine: the binaries, the UI, deploy/ and the Makefile onto the server
 
 # on the server, in its folder:
@@ -118,7 +132,7 @@ make restart
 ```
 
 nginx, once: `dist/deploy/nginx-axeos-dashboard.conf`, with your folder in
-place of `@DEPLOY_DIR@`. Logs: `axeos-logs`.
+place of `@DEPLOY_DIR@` (`make install` prints the commands). Logs: `axeos-logs`.
 
 ---
 

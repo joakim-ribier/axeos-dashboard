@@ -2,15 +2,13 @@
 # ⚙️  User Configuration — update these when deploying on a new server
 # ==============================================================================
 
-# The server, the only three values to change for yours: its SSH alias, the user
-# its services run as, and its folder. `make deploy` copies there,
-# `make install-services` writes them into deploy/*.service. Yours go in
-# Makefile.local (same lines, not versioned -- `make init` writes it), which
-# `make deploy` copies too. A
-# := so a stale one exported in a shell can't send a deploy elsewhere; the
-# command line still wins.
+# Where `make deploy` copies to, the only two values to change for yours: the
+# server's SSH alias and its folder. Yours go in Makefile.local (same lines, not
+# versioned -- `make init` writes it), which `make deploy` copies too. The
+# server itself needs neither: it works from the folder it's run in. A := so a
+# stale one exported in a shell can't send a deploy elsewhere; the command line
+# still wins.
 DEPLOY_HOST := server-dev
-DEPLOY_USER := debian
 DEPLOY_DIR  := /home/debian/axeos-bitaxe-dashboard
 -include Makefile.local
 
@@ -27,8 +25,9 @@ CONFIG ?= resources/dashboard.yml
 BIN_DIR := resources/build/server/bin
 
 # GitHub repo + release used by `make update` (CI-built binaries for the local
-# architecture instead of building locally). No RELEASE_TAG: the last vX.Y.Z
-# release; RELEASE_TAG=1.0.0 for release v1.0.0, RELEASE_TAG=latest for main's tip.
+# architecture instead of building locally). No RELEASE_TAG: the last stable
+# version (GitHub's "Latest"); RELEASE_TAG=1.0.0: a given version (v1.0.0);
+# RELEASE_TAG=latest: the last commit on main (the "latest" pre-release).
 GITHUB_REPO ?= joakim-ribier/axeos-dashboard
 RELEASE_TAG ?=
 
@@ -63,7 +62,7 @@ go-build = mkdir -p $(BIN_DIR) && cd server && for bin in $(BINARIES); do \
 .DEFAULT_GOAL := help
 .PHONY: help init run run-dashboard-api run-feeder run-mailer run-dashboard-ui docker build build-ui clean \
 	lint test swagger docs build-linux deploy \
-	install-services install-aliases restart update versions rebuild-totals check-config
+	install-services install-aliases restart install update fetch not-root versions rebuild-totals check-config
 
 help: ## this list
 	@awk 'BEGIN { FS = ":.*## " } \
@@ -134,12 +133,11 @@ docs: ## the docs site locally, rebuilt on every change
 # Asked one by one, Enter keeps the value shown: Makefile.local's if there is
 # one, else the defaults at the top of this file. The values it replaces stay
 # below, commented and dated -- the last ones only; none when nothing changed.
-init: ## write Makefile.local: the server's SSH alias, its user and its folder
+init: ## write Makefile.local: the server's SSH alias and its folder
 	@printf 'SSH alias of the server [%s]: ' '$(DEPLOY_HOST)'; read host; \
-	printf 'User its services run as [%s]: ' '$(DEPLOY_USER)'; read user; \
 	printf 'Its folder [%s]: ' '$(DEPLOY_DIR)'; read dir; \
-	new=$$(printf 'DEPLOY_HOST := %s\nDEPLOY_USER := %s\nDEPLOY_DIR  := %s' \
-		"$${host:-$(DEPLOY_HOST)}" "$${user:-$(DEPLOY_USER)}" "$${dir:-$(DEPLOY_DIR)}"); \
+	new=$$(printf 'DEPLOY_HOST := %s\nDEPLOY_DIR  := %s' \
+		"$${host:-$(DEPLOY_HOST)}" "$${dir:-$(DEPLOY_DIR)}"); \
 	old=$$(grep -v '^#' Makefile.local 2>/dev/null | grep -v '^$$'); \
 	if [ "$$new" = "$$old" ]; then echo ">>> Nothing changed, Makefile.local left as is:"; cat Makefile.local; exit 0; fi; \
 	{ echo "$$new"; \
@@ -158,11 +156,27 @@ deploy: build-linux ## copy the binaries, the UI, deploy/ and this Makefile to D
 	rsync -avz Makefile $(wildcard Makefile.local) $(DEPLOY_HOST):$(DEPLOY_DIR)/
 	@echo ">>> Done. Restart on the server: cd $(DEPLOY_DIR) && make restart"
 
-##@ Server -- on the server itself, in DEPLOY_DIR (everything it runs lives in dist/)
+##@ Server -- on the server itself, in its folder (everything it runs lives in dist/)
 
-install-services: ## on the server: install + enable the systemd services from dist/deploy/ (first time, and when they change)
+# The first time, in the folder it will run from, with this Makefile alone:
+#   curl -fLO https://github.com/joakim-ribier/axeos-dashboard/releases/latest/download/Makefile
+install: not-root ## on the server, the first time: the last stable version (RELEASE_TAG= as for update), a config.yml, the services started
+	@$(MAKE) --no-print-directory fetch
+	test -f config.yml || cp dist/deploy/config.yml.example config.yml
+	@$(MAKE) --no-print-directory install-services
+	sudo systemctl restart $(SERVICES)
+	@echo ">>> Running. nginx, once (sudo apt install nginx first), serves the UI and proxies the API:"
+	@echo "    sed 's#@DEPLOY_DIR@#$(CURDIR)#g' dist/deploy/nginx-axeos-dashboard.conf | sudo tee /etc/nginx/sites-available/axeos-dashboard > /dev/null"
+	@echo "    sudo ln -sf /etc/nginx/sites-available/axeos-dashboard /etc/nginx/sites-enabled/ && sudo rm -f /etc/nginx/sites-enabled/default && sudo systemctl reload nginx"
+
+# This folder, and the user running this: the services run from here, as them --
+# never as root by a `sudo make`, the recipes call sudo themselves.
+not-root:
+	@[ "$$(id -u)" != 0 ] || { echo "Error: run it as the user the services run as, without sudo (it calls sudo itself)"; exit 1; }
+
+install-services: not-root ## on the server: install + enable the systemd services from dist/deploy/ (first time, and when they change)
 	for s in $(SERVICES); do \
-		sed -e 's#@DEPLOY_DIR@#$(DEPLOY_DIR)#g' -e 's#@DEPLOY_USER@#$(DEPLOY_USER)#g' dist/deploy/$$s.service > /tmp/$$s.service \
+		sed -e 's#@DEPLOY_DIR@#$(CURDIR)#g' -e 's#@DEPLOY_USER@#$(shell id -un)#g' dist/deploy/$$s.service > /tmp/$$s.service \
 		&& sudo install -m 644 /tmp/$$s.service /etc/systemd/system/ \
 		&& rm /tmp/$$s.service || exit 1; \
 	done
@@ -187,8 +201,8 @@ RELEASE_URL := https://github.com/$(GITHUB_REPO)/releases/$(if $(RELEASE_TAG),do
 # runs the release's own; make has read this one already, replacing it is safe.
 # The services themselves are installed by install-services (sudo, a
 # daemon-reload): only said when they changed.
-update: ## on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / latest for another), then restart
-	@echo ">>> Fetching release '$(or $(RELEASE_TAG),the last vX.Y.Z)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
+fetch:
+	@echo ">>> Fetching '$(or $(RELEASE_TAG),the last stable version)' from $(GITHUB_REPO) (arch: $(RELEASE_ARCH))..."
 	mkdir -p dist/api
 	rm -rf dist/ui.new dist/ui.old dist/deploy.new dist/deploy.old Makefile.new
 	mkdir dist/ui.new dist/deploy.new
@@ -201,10 +215,13 @@ update: ## on the server: install the last vX.Y.Z release (RELEASE_TAG=1.0.0 / l
 	if [ -d dist/ui ]; then mv dist/ui dist/ui.old; fi
 	mv dist/ui.new dist/ui
 	rm -rf dist/ui.old
-	@changed=; for s in $(SERVICES); do cmp -s dist/deploy/$$s.service dist/deploy.new/$$s.service || changed=1; done; \
-	if [ -d dist/deploy ]; then mv dist/deploy dist/deploy.old; fi; \
+	@changed=; if [ -d dist/deploy ]; then \
+		for s in $(SERVICES); do cmp -s dist/deploy/$$s.service dist/deploy.new/$$s.service || changed=1; done; \
+		mv dist/deploy dist/deploy.old; fi; \
 	mv dist/deploy.new dist/deploy && rm -rf dist/deploy.old && mv Makefile.new Makefile; \
 	if [ -n "$$changed" ]; then echo ">>> The systemd services changed: make install-services, to install them"; fi
+
+update: fetch ## on the server: the last stable version, then restart -- RELEASE_TAG=1.0.0 a given one, RELEASE_TAG=latest the last commit on main
 	sudo systemctl restart $(SERVICES)
 
 check-config:
