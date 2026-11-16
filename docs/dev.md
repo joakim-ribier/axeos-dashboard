@@ -49,6 +49,18 @@ utilisé par défaut (fixez-en un avec `HTTP_PORT`) :
 Relancer `make docker` après une modification reconstruit les images et
 redémarre les containers avec le code à jour.
 
+Pour repartir d'une première installation — aucun mineur, aucune donnée —
+`FRESH=1` utilise un nouveau dossier sous `/tmp` à la place de
+`./axeos-dashboard/`, qui reste tel quel pour le prochain `make docker` :
+
+<div class="terminal-card">
+  <div class="terminal-card-header">
+    <span class="terminal-card-icon">&gt;_</span>
+    <span class="terminal-card-title">Terminal</span>
+  </div>
+  <pre class="terminal-card-body"><span class="term-command">$ make docker FRESH=1</span></pre>
+</div>
+
 La stack de dev a ses propres noms, quel que soit le dossier d'où elle est
 lancée : le projet `axeos-dashboard-dev` et les containers
 `axeos-dev-services` et `axeos-dev-dashboard`. Elle tourne donc à côté

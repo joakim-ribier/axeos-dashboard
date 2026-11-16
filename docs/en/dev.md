@@ -50,6 +50,18 @@ default (pin one with `HTTP_PORT`):
 Re-running `make docker` after a change rebuilds the images and restarts
 the containers with the up-to-date code.
 
+To start from a first install — no miner, no data — `FRESH=1` uses a
+new folder under `/tmp` instead of `./axeos-dashboard/`, which stays as it
+is for the next `make docker`:
+
+<div class="terminal-card">
+  <div class="terminal-card-header">
+    <span class="terminal-card-icon">&gt;_</span>
+    <span class="terminal-card-title">Terminal</span>
+  </div>
+  <pre class="terminal-card-body"><span class="term-command">$ make docker FRESH=1</span></pre>
+</div>
+
 The dev stack has its own names, whatever folder it's started from: the
 project `axeos-dashboard-dev` and the containers `axeos-dev-services` and
 `axeos-dev-dashboard`. It thus runs next to a
