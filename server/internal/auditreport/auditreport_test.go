@@ -145,7 +145,7 @@ func TestBuild_aDayInFrench(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if msg.Subject != "AxeOS Dashboard — Audit du jeudi 15 octobre 2026 : 3 événements" {
+	if msg.Subject != "AxeOS · D#hashboard — Audit du jeudi 15 octobre 2026 : 3 événements" {
 		t.Errorf("subject = %q", msg.Subject)
 	}
 	if !reflect.DeepEqual(msg.To, []string{"me@example.com"}) {
@@ -180,7 +180,7 @@ func TestBuild_severalDaysInEnglish(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if msg.Subject != "AxeOS Dashboard — Audit from 2026-10-12 to 2026-10-18: 3 events" {
+	if msg.Subject != "AxeOS · D#hashboard — Audit from 2026-10-12 to 2026-10-18: 3 events" {
 		t.Errorf("subject = %q", msg.Subject)
 	}
 	for _, want := range []string{

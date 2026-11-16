@@ -1675,7 +1675,7 @@ paths:
       description: 'The mailer''s own API, on the loopback only (mailer.port, default
         8082): mails the alerts a feeder poll just raised, all in one mail. Called
         by the feeder after a poll, when Configuration › Notifications turns the alerts
-        mail on.'
+        mail on. Under global.env dev, nothing is sent (200, no recipient).'
       parameters:
       - description: The alerts raised
         in: body

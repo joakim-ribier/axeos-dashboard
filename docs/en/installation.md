@@ -212,8 +212,9 @@ firmware:
   cacheTTL: 24h</pre>
 </div>
 
-- **global.env** — `dev` only shows logs on the console; any other value
-  also writes log files.
+- **global.env** — `dev` only shows logs on the console and sends neither
+  the audit report nor the alerts mails; any other value also writes log
+  files. Every mail's subject starts with this value, e.g. `[prod]`.
 - **server.port** — dashboard-api's listening port.
 - **mailer.port** — the port of the mailer, the service sending the
   mails; reached by dashboard-api on the machine itself only.

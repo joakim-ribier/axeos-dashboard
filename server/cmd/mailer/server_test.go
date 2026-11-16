@@ -66,7 +66,7 @@ func TestSendTestMail_sendsToEveryRecipientInTheUILanguage(t *testing.T) {
 		t.Fatal(err)
 	}
 	subject, _ := new(mime.WordDecoder).DecodeHeader(msg.Header.Get("Subject"))
-	if subject != "AxeOS Dashboard — mail de test" {
+	if subject != "AxeOS · D#hashboard — mail de test" {
 		t.Errorf("subject = %q, want the French one", subject)
 	}
 }

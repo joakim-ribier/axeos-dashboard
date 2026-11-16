@@ -412,3 +412,11 @@ func TestConfig_AlertMargins(t *testing.T) {
 		})
 	}
 }
+
+func TestGlobalConfig_Dev(t *testing.T) {
+	for env, want := range map[string]bool{"dev": true, "prod": false, "": false} {
+		if got := (GlobalConfig{Env: env}).Dev(); got != want {
+			t.Errorf("Env %q: Dev() = %v, want %v", env, got, want)
+		}
+	}
+}

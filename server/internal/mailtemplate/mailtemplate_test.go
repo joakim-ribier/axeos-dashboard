@@ -19,7 +19,7 @@ func write(t *testing.T, dir, name, content string) {
 func TestLoad_builtInWithoutAFile(t *testing.T) {
 	for _, dir := range []string{"", t.TempDir()} {
 		tmpl, err := Load(dir, TestMail, "fr")
-		if err != nil || tmpl.Subject != "AxeOS Dashboard — mail de test" {
+		if err != nil || tmpl.Subject != "AxeOS · D#hashboard — mail de test" {
 			t.Errorf("dir %q: Load() = %+v, %v; want the built-in French one", dir, tmpl, err)
 		}
 	}
@@ -28,7 +28,7 @@ func TestLoad_builtInWithoutAFile(t *testing.T) {
 func TestLoad_englishForAnyOtherLanguage(t *testing.T) {
 	for _, lang := range []string{"en", "de", ""} {
 		tmpl, err := Load("", TestMail, lang)
-		if err != nil || tmpl.Subject != "AxeOS Dashboard — test mail" {
+		if err != nil || tmpl.Subject != "AxeOS · D#hashboard — test mail" {
 			t.Errorf("lang %q: Load() = %+v, %v; want the English one", lang, tmpl, err)
 		}
 	}
@@ -47,7 +47,7 @@ func TestLoad_theOperatorsFile(t *testing.T) {
 		t.Errorf("Load() = %+v, want the file's own", tmpl)
 	}
 	// The other language still has no file: built-in.
-	if en, _ := Load(dir, TestMail, "en"); en.Subject != "AxeOS Dashboard — test mail" {
+	if en, _ := Load(dir, TestMail, "en"); en.Subject != "AxeOS · D#hashboard — test mail" {
 		t.Errorf("en = %+v, want the built-in one", en)
 	}
 }
@@ -61,7 +61,7 @@ func TestLoad_aBrokenFileFallsBackToTheBuiltIn(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "test-mail.fr.txt") {
 		t.Errorf("err = %v, want one naming the file", err)
 	}
-	if tmpl.Subject != "AxeOS Dashboard — mail de test" {
+	if tmpl.Subject != "AxeOS · D#hashboard — mail de test" {
 		t.Errorf("Load() = %+v, want the built-in one still", tmpl)
 	}
 }

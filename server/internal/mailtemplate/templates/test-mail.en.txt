@@ -11,11 +11,11 @@
 #   {{to}}            the recipients
 #   {{date}}          when it's sent (UTC)
 #   {{dashboardURL}}  the dashboard's address (empty when not set)
-Subject: AxeOS Dashboard — test mail
+Subject: AxeOS · D#hashboard — test mail
 
 Hello,
 
-Good news: AxeOS Dashboard can send mails.
+Good news: AxeOS · D#hashboard can send mails.
 
 It went out with these settings:
   • SMTP server: {{server}} ({{security}})
@@ -28,4 +28,4 @@ Configuration › Notifications.
 Sent on {{date}} (UTC).
 Dashboard: {{dashboardURL}}
 
-— AxeOS Dashboard
+— AxeOS · D#hashboard

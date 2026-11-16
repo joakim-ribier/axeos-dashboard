@@ -77,6 +77,12 @@ func (s *Server) Next(t *testing.T) Received {
 	}
 }
 
+// Pending is how many accepted mails no Next has read yet -- 0 once a send
+// that should have mailed nothing returned.
+func (s *Server) Pending() int {
+	return len(s.mails)
+}
+
 func (s *Server) serve(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 	r := bufio.NewReader(conn)

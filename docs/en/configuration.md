@@ -288,9 +288,9 @@ and a footer.
 
 ```text
 # Lines starting with # are comments
-Subject: AxeOS Dashboard — test mail
+Subject: AxeOS · D#hashboard — test mail
 
-Good news: AxeOS Dashboard can send mails.
+Good news: AxeOS · D#hashboard can send mails.
 
   • SMTP server: {{server}} ({{security}})
   • Recipients: {{to}}
