@@ -59,6 +59,14 @@ How the feeder, dashboard-api, mailer and UI fit together: the
 
 ![make's output: every command, by section and where it runs](readme/make-help.png)
 
+> [!NOTE]
+> Image generated with [freeze](https://github.com/charmbracelet/freeze), then resized with `sips`:
+>
+> ```bash
+> freeze --execute "make" --window --background "#1e1e2a" --border.radius 8 --shadow.blur 20 --shadow.y 10 --margin 20 --padding 20,40 --output readme/make-help.png
+> sips -Z 2400 readme/make-help.png
+> ```
+
 Details: the [Makefile page](https://joakim-ribier.github.io/axeos-dashboard/en/makefile.html). `dashboard.yml`'s
 fields: the [Installation page](https://joakim-ribier.github.io/axeos-dashboard/en/installation.html#config-file).
 

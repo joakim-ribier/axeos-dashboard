@@ -12,7 +12,7 @@ Naming: **board** is the word of the remote side -- what a board owns or reads i
 
 ## Commands
 
-`make` alone lists every target, by section -- the README shows it as an image: with any new, renamed or redescribed target, regenerate it with `freeze --execute "make" --window --border.radius 8 --shadow.blur 20 --shadow.y 10 --margin 20 --padding 20,40 --output readme/make-help.png` (then `sips -Z 2400` it).
+`make` alone lists every target, by section -- the README shows it as an image: with any new, renamed or redescribed target, regenerate it with `freeze --execute "make" --window --background "#1e1e2a" --border.radius 8 --shadow.blur 20 --shadow.y 10 --margin 20 --padding 20,40 --output readme/make-help.png` (then `sips -Z 2400` it).
 
 ### Dev
 

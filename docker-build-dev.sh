@@ -17,6 +17,9 @@
 # whatever else is already running on the machine. Pass HTTP_PORT for a
 # fixed, memorable one instead:
 #   HTTP_PORT=8888 ./docker-build-dev.sh
+# FRESH=1 starts from a first install instead -- no miner, no data -- in a
+# new folder under /tmp, ./axeos-dashboard/ left as it is for the next run:
+#   FRESH=1 ./docker-build-dev.sh
 set -e
 
 if [ ! -f docker-compose.yml ]; then
@@ -24,9 +27,15 @@ if [ ! -f docker-compose.yml ]; then
   exit 1
 fi
 
-mkdir -p axeos-dashboard/config axeos-dashboard/storage
-if [ ! -f axeos-dashboard/config/dashboard.yml ]; then
-  cp docker/dashboard.yml.example axeos-dashboard/config/dashboard.yml
+AXEOS_DEV_DIR=./axeos-dashboard
+if [ -n "$FRESH" ]; then
+  AXEOS_DEV_DIR=/tmp/axeos-dashboard-$(date +%Y%m%d-%H%M%S)
+fi
+export AXEOS_DEV_DIR
+
+mkdir -p "$AXEOS_DEV_DIR/config" "$AXEOS_DEV_DIR/storage"
+if [ ! -f "$AXEOS_DEV_DIR/config/dashboard.yml" ]; then
+  cp docker/dashboard.yml.example "$AXEOS_DEV_DIR/config/dashboard.yml"
 fi
 touch .env
 if [ -n "$HTTP_PORT" ]; then
@@ -43,6 +52,7 @@ echo ">>> Building images from local source (GIT_SHA=$GIT_SHA)..."
 $COMPOSE build --build-arg GIT_SHA="$GIT_SHA"
 $COMPOSE up -d
 
-echo ">>> Done. Open http://localhost:<port>/"
+echo ">>> Done. Config and data: $AXEOS_DEV_DIR"
+echo "    Open http://localhost:<port>/"
 echo "    (see the PORTS column below for <port>, unless you passed HTTP_PORT):"
 $COMPOSE ps

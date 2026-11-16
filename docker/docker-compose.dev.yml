@@ -13,9 +13,10 @@ name: axeos-dashboard-dev
 services:
   services:
     container_name: axeos-dev-services
+    # AXEOS_DEV_DIR: a fresh folder under /tmp with FRESH=1 (docker-build-dev.sh).
     volumes:
-      - ./axeos-dashboard/config:/config
-      - ./axeos-dashboard/storage:/data
+      - ${AXEOS_DEV_DIR:-./axeos-dashboard}/config:/config
+      - ${AXEOS_DEV_DIR:-./axeos-dashboard}/storage:/data
 
   dashboard:
     container_name: axeos-dev-dashboard

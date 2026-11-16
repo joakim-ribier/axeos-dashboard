@@ -87,7 +87,7 @@ run-dashboard-api run-feeder run-mailer: run-%: check-config ## one service alon
 run-dashboard-ui: ## the UI dev server alone → dashboard-api (:8080)
 	cd $(UI_DIR) && API_PORT=$(DASHBOARD_API_PORT) npm run dev -- --port $(DASHBOARD_UI_PORT) --strictPort
 
-docker: ## the Docker images from this checkout (uncommitted changes included), then the stack started (HTTP_PORT=...)
+docker: ## the Docker images from this checkout (uncommitted changes included), then the stack started (HTTP_PORT=..., FRESH=1 a first install)
 	./docker-build-dev.sh
 
 build: ## compile dashboard-api, feeder, mailer, rebuild-totals
