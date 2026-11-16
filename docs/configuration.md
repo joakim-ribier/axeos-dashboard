@@ -299,9 +299,9 @@ Alertes ou Audit, et un pied de page.
 
 ```text
 # Les lignes qui commencent par # sont des commentaires
-Subject: AxeOS Dashboard — mail de test
+Subject: AxeOS · D#hashboard — mail de test
 
-Bonne nouvelle : AxeOS Dashboard sait envoyer des mails.
+Bonne nouvelle : AxeOS · D#hashboard sait envoyer des mails.
 
   • Serveur SMTP : {{server}} ({{security}})
   • Destinataires : {{to}}

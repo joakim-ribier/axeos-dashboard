@@ -144,7 +144,7 @@ func (m *Mailer) sendTestMail(w http.ResponseWriter, r *http.Request) {
 		})
 		msg = mail.Message{To: settings.Mail.To, Subject: subject, Text: text}
 	}
-	if err := mail.Send(r.Context(), smtp, msg); err != nil {
+	if err := m.send(r.Context(), smtp, msg); err != nil {
 		m.logger.Error("failed to send the test mail", "error", err)
 		writeError(w, http.StatusBadGateway, err.Error())
 		return
@@ -164,7 +164,7 @@ type alertsMailRequest struct {
 // page; a failure is recorded in the audit, a mail sent isn't.
 //
 // @Summary Send an alerts mail (mailer)
-// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): mails the alerts a feeder poll just raised, all in one mail. Called by the feeder after a poll, when Configuration › Notifications turns the alerts mail on.
+// @Description The mailer's own API, on the loopback only (mailer.port, default 8082): mails the alerts a feeder poll just raised, all in one mail. Called by the feeder after a poll, when Configuration › Notifications turns the alerts mail on. Under global.env dev, nothing is sent (200, no recipient).
 // @Tags Mailer
 // @Accept json
 // @Param request body main.alertsMailRequest true "The alerts raised"
@@ -179,6 +179,12 @@ func (m *Mailer) sendAlertsMail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "no alert to mail")
 		return
 	}
+	// The real install mails them: a dev one would send each twice.
+	if m.config.Global.Dev() {
+		m.logger.Info("Alerts mail not sent: dev env", "alerts", len(req.Alerts))
+		writeJSON(w, http.StatusOK, testMailResponse{SentTo: []string{}})
+		return
+	}
 	settings := m.notifications()
 	if !settings.Mail.SMTP.Configured() || len(settings.Mail.To) == 0 {
 		writeError(w, http.StatusBadRequest, "no SMTP server or no recipient configured")
@@ -191,7 +197,7 @@ func (m *Mailer) sendAlertsMail(w http.ResponseWriter, r *http.Request) {
 	}
 	now := time.Now()
 	state := alertmail.State{LastSentAt: alertmail.Load(m.config.Storage.MailDir()).LastSentAt}
-	err = mail.Send(r.Context(), settings.Mail.SMTP, msg)
+	err = m.send(r.Context(), settings.Mail.SMTP, msg)
 	if err != nil {
 		m.logger.Error("failed to send the alerts mail", "alerts", len(req.Alerts), "error", err)
 		state.LastError = err.Error()
@@ -239,7 +245,7 @@ func (m *Mailer) sendRemoteActionMail(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		m.logger.Error("remote action mail template unusable, the built-in one is used instead", "error", err)
 	}
-	if err := mail.Send(r.Context(), settings.Mail.SMTP, msg); err != nil {
+	if err := m.send(r.Context(), settings.Mail.SMTP, msg); err != nil {
 		m.logger.Error("failed to send the remote action mail", "action", event.Action, "error", err)
 		writeError(w, http.StatusBadGateway, err.Error())
 		return

@@ -46,6 +46,15 @@ func NewMailer(logger *slog.Logger, cfg config.Config) *Mailer {
 	}
 }
 
+// send is how every mail goes out: its subject starts with the instance's
+// env ("[prod] ..."), so a mail tells which install sent it.
+func (m *Mailer) send(ctx context.Context, smtp config.SMTPConfig, msg mail.Message) error {
+	if env := m.config.Global.Env; env != "" {
+		msg.Subject = "[" + env + "] " + msg.Subject
+	}
+	return mail.Send(ctx, smtp, msg)
+}
+
 func (m *Mailer) lastCheck() time.Time {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -115,6 +124,9 @@ func (m *Mailer) Run() error {
 		}
 	}()
 	m.logger.Info("mailer API listening on " + addr)
+	if m.config.Global.Dev() {
+		m.logger.Info("dev env: neither the audit report nor the alerts mail is sent")
+	}
 	m.installTemplates()
 
 	ticker := time.NewTicker(time.Minute)
@@ -182,6 +194,9 @@ func (m *Mailer) notifications() config.NotificationsConfig {
 // due (see auditreport.Due), and records how it went for the Notifications
 // page.
 func (m *Mailer) runAuditReport(ctx context.Context, now time.Time) {
+	if m.config.Global.Dev() {
+		return
+	}
 	settings := m.notifications()
 	dir := m.config.Storage.MailDir()
 	state := auditreport.Load(dir)
@@ -204,7 +219,7 @@ func (m *Mailer) runAuditReport(ctx context.Context, now time.Time) {
 			if err != nil {
 				m.logger.Error("audit report template unusable, the built-in one is used instead", "error", err)
 			}
-			err = mail.Send(ctx, settings.Mail.SMTP, msg)
+			err = m.send(ctx, settings.Mail.SMTP, msg)
 			sent = err == nil
 		}
 	}

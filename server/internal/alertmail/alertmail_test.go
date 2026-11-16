@@ -31,7 +31,7 @@ func TestBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if msg.Subject != "3 new alerts — AxeOS Dashboard" || len(msg.To) != 1 {
+	if msg.Subject != "3 new alerts — AxeOS · D#hashboard" || len(msg.To) != 1 {
 		t.Errorf("subject = %q, to = %v", msg.Subject, msg.To)
 	}
 	if len(msg.Inline) != 1 || msg.Inline[0].ID != "logo" || len(msg.Inline[0].Data) == 0 {
@@ -68,7 +68,7 @@ func TestBuild_noLinkToAnIP(t *testing.T) {
 		if strings.Contains(msg.HTML, "href=") || (address != "" && strings.Contains(msg.HTML, address)) {
 			t.Errorf("%q: the HTML links to it or shows it -- spam filters flag that", address)
 		}
-		if msg.Subject != "office : Hors ligne — AxeOS Dashboard" {
+		if msg.Subject != "office : Hors ligne — AxeOS · D#hashboard" {
 			t.Errorf("subject = %q, want the one alert's", msg.Subject)
 		}
 	}
@@ -97,7 +97,7 @@ func TestBuild_anEditedTemplate(t *testing.T) {
 	// Broken: the built-in one, with the error to log.
 	write(`<title>{{.Nope}}</title>`)
 	msg, err = Build(settings("en", ""), events, dir)
-	if err == nil || msg.Subject != "3 new alerts — AxeOS Dashboard" {
+	if err == nil || msg.Subject != "3 new alerts — AxeOS · D#hashboard" {
 		t.Errorf("broken template: subject %q, err %v; want the built-in one and the error", msg.Subject, err)
 	}
 }

@@ -41,7 +41,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>{{if eq .Count 1}}{{with index .Alerts 0}}{{.Miner}} : {{.Title}}{{end}}{{else}}{{.Count}} nouvelles alertes{{end}} — AxeOS Dashboard</title>
+<title>{{if eq .Count 1}}{{with index .Alerts 0}}{{.Miner}} : {{.Title}}{{end}}{{else}}{{.Count}} nouvelles alertes{{end}} — AxeOS · D#hashboard</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f1f2f6;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f2f6;">
@@ -58,7 +58,7 @@
                   <img src="cid:logo" width="40" height="40" alt="" style="display:block;border:0;border-radius:8px;">
                 </td>
                 <td style="vertical-align:middle;">
-                  <div style="font-size:18px;font-weight:700;color:#ffffff;">AxeOS Dashboard</div>
+                  <div style="font-size:18px;font-weight:800;color:#ffffff;letter-spacing:-0.02em;"><span style="font-family:'Courier New',Courier,monospace;">AxeOS</span> <span style="color:#9a9ab0;">&middot;</span> D<span style="font-family:'Courier New',Courier,monospace;font-weight:700;color:#0e71a0;">#</span><span style="font-family:'Courier New',Courier,monospace;color:#00b4ff;">hash</span>board</div>
                   <div style="font-size:13px;color:#00b4ff;">Alertes</div>
                 </td>
               </tr>
@@ -105,7 +105,7 @@
         <!-- Pied de page -->
         <tr>
           <td style="padding:16px 24px 20px 24px;border-top:1px solid #e6e7ee;font-size:12px;line-height:1.5;color:#8a8aa0;">
-            Envoyé par AxeOS Dashboard à chaque nouvelle alerte.
+            Envoyé par AxeOS · D#hashboard à chaque nouvelle alerte.
             Pour ne plus le recevoir : Configuration › Notifications › Alertes.
           </td>
         </tr>

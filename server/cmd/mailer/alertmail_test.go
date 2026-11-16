@@ -72,7 +72,7 @@ func TestSendAlertsMail(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 	}
-	if subject, html := subjectOf(t, server.Next(t)); subject != "2 new alerts — AxeOS Dashboard" || !html {
+	if subject, html := subjectOf(t, server.Next(t)); subject != "2 new alerts — AxeOS · D#hashboard" || !html {
 		t.Errorf("subject = %q (html with logo: %v), want both alerts in one HTML mail", subject, html)
 	}
 	if state := alertmail.Load(m.config.Storage.MailDir()); state.LastSentAt.IsZero() || state.LastError != "" {
@@ -132,7 +132,7 @@ func TestSendTestMail_alertExample(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 	}
-	if subject, html := subjectOf(t, server.Next(t)); subject != "3 nouvelles alertes — AxeOS Dashboard" || !html {
+	if subject, html := subjectOf(t, server.Next(t)); subject != "3 nouvelles alertes — AxeOS · D#hashboard" || !html {
 		t.Errorf("subject = %q (html with logo: %v), want the French example", subject, html)
 	}
 }
@@ -146,7 +146,7 @@ func TestSendTestMail_remoteActionExample(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 	}
-	if subject, html := subjectOf(t, server.Next(t)); subject != "Test du mail d'action à distance — AxeOS Dashboard" || !html {
+	if subject, html := subjectOf(t, server.Next(t)); subject != "Test du mail d'action à distance — AxeOS · D#hashboard" || !html {
 		t.Errorf("subject = %q (html with logo: %v), want the French example", subject, html)
 	}
 }
@@ -163,7 +163,7 @@ func TestSendTestMail_auditExample(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", w.Code, w.Body.String())
 	}
 	subject, html := subjectOf(t, server.Next(t))
-	if !strings.HasPrefix(subject, "AxeOS Dashboard — Audit du ") || !strings.HasSuffix(subject, " : 3 événements") || !html {
+	if !strings.HasPrefix(subject, "AxeOS · D#hashboard — Audit du ") || !strings.HasSuffix(subject, " : 3 événements") || !html {
 		t.Errorf("subject = %q (html with logo: %v), want the French example, all 3 events", subject, html)
 	}
 }

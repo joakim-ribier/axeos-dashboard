@@ -474,6 +474,12 @@ type GlobalConfig struct {
 	Env string `yaml:"env"`
 }
 
+// Dev reports a development instance: logs on the console only, and no
+// scheduled nor alerts mail -- the real install sends those.
+func (g GlobalConfig) Dev() bool {
+	return g.Env == "dev"
+}
+
 type ServerConfig struct {
 	Port string `yaml:"port"`
 }
