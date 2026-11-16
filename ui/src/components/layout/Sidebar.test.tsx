@@ -26,6 +26,12 @@ vi.mock("@/hooks/useAlerts", () => ({
   useActiveAlerts: () => ({ data: activeAlerts }),
 }));
 
+// One configured miner unless a test says otherwise.
+let configuredMiners: unknown[] = [{}];
+vi.mock("@/hooks/useMinersConfig", () => ({
+  useMinersConfig: () => ({ data: configuredMiners }),
+}));
+
 const mockUseRemoteBoard = vi.fn();
 vi.mock("@/hooks/useRemoteBoard", () => ({
   useRemoteBoard: () => mockUseRemoteBoard(),
@@ -59,6 +65,7 @@ describe("Sidebar", () => {
   beforeEach(() => {
     window.localStorage.clear();
     activeAlerts = [];
+    configuredMiners = [{}];
     mockUseRemoteBoard.mockReturnValue({ data: undefined });
     mockUseAppInfo.mockReturnValue({
       buildSHA: undefined,
@@ -124,6 +131,43 @@ describe("Sidebar", () => {
 
       expect(settingsLinks[0]).toHaveAttribute("href", "/settings");
       expect(settingsLinks[0]).not.toHaveAttribute("aria-disabled");
+    });
+
+    // Every page but Configuration waits for a first miner: greyed out, not
+    // hidden.
+    describe.each(["nav.home", "nav.alerts", "nav.backups", "nav.audit"])(
+      "the %s nav item",
+      (label) => {
+        const link = () =>
+          screen.getAllByText(label).map((el) => el.closest("a"))[0];
+
+        it("is enabled with a miner configured", () => {
+          renderSidebar("/settings/miners");
+
+          expect(link()).not.toHaveAttribute("aria-disabled");
+        });
+
+        it("is greyed out, saying a miner comes first, without one", async () => {
+          configuredMiners = [];
+          renderSidebar("/settings/miners");
+
+          expect(link()).toHaveAttribute("aria-disabled", "true");
+          await userEvent.hover(link()!.parentElement!);
+          expect(await screen.findByRole("tooltip")).toHaveTextContent(
+            "nav.needsMiner",
+          );
+        });
+      },
+    );
+
+    it("keeps the Settings nav item enabled without a miner", () => {
+      configuredMiners = [];
+      renderSidebar("/settings/miners");
+
+      const settingsLink = screen
+        .getAllByText("nav.settings")
+        .map((el) => el.closest("a"))[0];
+      expect(settingsLink).not.toHaveAttribute("aria-disabled");
     });
 
     it("hides the Settings nav item entirely when ui.page.settings is hidden", () => {

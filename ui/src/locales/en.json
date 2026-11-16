@@ -167,7 +167,8 @@
     "alerts": "Alerts",
     "settings": "Settings",
     "backups": "Backups",
-    "audit": "Audit"
+    "audit": "Audit",
+    "needsMiner": "Add a miner first"
   },
   "sidebar": {
     "versionUpToDate": "Up to date",
