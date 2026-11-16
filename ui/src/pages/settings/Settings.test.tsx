@@ -54,7 +54,7 @@ const miner = {
 // What /api/miners reports -- none unless a test says otherwise.
 let liveMiners: unknown[] = [];
 
-const mockBackend = (settingsFlag: UIVisibility) => {
+const mockBackend = (settingsFlag: UIVisibility, configured = [miner]) => {
   mockedAxios.get.mockImplementation((url: string) => {
     if (url === "/api/info") {
       return Promise.resolve({
@@ -74,7 +74,7 @@ const mockBackend = (settingsFlag: UIVisibility) => {
       return Promise.resolve({ data: settings });
     }
     if (url === "/api/config/miners") {
-      return Promise.resolve({ data: { bitaxes: [miner] } });
+      return Promise.resolve({ data: { bitaxes: configured } });
     }
     if (url === "/api/miners") {
       return Promise.resolve({
@@ -652,5 +652,80 @@ describe("the pool dashboards", () => {
     } finally {
       settings.defaults.pools.dashboards = builtIn;
     }
+  });
+});
+
+describe("a fresh install, no miner configured", () => {
+  // Configuration's own menu, told apart from the sidebar by its Miners
+  // entry.
+  const sectionMenu = async () => {
+    const link = await screen.findByRole("link", { name: /^Miners/ });
+    return link.closest("nav") as HTMLElement;
+  };
+  // Once the configured miners are in -- before, nothing is locked yet.
+  const minersOpen = () =>
+    waitFor(() =>
+      expect(screen.getByRole("link", { name: /^Miners/ })).toHaveAttribute(
+        "aria-current",
+        "page",
+      ),
+    );
+
+  describe.each([
+    { section: "electricity", menu: /^Electricity/ },
+    { section: "notifications", menu: /^Notifications/ },
+    { section: "remote", menu: /^Remote/ },
+    { section: "system", menu: /^System/ },
+  ])("the $section section", ({ section, menu }) => {
+    it("is a link with a miner configured", async () => {
+      mockBackend("enabled");
+      renderAt("/settings/miners");
+
+      const nav = await sectionMenu();
+      expect(within(nav).getByRole("link", { name: menu })).toBeInTheDocument();
+    });
+
+    it("is greyed out, saying a miner comes first, without one", async () => {
+      mockBackend("enabled", []);
+      renderAt("/settings/miners");
+
+      const nav = await sectionMenu();
+      const entry = await within(nav).findByRole("button", { name: menu });
+      expect(within(nav).queryByRole("link", { name: menu })).toBeNull();
+      expect(entry).toHaveAttribute("aria-disabled", "true");
+      expect(entry).toHaveTextContent("Add a miner first");
+    });
+
+    it("sends its URL back to Miners without one", async () => {
+      mockBackend("enabled", []);
+      renderAt(`/settings/${section}`);
+
+      await minersOpen();
+    });
+  });
+
+  // Every page but Configuration waits for a first miner; with one, each
+  // opens and loads its own data (the positive control).
+  describe.each([
+    { path: "/backups", api: "/api/backups" },
+    { path: "/audit", api: "/api/audit" },
+  ])("$path", ({ path, api }) => {
+    const apiCalled = () =>
+      mockedAxios.get.mock.calls.some(([url]) => url === api);
+
+    it("opens with a miner configured", async () => {
+      mockBackend("enabled");
+      renderAt(path);
+
+      await waitFor(() => expect(apiCalled()).toBe(true));
+    });
+
+    it("lands on Configuration's Miners without one", async () => {
+      mockBackend("enabled", []);
+      renderAt(path);
+
+      await minersOpen();
+      expect(apiCalled()).toBe(false);
+    });
   });
 });

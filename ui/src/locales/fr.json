@@ -167,7 +167,8 @@
     "alerts": "Alertes",
     "settings": "Configuration",
     "backups": "Sauvegardes",
-    "audit": "Audit"
+    "audit": "Audit",
+    "needsMiner": "Ajoute d'abord un mineur"
   },
   "sidebar": {
     "versionUpToDate": "À jour",

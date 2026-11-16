@@ -32,6 +32,7 @@ import {
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { useActiveAlerts } from "@/hooks/useAlerts";
 import { useAppInfo, useUiFeatures } from "@/hooks/useMiners";
+import { useMinersConfig } from "@/hooks/useMinersConfig";
 import { useRemoteBoard } from "@/hooks/useRemoteBoard";
 import {
   type AppVersionStatus,
@@ -551,6 +552,14 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
   const location = useLocation();
   const { ui } = useUiFeatures();
   const { data: remoteBoard } = useRemoteBoard();
+  // A fresh install: every page but Configuration waits for a first miner,
+  // greyed out rather than hidden so what's coming stays visible.
+  const { data: configuredMiners } = useMinersConfig();
+  const needsMiner = configuredMiners?.length === 0;
+  const needsMinerProps = {
+    disabled: needsMiner,
+    disabledHint: t("nav.needsMiner"),
+  };
   // The board line under the brand: the hashboard board this dashboard
   // pushes to, once remote push is set up.
   const board: BoardInfo | null =
@@ -631,6 +640,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           icon={<DashboardIcon sx={{ fontSize: 18 }} />}
           label={t("nav.home")}
           onClick={onItemClick}
+          {...needsMinerProps}
           collapsed={collapsed}
         />
         <NavItem
@@ -639,6 +649,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
           icon={<NotificationsActiveIcon sx={{ fontSize: 18 }} />}
           label={t("nav.alerts")}
           onClick={onItemClick}
+          {...needsMinerProps}
           collapsed={collapsed}
           badge={alertsBadge}
         />
@@ -663,6 +674,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             icon={<BackupIcon sx={{ fontSize: 18 }} />}
             label={t("nav.backups")}
             onClick={onItemClick}
+            {...needsMinerProps}
             collapsed={collapsed}
           />
         )}
@@ -673,6 +685,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({
             icon={<ManageHistoryIcon sx={{ fontSize: 18 }} />}
             label={t("nav.audit")}
             onClick={onItemClick}
+            {...needsMinerProps}
             collapsed={collapsed}
           />
         )}

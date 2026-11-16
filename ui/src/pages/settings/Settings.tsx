@@ -134,7 +134,8 @@ export const Settings = () => {
   const { ui } = useUiFeatures();
   const readOnly = ui.page.settings === "readonly";
   const summaries = useSectionSummaries();
-  const { lastUpdated: minersLastUpdated } = useMinersConfig();
+  const { data: configuredMiners, lastUpdated: minersLastUpdated } =
+    useMinersConfig();
   const { data: appSettings } = useAppSettings();
 
   // A side column doesn't fit a phone: a single foldable bar there instead.
@@ -145,7 +146,11 @@ export const Settings = () => {
   const keys = (Object.keys(SECTIONS) as SectionKey[]).filter(
     (k) => !readOnly || !EDIT_ONLY.includes(k),
   );
-  const current = keys.find((k) => k === section);
+  // A fresh install: nothing to set up but a first miner, the other
+  // sections greyed out until then.
+  const locked = (k: SectionKey) =>
+    configuredMiners?.length === 0 && k !== "miners";
+  const current = keys.find((k) => k === section && !locked(k));
   if (!current) return <Navigate to="../miners" relative="path" replace />;
 
   const { Component } = SECTIONS[current];
@@ -154,6 +159,7 @@ export const Settings = () => {
     icon: SECTIONS[k].icon,
     title: t(`settingsPage.toc.${k}.title`),
     ...summaries[k],
+    ...(locked(k) && { summary: t("nav.needsMiner"), disabled: true }),
   }));
   const linkTo = (k: string) => `../${k}`;
 

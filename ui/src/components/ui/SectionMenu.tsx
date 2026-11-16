@@ -22,6 +22,8 @@ export interface SectionMenuItem {
   /** Something that needs a look -- an orange dot, the text itself only on
    * hover so the entry stays compact. */
   issue?: string;
+  /** Greyed out, not a link -- its summary is then why. */
+  disabled?: boolean;
 }
 
 interface SectionMenuProps {
@@ -58,18 +60,20 @@ export const SectionList = ({
   onSelect,
 }: SectionMenuProps) => (
   <List disablePadding>
-    {items.map(({ key, icon: Icon, title, summary, issue }) => {
+    {items.map(({ key, icon: Icon, title, summary, issue, disabled }) => {
       const selected = key === current;
-      const link = linkTo && {
-        component: RouterLink,
-        to: linkTo(key),
-        relative: "path" as const,
-      };
+      const link = linkTo &&
+        !disabled && {
+          component: RouterLink,
+          to: linkTo(key),
+          relative: "path" as const,
+        };
       return (
         <ListItemButton
           key={key}
           {...link}
           selected={selected}
+          disabled={disabled}
           aria-current={selected ? "page" : undefined}
           onClick={() => onSelect?.(key)}
           sx={{
@@ -105,7 +109,7 @@ export const SectionList = ({
               </Typography>
             )}
           </Box>
-          {issue && <IssueDot issue={issue} />}
+          {issue && !disabled && <IssueDot issue={issue} />}
         </ListItemButton>
       );
     })}

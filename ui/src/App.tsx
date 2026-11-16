@@ -96,7 +96,9 @@ export const App: React.FC = () => {
                     path="backups"
                     element={
                       <RequirePageEnabled page="backups">
-                        <Backups />
+                        <RequireMinersConfigured>
+                          <Backups />
+                        </RequireMinersConfigured>
                       </RequirePageEnabled>
                     }
                   />
@@ -104,7 +106,9 @@ export const App: React.FC = () => {
                     path="audit"
                     element={
                       <RequirePageEnabled page="audit">
-                        <Audit />
+                        <RequireMinersConfigured>
+                          <Audit />
+                        </RequireMinersConfigured>
                       </RequirePageEnabled>
                     }
                   />
