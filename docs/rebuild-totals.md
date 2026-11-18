@@ -7,7 +7,7 @@ subnav:
     anchor: rebuild-totals
 ---
 
-# Scripts
+{% include page_nav.html position="top" %}
 
 ## rebuild-totals
 {: #rebuild-totals }
@@ -19,7 +19,7 @@ d'installation (`totals.json` perdu ou corrompu), une migration de
 données, ou pour reconstruire l'historique existant avant que cette
 fonctionnalité n'ait été activée.
 
-[Aller à La flotte →]({{ '/dashboard.html#flotte' | relative_url }}){: .btn .btn-primary }
+[Écran d'accueil › La flotte]({{ '/dashboard.html#flotte' | relative_url }}){: .link-page }
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -80,19 +80,16 @@ elapsed: 41.122s
 (a real run over the same data should take about as long)</span></pre>
 </div>
 
-{: .note }
-> 💡 **Astuce** — remplacez `arm64` par `amd64` selon l'architecture de
-> votre machine. Aucun clone du dépôt ni installation de Go n'est
-> nécessaire, le binaire est prêt à l'emploi.
+`amd64` à la place de `arm64` selon l'architecture de ta machine. Le
+binaire est prêt à l'emploi : ni clone du dépôt, ni Go.
 
-- **Dry-run par défaut** — la commande ci-dessus affiche seulement ce
-  qu'elle ferait ; ajoutez `-dry-run=false` pour écrire réellement.
-- **Un seul mineur** — `-miner <mac|hostname|ip>` pour ne recalculer
-  qu'un mineur en particulier.
-- **Tarif électrique de secours** — les données antérieures au suivi du
-  tarif électrique n'ont pas ce champ dans leur `.jsonl` ; ces lignes sont
-  facturées avec `-fallback-rate <€/kWh>` (par défaut, le tarif actuellement
-  configuré).
-- **Sans risque** — un `totals.json` existant est d'abord copié en
-  `totals.json.bak` ; l'écriture est atomique (jamais de fichier à moitié
-  écrit) ; les fichiers `.jsonl`/`latest.json` ne sont jamais modifiés.
+- Essai par défaut — la commande affiche ce qu'elle ferait ;
+  `-dry-run=false` écrit vraiment.
+- Un seul mineur — `-miner <mac|hostname|ip>`.
+- Tarif de secours — les lignes plus anciennes que le suivi du tarif sont
+  comptées avec `-fallback-rate <€/kWh>` (par défaut, le tarif configuré).
+- Sans risque — un `totals.json` existant est d'abord copié en
+  `totals.json.bak`, l'écriture est atomique, et l'historique n'est jamais
+  modifié.
+
+{% include page_nav.html position="bottom" %}

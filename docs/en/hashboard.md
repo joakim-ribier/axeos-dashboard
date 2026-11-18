@@ -1,7 +1,7 @@
 ---
 title: Hashboard
-nav_order: 10.5
-group: Remote
+nav_order: 6.9
+group: Services
 lang: en
 subnav:
   - title: How it works
@@ -14,111 +14,112 @@ subnav:
     anchor: in-the-dashboard
 ---
 
-# Hashboard
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#how-it-works" class="toc-card">
     <span class="toc-card-icon">🔄</span>
-    <span class="toc-card-title">How it works</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">How it works</span>
+      <span class="toc-card-sub">What your dashboard sends</span>
+    </span>
   </a>
   <a href="#remote-actions" class="toc-card">
     <span class="toc-card-icon">🕹️</span>
-    <span class="toc-card-title">Remote actions</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Remote actions</span>
+      <span class="toc-card-sub">Restart or switch from your board</span>
+    </span>
   </a>
   <a href="#data-protection" class="toc-card">
     <span class="toc-card-icon">🔒</span>
-    <span class="toc-card-title">Data protection</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Data protection</span>
+      <span class="toc-card-sub">What stays at home</span>
+    </span>
   </a>
   <a href="#in-the-dashboard" class="toc-card">
     <span class="toc-card-icon">🧭</span>
-    <span class="toc-card-title">In the dashboard</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">In the dashboard</span>
+      <span class="toc-card-sub">Where your board shows</span>
+    </span>
   </a>
 </div>
 
-Follow your miners from anywhere: the dashboard sends their stats to
-[hashboard.live](https://hashboard.live), which shows them on your board.
+Your miners followed from anywhere: your dashboard sends their stats to
+[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+which shows them on your board — 24 h hashrate, indicators, miner status,
+pools and list, refreshed on their own, in the browser's language. Your
+board is public or private.
 
-The board is your fleet's home page, reachable away from home — 24h
-hashrate, KPIs, miners' status, pools and the miner list — refreshed
-automatically, in the browser's language. It can be public or private.
+No port nor VPN to open: your dashboard is the one sending, hashboard never
+connects to it.
+[Configuration › Remote]({{ '/en/configuration.html#remote' | relative_url }}){: .link-page }
 
-Nothing to open on your network, no port and no VPN: your dashboard does
-the sending, hashboard never connects to it. The push is set up in
-Settings › Remote.
-
-[Go to Remote →]({{ '/en/configuration.html#remote' | relative_url }}){: .btn .btn-primary }
-
-{: .protection }
-> 🔒 **Your personal data stays with you.** hashboard is a third-party
-> service. By default, your wallet, your pools and your miners' address on
-> your local network are obfuscated before the push: hashboard doesn't
-> receive them, doesn't store them and so can never expose them, not even
-> on a public board.
+Your personal data stays at home. By default, your wallet, your pools and
+your miners' addresses on your network are hidden before sending: hashboard
+doesn't receive them, doesn't store them, and so can't show them, even on a
+public board.
+{: .lead-privacy }
 
 ---
 
 ## 🔄 How it works
 {: #how-it-works }
 
-Once the push is set up, the feeder sends hashboard, on each cycle and
-for each miner:
+Once sending is set up, the feeder sends on every cycle, for each miner:
 
-- **the reading** — the measurements, the name (or alias), the model, the
-  kWh rate, the firmware's latest release, the feeder's interval and the
-  miner's alert thresholds, with the personal data obfuscated;
-- **the totals** — uptime, accepted and rejected shares, electricity
-  cost;
-- **an "offline" line** when the miner doesn't answer: the board's 24h
-  chart dips to 0 as it does locally.
+- the poll — the readings, the name, the model, the kWh rate, the latest
+  firmware release, the feeder's interval and the alert thresholds, the
+  personal data hidden;
+- the totals — uptime, shares, electricity cost;
+- an "offline" line when the miner doesn't answer: the board's 24 h chart
+  drops to 0, like locally.
 
-And, once for the whole board, **its settings**: the remote actions
-allowed, sent only when they change.
+And, for the whole board, its settings: the remote actions allowed, sent
+when they change.
 
-A board holds a limited number of miners (10 by default, set by
-hashboard). Past it, the feeder sends only the first enabled miners, in
-the configuration's order; the others are still polled, stored and
-watched here, and *Configuration › Remote* names them.
+A board holds a limited number of miners, set by hashboard. Beyond it, only
+the first enabled miners, in the configuration's order, are sent; the others
+stay polled and watched locally, and Configuration › Remote names them.
 
-Pushes run in the background: a slow or unreachable hashboard never
-delays the cycle, the failure is written to the logs. A changed setting
-applies on the next cycle.
-
-[See the details in Feeder →]({{ '/en/feeder.html#hashboard' | relative_url }}){: .btn .btn-primary }
+The sends go out in the background: a slow hashboard doesn't hold up the
+cycle, a failure is written to the logs.
+[Feeder › Push to hashboard]({{ '/en/feeder.html#hashboard' | relative_url }}){: .link-page }
 
 ---
 
 ## 🕹️ Remote actions
 {: #remote-actions }
 
-On a **private** board, the panel of a miner sending its data keeps its
-**Restart** and **Switch** buttons, for the actions the dashboard allows
-(*Configuration › Remote*).
+On a private board, a miner's detail keeps its *Restart* and *Switch*
+buttons, for the actions you allow.
 
-1. The board leaves the request on hashboard.
-2. The dashboard picks it up within a minute — it asks hashboard nothing
+1. Your board leaves the request on hashboard.
+2. Your dashboard picks it up within a minute — it asks hashboard nothing
    while no action is allowed.
-3. It checks the action is still allowed and the miner is one of its own,
-   does it like its own buttons and records it in the audit.
-4. The board shows *Request in progress*, then *Request picked up* with
-   the time, buttons greyed out. Each state lasts two pick-up intervals at
-   most: a request not picked up in time expires without being done.
+3. It checks the action is still allowed and the miner is one of yours, does
+   it like its own buttons and writes it to the audit.
+4. The board shows *Request pending*, then *Request picked up* with the time,
+   buttons greyed out. A request not picked up in time expires without being
+   done.
 
-One request at a time per miner. The action's outcome is in the
-dashboard's audit, and in the mail if you turned it on.
-
-[See the setting →]({{ '/en/configuration.html#remote' | relative_url }}){: .btn .btn-primary }
+One request at a time per miner. The outcome is in the audit, and in a mail
+if you turn it on.
+[Configuration › Remote]({{ '/en/configuration.html#remote' | relative_url }}){: .link-page }
 
 ---
 
 ## 🔒 Data protection
 {: #data-protection }
 
-Your wallet, your pools and your local network are personal data. Before
-each push, the dashboard **obfuscates** them: the field stays, its value
-is replaced by `xxxxxxxx` (`0` for a port) — so hashboard never
-receives the data, and the board doesn't show it.
+Your wallet, your pools and your local network are personal data. Before each
+send, your dashboard hides them: the field stays, its value becomes
+`xxxxxxxx` (`0` for a port). hashboard never receives the data, and the board
+doesn't show it.
 
-### Always obfuscated
+### Always hidden
 
 <table class="data-table">
   <thead>
@@ -133,15 +134,15 @@ receives the data, and the board doesn't show it.
       <td><code>xxxxxxxx</code></td>
     </tr>
     <tr>
-      <td>Miner's IPv6 address</td>
+      <td>The miner's IPv6 address</td>
       <td><code>xxxxxxxx</code></td>
     </tr>
   </tbody>
 </table>
 
-### Obfuscated by default
+### Hidden by default
 
-Shared only if you choose to, in Settings › Remote:
+To share only if you choose to, in Configuration › Remote:
 
 <table class="data-table">
   <thead>
@@ -164,27 +165,26 @@ Shared only if you choose to, in Settings › Remote:
     </tr>
     <tr>
       <td>Miners' IP address</td>
-      <td>a made-up address derived from the MAC address: <code>aa:bb:cc:dd:ee:ff</code> becomes <code>fd00::aabb:ccdd:eeff</code></td>
+      <td>a made-up address from the MAC: <code>aa:bb:cc:dd:ee:ff</code> becomes <code>fd00::aabb:ccdd:eeff</code></td>
       <td>each miner's IP on your network</td>
     </tr>
   </tbody>
 </table>
 
-The made-up address says nothing about your network: it only lets the
-board recognize each miner, and it's what the board shows.
-
-Only the push is obfuscated: your dashboard keeps all the data locally —
-home, history, backups, audit.
+The made-up address says nothing about your network: it only lets the board
+recognise each miner. Only what's sent is hidden: your dashboard keeps
+everything locally — home screen, history, backups, audit.
 
 ---
 
 ## 🧭 In the dashboard
 {: #in-the-dashboard }
 
-Once the push is set up, your board shows in the dashboard itself:
+Once sending is set up, your board shows in the dashboard:
 
-- **Menu** — under *AxeOS · D#hashboard*, the board ID (click to open the
-  board), whether it's public or private, and a link to your hashboard
-  account.
-- **Home** — under the page title, an *Open your board* link and
-  when hashboard last received data.
+- Menu — under *AxeOS · D#hashboard*, the board's ID (click to open it),
+  public or private, and a link to your hashboard account.
+- Home screen — under the page's title, *Open your board* and the time of
+  the last data received by hashboard.
+
+{% include page_nav.html position="bottom" %}

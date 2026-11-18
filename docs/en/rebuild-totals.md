@@ -8,7 +8,7 @@ subnav:
     anchor: rebuild-totals
 ---
 
-# Scripts
+{% include page_nav.html position="top" %}
 
 ## rebuild-totals
 {: #rebuild-totals }
@@ -19,7 +19,7 @@ history. Useful after an installation issue (`totals.json` lost or
 corrupted), a data migration, or to backfill existing history from before
 this feature was enabled.
 
-[Go to The fleet →]({{ '/en/dashboard.html#fleet' | relative_url }}){: .btn .btn-primary }
+[Home screen › The fleet]({{ '/en/dashboard.html#fleet' | relative_url }}){: .link-page }
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -80,19 +80,15 @@ elapsed: 41.122s
 (a real run over the same data should take about as long)</span></pre>
 </div>
 
-{: .note }
-> 💡 **Tip** — replace `arm64` with `amd64` depending on your machine's
-> architecture. No repo clone or Go install needed, the binary is ready
-> to run.
+`amd64` in place of `arm64` depending on your machine's architecture. The
+binary is ready to run: no repo clone, no Go.
 
-- **Dry-run by default** — the command above only shows what it would
-  do; add `-dry-run=false` to actually write.
-- **One miner** — `-miner <mac|hostname|ip>` to only recompute a single
-  miner.
-- **Fallback electricity rate** — data recorded before electricity-rate
-  tracking existed has no such field in its `.jsonl`; those lines are
-  billed at `-fallback-rate <€/kWh>` (defaults to the currently configured
-  rate).
-- **Safe by design** — an existing `totals.json` is first copied to
-  `totals.json.bak`; the write is atomic (never a half-written file);
-  the `.jsonl`/`latest.json` files are never modified.
+- Dry run by default — the command shows what it would do;
+  `-dry-run=false` really writes.
+- One miner — `-miner <mac|hostname|ip>`.
+- Fallback rate — the lines older than the rate's tracking are counted at
+  `-fallback-rate <€/kWh>` (by default, the configured rate).
+- Safe — an existing `totals.json` is first copied to `totals.json.bak`, the
+  write is atomic, and the history is never changed.
+
+{% include page_nav.html position="bottom" %}

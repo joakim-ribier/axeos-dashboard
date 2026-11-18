@@ -7,7 +7,7 @@ subnav:
     anchor: build
 ---
 
-# Docker
+{% include page_nav.html position="top" %}
 
 ## Build
 {: #build }
@@ -41,10 +41,9 @@ utilisé par défaut (fixez-en un avec `HTTP_PORT`) :
   <pre class="terminal-card-body"><span class="term-command">$ make docker HTTP_PORT=8888</span></pre>
 </div>
 
-{: .note }
-> 💡 **Astuce** — le SHA du commit courant est automatiquement inclus dans
-> le build (visible via `GET /api/info`), avec un suffixe `-dirty` si
-> des changements ne sont pas commités.
+Le SHA du commit courant est inclus dans le build (visible via
+`GET /api/info`), suivi de `-dirty` quand des changements ne sont pas
+commités.
 
 Relancer `make docker` après une modification reconstruit les images et
 redémarre les containers avec le code à jour.
@@ -64,8 +63,8 @@ Pour repartir d'une première installation — aucun mineur, aucune donnée —
 La stack de dev a ses propres noms, quel que soit le dossier d'où elle est
 lancée : le projet `axeos-dashboard-dev` et les containers
 `axeos-dev-services` et `axeos-dev-dashboard`. Elle tourne donc à côté
-d'une [installation Docker](installation.html#docker-installation) sur la
-même machine. Pour la voir, puis l'arrêter :
+d'une installation Docker sur la même machine. Pour la voir, puis
+l'arrêter :
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -75,3 +74,5 @@ même machine. Pour la voir, puis l'arrêter :
   <pre class="terminal-card-body"><span class="term-command">$ docker compose -p axeos-dashboard-dev ps</span>
 <span class="term-command">$ docker compose -p axeos-dashboard-dev down</span></pre>
 </div>
+
+{% include page_nav.html position="bottom" %}

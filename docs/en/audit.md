@@ -4,77 +4,65 @@ nav_order: 6.5
 group: Pages
 lang: en
 subnav:
-  - title: Recorded events
+  - title: The page
+    anchor: page
+  - title: Events recorded
     anchor: events
-  - title: Entry contents
-    anchor: entry
-  - title: Storage and API
-    anchor: storage
-  - title: Hide the page
-    anchor: hide
 ---
 
-# Audit
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
-  <a href="#events" class="toc-card">
+  <a href="#page" class="toc-card">
     <span class="toc-card-icon">📋</span>
-    <span class="toc-card-title">Recorded events</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">The page</span>
+      <span class="toc-card-sub">The filters and a day's events</span>
+    </span>
   </a>
-  <a href="#entry" class="toc-card">
-    <span class="toc-card-icon">🔎</span>
-    <span class="toc-card-title">Entry contents</span>
-  </a>
-  <a href="#storage" class="toc-card">
-    <span class="toc-card-icon">🗄️</span>
-    <span class="toc-card-title">Storage and API</span>
-  </a>
-  <a href="#hide" class="toc-card">
-    <span class="toc-card-icon">🙈</span>
-    <span class="toc-card-title">Hide the page</span>
+  <a href="#events" class="toc-card">
+    <span class="toc-card-icon">🗂️</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Events recorded</span>
+      <span class="toc-card-sub">Each type, where it comes from</span>
+    </span>
   </a>
 </div>
 
-The history of everything that changes a miner or the configuration,
-takes data off the Pi or scans the network, whether from the dashboard or
-by the app itself (scheduler, nightly backup).
+Everything that acts on a miner or on the configuration, takes data out or
+scans the network — from the dashboard, from your board, or by the
+application itself.
 
-![Audit page]({{ '/assets/images/audit.png' | relative_url }})
+## 📋 The page
+{: #page }
 
-The page shows the **last 24 hours** by default, newest first. The
-calendar shows another day, from midnight to midnight UTC. Times are in
-UTC, like Backups and the audit report mail: an event carries the same
-time everywhere.
+![Audit page]({{ '/assets/images/audit.png' | relative_url }}){: width="723" }
 
-- **Filters** — by miner, by event type and by day. Each active filter
-  shows up as a chip below the bar: its cross removes it, **Clear all**
-  removes them all. The period's event count is shown on the right.
-- **One row per event** — a green dot if the operation succeeded, red if
-  it failed, followed by the event type and the miner involved. Below:
-  - for an operation made from the dashboard: the time, the device's IP
-    address and browser (full details on hover);
-  - for a scheduler operation: the time and the cron expression that
-    triggered it;
-  - for the nightly backup: the time and the month updated;
-  - on failure, the error code and message.
-- **Copy** — the icon at the end of the row copies the full entry, as
-  JSON.
-- **Export** — downloads every entry of the current period and filters
-  (not just the page shown) as a JSON file.
+1. Miner — one miner, or all of them.
+2. Type — one event type, or all of them.
+3. Day — a day, from midnight to midnight UTC; empty, the last 24 hours.
+4. Export — every entry of the period and the filters, in a JSON file.
+5. By the application — here the scheduler, with the cron expression that
+   triggered the action.
+6. Copy — the whole entry, in JSON.
+7. From the dashboard — with the device's IP and browser (the detail on
+   hover).
+8. The nightly backup — with the month updated.
+
+A green dot for a success, red for a failure, with the error's code and
+message. The times are in UTC, like in the Backups and the audit report by
+mail: an event has the same time everywhere.
 
 ---
 
-## 📋 Recorded events
+## 🗂️ Events recorded
 {: #events }
 
-The audit traces what was done **through the tool**: by someone in the
-dashboard, or by the app itself (its scheduler, its nightly backup).
-Each entry says **what** (the type),
-**when**, **who** (the device's IP and browser, or the scheduler and its
-job), **on what** (the miner) and **with which result** (success, or
-failure with its error message). A failed action is recorded too.
+Each entry says what (the type), when, who (the IP and the browser, your
+board, or the part of the application that acted), on which miner, and the
+outcome. An action that fails is recorded too.
 
-### ⚙️ Miner actions
+### ⚙️ Actions on the miners
 
 <table class="data-table">
   <thead>
@@ -82,21 +70,21 @@ failure with its error message). A failed action is recorded too.
       <th>Type</th>
       <th>Label</th>
       <th>From</th>
-      <th>What the entry holds</th>
+      <th>Content</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><code>restart</code></td>
       <td>Restart</td>
-      <td>a miner's panel › Restart; or a scheduler job</td>
-      <td>the restarted miner</td>
+      <td>a miner's detail, a scheduler job, or your board</td>
+      <td>the miner restarted</td>
     </tr>
     <tr>
       <td><code>switch_primary</code></td>
       <td>Switch to primary pool</td>
-      <td>a miner's panel › Switch pool: one entry per miner, with the pool it left and the one it joined; or a scheduler job</td>
-      <td>the switched miner</td>
+      <td>a miner's detail, a scheduler job, or your board</td>
+      <td>the miner, the pool left and the pool joined</td>
     </tr>
     <tr>
       <td><code>switch_fallback</code></td>
@@ -107,8 +95,8 @@ failure with its error message). A failed action is recorded too.
     <tr>
       <td><code>switch_pool</code></td>
       <td>Switch to a pool</td>
-      <td>Configuration › Miners › Actions › Switch to a pool: one entry per switched miner, with the pool it left and the one it joined</td>
-      <td>the switched miner — <strong>all miners</strong> when none had to switch</td>
+      <td>Configuration › Miners › Actions › Switch to a pool, one entry per miner switched</td>
+      <td>the miner, the pool left and the pool joined; every miner when none had to switch</td>
     </tr>
   </tbody>
 </table>
@@ -121,21 +109,21 @@ failure with its error message). A failed action is recorded too.
       <th>Type</th>
       <th>Label</th>
       <th>From</th>
-      <th>What the entry holds</th>
+      <th>Content</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><code>save_miners</code></td>
       <td>Miners saved</td>
-      <td>Settings page: save discovered miners, enable / disable, alias, pools, schedule</td>
-      <td>per changed miner, what changed outside sensitive changes: alias, hostname, model (before → after). On failure: a single entry, with no miner</td>
+      <td>Configuration: detection, enabling, name, pools, scheduler</td>
+      <td>for each miner, what changed outside the sensitive changes: name, hostname, model (before → after)</td>
     </tr>
     <tr>
       <td><code>save_settings</code></td>
       <td>Settings saved</td>
-      <td>Settings page › App settings: rate, other devices, pool dashboards, remote</td>
-      <td>what changed outside sensitive changes: the rate (before → after), the other devices, pool dashboards and firmware repos added or removed. On failure: a single entry</td>
+      <td>Configuration: electricity, pool dashboards, remote</td>
+      <td>what changed outside the sensitive changes: the rate (before → after), the devices and pool dashboards added or removed</td>
     </tr>
   </tbody>
 </table>
@@ -148,44 +136,44 @@ failure with its error message). A failed action is recorded too.
       <th>Type</th>
       <th>Label</th>
       <th>From</th>
-      <th>What the entry holds</th>
+      <th>Content</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><code>export_audit</code></td>
       <td>Audit export</td>
-      <td>Audit page › Export</td>
-      <td>the exported period and filters</td>
+      <td>Audit › Export</td>
+      <td>the period and the filters exported</td>
     </tr>
     <tr>
       <td><code>download_backups</code></td>
       <td>Backups download</td>
-      <td>Backups page › Download</td>
+      <td>Backups › Download</td>
       <td>the months downloaded</td>
     </tr>
     <tr>
       <td><code>discover</code></td>
       <td>Network discovery</td>
-      <td>Settings page › Automatic detection (network scan, or add by IP)</td>
-      <td>the scanned range or the probed IP</td>
+      <td>Configuration › Automatic detection, or add by IP</td>
+      <td>the range scanned or the IP probed</td>
     </tr>
     <tr>
       <td><code>backup</code></td>
       <td>Backup updated</td>
-      <td>every night, by the app: the completed day is added to its month's archive (see <a href="{{ '/en/backups.html' | relative_url }}">Backups</a>)</td>
-      <td>the month(s) whose archive was updated</td>
+      <td>every night, by the application</td>
+      <td>the months whose archive was updated</td>
     </tr>
     <tr>
       <td><code>audit_report</code></td>
       <td>Audit report sent</td>
-      <td>at night, by the mailer, at the frequency chosen in Settings › Notifications</td>
-      <td>the period covered and the recipients; the error if it failed</td>
+      <td>at night, by the mailer, at the chosen frequency</td>
+      <td>the period and the recipients; the error on a failure</td>
     </tr>
     <tr>
       <td><code>alert_mail</code></td>
       <td>Alerts mail not sent</td>
-      <td>by the mailer, when the mail of a poll's new alerts couldn't go out (only the failures are recorded)</td>
+      <td>by the mailer, when the new alerts' mail couldn't go out</td>
       <td>the poll concerned and the error</td>
     </tr>
   </tbody>
@@ -193,12 +181,10 @@ failure with its error message). A failed action is recorded too.
 
 ### 🔐 Sensitive changes
 
-A configuration save that holds sensitive changes produces, **instead of**
-<code>save_miners</code> or <code>save_settings</code>, one dedicated
-entry per sensitive change: one entry per fact, no duplicate line. Each
-comes with its detail (values **before → after**, or the job added or
-removed), so it can be searched for directly. One save can produce several
-(e.g. a miner's pool **and** its schedule).
+A save holding a sensitive change records it in an entry of its own,
+instead of <code>save_miners</code> or <code>save_settings</code>, with
+before → after: you find it by its type. One save can produce several, a
+miner's pool and its scheduler for instance.
 
 <table class="data-table">
   <thead>
@@ -213,184 +199,48 @@ removed), so it can be searched for directly. One save can produce several
     <tr>
       <td><code>miner_pool</code></td>
       <td>Miner pool changed</td>
-      <td>a miner's primary or fallback pool URL, port or user changes</td>
-      <td>each changed field — e.g. <em>Fallback user: bc1q…abc.w1 → bc1q…xyz.w1</em></td>
+      <td>a pool's URL, port or user changes</td>
+      <td>each field — e.g. <em>Fallback user: bc1q…abc.w1 → bc1q…xyz.w1</em></td>
     </tr>
     <tr>
       <td><code>miner_schedule</code></td>
       <td>Schedule changed</td>
-      <td>a scheduled job is added or removed (a job is never edited: changing one is removing it and adding another)</td>
-      <td>each job added or removed, spelled out — e.g. <em>Job added: Restart · At 12:00 AM, only on Wednesday (0 0 0 * * WED)</em></td>
+      <td>a scheduled job is added or removed</td>
+      <td>each job, in words — e.g. <em>Job added: Restart · At 00:00, on Wednesday only (0 0 0 * * WED)</em></td>
     </tr>
     <tr>
       <td><code>miner_identity</code></td>
       <td>Miner IP changed</td>
-      <td>an already configured miner's IP changes (the miner is matched by its MAC)</td>
-      <td>the old and new IP</td>
+      <td>a miner's IP changes (it's recognised by its MAC)</td>
+      <td>the old and the new IP</td>
     </tr>
     <tr>
       <td><code>miner_disabled</code> / <code>miner_enabled</code></td>
       <td>Miner disabled / enabled</td>
-      <td>a miner is disabled (no longer monitored nor scheduled) or re-enabled</td>
+      <td>a miner is disabled or enabled again</td>
       <td>—</td>
     </tr>
     <tr>
       <td><code>miner_added</code></td>
       <td>Miner added</td>
       <td>a miner joins the configuration</td>
-      <td>its pools (URL, port, user) and its scheduled jobs</td>
+      <td>its pools and its scheduled jobs</td>
     </tr>
     <tr>
       <td><code>remote_push</code></td>
       <td>Remote push changed</td>
-      <td>the hashboard push URL, API key or a data protection setting changes</td>
-      <td>the URL before and after, each data protection setting on or off; the API key is never written down, only "changed"</td>
+      <td>the push URL, the API key, a remote action or the data protection changes</td>
+      <td>each setting before and after; the API key only reads "changed"</td>
     </tr>
     <tr>
       <td><code>mail_settings</code></td>
       <td>Notifications changed</td>
-      <td>the SMTP server or the mail recipients change</td>
-      <td>each server field before and after, the recipients added or removed; the password is never written down, only "changed"</td>
+      <td>the SMTP server or the recipients change</td>
+      <td>each field before and after, the recipients added or removed; the password only reads "changed"</td>
     </tr>
   </tbody>
 </table>
 
-The rest of a save (alias, hostname, model, rate, devices, pool
-dashboards, firmware repos) is detailed under <code>save_miners</code> /
-<code>save_settings</code>: each fact is written once, under one type.
 A save that changes nothing isn't recorded.
 
----
-
-## 🔎 Entry contents
-{: #entry }
-
-An operation made from the dashboard:
-
-```json
-{
-  "ts": "2026-10-10T07:57:41Z",
-  "source": "api",
-  "type": "restart",
-  "target": "192.168.1.65",
-  "ip": "192.168.1.20",
-  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
-  "requestId": "raspberrypi/xzGLtihnkN-000057",
-  "status": 204
-}
-```
-
-A scheduler operation, here a failed one:
-
-```json
-{
-  "ts": "2026-10-09T21:59:59Z",
-  "source": "system",
-  "service": "scheduler",
-  "type": "switch_fallback",
-  "target": "192.168.1.65",
-  "cron": "59 59 23 * * FRI",
-  "error": "switch pool for 192.168.1.65: … connect: connection refused"
-}
-```
-
-<table class="data-table">
-  <thead>
-    <tr>
-      <th>Field</th>
-      <th>Contents</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr><td><code>ts</code></td><td>Date and time, in UTC</td></tr>
-    <tr><td><code>source</code></td><td><code>api</code> (from the dashboard) or <code>system</code> (by the app itself)</td></tr>
-    <tr><td><code>type</code></td><td>The event type — see the table above</td></tr>
-    <tr><td><code>target</code></td><td>The IP of the miner involved — absent for a configuration save or a switch on every miner</td></tr>
-    <tr><td><code>ip</code></td><td><code>api</code> — the IP address of the device that made the request</td></tr>
-    <tr><td><code>userAgent</code></td><td><code>api</code> — that device's browser</td></tr>
-    <tr><td><code>requestId</code></td><td><code>api</code> — the request's ID, the same as in the dashboard's logs</td></tr>
-    <tr><td><code>status</code></td><td><code>api</code> — the response's HTTP code (400 or more: failure)</td></tr>
-    <tr><td><code>query</code></td><td><code>api</code> — the request's parameters: the months downloaded, the exported period and filters, the targeted miner…</td></tr>
-    <tr><td><code>service</code></td><td><code>system</code> — the part of the app that acted: <code>scheduler</code>, <code>backup</code> (nightly backup) or <code>mailer</code></td></tr>
-    <tr><td><code>cron</code></td><td><code>system</code> — the cron expression that triggered the operation</td></tr>
-    <tr><td><code>error</code></td><td>The error message, on failure</td></tr>
-    <tr><td><code>changes</code></td><td>What changed — each field with its kind (<code>kind</code>): <code>changed</code> (value <code>before</code> → <code>after</code>), or a list item <code>added</code> (<code>after</code>) or <code>removed</code> (<code>before</code>)</td></tr>
-  </tbody>
-</table>
-
----
-
-## 🗄️ Storage and API
-{: #storage }
-
-Entries are appended to one file per day (UTC):
-`{dataDir}/data/audit/YYYY-MM-DD.jsonl` (`./storage/data/audit/` with
-Docker), one JSON entry per line.
-
-Three API routes expose them:
-
-- `GET /api/audit` — the entries between `from` and `to` (RFC 3339 dates,
-  the last 24 hours by default, a year at most), filterable by `ip`
-  (miner) and `type`, paginated with `page` and `pageSize`.
-- `GET /api/audit/types` — every type, in the order the dashboard offers
-  them: the values `type` accepts.
-- `GET /api/audit/export` — same parameters, unpaginated: the
-  **Export** button's JSON file, which states the period and filters
-  before the list of entries.
-
-```json
-{
-  "from": "2026-10-09T08:00:00Z",
-  "to": "2026-10-10T08:00:00Z",
-  "type": "restart",
-  "exportedAt": "2026-10-10T08:00:00Z",
-  "total": 6,
-  "entries": [ … ]
-}
-```
-
-The response of `GET /api/audit/types` — each type is explained in
-[Recorded events](#events):
-
-```json
-{
-  "types": [
-    "restart",
-    "switch_primary",
-    "switch_fallback",
-    "switch_pool",
-    "save_miners",
-    "save_settings",
-    "export_audit",
-    "download_backups",
-    "discover",
-    "backup",
-    "audit_report",
-    "alert_mail",
-    "miner_pool",
-    "miner_schedule",
-    "miner_identity",
-    "miner_disabled",
-    "miner_enabled",
-    "miner_added",
-    "remote_push",
-    "mail_settings"
-  ]
-}
-```
-
-Parameter details are on the [API]({{ '/en/api.html' | relative_url }}) page.
-
----
-
-## 🙈 Hide the page
-{: #hide }
-
-The page and its menu entry can be hidden from `dashboard.yml` (dashboard
-restart needed). The dashboard keeps recording events.
-
-```yaml
-ui:
-  page:
-    audit: hidden   # enabled (default) | hidden
-```
+{% include page_nav.html position="bottom" %}

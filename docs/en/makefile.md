@@ -16,28 +16,43 @@ subnav:
     anchor: releases
 ---
 
-# Makefile
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#development" class="toc-card">
     <span class="toc-card-icon">🛠️</span>
-    <span class="toc-card-title">Development</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Development</span>
+      <span class="toc-card-sub">Run the stack on your machine</span>
+    </span>
   </a>
   <a href="#quality" class="toc-card">
     <span class="toc-card-icon">✅</span>
-    <span class="toc-card-title">Quality</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Quality</span>
+      <span class="toc-card-sub">Lint, tests, formatting</span>
+    </span>
   </a>
   <a href="#deploy" class="toc-card">
     <span class="toc-card-icon">🚀</span>
-    <span class="toc-card-title">Deploy</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Deploy</span>
+      <span class="toc-card-sub">To your server, without a release</span>
+    </span>
   </a>
   <a href="#server" class="toc-card">
     <span class="toc-card-icon">🖥️</span>
-    <span class="toc-card-title">Server</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Server</span>
+      <span class="toc-card-sub">Install and update</span>
+    </span>
   </a>
   <a href="#releases" class="toc-card">
     <span class="toc-card-icon">🏷️</span>
-    <span class="toc-card-title">Releases</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Releases</span>
+      <span class="toc-card-sub">The published versions</span>
+    </span>
   </a>
 </div>
 
@@ -98,10 +113,12 @@ One service alone, from the last build (`make build`):
 </div>
 
 `make docker` builds the Docker images from the local code and starts
-the stack: see [Docker](dev.html#build).
+the stack.
+[Docker]({{ '/en/dev.html#build' | relative_url }}){: .link-page }
 
 `make rebuild-totals` rebuilds the cumulative counters from the history:
-see [Scripts](rebuild-totals.html#rebuild-totals).
+see the Scripts page.
+[Scripts]({{ '/en/rebuild-totals.html#rebuild-totals' | relative_url }}){: .link-page }
 
 ## ✅ Quality
 {: #quality }
@@ -124,7 +141,7 @@ see [Scripts](rebuild-totals.html#rebuild-totals).
     </tr>
     <tr>
       <td><code>make swagger</code></td>
-      <td>regenerates the OpenAPI spec, and the <a href="api.html">API</a> page</td>
+      <td>regenerates the OpenAPI spec and the API page. <a class="link-page" href="{{ '/en/api.html' | relative_url }}">API</a></td>
     </tr>
     <tr>
       <td><code>make docs</code></td>
@@ -191,7 +208,7 @@ On the server itself, in its folder: everything it runs is in `dist/`.
   <tbody>
     <tr>
       <td><code>make install</code></td>
-      <td>the first time: the last stable version, a <code>config.yml</code>, the services installed and started (see <a href="installation.html#native">Installation › Native</a>)</td>
+      <td>the first time: the last stable version, a <code>config.yml</code>, the services installed and started. <a class="link-page" href="{{ '/en/installation.html#native' | relative_url }}">Installation › Native</a></td>
     </tr>
     <tr>
       <td><code>make install-services</code></td>
@@ -240,3 +257,5 @@ From anywhere: `make versions` lists the releases published on GitHub,
 latest    e72f5e3
 releases  v1.0.0 v0.1.0</pre>
 </div>
+
+{% include page_nav.html position="bottom" %}

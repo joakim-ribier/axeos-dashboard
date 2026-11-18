@@ -3,94 +3,127 @@ title: Alertes
 nav_order: 4
 group: Pages
 subnav:
+  - title: La page
+    anchor: page
+  - title: En cours
+    anchor: en-cours
   - title: Types d'alertes
     anchor: types
 ---
 
-# Alertes
+{% include page_nav.html position="top" %}
 
-Historique des alertes détectées par le feeder, un jour à la fois —
-aujourd'hui par défaut, ou un autre jour via le calendrier. Accessible
-depuis le menu.
+<div class="toc-grid">
+  <a href="#page" class="toc-card">
+    <span class="toc-card-icon">📋</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">La page</span>
+      <span class="toc-card-sub">Les filtres et les alertes d'un jour</span>
+    </span>
+  </a>
+  <a href="#en-cours" class="toc-card">
+    <span class="toc-card-icon">🔴</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">En cours</span>
+      <span class="toc-card-sub">Ce qui dure encore, et le badge du menu</span>
+    </span>
+  </a>
+  <a href="#types" class="toc-card">
+    <span class="toc-card-icon">⚠️</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Types d'alertes</span>
+      <span class="toc-card-sub">Quand chacune commence et se termine</span>
+    </span>
+  </a>
+</div>
 
-![Page Alertes]({{ '/assets/images/alerts.png' | relative_url }})
+Les alertes de tes mineurs : celles en cours, et l'historique d'un jour.
 
-Une alerte n'apparaît que lorsqu'elle change d'état : une ligne quand
-elle commence (rouge, orange pour une mise à jour firmware), une ligne
-quand elle se termine (verte), avec depuis quand elle durait, sa durée et,
-pour la température et le ventilateur, la valeur la plus haute atteinte
-(ex. « 28/10 14:18 → 28/10 16:28 · a duré 2h 10m · pic à 99% »). Entre les deux, rien : une
-température qui reste haute pendant des heures tient en deux lignes.
+## 📋 La page
+{: #page }
 
-Pour qu'une valeur qui oscille autour du seuil ne déclenche pas une
-alerte à chaque relevé, le retour à la normale se fait sous le seuil
-moins une marge de retour (voir le tableau ci-dessous). Un mineur n'est
-déclaré hors ligne qu'après 2 relevés manqués de suite.
+![Page Alertes]({{ '/assets/images/alerts.png' | relative_url }}){: width="723" }
 
-Les mêmes changements d'état alimentent les notifications de la cloche,
-et un mail à chaque nouvelle alerte si
-[Configuration › Notifications]({{ '/configuration.html#notifications' | relative_url }})
-l'active.
+1. Mineur — un mineur, ou tous.
+2. Type — un type d'alerte, ou tous.
+3. Jour — le jour affiché, aujourd'hui par défaut.
+4. ‹ Aujourd'hui › — le jour précédent, le suivant, ou retour à aujourd'hui ;
+   toujours visibles sur téléphone, filtres repliés.
+5. Filtres actifs — un par étiquette : la croix le retire, *Tout effacer*
+   les retire tous.
+6. Une alerte qui commence — en rouge (en orange pour une mise à jour
+   firmware), avec la valeur et l'heure.
+7. Une alerte qui se termine — en vert, avec son début, sa durée et la
+   valeur la plus haute atteinte.
 
-Les alertes **en cours** — commencées et pas encore terminées, quel que
-soit leur âge — restent en haut de la page, au-dessus de l'historique du
-jour choisi, avec depuis quand elles durent ; pour la température et le
-ventilateur, la valeur affichée est celle du dernier relevé du mineur,
-avec celle du début et la valeur sous laquelle elle se termine (ex.
-« Atchoum : ventilateur à 88% · 02/11 09:55 · depuis 3h 35m · 86% au
-début · se termine sous 85% »). Leur nombre s'affiche aussi en badge sur l'entrée Alertes du
-menu : rouge dès qu'une est un problème, orange s'il ne reste que des
-mises à jour firmware, « 9+ » au-delà de 9. Il ne baisse que lorsqu'une
-alerte se termine.
+Une alerte tient en deux lignes, son début et sa fin, même si elle dure des
+heures. Chacune arrive aussi dans les notifications de la cloche, et par
+mail si tu l'actives.
+[Configuration › Notifications]({{ '/configuration.html#notifications' | relative_url }}){: .link-page }
 
-Filtrable par mineur, par type et par jour (les alertes en cours suivent
-le mineur et le type). À côté du jour, **‹** et **›** passent au jour
-précédent ou suivant et **Aujourd'hui** y revient — sur téléphone, ils
-restent visibles quand les filtres sont repliés. Chaque filtre actif
-apparaît en étiquette sous la barre : la croix le retire, **Tout effacer**
-les retire tous.
+---
+
+## 🔴 En cours
+{: #en-cours }
+
+Les alertes pas encore terminées restent en haut de la page, au-dessus de
+l'historique, quel que soit le jour de leur début. Elles suivent les
+filtres du mineur et du type. Pour la température et le ventilateur, la
+valeur affichée est celle du dernier relevé, avec celle du début et la
+valeur sous laquelle l'alerte se termine.
+
+Leur nombre s'affiche en badge sur *Alertes* dans le menu : rouge dès qu'une
+est un problème, orange s'il ne reste que des mises à jour firmware.
+
+---
 
 ## ⚠️ Types d'alertes
 {: #types }
 
-Les seuils de température et de ventilateur se règlent pour tous les
-mineurs dans [Configuration › Système]({{ '/configuration.html#systeme' | relative_url }}),
-et pour un mineur en particulier dans son panneau de Configuration › Mineurs ;
-les marges de retour, communes à tous, dans Configuration › Système.
+Pour qu'une valeur qui oscille autour de son seuil reste une seule alerte,
+la température et le ventilateur reviennent à la normale sous leur seuil
+moins une marge. Un mineur passe hors ligne après 2 relevés manqués de
+suite.
 
 <table class="data-table">
   <thead>
     <tr>
       <th>Type</th>
-      <th>Déclenchement</th>
-      <th>Retour à la normale</th>
+      <th>Commence</th>
+      <th>Se termine</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Température haute</td>
+      <td>Température</td>
       <td>Puce au-dessus du seuil (62 °C par défaut)</td>
-      <td>Puce sous le seuil moins la marge de retour (2 °C par défaut)</td>
+      <td>Sous le seuil moins la marge (2 °C par défaut)</td>
     </tr>
     <tr>
-      <td>Ventilateur haut</td>
+      <td>Ventilateur</td>
       <td>Vitesse au-dessus du seuil (75 % par défaut)</td>
-      <td>Vitesse sous le seuil moins la marge de retour (5 % par défaut)</td>
+      <td>Sous le seuil moins la marge (5 % par défaut)</td>
     </tr>
     <tr>
       <td>Mise à jour firmware</td>
-      <td>Version du mineur en retard sur la dernière release GitHub</td>
-      <td>Mineur à jour</td>
+      <td>Une version plus récente est sortie sur GitHub</td>
+      <td>Le mineur est à jour</td>
     </tr>
     <tr>
       <td>Hors ligne</td>
-      <td>Mineur injoignable 2 relevés de suite</td>
+      <td>Pas de réponse à 2 relevés de suite</td>
       <td>Le mineur répond de nouveau</td>
     </tr>
     <tr>
-      <td>Configuration incohérente</td>
-      <td>La <code>mac:</code> configurée ne correspond pas à ce que le mineur reporte</td>
+      <td>Erreur de configuration</td>
+      <td>La MAC configurée n'est pas celle du mineur</td>
       <td>Le bon appareil répond de nouveau</td>
     </tr>
   </tbody>
 </table>
+
+Les seuils se règlent pour tous tes mineurs, ou pour un seul dans son
+panneau ; les marges, communes à tous, au même endroit.
+[Configuration › Système]({{ '/configuration.html#systeme' | relative_url }}){: .link-page }
+
+{% include page_nav.html position="bottom" %}

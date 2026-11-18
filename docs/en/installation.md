@@ -14,20 +14,35 @@ subnav:
         anchor: docker-startup
       - title: Update
         anchor: docker-update
-  - title: Config file
+  - title: Native
+    anchor: native
+  - title: Configuration file
     anchor: config-file
 ---
 
-# Installation
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#docker" class="toc-card">
     <span class="toc-card-icon">🐳</span>
-    <span class="toc-card-title">Docker</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Docker</span>
+      <span class="toc-card-sub">The simplest: everything runs in containers</span>
+    </span>
+  </a>
+  <a href="#native" class="toc-card">
+    <span class="toc-card-icon">💻</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Native</span>
+      <span class="toc-card-sub">Straight on the machine, with systemd</span>
+    </span>
   </a>
   <a href="#config-file" class="toc-card">
     <span class="toc-card-icon">⚙️</span>
-    <span class="toc-card-title">Config file</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Configuration file</span>
+      <span class="toc-card-sub">The <code>dashboard.yml</code> file, common to both</span>
+    </span>
   </a>
 </div>
 
@@ -41,57 +56,28 @@ subnav:
 ### Installation
 {: #docker-installation }
 
-- **Docker** installed and running on the target machine.
-- That's it — no manual nginx or systemd setup, no config file to write
-  by hand.
-
-The version to install is required, via `IMAGE_TAG`: `latest` for the very
-newest, or a specific release (e.g. `1.0.0`).
+With Docker on the machine, one command is enough. `IMAGE_TAG` picks the
+version: a release (`1.0.0`) or `latest`, the very last one.
 
 <div class="terminal-card">
   <div class="terminal-card-header">
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=latest HTTP_PORT=81 bash</span>
+  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=1.0.0 HTTP_PORT=81 bash</span>
 
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-100  1174  100  1174    0     0   2541      0 --:--:-- --:--:-- --:--:--  2546
-<span class="term-comment">&gt;&gt;&gt; Image tag: latest</span>
-[+] pull 10/10
- ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest  Pulled                                                                           12.7s
- ✔ Image ghcr.io/joakim-ribier/axeos-dashboard/axeos-dashboard:latest Pulled                                                                            9.6s
-[+] up 3/3
- ✔ Network axeos-dashboard_default Created                                                                                                              0.0s
- ✔ Container axeos-services        Started                                                                                                              0.2s
- ✔ Container axeos-dashboard       Started                                                                                                              0.2s
-<span class="term-comment">&gt;&gt;&gt; Done. Open http://&lt;this-machine-ip&gt;:&lt;port&gt;/ from any device on your LAN
-    (see the PORTS column below for &lt;port&gt;, unless you passed HTTP_PORT):</span>
-NAME              IMAGE                                                          COMMAND                  SERVICE     CREATED                  STATUS                  PORTS
-axeos-dashboard   ghcr.io/joakim-ribier/axeos-dashboard/axeos-dashboard:latest   "/docker-entrypoint.…"   dashboard   Less than a second ago   Up Less than a second   0.0.0.0:81->80/tcp, [::]:81->80/tcp
-axeos-services    ghcr.io/joakim-ribier/axeos-dashboard/axeos-services:latest    "/entrypoint.sh"         services    Less than a second ago   Up Less than a second</pre>
+<span class="term-comment">&gt;&gt;&gt; Image tag: 1.0.0</span>
+ ✔ Container axeos-services    Started
+ ✔ Container axeos-dashboard   Started
+<span class="term-comment">&gt;&gt;&gt; Done. Open http://&lt;this-machine-ip&gt;:&lt;port&gt;/ from any device on your LAN</span></pre>
 </div>
 
-Safe to re-run later — it never overwrites an existing
-`config/dashboard.yml`, and the port you chose (`HTTP_PORT`) is
-remembered from one run to the next.
-
-{: .note }
-> 💡 **Tip** — install a specific release rather than `latest`
-
-<div class="terminal-card">
-  <div class="terminal-card-header">
-    <span class="terminal-card-icon">&gt;_</span>
-    <span class="terminal-card-title">Terminal</span>
-  </div>
-  <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=1.0.0 bash</span></pre>
-</div>
+Running the command again keeps your configuration and the chosen port.
 
 ### Structure
 {: #docker-structure }
 
-Directory tree created wherever you ran the command:
+The folder created where you ran the command:
 
 ```text
 axeos-dashboard/
@@ -100,7 +86,7 @@ axeos-dashboard/
 ├── config/
 │   ├── dashboard.yml
 │   └── mail-templates/  # the mails' texts, created by the mailer
-└── storage/            # filled in once the services are running
+└── storage/            # filled once the services run
     ├── logs/
     │   ├── dashboard-api.log
     │   ├── feeder.log
@@ -118,16 +104,14 @@ axeos-dashboard/
 ### Startup
 {: #docker-startup }
 
-Open [http://localhost:81/](http://localhost:81/){:target="_blank"} (the
-port from the example above), then:
-
-[Automatic miner detection]({{ '/en/configuration.html#automatic-detection' | relative_url }}){: .btn .btn-primary }
+Open [http://localhost:81/](http://localhost:81/){:target="_blank" rel="noopener noreferrer"}
+and start detecting your miners.
+[Automatic detection]({{ '/en/configuration.html#automatic-detection' | relative_url }}){: .link-page }
 
 ### Update
 {: #docker-update }
 
-Re-run the exact same install command, or from the `axeos-dashboard/`
-folder:
+Run the installation command again, or from `axeos-dashboard/`:
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -142,8 +126,8 @@ folder:
 ## 💻 Native
 {: #native }
 
-Without Docker, with the release's binaries: in the folder the services
-will run from, as a user with `sudo`, the Makefile alone is enough.
+The release's binaries, started by systemd. In the folder the services will
+run from, as a user with `sudo`:
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -155,29 +139,24 @@ will run from, as a user with `sudo`, the Makefile alone is enough.
 <span class="term-command">$ make install</span></pre>
 </div>
 
-`make install` downloads the last stable version (the binaries for the server's
-architecture, the UI, the Makefile and `deploy/`), writes a `config.yml`
-(never over an existing one), installs and starts the systemd services
-(feeder, dashboard-api, mailer) from this folder, as your user, and adds the
-`axeos-*` shortcuts to your `~/.bashrc`. A given version:
+`make install` installs the latest stable version, writes `config.yml` when
+there's none, starts the feeder, dashboard-api and the mailer as your user,
+and adds the `axeos-*` shortcuts. A given version:
 `make install RELEASE_TAG=1.0.0`.
 
-nginx, once, serves the UI and proxies the API: `make install` prints its
-two commands at the end, already filled in with this folder. nginx must be
-able to go through every folder on the path: for one that doesn't let it
-(a home folder in `700`, for instance), it also prints the `chmod o+x` to
-run, which doesn't let it list what's inside.
+At the end, it prints the two nginx commands to run — nginx serves the
+interface and relays the API — and the `chmod o+x` when a folder on the
+path is closed to it.
 
-Updates: `make update`, or `axeos-update` (see
-[Makefile › Server](makefile.html#server)).
+To update: `make update`, or `axeos-update`.
+[Makefile › Server]({{ '/en/makefile.html#server' | relative_url }}){: .link-page }
 
 ---
 
-## ⚙️ Config file
+## ⚙️ Configuration file
 {: #config-file }
 
-`dashboard.yml` is a static file, read **once at startup** — any change
-requires **restarting** the binaries to take effect.
+`dashboard.yml` is read at startup: restart the services after a change.
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -209,27 +188,30 @@ endpoints:
   restart: api/system/restart
 
 firmware:
-  cacheTTL: 24h</pre>
+  cacheTTL: 24h
+
+ui:
+  page:
+    settings: enabled
+    backups: enabled
+    audit: enabled</pre>
 </div>
 
-- **global.env** — `dev` only shows logs on the console and sends neither
-  the audit report nor the alerts mails; any other value also writes log
-  files. Every mail's subject starts with this value, e.g. `[prod]`.
-- **server.port** — dashboard-api's listening port.
-- **mailer.port** — the port of the mailer, the service sending the
-  mails; reached by dashboard-api on the machine itself only.
-- **storage.dataDir** — root data folder (miners, history, firmware
-  cache).
-- **feeder.interval** — how often each miner is polled.
-- **healthCheck.interval** — how often reachability is checked.
-- **endpoints** — endpoint paths called on each miner (read, write pool,
-  restart).
-- **firmware.cacheTTL** — how long the GitHub "latest version" response
-  is cached.
+- `global.env` — `dev`: logs on the console, neither the audit report nor
+  the alerts by mail. Any other value: logs in files too. Every mail's
+  subject starts with this value (`[prod]`).
+- `server.port` — dashboard-api's port.
+- `mailer.port` — the mailer's port, reached on the machine itself.
+- `storage.dataDir` — the data folder.
+- `feeder.interval` — the time between two polls of the miners.
+- `healthCheck.interval` — the time between two checks of the miners.
+- `endpoints` — the paths called on each miner.
+- `firmware.cacheTTL` — how long the latest firmware version stays cached.
+- `ui.page` — for Configuration, Backups and Audit: `hidden` removes the page
+  and its menu entry (archiving and the audit go on), `readonly` shows
+  Configuration without letting anything be changed.
 
-{: .note }
-> The miner list, electricity rate, notifications and pools are all
-> managed directly from the app (**Configuration** page) — no need to
-> hand-edit a file for that.
+The rest — miners, electricity, notifications, pools — is set in the app.
+[Configuration]({{ '/en/configuration.html' | relative_url }}){: .link-page }
 
-[Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
+{% include page_nav.html position="bottom" %}

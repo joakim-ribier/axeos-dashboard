@@ -8,7 +8,7 @@ subnav:
     anchor: build
 ---
 
-# Docker
+{% include page_nav.html position="top" %}
 
 ## Build
 {: #build }
@@ -42,10 +42,8 @@ default (pin one with `HTTP_PORT`):
   <pre class="terminal-card-body"><span class="term-command">$ make docker HTTP_PORT=8888</span></pre>
 </div>
 
-{: .note }
-> 💡 **Tip** — the current commit's SHA is automatically baked into the
-> build (visible via `GET /api/info`), with a `-dirty` suffix if there
-> are uncommitted changes.
+The current commit's SHA is baked into the build (visible via
+`GET /api/info`), followed by `-dirty` when changes aren't committed.
 
 Re-running `make docker` after a change rebuilds the images and restarts
 the containers with the up-to-date code.
@@ -65,8 +63,7 @@ is for the next `make docker`:
 The dev stack has its own names, whatever folder it's started from: the
 project `axeos-dashboard-dev` and the containers `axeos-dev-services` and
 `axeos-dev-dashboard`. It thus runs next to a
-[Docker install](installation.html#docker-installation) on the same
-machine. To see it, then stop it:
+Docker install on the same machine. To see it, then stop it:
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -76,3 +73,5 @@ machine. To see it, then stop it:
   <pre class="terminal-card-body"><span class="term-command">$ docker compose -p axeos-dashboard-dev ps</span>
 <span class="term-command">$ docker compose -p axeos-dashboard-dev down</span></pre>
 </div>
+
+{% include page_nav.html position="bottom" %}

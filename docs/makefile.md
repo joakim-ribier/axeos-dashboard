@@ -15,28 +15,43 @@ subnav:
     anchor: releases
 ---
 
-# Makefile
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#developpement" class="toc-card">
     <span class="toc-card-icon">🛠️</span>
-    <span class="toc-card-title">Développement</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Développement</span>
+      <span class="toc-card-sub">Lancer la stack sur ta machine</span>
+    </span>
   </a>
   <a href="#qualite" class="toc-card">
     <span class="toc-card-icon">✅</span>
-    <span class="toc-card-title">Qualité</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Qualité</span>
+      <span class="toc-card-sub">Lint, tests, formatage</span>
+    </span>
   </a>
   <a href="#deploiement" class="toc-card">
     <span class="toc-card-icon">🚀</span>
-    <span class="toc-card-title">Déploiement</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Déploiement</span>
+      <span class="toc-card-sub">Vers ton serveur, sans release</span>
+    </span>
   </a>
   <a href="#serveur" class="toc-card">
     <span class="toc-card-icon">🖥️</span>
-    <span class="toc-card-title">Serveur</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Serveur</span>
+      <span class="toc-card-sub">Installer et mettre à jour</span>
+    </span>
   </a>
   <a href="#releases" class="toc-card">
     <span class="toc-card-icon">🏷️</span>
-    <span class="toc-card-title">Releases</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Releases</span>
+      <span class="toc-card-sub">Les versions publiées</span>
+    </span>
   </a>
 </div>
 
@@ -67,7 +82,7 @@ Server -- on the server itself, in its folder (everything it runs lives in dist/
 ## 🛠️ Développement
 {: #developpement }
 
-Sur votre machine. `make run` compile les binaires puis lance toute la
+Sur ta machine. `make run` compile les binaires puis lance toute la
 stack dans la console : mailer, feeder, dashboard-api et l'interface sur
 le port 5174. Chaque ligne est préfixée par le processus d'où elle vient,
 et Ctrl+C arrête tout.
@@ -98,10 +113,12 @@ Un service seul, à partir du dernier build (`make build`) :
 </div>
 
 `make docker` construit les images Docker à partir du code local et
-démarre la stack : voir [Docker](dev.html#build).
+démarre la stack.
+[Docker]({{ '/dev.html#build' | relative_url }}){: .link-page }
 
 `make rebuild-totals` reconstruit les compteurs cumulés depuis
-l'historique : voir [Scripts](rebuild-totals.html#rebuild-totals).
+l'historique.
+[Scripts]({{ '/rebuild-totals.html#rebuild-totals' | relative_url }}){: .link-page }
 
 ## ✅ Qualité
 {: #qualite }
@@ -124,7 +141,7 @@ l'historique : voir [Scripts](rebuild-totals.html#rebuild-totals).
     </tr>
     <tr>
       <td><code>make swagger</code></td>
-      <td>régénère la spécification OpenAPI, et la page <a href="api.html">API</a></td>
+      <td>régénère la spécification OpenAPI et la page API. <a class="link-page" href="{{ '/api.html' | relative_url }}">API</a></td>
     </tr>
     <tr>
       <td><code>make docs</code></td>
@@ -136,7 +153,7 @@ l'historique : voir [Scripts](rebuild-totals.html#rebuild-totals).
 ## 🚀 Déploiement
 {: #deploiement }
 
-De votre machine vers votre serveur, sans passer par une release : pour
+De ta machine vers ton serveur, sans passer par une release : pour
 essayer une modification avant de la publier.
 
 Le serveur se décrit en deux valeurs : son alias SSH et son dossier.
@@ -171,7 +188,7 @@ ensuite.
     <span class="terminal-card-icon">&gt;_</span>
     <span class="terminal-card-title">Terminal</span>
   </div>
-  <pre class="terminal-card-body"><span class="term-comment"># sur votre machine</span>
+  <pre class="terminal-card-body"><span class="term-comment"># sur ta machine</span>
 <span class="term-command">$ make deploy</span>
 <span class="term-comment"># puis sur le serveur, dans son dossier</span>
 <span class="term-command">$ make restart</span></pre>
@@ -193,7 +210,7 @@ dans `dist/`.
   <tbody>
     <tr>
       <td><code>make install</code></td>
-      <td>la première fois : la dernière version stable, un <code>config.yml</code>, les services installés et démarrés (voir <a href="installation.html#native">Installation › Native</a>)</td>
+      <td>la première fois : la dernière version stable, un <code>config.yml</code>, les services installés et démarrés. <a class="link-page" href="{{ '/installation.html#native' | relative_url }}">Installation › Native</a></td>
     </tr>
     <tr>
       <td><code>make install-services</code></td>
@@ -245,3 +262,5 @@ ancienne.
 latest    e72f5e3
 releases  v1.0.0 v0.1.0</pre>
 </div>
+
+{% include page_nav.html position="bottom" %}
