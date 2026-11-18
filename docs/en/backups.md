@@ -4,95 +4,60 @@ nav_order: 6
 group: Pages
 lang: en
 subnav:
-  - title: Archive contents
-    anchor: contents
+  - title: The page
+    anchor: page
   - title: Restore
     anchor: restore
-  - title: Hide the page
-    anchor: hide
 ---
 
-# Backups
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
-  <a href="#contents" class="toc-card">
-    <span class="toc-card-icon">📦</span>
-    <span class="toc-card-title">Archive contents</span>
+  <a href="#page" class="toc-card">
+    <span class="toc-card-icon">📋</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">The page</span>
+      <span class="toc-card-sub">One zip per month, to download</span>
+    </span>
   </a>
   <a href="#restore" class="toc-card">
     <span class="toc-card-icon">♻️</span>
-    <span class="toc-card-title">Restore</span>
-  </a>
-  <a href="#hide" class="toc-card">
-    <span class="toc-card-icon">🙈</span>
-    <span class="toc-card-title">Hide the page</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Restore</span>
+      <span class="toc-card-sub">Put a month back on disk</span>
+    </span>
   </a>
 </div>
 
-The miners' history, archived automatically by the feeder, one zip
-archive per month. Available from the sidebar, right below
-Configuration.
+Your miners' history, archived automatically: one zip per month.
 
-![Backups page]({{ '/assets/images/backups.png' | relative_url }})
+## 📋 The page
+{: #page }
 
-Every night, the previous day is added to its month's archive, within
-the hour after midnight UTC. The current month is flagged **in
-progress** and so holds everything up to yesterday. On the 1st of the
-next month, its archive is complete and becomes final: it will never be
-modified again, and its checksum (MD5) shows in the table.
+![Backups page]({{ '/assets/images/backups.png' | relative_url }}){: width="701" }
 
-On first startup, all the history already on disk is archived, month by
-month. If the feeder was stopped for a few days, the missing days are
-caught up when it restarts.
+1. Download — the months ticked, in a single zip; their total size shows
+   next to it.
+2. Tick all — the months of the year shown. The selection stays from one
+   year to the next.
+3. In progress — the current month, added to every night with the day
+   before.
+4. A month — downloads its archive.
+5. Year — one year at a time, the current one by default.
 
-- **One month** — the icon at the end of the row downloads its archive.
-- **Several months** — tick them, then **Download**: a single zip
-  bundling them, with their approximate total size shown next to the
-  button. The selection is kept from one year to another.
-- **By year** — the table footer shows one year at a time, the current
-  year by default; the arrows move to previous years.
-
----
-
-## 📦 Archive contents
-{: #contents }
-
-Each miner's `.jsonl` files for the month, laid out as in the data
-directory:
-
-```
-axeos-backup-2026-09.zip
-└── data/bitaxes/
-    ├── aabbccddee01/
-    │   ├── 2026-09-01.jsonl
-    │   ├── 2026-09-02.jsonl
-    │   └── ...
-    └── aabbccddee02/
-        └── ...
-```
-
-A multi-month download has exactly the same shape, with the days of
-every selected month.
-
-Archives are stored in `{dataDir}/data/backups/`
-(`./storage/data/backups/` with Docker), along with `checksums.md5`, the
-MD5 of each final archive. To check them from that directory:
-
-<div class="terminal-card">
-  <div class="terminal-card-header">
-    <span class="terminal-card-icon">&gt;_</span>
-    <span class="terminal-card-title">Terminal</span>
-  </div>
-  <pre class="terminal-card-body"><span class="term-command">$ md5sum -c checksums.md5</span></pre>
-</div>
+Every night, within the hour after midnight UTC, the day before joins its
+month's archive. On the 1st of the next month, the archive is complete: it no
+longer changes, and its checksum (MD5) shows. On the first start, all the
+history already on disk is archived; after the feeder was stopped, the
+missing days are caught up.
 
 ---
 
 ## ♻️ Restore
 {: #restore }
 
-Unzip the archive into the dashboard's `dataDir` — `-n` keeps files
-already there instead of overwriting them:
+An archive holds your miners' folders, one file per day. Unzip it into the
+data folder; `-n` keeps the files already there:
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -102,19 +67,7 @@ already there instead of overwriting them:
   <pre class="terminal-card-body"><span class="term-command">$ unzip -n axeos-backup-2026-09.zip -d ./storage</span></pre>
 </div>
 
-Then rebuild the totals with
-[rebuild-totals]({{ '/en/rebuild-totals.html#rebuild-totals' | relative_url }}).
+Then rebuild the totals.
+[Scripts › rebuild-totals]({{ '/en/rebuild-totals.html#rebuild-totals' | relative_url }}){: .link-page }
 
----
-
-## 🙈 Hide the page
-{: #hide }
-
-The page and its sidebar entry can be hidden from `dashboard.yml`
-(dashboard restart required). The feeder keeps archiving every night.
-
-```yaml
-ui:
-  page:
-    backups: hidden   # enabled (default) | hidden
-```
+{% include page_nav.html position="bottom" %}

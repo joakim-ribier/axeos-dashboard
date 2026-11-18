@@ -1,5 +1,5 @@
-title: axeos-dashboard
-description: Documentation de axeos-dashboard
+title: AxeOS · D#hashboard
+description: Documentation de AxeOS · D#hashboard
 remote_theme: just-the-docs/just-the-docs
 
 plugins:
@@ -28,7 +28,3 @@ callouts:
     color: green
   protection:
     color: blue
-
-aux_links:
-  "axeos-dashboard sur GitHub":
-    - "https://github.com/joakim-ribier/axeos-dashboard"

@@ -1,7 +1,7 @@
 ---
 title: Hashboard
-nav_order: 10.5
-group: Remote
+nav_order: 6.9
+group: Services
 subnav:
   - title: Fonctionnement
     anchor: fonctionnement
@@ -13,113 +13,114 @@ subnav:
     anchor: dans-le-dashboard
 ---
 
-# Hashboard
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#fonctionnement" class="toc-card">
     <span class="toc-card-icon">🔄</span>
-    <span class="toc-card-title">Fonctionnement</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Fonctionnement</span>
+      <span class="toc-card-sub">Ce que ton dashboard envoie</span>
+    </span>
   </a>
   <a href="#actions-a-distance" class="toc-card">
     <span class="toc-card-icon">🕹️</span>
-    <span class="toc-card-title">Actions à distance</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Actions à distance</span>
+      <span class="toc-card-sub">Redémarrer ou basculer depuis ton board</span>
+    </span>
   </a>
   <a href="#protection-des-donnees" class="toc-card">
     <span class="toc-card-icon">🔒</span>
-    <span class="toc-card-title">Protection des données</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Protection des données</span>
+      <span class="toc-card-sub">Ce qui reste chez toi</span>
+    </span>
   </a>
   <a href="#dans-le-dashboard" class="toc-card">
     <span class="toc-card-icon">🧭</span>
-    <span class="toc-card-title">Dans le dashboard</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Dans le dashboard</span>
+      <span class="toc-card-sub">Où ton board apparaît</span>
+    </span>
   </a>
 </div>
 
-Suivez vos mineurs depuis n'importe où : le dashboard envoie leurs stats à
-[hashboard.live](https://hashboard.live), qui les affiche sur votre board.
+Tes mineurs suivis de n'importe où : ton dashboard envoie leurs
+statistiques à [hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+qui les affiche sur ton board — hashrate sur 24 h, indicateurs, état des
+mineurs, pools et liste, rafraîchis tout seuls, dans la langue du
+navigateur. Ton board est public ou privé.
 
-Le board est la page d'accueil de votre flotte, accessible hors de chez
-vous — hashrate sur 24 h, indicateurs, état des mineurs, pools et liste
-des mineurs — rafraîchie automatiquement, dans la langue du navigateur.
-Il peut être public ou privé.
+Ni port ni VPN à ouvrir : c'est ton dashboard qui envoie, hashboard ne s'y
+connecte jamais.
+[Configuration › Distant]({{ '/configuration.html#distant' | relative_url }}){: .link-page }
 
-Rien à ouvrir sur votre réseau, ni port ni VPN : c'est votre dashboard qui
-envoie, hashboard ne s'y connecte jamais. L'envoi se configure dans
-Configuration › Distant.
-
-[Aller à Distant →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
-
-{: .protection }
-> 🔒 **Vos données personnelles restent chez vous.** hashboard est un
-> service tiers. Par défaut, votre wallet, vos pools et l'adresse de vos
-> mineurs sur votre réseau local sont offusqués avant l'envoi : hashboard
-> ne les reçoit pas, ne les stocke pas et ne peut donc jamais les exposer,
-> même sur un board public.
+Tes données personnelles restent chez toi. Par défaut, ton wallet, tes pools
+et les adresses de tes mineurs sur ton réseau sont masqués avant l'envoi :
+hashboard ne les reçoit pas, ne les stocke pas, et ne peut donc pas les
+montrer, même sur un board public.
+{: .lead-privacy }
 
 ---
 
 ## 🔄 Fonctionnement
 {: #fonctionnement }
 
-Une fois l'envoi configuré, le feeder envoie à hashboard, à chaque cycle
-et pour chaque mineur :
+Une fois l'envoi configuré, le feeder envoie à chaque cycle, pour chaque
+mineur :
 
-- **le relevé** — les mesures, le nom (ou l'alias), le modèle, le tarif du
-  kWh, la dernière release du firmware, l'intervalle du feeder et les
-  seuils d'alerte du mineur, avec les données personnelles offusquées ;
-- **les totaux** — temps de fonctionnement, parts acceptées et rejetées,
-  coût d'électricité ;
-- **une ligne « hors ligne »** quand le mineur ne répond pas : le graphe
-  24 h du board chute à 0 comme en local.
+- le relevé — les mesures, le nom, le modèle, le tarif du kWh, la dernière
+  release du firmware, l'intervalle du feeder et les seuils d'alerte, les
+  données personnelles masquées ;
+- les totaux — temps de fonctionnement, parts, coût d'électricité ;
+- une ligne « hors ligne » quand le mineur ne répond pas : le graphique 24 h
+  du board chute à 0, comme en local.
 
-Et, une fois pour tout le board, **ses réglages** : les actions à distance
-autorisées, envoyées seulement quand elles changent.
+Et, pour tout le board, ses réglages : les actions à distance autorisées,
+envoyées quand elles changent.
 
-Un board contient un nombre limité de mineurs (10 par défaut, fixé par
-hashboard). Au-delà, le feeder n'envoie que les premiers mineurs activés,
-dans l'ordre de la configuration ; les autres restent relevés, stockés et
-surveillés en local, et *Configuration › Distant* les nomme.
+Un board a un nombre limité de mineurs, fixé par hashboard.
+Au-delà, seuls les premiers mineurs activés, dans l'ordre de la
+configuration, sont envoyés ; les autres restent relevés et surveillés en
+local, et Configuration › Distant les nomme.
 
-Les envois partent en arrière-plan : un hashboard lent ou injoignable ne
-retarde jamais le cycle, l'échec est écrit dans les logs. Un réglage
-modifié s'applique au cycle suivant.
-
-[Voir le détail dans Feeder →]({{ '/feeder.html#hashboard' | relative_url }}){: .btn .btn-primary }
+Les envois partent en arrière-plan : un hashboard lent ne retarde pas le
+cycle, un échec est écrit dans les logs.
+[Feeder › Envoi vers hashboard]({{ '/feeder.html#hashboard' | relative_url }}){: .link-page }
 
 ---
 
 ## 🕹️ Actions à distance
 {: #actions-a-distance }
 
-Sur un board **privé**, le panneau d'un mineur qui envoie ses données garde
-ses boutons **Redémarrer** et **Basculer**, pour les actions que le
-dashboard autorise (*Configuration › Distant*).
+Sur un board privé, le détail d'un mineur garde ses boutons *Redémarrer* et
+*Basculer*, pour les actions que tu autorises.
 
-1. Le board dépose la demande sur hashboard.
-2. Le dashboard la récupère dans la minute — il ne demande rien à hashboard
-   tant qu'aucune action n'est autorisée.
-3. Il vérifie qu'elle est toujours autorisée et que le mineur est l'un des
-   siens, la fait comme ses propres boutons et l'inscrit dans l'audit.
+1. Ton board dépose la demande sur hashboard.
+2. Ton dashboard la récupère dans la minute — il ne demande rien à
+   hashboard tant qu'aucune action n'est autorisée.
+3. Il vérifie qu'elle est toujours autorisée et que le mineur est bien l'un
+   des tiens, la fait comme ses propres boutons et la note dans l'audit.
 4. Le board affiche *Demande en cours*, puis *Demande récupérée* avec
-   l'heure, boutons grisés. Chaque état dure au plus deux intervalles de
-   récupération : une demande non récupérée à temps expire sans être
-   exécutée.
+   l'heure, boutons grisés. Une demande pas récupérée à temps expire sans
+   être faite.
 
-Une seule demande à la fois par mineur. Le résultat de l'action est dans
-l'audit du dashboard, et dans le mail si vous l'avez activé.
-
-[Voir le réglage →]({{ '/configuration.html#distant' | relative_url }}){: .btn .btn-primary }
+Une demande à la fois par mineur. Le résultat est dans l'audit, et dans un
+mail si tu l'actives.
+[Configuration › Distant]({{ '/configuration.html#distant' | relative_url }}){: .link-page }
 
 ---
 
 ## 🔒 Protection des données
 {: #protection-des-donnees }
 
-Votre wallet, vos pools et votre réseau local sont des données
-personnelles. Avant chaque envoi, le dashboard les **offusque** : le champ
-reste, sa valeur est remplacée par `xxxxxxxx` (`0` pour un port) —
-hashboard ne reçoit donc jamais la donnée, et le board ne l'affiche pas.
+Ton wallet, tes pools et ton réseau local sont des données personnelles.
+Avant chaque envoi, ton dashboard les masque : le champ reste, sa valeur
+devient `xxxxxxxx` (`0` pour un port). hashboard ne reçoit donc jamais la
+donnée, et le board ne l'affiche pas.
 
-### Toujours offusqué
+### Toujours masqué
 
 <table class="data-table">
   <thead>
@@ -140,9 +141,9 @@ hashboard ne reçoit donc jamais la donnée, et le board ne l'affiche pas.
   </tbody>
 </table>
 
-### Offusqué par défaut
+### Masqué par défaut
 
-À partager seulement si vous le choisissez, dans Configuration › Distant :
+À partager seulement si tu le choisis, dans Configuration › Distant :
 
 <table class="data-table">
   <thead>
@@ -156,37 +157,35 @@ hashboard ne reçoit donc jamais la donnée, et le board ne l'affiche pas.
     <tr>
       <td>Utilisateur / wallet des pools</td>
       <td><code>xxxxxxxx</code></td>
-      <td>l'utilisateur des pools principale et de secours</td>
+      <td>l'utilisateur des pools principal et de secours</td>
     </tr>
     <tr>
       <td>Pools (adresse et port)</td>
       <td><code>xxxxxxxx</code>, port <code>0</code></td>
-      <td>l'adresse et le port des pools principale et de secours</td>
+      <td>l'adresse et le port des pools principal et de secours</td>
     </tr>
     <tr>
       <td>Adresse IP des mineurs</td>
-      <td>une adresse fictive tirée de l'adresse MAC : <code>aa:bb:cc:dd:ee:ff</code> devient <code>fd00::aabb:ccdd:eeff</code></td>
-      <td>l'IP de chaque mineur sur votre réseau</td>
+      <td>une adresse fictive tirée de la MAC : <code>aa:bb:cc:dd:ee:ff</code> devient <code>fd00::aabb:ccdd:eeff</code></td>
+      <td>l'IP de chaque mineur sur ton réseau</td>
     </tr>
   </tbody>
 </table>
 
-L'adresse fictive ne dit rien de votre réseau : elle sert seulement au
-board à reconnaître chaque mineur, et c'est elle qu'il affiche.
-
-Seul l'envoi est offusqué : votre dashboard garde toutes les données en
-local — accueil, historique, sauvegardes, audit.
+L'adresse fictive ne dit rien de ton réseau : elle sert seulement au board à
+reconnaître chaque mineur. Seul l'envoi est masqué : ton dashboard garde
+tout en local — accueil, historique, sauvegardes, audit.
 
 ---
 
 ## 🧭 Dans le dashboard
 {: #dans-le-dashboard }
 
-Une fois l'envoi configuré, votre board apparaît dans le dashboard
-lui-même :
+Une fois l'envoi configuré, ton board apparaît dans le dashboard :
 
-- **Menu** — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
-  ouvrir le board), s'il est public ou privé, et un lien vers votre compte
-  hashboard.
-- **Accueil** — sous le titre de la page, un lien *Ouvrir ton board* et
-  l'heure des dernières données reçues par hashboard.
+- Menu — sous *AxeOS · D#hashboard*, l'identifiant du board (clic pour
+  l'ouvrir), public ou privé, et un lien vers ton compte hashboard.
+- Accueil — sous le titre de la page, *Ouvrir ton board* et l'heure des
+  dernières données reçues par hashboard.
+
+{% include page_nav.html position="bottom" %}

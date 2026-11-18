@@ -3,97 +3,60 @@ title: Sauvegardes
 nav_order: 6
 group: Pages
 subnav:
-  - title: Contenu d'une archive
-    anchor: contenu
+  - title: La page
+    anchor: page
   - title: Restaurer
     anchor: restaurer
-  - title: Masquer la page
-    anchor: masquer
 ---
 
-# Sauvegardes
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
-  <a href="#contenu" class="toc-card">
-    <span class="toc-card-icon">📦</span>
-    <span class="toc-card-title">Contenu d'une archive</span>
+  <a href="#page" class="toc-card">
+    <span class="toc-card-icon">📋</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">La page</span>
+      <span class="toc-card-sub">Un zip par mois, à télécharger</span>
+    </span>
   </a>
   <a href="#restaurer" class="toc-card">
     <span class="toc-card-icon">♻️</span>
-    <span class="toc-card-title">Restaurer</span>
-  </a>
-  <a href="#masquer" class="toc-card">
-    <span class="toc-card-icon">🙈</span>
-    <span class="toc-card-title">Masquer la page</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Restaurer</span>
+      <span class="toc-card-sub">Remettre un mois sur le disque</span>
+    </span>
   </a>
 </div>
 
-L'historique des mineurs archivé automatiquement par le feeder, une
-archive zip par mois. Accessible depuis le menu, juste sous
-Configuration.
+L'historique de tes mineurs, archivé automatiquement : un zip par mois.
 
-![Page Sauvegardes]({{ '/assets/images/backups.png' | relative_url }})
+## 📋 La page
+{: #page }
 
-Chaque nuit, la journée de la veille est ajoutée à l'archive de son mois,
-dans l'heure qui suit minuit UTC (1h ou 2h du matin, heure de Paris). Le
-mois en cours est marqué **en cours** et contient donc tout jusqu'à la
-veille. Le 1er du mois suivant, son archive est complète et devient
-définitive : elle ne sera plus jamais modifiée, et son checksum (MD5)
-s'affiche dans le tableau.
+![Page Sauvegardes]({{ '/assets/images/backups.png' | relative_url }}){: width="701" }
 
-Au premier démarrage, tout l'historique déjà présent sur le disque est
-archivé, mois par mois. Si le feeder a été arrêté quelques jours, les
-journées manquantes sont rattrapées à son redémarrage.
+1. Télécharger — les mois cochés, dans un seul zip ; leur taille totale
+   s'affiche à côté.
+2. Tout cocher — les mois de l'année affichée. La sélection reste d'une
+   année à l'autre.
+3. En cours — le mois en cours, complété chaque nuit avec la veille.
+4. Un mois — télécharge son archive.
+5. Année — une année à la fois, l'année en cours par défaut.
 
-- **Un mois** — l'icône en bout de ligne télécharge son archive.
-- **Plusieurs mois** — cochez-les, puis **Télécharger** : un seul zip qui
-  les regroupe, avec leur taille totale approximative affichée à côté du
-  bouton. La sélection est conservée d'une année à l'autre.
-- **Par année** — le pied du tableau affiche une année à la fois,
-  l'année en cours par défaut ; les flèches passent aux années
-  précédentes.
-
----
-
-## 📦 Contenu d'une archive
-{: #contenu }
-
-Les fichiers `.jsonl` de chaque mineur pour le mois, rangés comme dans le
-dossier de données :
-
-```
-axeos-backup-2026-09.zip
-└── data/bitaxes/
-    ├── aabbccddee01/
-    │   ├── 2026-09-01.jsonl
-    │   ├── 2026-09-02.jsonl
-    │   └── ...
-    └── aabbccddee02/
-        └── ...
-```
-
-Un téléchargement de plusieurs mois a exactement la même forme, avec les
-journées de tous les mois sélectionnés.
-
-Les archives sont stockées dans `{dataDir}/data/backups/`
-(`./storage/data/backups/` avec Docker), avec `checksums.md5`, le MD5 de
-chaque archive définitive. Pour les vérifier depuis ce dossier :
-
-<div class="terminal-card">
-  <div class="terminal-card-header">
-    <span class="terminal-card-icon">&gt;_</span>
-    <span class="terminal-card-title">Terminal</span>
-  </div>
-  <pre class="terminal-card-body"><span class="term-command">$ md5sum -c checksums.md5</span></pre>
-</div>
+Chaque nuit, dans l'heure qui suit minuit UTC, la veille rejoint l'archive
+de son mois. Le 1er du mois suivant, l'archive est complète : elle ne change
+plus, et son checksum (MD5) s'affiche. Au premier démarrage, tout
+l'historique déjà sur le disque est archivé ; après un arrêt du feeder, les
+jours manquants sont rattrapés.
 
 ---
 
 ## ♻️ Restaurer
 {: #restaurer }
 
-Décompressez l'archive dans le `dataDir` du dashboard — `-n` garde les
-fichiers déjà présents plutôt que de les écraser :
+Une archive reprend les dossiers de tes mineurs, un fichier par jour.
+Décompresse-la dans le dossier de données ; `-n` garde les fichiers déjà
+présents :
 
 <div class="terminal-card">
   <div class="terminal-card-header">
@@ -103,20 +66,7 @@ fichiers déjà présents plutôt que de les écraser :
   <pre class="terminal-card-body"><span class="term-command">$ unzip -n axeos-backup-2026-09.zip -d ./storage</span></pre>
 </div>
 
-Puis reconstruisez les totaux avec
-[rebuild-totals]({{ '/rebuild-totals.html#rebuild-totals' | relative_url }}).
+Puis reconstruis les totaux.
+[Scripts › rebuild-totals]({{ '/rebuild-totals.html#rebuild-totals' | relative_url }}){: .link-page }
 
----
-
-## 🙈 Masquer la page
-{: #masquer }
-
-La page et son entrée dans le menu se masquent depuis `dashboard.yml`
-(redémarrage du dashboard nécessaire). Le feeder continue d'archiver
-chaque nuit.
-
-```yaml
-ui:
-  page:
-    backups: hidden   # enabled (par défaut) | hidden
-```
+{% include page_nav.html position="bottom" %}

@@ -1,0 +1,48 @@
+{%- comment -%}
+  The page's previous and next, in the menu's order (nav_order) and in its
+  own language: a bar holding the page's title on top
+  (include page_nav.html position="top"), two cards at the bottom
+  (position="bottom").
+{%- endcomment -%}
+{%- if page.lang == "en" -%}
+  {%- assign nav_pages = site.html_pages | where: "lang", "en" -%}
+  {%- assign label_prev = "Previous" -%}
+  {%- assign label_next = "Next" -%}
+{%- else -%}
+  {%- assign nav_pages = site.html_pages | where_exp: "p", "p.lang != 'en'" -%}
+  {%- assign label_prev = "Précédent" -%}
+  {%- assign label_next = "Suivant" -%}
+{%- endif -%}
+{%- assign nav_pages = nav_pages | where_exp: "p", "p.nav_order != nil" | sort: "nav_order" -%}
+{%- assign prev_page = nil -%}
+{%- assign next_page = nil -%}
+{%- for p in nav_pages -%}
+  {%- if p.url == page.url -%}
+    {%- assign i = forloop.index0 -%}
+    {%- if i > 0 -%}{%- assign prev_index = i | minus: 1 -%}{%- assign prev_page = nav_pages[prev_index] -%}{%- endif -%}
+    {%- assign next_index = i | plus: 1 -%}
+    {%- assign next_page = nav_pages[next_index] -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if include.position == "top" -%}
+<div class="page-nav-top">
+  <span class="page-nav-side">{%- if prev_page -%}<a class="page-nav-prev" href="{{ prev_page.url | relative_url }}">{{ prev_page.title }}</a>{%- endif -%}</span>
+  <h1>{{ page.title }}</h1>
+  <span class="page-nav-side page-nav-side-end">{%- if next_page -%}<a class="page-nav-next" href="{{ next_page.url | relative_url }}">{{ next_page.title }}</a>{%- endif -%}</span>
+</div>
+{%- else -%}
+<nav class="page-nav-bottom" aria-label="{{ label_prev }} / {{ label_next }}">
+  {%- if prev_page -%}
+  <a class="page-nav-card page-nav-card-prev" href="{{ prev_page.url | relative_url }}">
+    <span class="page-nav-label">{{ label_prev }}</span>
+    <span class="page-nav-name">{{ prev_page.title }}</span>
+  </a>
+  {%- endif -%}
+  {%- if next_page -%}
+  <a class="page-nav-card page-nav-card-next" href="{{ next_page.url | relative_url }}">
+    <span class="page-nav-label">{{ label_next }}</span>
+    <span class="page-nav-name">{{ next_page.title }}</span>
+  </a>
+  {%- endif -%}
+</nav>
+{%- endif -%}

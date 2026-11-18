@@ -434,3 +434,65 @@ remote-dashboard-api's data dir has no override of its own -- always `{storage.d
 **Go:** `go-chi/chi/v5`, `robfig/cron/v3`, `go.yaml.in/yaml/v3`
 
 **React:** `@tanstack/react-query`, `@mui/material`, `axios`, `zod`, `i18next`, `recharts`
+
+## Docs site (`docs/`)
+
+Jekyll + Just the Docs, served by GitHub Pages; `make docs` runs it locally (rebuilt on every change, restart it for `_config.yml`). French pages at the root, English mirrors under `docs/en/` (`lang: en`, same structure, the English anchors their own -- the README links `en/installation.html#config-file`): a change to a French page goes to its English mirror too. The screenshots are shared, the app shown in French in both languages -- never an English set. Every page follows the style below; the reference ones: Home (`index.md`), Installation, Écran d'accueil (`dashboard.md`).
+
+### The menu
+
+Groups, in this order: Accueil and Installation on top, then **Pages** (the app's screens), **Services** (Feeder, Mailer, Hashboard -- how it runs), **Dev** (Makefile, Docker, Scripts, API), **Release**. A page's `group` and `nav_order` place it; the menu shows the groups in the order of their first page's `nav_order`, and the previous / next links follow that same order.
+
+### How a page is built
+
+1. Front matter: `title` (also the menu's entry, the tab's title and the page's own title), `nav_order`, `group`, `subnav` for the page's sections.
+2. `{% include page_nav.html position="top" %}` instead of a `# Title`: the bar with the previous page, the title, the next page -- no separator under it. `{% include page_nav.html position="bottom" %}` as the page's last line: the "Précédent / Suivant" cards, under a separator. Both computed from the menu's order, in the page's language.
+3. The `toc-grid` cards: each `toc-card` with an icon, a `toc-card-title` and, in a `toc-card-text`, a `toc-card-sub` line saying what's behind it (a few words). The grid is closed by a separator, the same room above and below.
+4. Then one line saying what the page is, the screenshot, the view's description, the sections the cards point to.
+5. Sections: `## 🐳 Title` + `{: #anchor }`, separated by `---`; a section with sub-parts gets a `text-toc` line under its title (muted, blue on hover).
+
+### Writing
+
+- French: tutoiement (like the app's own UI). Short sentences, one idea each, no filler; no repeating the app's name.
+- No bold in running text -- not in numbered lists either; a setting's name in code (`global.env`), a state or a screen's name in italics (*En retard*, *État plateforme*).
+- Say what happens, never list what isn't there.
+- Under a screenshot, say only what the image doesn't show (a click's effect, a color's meaning) -- no list repeating its content.
+- No orange `.note` / `.release` callout for a plain remark: a sentence.
+- A long terminal output is cut to its useful lines.
+- No maintainer detail on a user page (the Pages group: Écran d'accueil, Alertes, Configuration, Sauvegardes, Audit): only what the user sees and does. JSON formats, fields, routes, file paths, checksum commands go on the Services / Dev pages (the audit's entries and routes: API; settings in `dashboard.yml`: Installation › Paramétrage).
+
+### Links -- two signs
+
+| For | Markdown | Looks |
+|---|---|---|
+| another site | `[text](url){:target="_blank" rel="noopener noreferrer"}` | the link + the app's "open in new" icon (CSS on `target="_blank"`) |
+| another docs page or section, end of a sentence | `[En savoir plus]({{ '/page.html' \| relative_url }}){: .link-page }` | the link + the app's chevron › |
+| a section summing up a page | `### [Title]({{ '/page.html' \| relative_url }}){: .link-heading }` | title color, grey chevron, blue on hover |
+| a page's one main action (Home only so far) | `{: .btn .btn-quiet }` | light brand fill, uppercase, chevron |
+
+No plain link to a docs page or section, not even in the middle of a sentence: the sentence says it in words, and the link comes at its end as a `.link-page` -- `(#anchor)` for a section of the same page. Always `relative_url` for a docs page. No `.btn-primary` (too bright), no button for a link to a page.
+
+### Screenshots
+
+Made by `docs/scripts/screenshots.mjs` (Node, no dependency: Chrome headless over its DevTools protocol), from the Pi's dashboard:
+
+```bash
+node docs/scripts/screenshots.mjs http://192.168.1.60 <out dir> fr sidebar topbar fleet ...
+```
+
+- Read-only: the script only opens the UI (the tiles view, a miner's panel, a phone's "Plus"), never an action button -- the Configuration scan's results are the one exception, a real scan (recorded in the audit).
+- No real personal value in any shot: the script replaces them in the page before the shot -- never blurs (a blur can be guessed back). Stratum users -> `wallet.workerN`, pools -> `pool.example.com` / `fallback.example.com`, IPs -> `192.0.2.x` (RFC 5737; any other LAN address -> `192.0.2.100`), MACs -> `00:00:5E:00:53:xx` (RFC 7042, every format shown), the board's ID -> dots, the SMTP host / username / sender / recipients -> `example.com` addresses, the dashboard's address -> `http://192.0.2.1`. The same fake for a miner in every shot (miners ordered by IP). A new kind of personal value on a screen gets its fake in the script's `MASK` before the shot is published.
+- One window, 1240px wide, at 2x, for every shot: the shot's element alone on the app's background (`#1e1e2a`), 16px around it.
+- One scale on the page: every image is shown at 0.736 of its CSS width (a full-width band = 736px, the docs column), written as `{: width="N" }` -- the script prints N, `docs/scripts/image-widths.py <page>.md` writes it on every image of a page. So an app control is the same size in every shot.
+- Numbered badges: one look (22px, the brand blue, a white number), one rule per kind of element -- in a column beside a vertical list (menu, a miner's panel), on a line under or over a row (top bar, search, the list's headers), in the corner of cards (fleet, state & pools); never over the content, in a gutter when needed. Numbered in reading order; the page's numbered list matches them.
+- No border, no frame: the image's own 16px of the app's background is its margin (`#main-content img`: radius 12, shadow). The Home's overview is the whole window (`home` shot), the page's width, room around it (`.shot-hero`).
+- A new shot: describe it in the script's `SHOTS` (what to isolate, where each badge goes), take one witness shot first, then the rest.
+
+### Other pieces
+
+- The `.lead-privacy` paragraph (the app's PrivacyTip icon, grey) for a sentence about the reader's data.
+- `.release-line`: the latest release, one small `.link-page` line at the top of Home.
+
+### Styles
+
+All in `docs/_sass/custom/custom.scss`, mirroring the app's theme (`ui/src/theme.ts`): colors, MUI icons drawn as CSS masks. Rules that must beat the theme go through `#main-content` (the theme's `.main-content a:not(.btn)` and its `!important` h1 sizes win otherwise). The theme's hover anchor icon on headings is hidden.

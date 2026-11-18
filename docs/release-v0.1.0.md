@@ -4,20 +4,29 @@ nav_order: 11
 group: Release
 ---
 
-# v0.1.0
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#images" class="toc-card">
     <span class="toc-card-icon">🐳</span>
-    <span class="toc-card-title">Images Docker</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Images Docker</span>
+      <span class="toc-card-sub">Les deux images de la version</span>
+    </span>
   </a>
   <a href="#installation" class="toc-card">
     <span class="toc-card-icon">🚀</span>
-    <span class="toc-card-title">Installation</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Installation</span>
+      <span class="toc-card-sub">La commande à lancer</span>
+    </span>
   </a>
   <a href="https://github.com/joakim-ribier/axeos-dashboard/releases/tag/v0.1.0" class="toc-card" target="_blank" rel="noopener noreferrer">
     <span class="toc-card-icon">🔗</span>
-    <span class="toc-card-title">Release sur GitHub</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Release sur GitHub</span>
+      <span class="toc-card-sub">Ses notes et ses fichiers</span>
+    </span>
   </a>
 </div>
 
@@ -25,9 +34,8 @@ Première version taguée de axeos-dashboard, publiée le 16 septembre 2026 —
 un point de repère stable, distinct du build `latest` qui suit chaque push
 sur `main`.
 
-{: .note }
-> 🐳 **Docker uniquement** — cette version s'installe seulement avec les
-> images Docker : la release n'a pas de binaires pour `make update`.
+Cette version s'installe avec les images Docker : sa release n'a pas de
+binaires pour `make update`.
 
 ## 🐳 Images Docker
 {: #images }
@@ -62,5 +70,8 @@ sur `main`.
   <pre class="terminal-card-body"><span class="term-command">$ curl -fsSL https://raw.githubusercontent.com/joakim-ribier/axeos-dashboard/main/docker-install.sh | IMAGE_TAG=0.1.0 bash</span></pre>
 </div>
 
-Le détail de `IMAGE_TAG`, de la structure installée et de la mise à jour :
-[Installation › Docker](installation.html#docker-installation).
+Le détail de `IMAGE_TAG`, de la structure installée et de la mise à jour
+est sur la page Installation.
+[Installation › Docker]({{ '/installation.html#docker' | relative_url }}){: .link-page }
+
+{% include page_nav.html position="bottom" %}

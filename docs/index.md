@@ -9,213 +9,235 @@ subnav:
     anchor: modeles-supportes
 ---
 
-# axeos-dashboard
+{% include page_nav.html position="top" %}
 
-{: .release }
-> 🚀 [Voir la dernière release — 0.1.0]({{ '/release-v0.1.0.html' | relative_url }})
+[Dernière version : 0.1.0 — les nouveautés]({{ '/release-v0.1.0.html' | relative_url }}){: .link-page }
+{: .release-line }
 
-**axeos-dashboard** est un dashboard local qui centralise en un seul
-endroit les statistiques de tous vos mineurs Bitcoin ASIC compatibles
-[AxeOs](https://github.com/skot/ESP-Miner) (Bitaxe, NerdQAxe...) —
-hashrate, température, ventilation, pools, et bien plus — sans avoir à
+Toutes les statistiques de tes mineurs Bitcoin ASIC
+[AxeOS](https://github.com/skot/ESP-Miner){:target="_blank" rel="noopener noreferrer"} (Bitaxe, NerdQAxe…) au même
+endroit — hashrate, température, ventilation, pools et bien plus — sans
 ouvrir l'interface de chaque appareil un par un.
 
-Conçu pour tourner sur un Raspberry Pi ou toute machine de votre réseau
-local. Aucune authentification requise — usage réseau local uniquement.
+Tout tourne chez toi, sur un Raspberry Pi ou n'importe quelle machine de
+ton réseau local : l'historique de tes mineurs, ta configuration et tes
+réglages restent sur ta machine. Aucun compte à créer, il s'utilise depuis
+ton réseau local.
+{: .lead-privacy }
 
-[Commencer avec l'installation](installation){: .btn .btn-primary }
+Pour suivre tes mineurs hors de chez toi, tu peux activer l'envoi vers
+[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"} : seules leurs statistiques
+partent (hashrate, températures, parts…), ton wallet, tes pools et les
+adresses de ton réseau restent masqués, sauf si tu choisis de les
+partager. [En savoir plus]({{ '/hashboard.html' | relative_url }}){: .link-page }
 
-{: .note }
-> 💡 **Astuce** — Exportez vos données vers le cloud pour surveiller vos
-> mineurs depuis n'importe où dans le monde, sans VPN, via
-> [hashboard.live](https://hashboard.live) — vos données personnelles
-> offusquées. [En savoir plus]({{ '/hashboard.html' | relative_url }})
+[Commencer avec l'installation]({{ '/installation.html' | relative_url }}){: .btn .btn-quiet }
 
-![Aperçu du dashboard axeos-dashboard]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})
+![Aperçu du dashboard]({{ '/assets/images/dashboard-screenshot.png' | relative_url }})
+{: .shot-hero }
 
 ---
 
 ## Fonctionnalités clés
 
-### Accueil
+### [Accueil]({{ '/dashboard.html' | relative_url }}){: .link-heading }
 
-- Vue d'ensemble de la flotte : hashrate des dernières 24 h, puissance,
-  efficacité, coût électrique, parts...
-- État de chaque mineur en un coup d'œil, les mineurs à problème en tête
-- Liste ou tuiles des mineurs, avec recherche, filtres et tri
-- Détail complet d'un mineur en un clic : graphiques, pools, totaux
-- Calcul des totaux de vie (uptime + shares acceptés)
-- Switch de pool et redémarrage à la demande
-- Détection des nouvelles versions de firmware
-- Détection d'une nouvelle version du dashboard
+- La flotte d'un coup d'œil : hashrate des dernières 24 h, puissance,
+  efficacité, coût électrique par jour et depuis le début, parts, meilleure
+  difficulté, température
+- L'état de chaque mineur et la part de chaque pool, qui servent aussi de
+  filtres rapides
+- Tes mineurs en liste ou en tuiles, avec recherche, filtres et tri — les
+  mineurs à problème en tête
+- Le détail d'un mineur en un clic : graphique 24 h, pools, session et
+  totaux depuis le début, redémarrage et bascule de pool
+- Les nouvelles versions du firmware de chaque mineur et du dashboard
+- L'état de chaque service de la plateforme, en bas du menu
 
-[Voir le détail de l'écran d'accueil]({{ '/dashboard.html' | relative_url }}){: .btn .btn-primary }
+### [Configuration]({{ '/configuration.html' | relative_url }}){: .link-heading }
 
-### Settings
+- Détection des mineurs sur le réseau, ou ajout par IP
+- Pour chaque mineur : nom affiché, pools principal et de secours, seuils
+  d'alerte, planificateur (bascule de pool ou redémarrage à heure fixe)
+- Vérification des pools de chaque mineur, et bascule de toute la flotte
+  sur un pool en une fois
+- Tarif électrique et autres appareils (ventilateur, routeur…) pour le
+  coût journalier de toute l'installation
+- Mails : serveur SMTP, destinataires, rapport d'audit (chaque jour, tous
+  les 2 jours, chaque semaine ou chaque mois), mail à chaque nouvelle
+  alerte, textes modifiables
+- Seuils d'alerte communs à tous les mineurs, dashboards des pools
 
-- Détection automatique des mineurs sur le réseau
-- Configuration des pools
-- Programmation d'un scheduler (cron) pour switcher ou redémarrer
-  automatiquement
-- Réglage du tarif électrique et des autres appareils (ventilateur,
-  routeur...) pour estimer le coût journalier de l'installation complète
-- Notifications par mail : serveur SMTP, destinataires, rapport d'audit
-  quotidien, hebdomadaire ou mensuel, mail à chaque nouvelle alerte, mail
-  de test, textes modifiables
+### [Alertes]({{ '/alerts.html' | relative_url }}){: .link-heading }
 
-[Voir le détail de Configuration]({{ '/configuration.html' | relative_url }}){: .btn .btn-primary }
+- Les alertes en cours sur tes mineurs : hors ligne, erreur de
+  configuration, température, ventilateur, nouveau firmware
+- L'historique de chaque jour, filtrable par mineur et par type
+- Chaque alerte est levée une fois, et se termine quand la valeur repasse
+  sous son seuil moins une marge
+- Un mail à chaque nouvelle alerte, si tu l'actives
 
-### Alertes
+### [Sauvegardes]({{ '/backups.html' | relative_url }}){: .link-heading }
 
-- Page dédiée aux alertes (température, ventilation, hors-ligne,
-  configuration, firmware...)
-
-### Sauvegardes
-
-- Archive automatique de l'historique des mineurs, un zip par mois
+- L'historique de tes mineurs archivé automatiquement : un zip par mois,
   complété chaque nuit
+- Le checksum de chaque mois terminé
 - Téléchargement d'un mois ou de plusieurs à la fois
 
-[Voir le détail des Sauvegardes]({{ '/backups.html' | relative_url }}){: .btn .btn-primary }
+### [Audit]({{ '/audit.html' | relative_url }}){: .link-heading }
 
-### Audit
-
-- Historique de tout ce qui modifie un mineur ou la configuration, sort
-  des données du Pi ou scanne le réseau, depuis le dashboard (avec l'IP et
-  le navigateur) ou par le planificateur
-- Filtres par mineur, type et jour, export JSON
-
-[Voir le détail de l'Audit]({{ '/audit.html' | relative_url }}){: .btn .btn-primary }
-
-### Hashboard
-
-- Vos mineurs suivis depuis n'importe où, sans VPN ni port ouvert, sur
-  [hashboard.live](https://hashboard.live)
-- Données personnelles offusquées avant l'envoi : wallet, pools, adresses
-  du réseau local — à partager seulement si vous le choisissez
-- Redémarrage ou bascule de pool depuis votre board privé, si vous
-  l'autorisez
-
-[Voir le détail de Hashboard]({{ '/hashboard.html' | relative_url }}){: .btn .btn-primary }
+- Tout ce qui agit sur un mineur ou sur la configuration : redémarrages,
+  bascules de pool, réglages enregistrés, détections réseau,
+  téléchargements, actions à distance
+- Depuis le dashboard (avec l'IP et le navigateur), ou par l'application
+  elle-même (planificateur, sauvegarde, mails)
+- Filtres par mineur, type et jour, export JSON, rapport par mail
 
 ---
 
 ## Architecture
 
 <div class="arch-diagram">
-<svg viewBox="0 0 860 610" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schéma d'architecture : Feeder, Dashboard API et Mailer (Go) et UI (React) tournant sur un Raspberry Pi, communiquant avec les mineurs et un stockage local, accessible depuis un navigateur">
+<svg viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Schéma d'architecture : sur le réseau local, un Raspberry Pi fait tourner le Feeder, le Mailer, la Dashboard API et l'UI autour d'un stockage local, relève les mineurs et leur transmet les actions ; sur Internet, un VPS fait tourner hashboard et le board, qui reçoivent les statistiques du feeder, et le serveur SMTP reçoit les mails">
   <defs>
     <marker id="arch-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#5a6472"></path>
     </marker>
+    <marker id="arch-arrow-action" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ffa726"></path>
+    </marker>
   </defs>
 
-  <rect x="20" y="20" width="820" height="490" rx="16" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="5 5"></rect>
-  <text x="42" y="46" fill="#8892a4" font-size="12" font-weight="700" letter-spacing="1">RÉSEAU LOCAL</text>
+  <!-- Internet -->
+  <rect x="20" y="20" width="920" height="186" rx="16" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="5 5"></rect>
+  <text x="42" y="46" fill="#8892a4" font-size="12" font-weight="700" letter-spacing="1">INTERNET</text>
 
-  <rect x="48" y="70" width="440" height="400" rx="14" fill="#1e1e2a" stroke="rgba(0,180,255,0.45)" stroke-width="1.5"></rect>
-  <text x="70" y="98" fill="#8892a4" font-size="12" font-weight="700">Raspberry Pi (ou autre machine)</text>
+  <rect x="40" y="92" width="160" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="120" y="119" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Serveur SMTP</text>
+  <text x="120" y="139" text-anchor="middle" fill="#8892a4" font-size="12">tes mails</text>
 
-  <!-- Feeder -->
-  <rect x="68" y="112" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="268" y="138" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Feeder</text>
-  <text x="268" y="158" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
+  <rect x="230" y="60" width="460" height="112" rx="14" fill="#1e1e2a" stroke="rgba(139,124,246,0.55)" stroke-width="1.5"></rect>
+  <text x="250" y="82" fill="#8892a4" font-size="12" font-weight="700">VPS — hashboard.live</text>
 
-  <!-- Storage -->
-  <rect x="68" y="204" width="400" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
-  <text x="268" y="228" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700" font-family="monospace">latest.json + jour.jsonl</text>
-  <text x="268" y="248" text-anchor="middle" fill="#8892a4" font-size="12">Stockage local (disque)</text>
+  <rect x="250" y="92" width="200" height="64" rx="10" fill="#262637" stroke="#8b7cf6" stroke-width="1.5"></rect>
+  <text x="350" y="119" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">hashboard</text>
+  <text x="350" y="139" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
 
-  <!-- Dashboard API -->
-  <rect x="218" y="296" width="250" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="343" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
-  <text x="343" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
+  <rect x="470" y="92" width="200" height="64" rx="10" fill="#262637" stroke="#8b7cf6" stroke-width="1.5"></rect>
+  <text x="570" y="119" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Board</text>
+  <text x="570" y="139" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · React</text>
 
-  <!-- Mailer -->
-  <rect x="68" y="296" width="134" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="135" y="322" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Mailer</text>
-  <text x="135" y="342" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
+  <rect x="740" y="92" width="180" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="830" y="119" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Navigateur</text>
+  <text x="830" y="139" text-anchor="middle" fill="#8892a4" font-size="12">n'importe où</text>
 
-  <!-- UI -->
-  <rect x="68" y="388" width="400" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
-  <text x="268" y="414" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">UI</text>
-  <text x="268" y="434" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">React · nginx</text>
+  <!-- Local network -->
+  <rect x="20" y="226" width="920" height="474" rx="16" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" stroke-dasharray="5 5"></rect>
+  <text x="918" y="252" text-anchor="end" fill="#8892a4" font-size="12" font-weight="700" letter-spacing="1">RÉSEAU LOCAL</text>
 
-  <!-- Miners -->
-  <rect x="545" y="90" width="255" height="72" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
-  <text x="672" y="119" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Bitaxe</text>
-  <text x="672" y="139" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
+  <rect x="40" y="266" width="580" height="310" rx="14" fill="#1e1e2a" stroke="rgba(0,180,255,0.45)" stroke-width="1.5"></rect>
+  <text x="600" y="292" text-anchor="end" fill="#8892a4" font-size="12" font-weight="700">Raspberry Pi (ou autre machine)</text>
 
-  <rect x="545" y="240" width="255" height="72" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
-  <text x="672" y="269" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Bitaxe</text>
-  <text x="672" y="289" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
+  <rect x="60" y="306" width="250" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="185" y="333" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Mailer</text>
+  <text x="185" y="353" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
 
-  <rect x="545" y="390" width="255" height="72" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
-  <text x="672" y="419" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">NerdQAxe</text>
-  <text x="672" y="439" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
+  <rect x="330" y="306" width="270" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="465" y="333" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Feeder</text>
+  <text x="465" y="353" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go</text>
 
-  <!-- Browser -->
-  <rect x="48" y="540" width="210" height="56" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
-  <text x="153" y="574" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Navigateur</text>
+  <rect x="60" y="398" width="540" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="330" y="425" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Stockage local (disque)</text>
+  <text x="330" y="445" text-anchor="middle" fill="#8892a4" font-size="12">historique · alertes · audit · archives</text>
 
-  <!-- Feeder -> miners (polling) -->
-  <path d="M468,144 L545,126" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <path d="M468,144 L545,276" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <path d="M468,144 L545,426" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="486" y="188" fill="#8892a4" font-size="11" font-family="monospace">GET /api/system/info</text>
-  <text x="486" y="202" fill="#8892a4" font-size="11">toutes les 2 min</text>
+  <rect x="60" y="490" width="250" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="185" y="517" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">UI</text>
+  <text x="185" y="537" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">React · nginx</text>
 
-  <!-- Dashboard API -> miners (control actions) -->
-  <path d="M468,320 L545,276" fill="none" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arch-arrow)"></path>
-  <text x="486" y="240" fill="#ffa726" font-size="11" font-family="monospace">POST switch / restart</text>
-  <text x="486" y="254" fill="#8892a4" font-size="11">contrôle, à la demande</text>
+  <rect x="330" y="490" width="270" height="64" rx="10" fill="#262637" stroke="#00b4ff" stroke-width="1.5"></rect>
+  <text x="465" y="517" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">Dashboard API</text>
+  <text x="465" y="537" text-anchor="middle" fill="#8892a4" font-size="12" font-family="monospace">Go · chi</text>
 
-  <!-- Feeder -> Storage (écriture) -->
-  <path d="M268,176 L268,204" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="300" y="194" fill="#8892a4" font-size="11">écriture</text>
+  <rect x="60" y="616" width="250" height="56" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="185" y="640" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Navigateur</text>
+  <text x="185" y="658" text-anchor="middle" fill="#8892a4" font-size="12">réseau local</text>
 
-  <!-- Dashboard API -> Storage (lecture) -->
-  <path d="M343,296 L343,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="355" y="286" fill="#8892a4" font-size="11">lecture</text>
+  <rect x="740" y="286" width="180" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="830" y="313" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Bitaxe</text>
+  <text x="830" y="333" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
 
-  <!-- Mailer -> Storage -->
-  <path d="M135,296 L135,268" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="147" y="286" fill="#8892a4" font-size="11">lecture</text>
+  <rect x="740" y="386" width="180" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="830" y="413" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">Bitaxe</text>
+  <text x="830" y="433" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
 
-  <!-- UI -> Dashboard API -->
-  <path d="M320,388 L320,360" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="336" y="378" fill="#8892a4" font-size="11">/api/*</text>
+  <rect x="740" y="486" width="180" height="64" rx="10" fill="#262637" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></rect>
+  <text x="830" y="513" text-anchor="middle" fill="#e0e0e0" font-size="14" font-weight="700">NerdQAxe</text>
+  <text x="830" y="533" text-anchor="middle" fill="#8892a4" font-size="12">AxeOS</text>
 
-  <!-- Browser -> UI -->
-  <path d="M178,540 L245,452" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
-  <text x="185" y="500" fill="#8892a4" font-size="11">HTTP</text>
+  <!-- Data: grey -->
+  <path d="M600,338 L740,318" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <path d="M600,338 L740,418" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <path d="M600,338 L740,512" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="634" y="300" fill="#8892a4" font-size="11">relevé</text>
+  <text x="634" y="314" fill="#8892a4" font-size="11">toutes les 2 min</text>
+
+  <path d="M465,370 L465,398" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="475" y="389" fill="#8892a4" font-size="11">écriture</text>
+  <path d="M185,398 L185,370" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="195" y="389" fill="#8892a4" font-size="11">lecture</text>
+  <path d="M465,462 L465,490" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="475" y="481" fill="#8892a4" font-size="11">lecture</text>
+
+  <path d="M330,338 L310,338" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <path d="M310,522 L330,522" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <path d="M185,616 L185,554" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="195" y="590" fill="#8892a4" font-size="11">HTTP</text>
+
+  <path d="M360,306 L350,156" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="366" y="244" fill="#8892a4" font-size="11">statistiques</text>
+  <path d="M120,306 L120,156" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="128" y="244" fill="#8892a4" font-size="11">mails</text>
+  <path d="M450,124 L470,124" fill="none" stroke="#5a6472" stroke-width="1.5" marker-start="url(#arch-arrow)"></path>
+  <path d="M740,124 L670,124" fill="none" stroke="#5a6472" stroke-width="1.5" marker-end="url(#arch-arrow)"></path>
+  <text x="698" y="116" fill="#8892a4" font-size="11">HTTPS</text>
+
+  <!-- Actions: orange -->
+  <path d="M600,528 L740,528" fill="none" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arch-arrow-action)"></path>
+  <text x="634" y="548" fill="#ffa726" font-size="11">redémarrage,</text>
+  <text x="634" y="562" fill="#ffa726" font-size="11">bascule de pool</text>
+  <path d="M600,506 H612 V186 H430 V156" fill="none" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arch-arrow-action)"></path>
+  <text x="602" y="200" text-anchor="end" fill="#ffa726" font-size="11">actions du board · chaque minute</text>
+
+  <!-- Legend -->
+  <path d="M640,620 L680,620" fill="none" stroke="#5a6472" stroke-width="1.5"></path>
+  <text x="690" y="624" fill="#8892a4" font-size="11">données</text>
+  <path d="M640,644 L680,644" fill="none" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="4 3"></path>
+  <text x="690" y="648" fill="#8892a4" font-size="11">actions sur les mineurs</text>
 </svg>
 </div>
 
-### Feeder
+### [Dashboard]({{ '/dashboard.html' | relative_url }}){: .link-heading }
 
-Un service qui tourne en continu sur la configuration des mineurs
-enregistrés. Il interroge chaque mineur toutes les 2 minutes (intervalle
-configurable côté serveur), et enregistre le résultat à deux endroits :
-`latest.json`, le dernier état du mineur, et un fichier `.jsonl`,
-l'historique de chaque itération, stocké par jour.
+L'interface web que tu ouvres dans ton navigateur.
 
-### Dashboard (API + UI)
+### [API]({{ '/api.html' | relative_url }}){: .link-heading }
 
-Le dashboard comprend une API et une interface web. Il ne parle pas
-directement aux mineurs — son rôle est principalement de restituer les
-informations déjà stockées par le feeder (`latest.json` et l'historique
-des mineurs), et de proxyfier les quelques actions de contrôle (switch de
-pool, redémarrage) vers les mineurs. Il donne aussi l'état de chaque
-service, affiché en bas du menu (*État plateforme*).
+Lit l'historique enregistré par le feeder pour l'interface, et transmet
+tes actions aux mineurs.
 
-### Mailer
+### [Feeder]({{ '/feeder.html' | relative_url }}){: .link-heading }
 
-Le service qui envoie tous les mails, par le serveur SMTP réglé dans
-Configuration › Notifications : le rapport d'audit, à partir de l'audit
-et des réglages enregistrés sur le disque, le mail des nouvelles alertes,
-que le feeder lui transmet après chaque relevé, et le mail de test,
-demandé par le dashboard.
+Relève tes mineurs toutes les 2 minutes et enregistre leur historique sur
+le disque.
+
+### [Mailer]({{ '/mailer.html' | relative_url }}){: .link-heading }
+
+Envoie tous les mails par ton serveur SMTP.
+
+### [Hashboard]({{ '/hashboard.html' | relative_url }}){: .link-heading }
+
+Sur un VPS : affiche les statistiques de tes mineurs sur ton board, de
+n'importe où.
 
 ---
 
@@ -224,5 +246,7 @@ demandé par le dashboard.
 
 Firmware testé, jusqu'à ces versions :
 
-- **Bitaxe Gamma** — [v2.15.4](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.4){:target="_blank" rel="noopener noreferrer"}
-- **NerdQAxe++** — [v1.1.2](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.2){:target="_blank" rel="noopener noreferrer"}
+- Bitaxe Gamma — [v2.15.4](https://github.com/bitaxeorg/esp-miner/releases/tag/v2.15.4){:target="_blank" rel="noopener noreferrer"}
+- NerdQAxe++ — [v1.1.2](https://github.com/shufps/ESP-Miner-NerdQAxePlus/releases/tag/v1.1.2){:target="_blank" rel="noopener noreferrer"}
+
+{% include page_nav.html position="bottom" %}

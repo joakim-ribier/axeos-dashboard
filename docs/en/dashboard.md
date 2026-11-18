@@ -4,7 +4,7 @@ nav_order: 3
 group: Pages
 lang: en
 subnav:
-  - title: Sidebar
+  - title: Menu
     anchor: sidebar
   - title: Top bar
     anchor: top-bar
@@ -14,280 +14,271 @@ subnav:
     anchor: status-pools
   - title: Search, filters & sort
     anchor: search-filters-sort
-  - title: The miner list
+  - title: The miners' list
     anchor: list
-  - title: A miner's details
+  - title: A miner's detail
     anchor: details
 ---
 
-# Home screen
+{% include page_nav.html position="top" %}
 
 <div class="toc-grid">
   <a href="#sidebar" class="toc-card">
     <span class="toc-card-icon">☰</span>
-    <span class="toc-card-title">Sidebar</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Menu</span>
+      <span class="toc-card-sub">The pages, your board and the services' state</span>
+    </span>
   </a>
   <a href="#top-bar" class="toc-card">
     <span class="toc-card-icon">🔔</span>
-    <span class="toc-card-title">Top bar</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Top bar</span>
+      <span class="toc-card-sub">Docs, refresh, notifications, language</span>
+    </span>
   </a>
   <a href="#fleet" class="toc-card">
     <span class="toc-card-icon">📊</span>
-    <span class="toc-card-title">The fleet</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">The fleet</span>
+      <span class="toc-card-sub">24 h hashrate, power, cost, shares</span>
+    </span>
   </a>
   <a href="#status-pools" class="toc-card">
     <span class="toc-card-icon">🚦</span>
-    <span class="toc-card-title">Status & pools</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Status & pools</span>
+      <span class="toc-card-sub">Your miners by state, the hashrate by pool</span>
+    </span>
   </a>
   <a href="#search-filters-sort" class="toc-card">
     <span class="toc-card-icon">🔍</span>
-    <span class="toc-card-title">Search, filters & sort</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">Search & sort</span>
+      <span class="toc-card-sub">Find a miner, order the list</span>
+    </span>
   </a>
   <a href="#list" class="toc-card">
     <span class="toc-card-icon">📋</span>
-    <span class="toc-card-title">The list</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">The list</span>
+      <span class="toc-card-sub">Each miner on a row, or as tiles</span>
+    </span>
   </a>
   <a href="#details" class="toc-card">
     <span class="toc-card-icon">🔎</span>
-    <span class="toc-card-title">Details</span>
+    <span class="toc-card-text">
+      <span class="toc-card-title">The detail</span>
+      <span class="toc-card-sub">All about a miner, restart and switch</span>
+    </span>
   </a>
 </div>
 
-## ☰ Sidebar
+## ☰ Menu
 {: #sidebar }
 
 <div class="shot-aside" markdown="1">
 
-![Sidebar]({{ '/assets/images/sidebar-only.png' | relative_url }}){: width="240" }
+![Menu]({{ '/assets/images/sidebar-only.png' | relative_url }}){: width="225" }
 
-1. **AxeOS · D#hashboard** — reloads the app and goes back home, as when
-   first arriving on the dashboard.
-2. **Hashboard board** — once the push to hashboard is set up: the
-   board ID (click to open it), whether it's public or private, and a
-   link to your hashboard account.
-   [Go to Hashboard →]({{ '/en/hashboard.html' | relative_url }}){: .btn .btn-primary }
-3. **Home** — overview of all your miners.
-4. **Alerts** — alerts in progress and history (temperature, fan,
-   offline...); the badge counts the alerts in progress.
-   [Go to Alerts →]({{ '/en/alerts.html' | relative_url }}){: .btn .btn-primary }
-5. **Settings** — miners, electricity, notifications, remote, system.
-   [Go to Configuration →]({{ '/en/configuration.html' | relative_url }}){: .btn .btn-primary }
-6. **Backups** — monthly archives of the miners' history, to download.
-   [Go to Backups →]({{ '/en/backups.html' | relative_url }}){: .btn .btn-primary }
-7. **Audit** — history of restarts, pool switches, configuration changes, exports and network scans.
-   [Go to Audit →]({{ '/en/audit.html' | relative_url }}){: .btn .btn-primary }
-8. **Platform status** — green when everything runs, orange when a
-   service missed a run, red when a service doesn't answer; click for the
-   details ([see below](#platform-status)).
-9. **Version** — the currently deployed build's SHA.
-10. **Update available** — only shows up if a newer dashboard version is
-    available on GitHub; click to open the release.
-11. **Fold** — narrows the sidebar to a column of icons, the app's icon on
-    top and each page's name in a tooltip; the browser keeps the choice.
+1. AxeOS · D#hashboard — reloads the app and goes back home.
+2. [hashboard board]({{ '/en/hashboard.html' | relative_url }}){: .link-page } —
+   once sending to hashboard is set up: the board's ID (click to open it),
+   public or private, and a link to your account.
+3. Home — all your miners.
+4. [Alerts]({{ '/en/alerts.html' | relative_url }}){: .link-page } — in
+   progress and history; the badge counts those in progress.
+5. [Configuration]({{ '/en/configuration.html' | relative_url }}){: .link-page } —
+   miners, electricity, notifications, remote, system.
+6. [Backups]({{ '/en/backups.html' | relative_url }}){: .link-page } — the
+   history's monthly archives.
+7. [Audit]({{ '/en/audit.html' | relative_url }}){: .link-page } — everything
+   that acts on a miner or on the configuration.
+8. Platform status — green when everything runs, orange when a service
+   missed a run, red when one doesn't answer.
+   [The detail](#platform-status){: .link-page }
+9. Menu footer — the deployed version, "Update available" when a new
+   version is out (click to open the release), and the button folding the
+   menu into a column of icons.
 
 </div>
 
-On a phone, the sidebar opens from the top bar's ☰ button.
+On a phone, the menu opens with the ☰ button of the top bar.
 
 ### Platform status
 {: #platform-status }
 
-A click on the *Platform status* card opens the state of every service of
-the installation, asked again on every opening:
+A click on *Platform status* shows each service's state, read again every
+time it opens:
 
-![Services status]({{ '/assets/images/services-status.png' | relative_url }}){: width="440" }
+![Services status]({{ '/assets/images/services-status.png' | relative_url }}){: width="347" }
 
-- **Dashboard (API)** — when it started, and its version.
-- **Feeder** — its interval and its last poll of the miners.
-- **Health check** — its interval and its last check.
-- **Mailer** — its last run (it looks every minute for a mail to send).
-- **Firmware cache** — its last check for a new version.
-
-Each one is **Running**, **Late** (nothing within twice its interval),
-**Unreachable** (doesn't answer) or **No run yet**.
+A service is *Late* when it did nothing for two intervals, *Unreachable*
+when it doesn't answer, and *No run yet* until it has run.
 
 ---
 
 ## 🔔 Top bar
 {: #top-bar }
 
-Always on screen, even while scrolling the page.
+Always there, even when scrolling the page.
 
-![Top bar]({{ '/assets/images/topbar-only.png' | relative_url }})
+![Top bar]({{ '/assets/images/topbar-only.png' | relative_url }}){: width="736" }
 
-1. **Page** — the current page's icon, title and description.
-2. **Documentation** — opens this documentation.
-3. **Auto-refresh** — turns the automatic data refresh on (blue) or off
-   (grey) in one click; the browser keeps the choice.
-4. **Notifications** — the alerts that start and those that end, and
-   recent events (update available...); the red badge counts the unread
-   ones. A click on the bell marks them read on every device.
-5. **Language** — switches between French and English.
+1. Page — the page's icon, title and description.
+2. Documentation — opens these docs.
+3. Auto refresh — turns the data's refresh on (blue) or off (grey); kept by
+   the browser.
+4. Notifications — the alerts that start or end, and recent events; the
+   badge counts the unread ones. A click marks them read on every device.
+5. Language — French or English.
 
-On a phone, the bar keeps what matters most:
+On a phone, the bar keeps the essentials:
 
-![Top bar on a phone]({{ '/assets/images/topbar-mobile.png' | relative_url }}){: width="390" }
+![Top bar on a phone]({{ '/assets/images/topbar-mobile.png' | relative_url }}){: width="287" }
 
-1. **Menu** — opens the sidebar.
-2. **Page** — the current page's icon and title.
-3. **Auto-refresh**
-4. **Notifications**
-5. **More** — unfolds the documentation and language below the bar;
-   folds back on every page change.
+1. Menu — opens the menu.
+2. Page — its icon and title.
+3. Auto refresh
+4. Notifications
+5. More — unfolds the docs and the language under the bar.
 
 ---
 
 ## 📊 The fleet
 {: #fleet }
 
-![The fleet]({{ '/assets/images/fleet.png' | relative_url }})
+![The fleet]({{ '/assets/images/fleet.png' | relative_url }}){: width="736" }
 
-1. **Fleet hashrate · 24 h** — what all the miners produce together.
-2. **Health** — how many miners have no problem, out of the total. Takes
-   the color of the most urgent problem, if any. A click unfolds every
-   miner, the ones with a problem first, each with its status; clicking
-   one opens [its details](#details).
+1. Fleet hashrate · 24 h — the output of all your miners.
+2. Health — the miners with no problem out of the total, in the color of the
+   most urgent problem. A click unfolds every miner, the ones with a problem
+   first; a click on one opens its detail.
+   [A miner's detail](#details){: .link-page }
 
-   ![Every miner under the health badge]({{ '/assets/images/fleet-health.png' | relative_url }}){: width="328" }
+   ![Miners under the health chip]({{ '/assets/images/fleet-health.png' | relative_url }}){: width="259" }
 
-3. **Last poll** — time of the most recent reading. Turns red when even
-   that one is older than twice the configured polling interval: the
-   feeder has stopped.
-4. **Current hashrate** — the sum of the reachable miners' hashrate, and
-   next to it the average over the last 24 h.
-5. **24 h chart** — the fleet's combined hashrate, in 15-minute steps. A
-   stretch with no reading at all (feeder stopped) shows in grey.
-6. **Power** — the reachable miners' total draw; below, the lowest ↓ and
-   highest ↑ of a single miner.
-7. **Efficiency** — the fleet's efficiency (J/TH); below, the best ↓ and
-   worst ↑ miner.
-8. **Electricity** — estimated cost over a day at the current draw and
-   the configured rate, for the whole setup: the miners plus the
-   [other devices]({{ '/en/configuration.html#electricity' | relative_url }})
-   declared (fan, router...). Below, the total actually spent since each
-   miner started being tracked — a later rate change never alters that
-   past total.
-9. **Shares** — total accepted shares since the miners last started;
-   below, the cumulative total since they were first set up.
-10. **Best diff** — the best difficulty reached, and the miner holding it.
-11. **Temperature** — the lowest ↓ and highest ↑ chip temperature; below,
-    the fastest fan speed.
+3. Last poll — its time. Red when it's older than 2 intervals: the feeder
+   no longer runs.
+4. Current hashrate — the reachable miners', and the 24 h average.
+5. 24 h chart — the fleet's hashrate in 15-minute slices; a time with no
+   poll shows in grey.
+6. Power — the total draw; below, the miner drawing the least ↓ and the
+   most ↑.
+7. Efficiency — the fleet's efficiency (J/TH); below, the best ↓ and the
+   worst ↑.
+8. Electricity — the cost per day at the set rate, miners and other devices
+   included; below, the total spent since the start, which a change of rate
+   doesn't alter.
+   [Configuration › Electricity]({{ '/en/configuration.html#electricity' | relative_url }}){: .link-page }
+9. Shares — the shares accepted since the miners started; below, since their
+   very first start.
+10. Best diff — the best difficulty, and the miner holding it.
+11. Temperature — the chips' lowest ↓ and highest ↑; below, the fastest fan.
 
 ---
 
 ## 🚦 Miner status & pools
 {: #status-pools }
 
-![Miner status and pools]({{ '/assets/images/breakdowns.png' | relative_url }})
+![Miner status and pools]({{ '/assets/images/breakdowns.png' | relative_url }}){: width="736" }
 
-1. **Miner status** — the miners broken down by status, most urgent
-   first:
-   - **Offline** — the miner no longer answers.
-   - **Config error** — the configured `mac:` doesn't match what the miner
-     reports (wrong device at that IP, or a typo).
-   - **Delayed** — the miner answers, but no reading has come in for more
-     than twice the polling interval.
-   - **Alert** — chip temperature or fan above the miner's threshold
-     (62 °C and 75 % by default), until back to normal.
-   - **Online** — all good.
-2. **Pools** — the share of the fleet's hashrate going to each pool.
+1. Miner status — how your miners split, the most urgent first:
+   - Offline — the miner no longer answers.
+   - Config error — the configured MAC isn't the miner's (wrong device at
+     this IP, or a typo).
+   - Late — the miner answers, but no poll for more than 2 intervals.
+   - Alert — temperature or fan above the threshold (62 °C and 75 % by
+     default), until back to normal.
+   - Online — all is well.
+2. Pools — each pool's share of the hashrate.
 
-Each chip filters the miner list below; a second click removes the
-filter.
+Each chip filters the list below; a second click removes the filter.
 
 ---
 
 ## 🔍 Search, filters & sort
 {: #search-filters-sort }
 
-![Search, filters and sort]({{ '/assets/images/toolbar.png' | relative_url }})
+![Search, filters and sort]({{ '/assets/images/toolbar.png' | relative_url }}){: width="736" }
 
-1. **Search** — free text (name, IP, model, pool, stratum user, firmware
-   version) or comparisons: `temp>60`, `fan<=50`, `power>15`,
-   `hashrate<0.3`, `uptime>3600` (seconds). `offline` keyword (negate with
-   `!offline`/`-offline`). Several space-separated terms must all match;
-   negate any term with `-`/`!`.
-2. **Tips** — a reminder of that syntax.
-3. **Sort** — hottest (default), hashrate, fastest fan, most shares,
-   oldest (total uptime) or pool (A-Z), remembered between visits.
-   Whatever the sort, miners with a problem stay on top, most urgent
-   first.
-4. **Model** — filter by miner type, with the number of miners for each.
-5. **Firmware** — filter by firmware version, with the number of miners
-   for each.
-6. **View** — list or tiles, remembered between visits. On a phone,
-   miners always show as tiles.
-7. **Counter** — how many miners are shown, out of the total.
+1. Search — text (name, IP, model, pool, user, firmware) or comparisons:
+   `temp>60`, `fan<=50`, `power>15`, `hashrate<0.3`, `uptime>3600`
+   (seconds), `offline`. Several terms add up; `-` or `!` before a term
+   excludes it.
+2. Tips — a reminder of this syntax.
+3. Sort — hottest (default), hashrate, fan, shares, oldest or pool. The
+   miners with a problem always stay first.
+4. Model — a filter per type of miner, with their count.
+5. Firmware — a filter per version, with their count.
+6. View — list or tiles; always tiles on a phone.
+7. Counter — the miners shown out of the total.
+
+The sort and the view are kept from one visit to the next.
 
 ---
 
-## 📋 The miner list
+## 📋 The miners' list
 {: #list }
 
-![The miner list]({{ '/assets/images/miner-list.png' | relative_url }})
+![The miners' list]({{ '/assets/images/miner-list.png' | relative_url }}){: width="736" }
 
-1. **Miner** — alias or hostname, then its IP and model.
-2. **Hashrate · 24 h** — the last 24 h of hashrate and its current value.
-   Stretches where the miner was unreachable show in red on the baseline.
-3. **Chip temp** — chip temperature, on a green gauge that turns yellow
-   close to the miner's threshold (62 °C by default, marked by a tick),
-   then red during the alert — until it's back under the threshold minus
-   the return margin.
-4. **Fan** — fan speed, on the same gauge, with the miner's threshold (75 % by default).
-5. **Power** — draw (W) and efficiency (J/TH).
-6. **Pool** — the active pool, linking to its dashboard when a link is
-   known for it (see
-   [Configuration]({{ '/en/configuration.html#system' | relative_url }})),
-   and whether it's the **Primary** or **Fallback** one.
-7. **Firmware** — installed version; below, in blue, the newer version
-   available if there is one.
-8. **Status** — the stripe on the left takes the color of
-   [the miner's status](#status-pools).
-9. **Details** — a click anywhere on the row opens
-   [the miner's details](#details).
+1. Miner — its name, its IP and its model.
+2. Hashrate · 24 h — the last 24 h's curve and the current value; in red on
+   the baseline, the times it didn't answer.
+3. Chip temp — on a green gauge, yellow near the threshold (the mark,
+   62 °C by default), red during the alert.
+4. Fan — the same gauge, with its threshold (75 % by default).
+5. Power — draw (W) and efficiency (J/TH).
+6. Pool — the active pool, primary or fallback; clickable to its dashboard
+   when a link is known.
+   [Configuration › System]({{ '/en/configuration.html#system' | relative_url }}){: .link-page }
+7. Firmware — the installed version; in blue below, the new one if there is
+   one.
+8. State — the stripe on the left, in the color of the miner's state.
+   [Miner status](#status-pools){: .link-page }
+9. Detail — a click on the row opens the miner's detail.
+   [A miner's detail](#details){: .link-page }
 
-As tiles, each miner shows the same information, with its status spelled
-out:
+As tiles, the same information, with the state written out:
 
-![Miners as tiles]({{ '/assets/images/miner-tiles.png' | relative_url }}){: width="580" }
+![The miners as tiles]({{ '/assets/images/miner-tiles.png' | relative_url }}){: width="495" }
 
 ---
 
-## 🔎 A miner's details
+## 🔎 A miner's detail
 {: #details }
 
-A panel that slides in from the right (full screen on a phone); it closes
-with the cross, by clicking next to it, or with a swipe to the right on a
-phone.
+A panel on the right, full screen on a phone. It closes with the cross, a
+click beside it, or a swipe to the right.
 
 <div class="shot-aside" markdown="1">
 
-![A miner's details]({{ '/assets/images/drawer.png' | relative_url }}){: width="340" }
+![A miner's detail]({{ '/assets/images/drawer.png' | relative_url }}){: width="446" }
 
-1. **Name and status** — the stripe at the top takes the status color.
-2. **IP** — a direct link to the miner's own interface, followed by its
-   model.
-3. **Readings** — the last 24 h of hashrate, power and efficiency, chip
-   temperature and fan with their threshold.
-4. **Last 24 hours** — a chart of the temperature, fan, hashrate or ping,
-   over the last hour (**1H**) or the last 24 hours (**24H**).
-5. **Pools** — the primary and fallback pools, the active one marked
-   **Active**; each links to its dashboard when a link is known for it.
-6. **User** — the selected pool's stratum user, copied in one click.
-   Clicking the other pool shows its own.
-7. **Session** — accepted and rejected shares, best difficulty and uptime
-   since the last restart.
-8. **Since tracking began** — accepted shares, uptime and electricity
-   spent since the miner was first set up.
-9. **Device** — firmware version, MAC address, pool ping and time of the
-   last poll.
-10. **Actions** — **Restart** the miner or **Switch** to the other pool
-    (the miner restarts to apply it), always after a confirmation.
+1. Name and state — the top stripe in the state's color.
+2. IP — opens the miner's interface; then its model.
+3. Readings — 24 h hashrate, power and efficiency, temperature and fan with
+   their threshold.
+4. Last 24 h — temperature, fan, hashrate or ping, over 1 h or 24 h.
+5. Pools — the primary and the fallback, the active one marked; each
+   clickable to its dashboard when a link is known.
+6. User — the chosen pool's user, copied in one click; a click on the other
+   pool shows its own.
+7. Session — accepted and rejected shares, best difficulty and uptime since
+   the last restart.
+8. Since tracking began — shares, uptime and electricity since the very
+   first start.
+9. Device — firmware, MAC, pool ping and last poll.
+10. Actions — restart the miner or switch it to its other pool (it restarts
+    to apply it), always after a confirmation.
 
 </div>
 
-When the miner has a problem, a banner right under the header details
-it: unreachable, no reading since a given time, configuration error,
-temperature or fan at its threshold — or back under it but not yet under
-the back-to-normal value, shown. A newer firmware version shows in a
-blue banner, with a link to its release.
+When the miner has a problem, a banner describes it under the header:
+unreachable, no poll since a given time, configuration error, temperature
+or fan at the threshold — or back under the threshold without being back to
+normal yet, with the value to reach. A new firmware version shows in a blue
+banner, with the link to its release.
+
+{% include page_nav.html position="bottom" %}
