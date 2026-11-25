@@ -28,7 +28,7 @@ import (
 // @description No authentication — internal LAN use only.
 // @description
 // @description Endpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);
-// @description remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;
+// @description remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.forlovers.app;
 // @description the mailer (default :8082, on the loopback only), reached through dashboard-api.
 // @host localhost:8080
 // @BasePath /

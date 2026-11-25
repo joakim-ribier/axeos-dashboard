@@ -1165,7 +1165,7 @@ info:
     No authentication — internal LAN use only.
 
     Endpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);
-    remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;
+    remote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.forlovers.app;
     the mailer (default :8082, on the loopback only), reached through dashboard-api.
   title: axeos-dashboard API
   version: "1.0"
@@ -1202,7 +1202,7 @@ paths:
   /api/{boardId}/miners:
     get:
       description: Auto-discovers miners from the board's bitaxes directory — no local
-        config needed, data comes from whatever the feeder already pushed to hashboard.live.
+        config needed, data comes from whatever the feeder already pushed to hashboard.forlovers.app.
       parameters:
       - description: hashboard board ID
         in: path

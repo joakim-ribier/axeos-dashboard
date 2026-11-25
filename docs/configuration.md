@@ -9,7 +9,7 @@ subnav:
     anchor: electricite
   - title: Notifications
     anchor: notifications
-  - title: Distant (hashboard.live)
+  - title: Distant (hashboard.forlovers.app)
     anchor: distant
   - title: Système
     anchor: systeme
@@ -194,11 +194,11 @@ Sous le rapport et les alertes, la date du dernier envoi, ou du dernier
 
 ---
 
-## ☁️ Distant (hashboard.live)
+## ☁️ Distant (hashboard.forlovers.app)
 {: #distant }
 
 L'envoi des statistiques de tes mineurs vers
-[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+[hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"},
 pour les suivre de n'importe où, sans VPN.
 
 ![Distant (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }}){: width="533" }

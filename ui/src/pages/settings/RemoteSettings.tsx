@@ -292,7 +292,7 @@ const RemoteSection = ({
           <TextField
             size="small"
             label={t("settingsPage.appSettings.remote.pushUrlLabel")}
-            placeholder="https://hashboard.live/api/push"
+            placeholder="https://hashboard.forlovers.app/api/push"
             value={pushURL}
             onChange={(e) => setPushURL(e.target.value)}
             error={pushURLInvalid}

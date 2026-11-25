@@ -126,7 +126,7 @@ every commit.
   and the pools' user, the pools and the miners' IPs unless shared from
   Configuration › Remote, are masked before every push.
 - ✅ **Icon pack**: one set of icons in `brand/` for the app, the docs site
-  and hashboard.live.
+  and hashboard.forlovers.app.
 - ✅ **Alerts by mail**: one HTML mail (editable template, logo, text
   version) per feeder poll that raises alerts, sent by the mailer when
   turned on in Configuration › Notifications.

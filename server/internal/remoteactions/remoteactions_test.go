@@ -516,8 +516,8 @@ func TestIsAction(t *testing.T) {
 
 func TestAPIURL(t *testing.T) {
 	for pushURL, want := range map[string]string{
-		"https://hashboard.live/api/push":  "https://hashboard.live/api/actions/pending",
-		"https://hashboard.live/api/push/": "https://hashboard.live/api/actions/pending",
+		"https://hashboard.forlovers.app/api/push":  "https://hashboard.forlovers.app/api/actions/pending",
+		"https://hashboard.forlovers.app/api/push/": "https://hashboard.forlovers.app/api/actions/pending",
 	} {
 		if got := apiURL(pushURL, "/actions/pending"); got != want {
 			t.Errorf("apiURL(%q) = %q, want %q", pushURL, got, want)

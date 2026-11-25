@@ -28,7 +28,7 @@ your machine. No account to create, you use it from your local network.
 {: .lead-privacy }
 
 To follow your miners away from home, you can turn on sending to
-[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"}: only their stats go out
+[hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"}: only their stats go out
 (hashrate, temperatures, shares…), your wallet, your pools and your network's
 addresses stay hidden, unless you choose to share them.
 [Learn more]({{ '/en/hashboard.html' | relative_url }}){: .link-page }
@@ -115,7 +115,7 @@ addresses stay hidden, unless you choose to share them.
   <text x="120" y="139" text-anchor="middle" fill="#8892a4" font-size="12">your mails</text>
 
   <rect x="230" y="60" width="460" height="112" rx="14" fill="#1e1e2a" stroke="rgba(139,124,246,0.55)" stroke-width="1.5"></rect>
-  <text x="250" y="82" fill="#8892a4" font-size="12" font-weight="700">VPS — hashboard.live</text>
+  <text x="250" y="82" fill="#8892a4" font-size="12" font-weight="700">VPS — hashboard.forlovers.app</text>
 
   <rect x="250" y="92" width="200" height="64" rx="10" fill="#262637" stroke="#8b7cf6" stroke-width="1.5"></rect>
   <text x="350" y="119" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">hashboard</text>

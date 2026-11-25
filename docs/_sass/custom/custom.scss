@@ -16,7 +16,7 @@ $dashboard-sidebar-bg: #262637;
 $dashboard-text-primary: #e0e0e0;
 $dashboard-text-secondary: #b0b0b0;
 $dashboard-brand: #00b4ff;
-// hashboard.live's own TerminalCard component (ui/src/components/
+// hashboard.forlovers.app's own TerminalCard component (ui/src/components/
 // TerminalCard.tsx: BODY_BG) intentionally uses a darker shade than the
 // header for its <pre> body -- this terminal-card mirrors that on purpose,
 // not $dashboard-sidebar-bg for both.
@@ -325,7 +325,7 @@ body {
   color: $dashboard-text-secondary;
 }
 
-// "Terminal card" -- adapted from hashboard.live's own TerminalCard/
+// "Terminal card" -- adapted from hashboard.forlovers.app's own TerminalCard/
 // TerminalLine components (ui/src/components/TerminalCard.tsx): a
 // terminal-window look for copy-pasteable commands, with $ commands in
 // green and # comments muted, distinct from a plain fenced code block.

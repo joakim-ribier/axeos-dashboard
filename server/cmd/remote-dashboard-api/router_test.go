@@ -110,7 +110,7 @@ func privateAccessChecker(t *testing.T) *hashboardaccess.Checker {
 }
 
 func TestNewRouter_infoNotGatedByBoardAccess(t *testing.T) {
-	cfg := config.Config{HashboardURL: "https://hashboard.live"}
+	cfg := config.Config{HashboardURL: "https://hashboard.forlovers.app"}
 	router := NewRouter(cfg, testVersionChecker(), privateAccessChecker(t))
 
 	w := httptest.NewRecorder()
@@ -124,8 +124,8 @@ func TestNewRouter_infoNotGatedByBoardAccess(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if got.HashboardURL != "https://hashboard.live" {
-		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.live")
+	if got.HashboardURL != "https://hashboard.forlovers.app" {
+		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.forlovers.app")
 	}
 }
 

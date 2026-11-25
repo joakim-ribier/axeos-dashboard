@@ -248,7 +248,7 @@ describe("Audit page", () => {
         changes: [
           {
             field: "pushURL",
-            before: "https://hashboard.live/api/push",
+            before: "https://hashboard.forlovers.app/api/push",
             after: "https://elsewhere.example/api/push",
           },
           { field: "apiKey" },
@@ -261,7 +261,7 @@ describe("Audit page", () => {
     expect(within(push).getByText("Remote push changed")).toBeInTheDocument();
     expect(
       within(push).getByText(
-        "Push URL: https://hashboard.live/api/push → https://elsewhere.example/api/push",
+        "Push URL: https://hashboard.forlovers.app/api/push → https://elsewhere.example/api/push",
       ),
     ).toBeInTheDocument();
     // The key itself is never written down -- only that it changed.

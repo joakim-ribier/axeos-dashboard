@@ -25,7 +25,7 @@ Local dashboard and controller for [AxeOs](https://github.com/skot/ESP-Miner)-co
 
 > [!NOTE]
 > **Monitor your miners from anywhere** — push your stats to
-> [hashboard.live](https://hashboard.live), free, no port to open or VPN to
+> [hashboard.forlovers.app](https://hashboard.forlovers.app), free, no port to open or VPN to
 > set up.
 
 - [Prerequisites](#prerequisites)
@@ -153,7 +153,7 @@ place of `@DEPLOY_DIR@` (`make install` prints the commands). Logs: `axeos-logs`
 
 ## Icons
 
-One pack for the app, the docs and [hashboard.live](https://hashboard.live):
+One pack for the app, the docs and [hashboard.forlovers.app](https://hashboard.forlovers.app):
 [`brand/`](brand/README.md).
 
 ---
