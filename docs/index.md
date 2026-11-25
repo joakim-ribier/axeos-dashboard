@@ -26,7 +26,7 @@ ton réseau local.
 {: .lead-privacy }
 
 Pour suivre tes mineurs hors de chez toi, tu peux activer l'envoi vers
-[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"} : seules leurs statistiques
+[hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"} : seules leurs statistiques
 partent (hashrate, températures, parts…), ton wallet, tes pools et les
 adresses de ton réseau restent masqués, sauf si tu choisis de les
 partager. [En savoir plus]({{ '/hashboard.html' | relative_url }}){: .link-page }
@@ -117,7 +117,7 @@ partager. [En savoir plus]({{ '/hashboard.html' | relative_url }}){: .link-page 
   <text x="120" y="139" text-anchor="middle" fill="#8892a4" font-size="12">tes mails</text>
 
   <rect x="230" y="60" width="460" height="112" rx="14" fill="#1e1e2a" stroke="rgba(139,124,246,0.55)" stroke-width="1.5"></rect>
-  <text x="250" y="82" fill="#8892a4" font-size="12" font-weight="700">VPS — hashboard.live</text>
+  <text x="250" y="82" fill="#8892a4" font-size="12" font-weight="700">VPS — hashboard.forlovers.app</text>
 
   <rect x="250" y="92" width="200" height="64" rx="10" fill="#262637" stroke="#8b7cf6" stroke-width="1.5"></rect>
   <text x="350" y="119" text-anchor="middle" fill="#e0e0e0" font-size="15" font-weight="700">hashboard</text>

@@ -10,7 +10,7 @@ subnav:
     anchor: electricity
   - title: Notifications
     anchor: notifications
-  - title: Remote (hashboard.live)
+  - title: Remote (hashboard.forlovers.app)
     anchor: remote
   - title: System
     anchor: system
@@ -188,11 +188,11 @@ failure with its reason; *Send an example* shows the mail without waiting.
 
 ---
 
-## ☁️ Remote (hashboard.live)
+## ☁️ Remote (hashboard.forlovers.app)
 {: #remote }
 
 Sending your miners' stats to
-[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+[hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"},
 to follow them from anywhere, with no VPN.
 
 ![Remote (hashboard)]({{ '/assets/images/settings-remote.png' | relative_url }}){: width="533" }

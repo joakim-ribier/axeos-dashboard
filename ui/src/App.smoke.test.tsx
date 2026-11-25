@@ -122,7 +122,10 @@ describe("App routing smoke test (remote board)", () => {
       mockedAxios.get.mockImplementation((url: string) => {
         if (url === "/api/info")
           return Promise.resolve({
-            data: { remote: true, hashboardURL: "https://hashboard.live" },
+            data: {
+              remote: true,
+              hashboardURL: "https://hashboard.forlovers.app",
+            },
           });
         const err = Object.assign(new Error("not found"), {
           response: { status: 404, data: { error: "board not found" } },
@@ -137,7 +140,9 @@ describe("App routing smoke test (remote board)", () => {
         renderApp(path);
 
         await waitFor(() =>
-          expect(replace).toHaveBeenCalledWith("https://hashboard.live/me"),
+          expect(replace).toHaveBeenCalledWith(
+            "https://hashboard.forlovers.app/me",
+          ),
         );
         expect(
           screen.queryByText("This page does not exist."),
@@ -297,7 +302,10 @@ describe("App routing smoke test (remote board)", () => {
     mockedAxios.get.mockImplementation((url: string) => {
       if (url === "/api/info")
         return Promise.resolve({
-          data: { remote: true, hashboardURL: "https://hashboard.live" },
+          data: {
+            remote: true,
+            hashboardURL: "https://hashboard.forlovers.app",
+          },
         });
       return Promise.reject(new Error(`unexpected URL ${url}`));
     });
@@ -309,7 +317,9 @@ describe("App routing smoke test (remote board)", () => {
       renderApp("/alerts");
 
       await waitFor(() =>
-        expect(replace).toHaveBeenCalledWith("https://hashboard.live/me"),
+        expect(replace).toHaveBeenCalledWith(
+          "https://hashboard.forlovers.app/me",
+        ),
       );
       // Nothing local is fetched (nor rendered) on the way out.
       expect(mockedAxios.get).toHaveBeenCalledTimes(1);

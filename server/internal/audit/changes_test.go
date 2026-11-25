@@ -113,12 +113,12 @@ func TestMinerChanges(t *testing.T) {
 
 func TestSettingsChanges(t *testing.T) {
 	var before, after config.AppSettingsFile
-	before.Remote = config.RemoteConfig{PushURL: "https://hashboard.live/api/push", APIKey: "secret-1"}
+	before.Remote = config.RemoteConfig{PushURL: "https://hashboard.forlovers.app/api/push", APIKey: "secret-1"}
 	after.Remote = config.RemoteConfig{PushURL: "https://elsewhere.example/api/push", APIKey: "secret-2"}
 
 	got := SettingsChanges(before, after)
 	want := []Entry{{Type: TypeRemotePush, Changes: []Change{
-		{Field: "pushURL", Kind: ChangeChanged, Before: "https://hashboard.live/api/push", After: "https://elsewhere.example/api/push"},
+		{Field: "pushURL", Kind: ChangeChanged, Before: "https://hashboard.forlovers.app/api/push", After: "https://elsewhere.example/api/push"},
 		// Changed, but its value is never written down.
 		{Field: "apiKey", Kind: ChangeChanged},
 	}}}

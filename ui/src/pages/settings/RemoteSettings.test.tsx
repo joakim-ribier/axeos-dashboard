@@ -101,7 +101,7 @@ describe("RemoteSettings -- push URL check", () => {
     const user = userEvent.setup();
     render(<RemoteSettings />);
 
-    await user.type(pushUrl(), "hashboard.live/api/push");
+    await user.type(pushUrl(), "hashboard.forlovers.app/api/push");
 
     expect(save()).toBeDisabled();
     expect(screen.getByText(`${k}.invalidPushUrl`)).toBeInTheDocument();
@@ -111,11 +111,11 @@ describe("RemoteSettings -- push URL check", () => {
     const user = userEvent.setup();
     render(<RemoteSettings />);
 
-    await user.type(pushUrl(), "https://hashboard.live/api/push");
+    await user.type(pushUrl(), "https://hashboard.forlovers.app/api/push");
     await user.click(save());
 
     expect(saveSettings.mock.calls[0][0].remote.pushURL).toBe(
-      "https://hashboard.live/api/push",
+      "https://hashboard.forlovers.app/api/push",
     );
   });
 
@@ -134,7 +134,7 @@ const pushingSettings = (): AppSettings => ({
   electricity: { ratePerKwh: 0.2 },
   pools: { dashboards: {} },
   remote: {
-    pushURL: "https://hashboard.live/api/push",
+    pushURL: "https://hashboard.forlovers.app/api/push",
     apiKey: "key",
     sendUser: false,
     sendPools: true,
@@ -221,7 +221,7 @@ describe("RemoteSettings -- remote actions", () => {
     electricity: { ratePerKwh: 0.2 },
     pools: { dashboards: {} },
     remote: {
-      pushURL: "https://hashboard.live/api/push",
+      pushURL: "https://hashboard.forlovers.app/api/push",
       apiKey: "key",
       sendUser: false,
       sendPools: false,
@@ -373,7 +373,7 @@ describe("RemoteSettings -- the board's fleet", () => {
     // The saved push URL's hashboard, /me/remote.
     expect(
       screen.getByText(`${k}.state.unauthorizedLink`).closest("a"),
-    ).toHaveAttribute("href", "https://hashboard.live/me/remote");
+    ).toHaveAttribute("href", "https://hashboard.forlovers.app/me/remote");
   });
 
   it("says nothing of the link when it's fine", () => {

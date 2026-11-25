@@ -47,7 +47,7 @@ subnav:
 </div>
 
 Tes mineurs suivis de n'importe où : ton dashboard envoie leurs
-statistiques à [hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+statistiques à [hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"},
 qui les affiche sur ton board — hashrate sur 24 h, indicateurs, état des
 mineurs, pools et liste, rafraîchis tout seuls, dans la langue du
 navigateur. Ton board est public ou privé.

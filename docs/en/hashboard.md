@@ -48,7 +48,7 @@ subnav:
 </div>
 
 Your miners followed from anywhere: your dashboard sends their stats to
-[hashboard.live](https://hashboard.live){:target="_blank" rel="noopener noreferrer"},
+[hashboard.forlovers.app](https://hashboard.forlovers.app){:target="_blank" rel="noopener noreferrer"},
 which shows them on your board — 24 h hashrate, indicators, miner status,
 pools and list, refreshed on their own, in the browser's language. Your
 board is public or private.

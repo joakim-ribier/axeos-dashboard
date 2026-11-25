@@ -26,7 +26,7 @@ func boardDataRoot(dataDir, boardID string) string {
 // Miner metadata (IP, hostname, model) is read from the file itself (PushSample fields).
 //
 // @Summary List miners pushed to a hashboard board (read-only)
-// @Description Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.
+// @Description Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.forlovers.app.
 // @Tags Board miners
 // @Produce json
 // @Param boardId path string true "hashboard board ID"

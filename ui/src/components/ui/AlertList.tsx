@@ -14,7 +14,7 @@ interface AlertListProps {
 }
 
 /** The small colored, rounded-square swatch (not a round dot) that marks
- * each point -- the exact shape hashboard.live itself uses for its own
+ * each point -- the exact shape hashboard.forlovers.app itself uses for its own
  * up/down status indicator in its top bar (10x10, 3px radius, solid
  * fill), reused here as a decorative marker.
  */

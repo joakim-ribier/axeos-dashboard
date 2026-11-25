@@ -2,7 +2,7 @@
 
 Icône « Hash Chip ₿ » : une puce ASIC dont le `#` de hashboard se referme en ₿, avec le pouls du hashrate en guise de taille.
 
-Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashboard.live en utilisent des copies. Pour changer une icône, la changer ici, puis recopier le fichier aux endroits listés plus bas.
+Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashboard.forlovers.app en utilisent des copies. Pour changer une icône, la changer ici, puis recopier le fichier aux endroits listés plus bas.
 
 ## Fichiers
 
@@ -15,7 +15,7 @@ Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashbo
 | `apple-touch-icon.png` | 180 px, plein cadre (iOS arrondit lui-même) |
 | `icon-192.png`, `icon-512.png` | Icônes PWA / Android |
 | `icon-maskable.svg`, `icon-maskable-512.png` | Version maskable Android, le motif tient dans la zone de sécurité |
-| `og-image.png` | Image de partage 1200×630 pour hashboard.live |
+| `og-image.png` | Image de partage 1200×630 pour hashboard.forlovers.app |
 | `site.webmanifest` | Manifest PWA |
 
 ## Palette
@@ -32,9 +32,9 @@ Ce dossier est la source de toutes les icônes : l'app, le site de doc et hashbo
 |---|---|---|
 | App (local et boards distants) — `ui/public/` | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `site.webmanifest` | `ui/index.html` ; `favicon.svg` sert aussi de logo au menu replié (`Sidebar.tsx`) |
 | Site de doc — `docs/` | `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | `docs/_includes/head_custom.html` (le thème déclare `favicon.ico` de lui-même) |
-| hashboard.live — `ui/public/` du dépôt hashboard | les mêmes que l'app, plus `og-image.png` | `ui/index.html` et `ui/scripts/prerender.mjs` (guides) |
+| hashboard.forlovers.app — `ui/public/` du dépôt hashboard | les mêmes que l'app, plus `og-image.png` | `ui/index.html` et `ui/scripts/prerender.mjs` (guides) |
 
-Le `site.webmanifest` de l'app prend la couleur de fond de l'app (`#1e1e2a`) ; celui de ce dossier et de hashboard.live garde `#0f0f1a`.
+Le `site.webmanifest` de l'app prend la couleur de fond de l'app (`#1e1e2a`) ; celui de ce dossier et de hashboard.forlovers.app garde `#0f0f1a`.
 
 `icon-192.png` est aussi le logo des mails HTML, embarqué dans le mailer sous `server/internal/mailtemplate/logo.png`.
 

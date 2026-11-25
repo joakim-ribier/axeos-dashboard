@@ -50,7 +50,7 @@ func TestInfo_remoteMode(t *testing.T) {
 	ui := config.UIConfig{
 		Page: config.UIPageConfig{Settings: config.UIHidden, Backups: config.UIHidden, Audit: config.UIHidden},
 	}
-	Info(testVersionChecker(), "https://hashboard.live", true, ui)(w, r)
+	Info(testVersionChecker(), "https://hashboard.forlovers.app", true, ui)(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
@@ -59,8 +59,8 @@ func TestInfo_remoteMode(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if got.HashboardURL != "https://hashboard.live" {
-		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.live")
+	if got.HashboardURL != "https://hashboard.forlovers.app" {
+		t.Errorf("HashboardURL = %q, want %q", got.HashboardURL, "https://hashboard.forlovers.app")
 	}
 	if !got.Remote {
 		t.Errorf("Remote = %v, want true for remote mode", got.Remote)

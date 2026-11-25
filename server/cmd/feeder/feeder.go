@@ -643,7 +643,7 @@ func (f *Feeder) pushTotalsToRemote(storageKey string, totals storage.Totals) {
 // same auth, same timeout, same fire-and-forget error handling (logged,
 // never fatal: a hashboard hiccup must never affect local polling).
 // path is relative to f.config.Remote.PushURL -- only that path suffix is
-// ever logged/persisted (never the full URL), so a hashboard.live URL
+// ever logged/persisted (never the full URL), so a hashboard.forlovers.app URL
 // doesn't get repeated in full on every single log line and error message.
 func (f *Feeder) postToRemote(path string, body []byte, logCtx string) error {
 	url := f.config.Remote.PushURL + path

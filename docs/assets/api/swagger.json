@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.\nNo authentication — internal LAN use only.\n\nEndpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);\nremote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.live;\nthe mailer (default :8082, on the loopback only), reached through dashboard-api.",
+        "description": "Local, read/write REST API for AxeOs-compatible miners (Bitaxe, NerdAxe) on your LAN.\nNo authentication — internal LAN use only.\n\nEndpoints are grouped by the service answering them: dashboard-api (this binary, default :8080);\nremote-dashboard-api (default :8081), a read-only API serving the miners pushed to hashboard.forlovers.app;\nthe mailer (default :8082, on the loopback only), reached through dashboard-api.",
         "title": "axeos-dashboard API",
         "contact": {},
         "version": "1.0"
@@ -1131,7 +1131,7 @@
         },
         "/api/{boardId}/miners": {
             "get": {
-                "description": "Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.live.",
+                "description": "Auto-discovers miners from the board's bitaxes directory — no local config needed, data comes from whatever the feeder already pushed to hashboard.forlovers.app.",
                 "produces": [
                     "application/json"
                 ],

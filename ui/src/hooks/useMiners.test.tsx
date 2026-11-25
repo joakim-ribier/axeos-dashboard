@@ -202,7 +202,7 @@ describe("useAppInfo", () => {
     mockGetByUrl({
       "/api/info": {
         buildSHA: "abc1234",
-        hashboardURL: "https://hashboard.live",
+        hashboardURL: "https://hashboard.forlovers.app",
       },
       "/api/miners": { miners: [] },
     });
@@ -212,7 +212,9 @@ describe("useAppInfo", () => {
     });
 
     await waitFor(() =>
-      expect(result.current.hashboardUrl).toBe("https://hashboard.live"),
+      expect(result.current.hashboardUrl).toBe(
+        "https://hashboard.forlovers.app",
+      ),
     );
   });
 });
